@@ -1,7 +1,7 @@
 // Mock of the club-server inventory module (InventoryHandlers): everyone reads, admin/board/coaches manage.
 import { settings } from '../../settings';
 import { directory, type MockDirectory } from '../../lib/mock/core';
-import { linkRefs } from '../../lib/mock/MockLinks';
+import { itemUseSources, linkRefs } from '../../lib/mock/MockLinks';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import { PRIVILEGED, type Member } from '../../lib/types';
@@ -122,5 +122,11 @@ mockServer
   .on('GET', '/api/v1/inventory', (req) => (actor(req), { items: inventory.list() }))
   .on('POST', '/api/v1/inventory', (req) => inventory.create(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/inventory/:id', (req) => (actor(req), inventory.get(req.params.id)))
+  .on('GET', '/api/v1/inventory/:id/uses', (req) => {
+    const member = actor(req);
+    inventory.get(req.params.id);
+    const uses = itemUseSources.flatMap((source) => source(member, req.params.id));
+    return { uses: uses.sort((a, b) => (a.at === b.at ? 0 : a.at === null ? 1 : b.at === null ? -1 : a.at.localeCompare(b.at))) };
+  })
   .on('PATCH', '/api/v1/inventory/:id', (req) => inventory.update(actor(req), req.params.id, req.body ?? {}))
   .on('DELETE', '/api/v1/inventory/:id', (req) => inventory.delete(actor(req), req.params.id));

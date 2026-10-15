@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { confirmation, live, session, toasts } from '../../lib/container';
+  import { confirmation, live, session, toasts, windows } from '../../lib/container';
   import { onLive } from '../../lib/live/onLive.svelte';
   import { Action } from '../../lib/state/Action.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
@@ -22,7 +22,13 @@
   const save = new Action();
   const remove = new Action();
   let form = $state<ItemForm | null>(null);
+  // svelte-ignore state_referenced_locally
+  const uses = new Resource(() => inventoryApi.uses(id));
   void item.load();
+  void uses.load();
+
+  // Lists elsewhere change what needs this item.
+  onLive(live, ['calendar.appointments-changed', 'tasks.task-changed'], () => void uses.load());
 
   $effect(() => {
     const name = item.value?.name;
@@ -93,7 +99,66 @@
           <dd>{session.format.dateTime(value.updatedAt)}</dd>
         </dl>
         {#if value.description}<p class="prose">{value.description}</p>{/if}
+
+        <h2>Benötigt für</h2>
+        <AsyncView resource={uses}>
+          {#snippet children(list)}
+            {#if list.length}
+              <ul class="uses">
+                {#each list as use (use.kind + use.id)}
+                  <li>
+                    <button type="button" onclick={() => windows.open(use.kind === 'APPOINTMENT' ? 'appointment' : 'task', use.id)}>
+                      <span class="title">{use.title}</span>
+                      <span class="muted">{use.kind === 'APPOINTMENT' ? 'Termin' : 'Aufgabe'}{use.at ? `, ${session.format.dateTime(use.at)}` : ''}</span>
+                      <span class="quantity" class:short={use.quantity > value.quantity}>{use.quantity}</span>
+                    </button>
+                  </li>
+                {/each}
+              </ul>
+            {:else}
+              <p class="muted none">Kein kommender Termin und keine offene Aufgabe braucht diesen Gegenstand.</p>
+            {/if}
+          {/snippet}
+        </AsyncView>
       {/if}
     </Detail>
   {/snippet}
 </AsyncView>
+
+<style>
+  .uses li {
+    border-bottom: 1px solid var(--color-border);
+  }
+  .uses button {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 4rem;
+    align-items: center;
+    gap: var(--space-md);
+    width: 100%;
+    min-height: var(--control-height);
+    padding: 2px var(--space-xs);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    text-align: left;
+    cursor: pointer;
+  }
+  .uses button:hover {
+    background: var(--color-hover);
+  }
+  .title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .quantity {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .short {
+    color: var(--color-danger);
+  }
+  .none {
+    margin: 0;
+  }
+</style>

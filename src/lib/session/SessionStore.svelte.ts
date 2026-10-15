@@ -51,6 +51,11 @@ export class SessionStore {
     return this.me.member;
   }
 
+  /** The member's minors (server: members_guardian). */
+  get wardIds(): readonly string[] {
+    return this.me?.wardIds ?? [];
+  }
+
   get teams(): readonly Team[] {
     return this.me?.teams ?? [];
   }

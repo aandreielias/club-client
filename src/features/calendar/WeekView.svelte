@@ -2,6 +2,7 @@
   import { settings } from '../../settings';
   import { session, windows } from '../../lib/container';
   import type { CalendarModel } from './CalendarModel.svelte';
+  import { menu } from '../../ui/contextMenu';
   import EntryChip from './EntryChip.svelte';
   import { appointmentPolicy as policy } from './services';
 
@@ -16,6 +17,13 @@
     const team = model.teamId ? `team=${model.teamId}&` : '';
     windows.open('appointment-new', `${team}date=${date}`);
   }
+
+  /** Right-click on a day: new appointment there. */
+  function dayMenu(date: string) {
+    return [
+      ...(policy.canCreate() ? [{ label: `Neuer Termin am ${session.format.date(date)}`, run: () => create(date), command: 'page.new' as const }] : []),
+    ];
+  }
 </script>
 
 <div class="week" style:--hours={hours.length}>
@@ -29,7 +37,7 @@
 
   <div class="lane-label muted">Ganztägig</div>
   {#each model.days as day (day)}
-    <div class="all-day">
+    <div class="all-day" {@attach menu(() => dayMenu(day))}>
       {#each model.entriesOn(day).filter((e) => e.allDay) as entry (entry.key)}
         <EntryChip {entry} />
       {/each}
@@ -41,7 +49,7 @@
   </div>
   {#each model.days as day (day)}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="column" class:today={day === model.today} ondblclick={() => create(day)}>
+    <div class="column" class:today={day === model.today} ondblclick={() => create(day)} {@attach menu(() => dayMenu(day))}>
       {#each hours as hour (hour)}<div class="slot"></div>{/each}
       {#each model.placeOn(day, startHour, endHour) as placed (placed.entry.key)}
         <div class="event" style:top="{placed.top}%" style:height="{placed.height}%"

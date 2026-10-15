@@ -1,10 +1,12 @@
 <script lang="ts">
-  import { commands, live, session, store, toasts, windows } from '../../lib/container';
+  import { commands, live, router, session, store, toasts, windows } from '../../lib/container';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { onLive } from '../../lib/live/onLive.svelte';
   import { ROLE_LABELS } from '../../lib/types';
   import Button from '../../ui/Button.svelte';
   import DataTable from '../../ui/DataTable.svelte';
+  import { windowMenu } from '../../lib/window/windowMenu';
+
   import Page from '../../ui/Page.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { MEMBER_DEACTIVATED, MEMBER_INVITED } from './events';
@@ -38,6 +40,7 @@
     model={list}
     rowKey={(m) => m.id}
     onopen={(m) => windows.open('member', m.id)}
+    menu={(m) => windowMenu(windows, router, 'member', m.id)}
     selected={windows.current?.kind === 'member' ? windows.current.id : null}
     emptyText="Noch keine Mitglieder."
   >

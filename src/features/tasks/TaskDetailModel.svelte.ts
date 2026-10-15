@@ -39,9 +39,9 @@ export class TaskDetailModel {
     }
   }
 
-  /** Sets a new due instant (the server cannot remove a due date, only change it). */
-  setDue(dueAt: string): Promise<boolean> {
-    return this.write(this.dueAction, () => this.api.update(this.id, { dueAt }));
+  /** Sets a new due instant, or removes the due date with null. */
+  setDue(dueAt: string | null): Promise<boolean> {
+    return this.write(this.dueAction, () => this.api.update(this.id, dueAt ? { dueAt } : { clearDue: true }));
   }
 
   addComment(text: string): Promise<boolean> {

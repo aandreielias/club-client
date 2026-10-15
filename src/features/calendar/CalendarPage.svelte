@@ -7,6 +7,8 @@
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import DataTable from '../../ui/DataTable.svelte';
+  import { windowMenu } from '../../lib/window/windowMenu';
+
   import Page from '../../ui/Page.svelte';
   import Select from '../../ui/Select.svelte';
   import Tag from '../../ui/Tag.svelte';
@@ -103,7 +105,7 @@
 
   <div class="view" aria-busy={model.entries.loading}>
     {#if model.view === 'list'}
-      <DataTable model={list} rowKey={(e) => e.key} onopen={(e) => windows.open(e.window.kind, e.window.id)} leading={filters}
+      <DataTable model={list} rowKey={(e) => e.key} onopen={(e) => windows.open(e.window.kind, e.window.id)} menu={(e) => windowMenu(windows, router, e.window.kind, e.window.id)} leading={filters}
         emptyText="Keine Einträge in diesem Zeitraum.">
         {#snippet cell(entry, column)}
           {#if column.key === 'title'}

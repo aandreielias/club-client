@@ -2,10 +2,7 @@ import type { CalendarEntry, CalendarSource } from '../../lib/calendar/CalendarS
 import type { Task } from './model';
 import type { TasksApi } from './TasksApi';
 
-/**
- * Puts task due dates into the calendar (all visible tasks, done ones struck through).
- * shortcut: the server has no due-date range filter, so every visible task is loaded and filtered here; add a range parameter when lists grow large.
- */
+/** Puts the due dates of visible tasks in the range into the calendar (done ones struck through). */
 export class TaskCalendarSource implements CalendarSource {
   readonly id = 'tasks';
   readonly label = 'Aufgaben';
@@ -13,8 +10,8 @@ export class TaskCalendarSource implements CalendarSource {
   constructor(private readonly api: TasksApi) {}
 
   async load(from: string, to: string): Promise<CalendarEntry[]> {
-    const tasks = await this.api.list({ mine: false, teamId: null, includeDone: true });
-    return tasks.filter((t) => t.dueAt !== null && t.dueAt >= from && t.dueAt < to).map(TaskCalendarSource.entry);
+    const tasks = await this.api.list({ mine: false, teamId: null, includeDone: true, dueFrom: from, dueTo: to });
+    return tasks.filter((t) => t.dueAt !== null).map(TaskCalendarSource.entry);
   }
 
   static entry(task: Task): CalendarEntry {

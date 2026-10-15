@@ -50,13 +50,17 @@ export interface NewTask {
 }
 
 /** Omitted fields stay unchanged; a given checklist replaces the old one (and resets its ticks). */
-export type TaskPatch = Partial<Pick<NewTask, 'title' | 'description' | 'dueAt' | 'assignees' | 'checklist'>>;
+/** Absent fields stay unchanged; `clearDue` removes the due date (never together with `dueAt`). */
+export type TaskPatch = Partial<Pick<NewTask, 'title' | 'description' | 'dueAt' | 'assignees' | 'checklist'>> & { clearDue?: boolean };
 
 export interface TaskQuery {
   /** Only tasks assigned to the member or their minors. */
   mine: boolean;
   teamId: string | null;
   includeDone: boolean;
+  /** Due range [dueFrom, dueTo) as instants; with a range, undated tasks are left out. */
+  dueFrom?: string;
+  dueTo?: string;
 }
 
 export const TASK_STATUSES: readonly { value: TaskStatus; label: string }[] = [

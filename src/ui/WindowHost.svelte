@@ -3,12 +3,18 @@
   import { windows } from '../lib/container';
   import { DOCKS, type Dock } from '../lib/window/WindowService.svelte';
   import Button from './Button.svelte';
+  import { tooltip, withKeys } from './tooltip';
 
   /**
    * Renders the single detail window. Placement (center, side, bottom) animates between positions;
    * centered it is modal, docked it leaves the page usable next to it.
    */
   const LABELS: Record<Dock, string> = { center: 'Mitte', side: 'Seite', bottom: 'Unten' };
+  const HINTS = {
+    center: withKeys('Fenster in die Mitte', 'window.center'),
+    side: withKeys('Fenster an die Seite', 'window.side'),
+    bottom: withKeys('Fenster nach unten', 'window.bottom'),
+  } satisfies Record<Dock, string>;
 
   const target = $derived(windows.current);
   const content = $derived(target ? windows.content(target.kind) : undefined);
@@ -79,13 +85,15 @@
       <div class="controls">
         <div class="docks" role="group" aria-label="Fensterposition">
           {#each DOCKS as dock (dock)}
-            <Button size="sm" variant="ghost" pressed={windows.dock === dock} onclick={() => windows.setDock(dock)}>{LABELS[dock]}</Button>
+            <Button size="sm" variant="ghost" pressed={windows.dock === dock} onclick={() => windows.setDock(dock)}
+              {@attach tooltip(HINTS[dock])}>{LABELS[dock]}</Button>
           {/each}
         </div>
         {#if content.page}
-          <Button size="sm" variant="ghost" onclick={() => handle.navigate(content.page!(target.id))}>Als Seite öffnen</Button>
+          <Button size="sm" variant="ghost" onclick={() => handle.navigate(content.page!(target.id))}
+            {@attach tooltip(withKeys('Als eigene Seite öffnen', 'window.page'))}>Als Seite öffnen</Button>
         {/if}
-        <Button size="sm" variant="ghost" onclick={() => windows.close()}>Schließen</Button>
+        <Button size="sm" variant="ghost" onclick={() => windows.close()} {@attach tooltip(withKeys('Fenster schließen', 'window.close'))}>Schließen</Button>
       </div>
     </header>
     <div class="body">

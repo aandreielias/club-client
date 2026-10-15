@@ -1,7 +1,7 @@
 // Mock of the club-server tasks module (TaskHandlers): visibility, work and manage rights, validation.
 import { settings } from '../../settings';
 import { directory, type MockDirectory } from '../../lib/mock/core';
-import { MockLinks } from '../../lib/mock/MockLinks';
+import { itemUseSources, MockLinks, type ItemUse } from '../../lib/mock/MockLinks';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import type { Member } from '../../lib/types';
@@ -61,6 +61,17 @@ export class MockTasks {
     return this.links.get(member, this.visible(this.viewer(member), id).id);
   }
 
+  /** server: TaskHandlers.itemUses */
+  itemUses(member: Member, itemId: string): ItemUse[] {
+    const viewer = this.viewer(member);
+    return this.links.owners(itemId)
+      .flatMap(([id, quantity]) => {
+        const t = this.tasks.data.find((x) => x.id === id);
+        return t && viewer.canSee(t) && t.status !== 'DONE' ? [{ kind: 'TASK' as const, id: t.id, title: t.title, at: t.dueAt, quantity }] : [];
+      })
+      .sort(MockTasks.compareAt);
+  }
+
   setLinks(member: Member, id: string, body: Record<string, unknown>) {
     const viewer = this.viewer(member);
     const task = this.visible(viewer, id);
@@ -70,11 +81,16 @@ export class MockTasks {
     return links;
   }
 
-  list(member: Member, mine: boolean, teamId: string | null, includeDone: boolean): Task[] {
+  list(member: Member, mine: boolean, teamId: string | null, includeDone: boolean, dueFrom: string | null = null, dueTo: string | null = null): Task[] {
     const viewer = this.viewer(member);
     if (teamId && !viewer.board && !viewer.teamIds.has(teamId)) fail(404, 'team.not-found');
+    const [from, to] = [dueFrom ? Date.parse(dueFrom) : null, dueTo ? Date.parse(dueTo) : null];
+    if (Number.isNaN(from) || Number.isNaN(to)) fail(400, 'request.invalid');
+    if (from !== null && to !== null && from >= to) fail(400, 'task.range-invalid');
+    const inRange = (t: StoredTask) =>
+      (from === null || (t.dueAt !== null && Date.parse(t.dueAt) >= from)) && (to === null || (t.dueAt !== null && Date.parse(t.dueAt) < to));
     return this.tasks.data
-      .filter((t) => viewer.canSee(t) && (!mine || viewer.assigned(t)) && (!teamId || t.teamId === teamId) && (includeDone || t.status !== 'DONE'))
+      .filter((t) => viewer.canSee(t) && (!mine || viewer.assigned(t)) && (!teamId || t.teamId === teamId) && (includeDone || t.status !== 'DONE') && inRange(t))
       .sort((a, b) => MockTasks.compareDue(a, b))
       .map((t) => ({ ...t, comments: [] }));
   }
@@ -115,12 +131,13 @@ export class MockTasks {
     const current = this.visible(viewer, id);
     this.requireMayManage(viewer, current.teamId);
     if (patch.assignees) this.requireValidAssignees(current.teamId, patch.assignees);
+    if (patch.clearDue && patch.dueAt) fail(400, 'task.due-conflict');
     const previousAssignees = [...current.assignees];
     const next = MockTasks.validated({
       ...current,
       title: patch.title ?? current.title,
       description: patch.description ?? current.description,
-      dueAt: patch.dueAt ?? current.dueAt,
+      dueAt: patch.clearDue ? null : (patch.dueAt ?? current.dueAt),
       assignees: patch.assignees ? [...new Set(patch.assignees)] : current.assignees,
       checklist: patch.checklist ? MockTasks.items(patch.checklist) : current.checklist,
     });
@@ -242,6 +259,14 @@ export class MockTasks {
     return texts.map((text) => ({ id: crypto.randomUUID(), text, done: false }));
   }
 
+  /** By date, undated last. */
+  static compareAt(a: { at: string | null }, b: { at: string | null }): number {
+    if (a.at === b.at) return 0;
+    if (a.at === null) return 1;
+    if (b.at === null) return -1;
+    return a.at.localeCompare(b.at);
+  }
+
   /** ORDER BY due_at NULLS LAST, created_at */
   private static compareDue(a: StoredTask, b: StoredTask): number {
     if (a.dueAt !== b.dueAt) {
@@ -288,12 +313,14 @@ export class MockTasks {
 
 export const tasks = new MockTasks(directory);
 
+itemUseSources.push((member, itemId) => tasks.itemUses(member, itemId));
+
 const actor = (req: MockRequest) => directory.actor(req);
 const flag = (req: MockRequest, name: string) => req.query.get(name) === 'true';
 
 mockServer
   .on('GET', '/api/v1/tasks', (req) =>
-    ({ items: tasks.list(actor(req), flag(req, 'mine'), req.query.get('teamId'), flag(req, 'includeDone')) }))
+    ({ items: tasks.list(actor(req), flag(req, 'mine'), req.query.get('teamId'), flag(req, 'includeDone'), req.query.get('dueFrom'), req.query.get('dueTo')) }))
   .on('POST', '/api/v1/tasks', (req) => tasks.create(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/tasks/:id', (req) => tasks.get(actor(req), req.params.id))
   .on('PATCH', '/api/v1/tasks/:id', (req) => tasks.update(actor(req), req.params.id, req.body ?? {}))

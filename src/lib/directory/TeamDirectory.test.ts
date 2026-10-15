@@ -13,6 +13,7 @@ const me: Me = {
     { id: 'b', name: 'Team B', season: '2026/27' },
   ],
   missing: [],
+  wardIds: [],
 };
 
 const rosters: Record<string, Roster> = {

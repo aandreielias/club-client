@@ -35,6 +35,18 @@ export const linkRefs = {
   files: (_member: Member, _links: readonly FileLink[]): FileRef[] => [],
 };
 
+/** server: InventoryApi.ItemUse */
+export interface ItemUse {
+  kind: 'APPOINTMENT' | 'TASK';
+  id: string;
+  title: string;
+  at: string | null;
+  quantity: number;
+}
+
+/** Calendar and tasks register here what they answer to GetItemUses (server: CalendarApi/TasksApi.ITEM_USES). */
+export const itemUseSources: ((member: Member, itemId: string) => ItemUse[])[] = [];
+
 export class MockLinks {
   /** ownerId → stored rows */
   readonly table: MockTable<Record<string, Rows>>;
@@ -78,6 +90,12 @@ export class MockLinks {
     this.table.data[ownerId] = { needs: needRows, files: fileRows };
     this.table.save();
     return MockLinks.resolve(member, this.table.data[ownerId]);
+  }
+
+  /** ownerId → quantity of every owner whose list needs the item. */
+  owners(itemId: string): [string, number][] {
+    return Object.entries(this.table.data).flatMap(([owner, rows]) =>
+      rows.needs.filter((n) => n.itemId === itemId).map((n): [string, number] => [owner, n.quantity]));
   }
 
   remove(ownerId: string): void {

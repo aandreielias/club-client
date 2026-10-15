@@ -1,5 +1,5 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
-import type { Item, ItemList, ItemPatch, NewItem } from './model';
+import type { Item, ItemList, ItemPatch, ItemUse, NewItem } from './model';
 
 /** Typed access to the inventory endpoints of club-server. */
 export class InventoryApi {
@@ -14,6 +14,11 @@ export class InventoryApi {
 
   get(id: string): Promise<Item> {
     return this.api.get<Item>(this.path(id));
+  }
+
+  /** Upcoming appointments and open tasks the member sees that need the item. */
+  async uses(id: string): Promise<ItemUse[]> {
+    return (await this.api.get<{ uses: ItemUse[] }>(`${this.path(id)}/uses`)).uses;
   }
 
   create(item: NewItem): Promise<Item> {

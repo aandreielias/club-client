@@ -15,6 +15,15 @@ export interface ItemList {
   items: Item[];
 }
 
+/** An upcoming appointment or open task that needs the item; `at` is its start or due date. */
+export interface ItemUse {
+  kind: 'APPOINTMENT' | 'TASK';
+  id: string;
+  title: string;
+  at: string | null;
+  quantity: number;
+}
+
 export interface NewItem {
   name: string;
   category: string | null;

@@ -29,7 +29,8 @@
     {#if teamPolicy.canCreate()}<Button variant="primary" onclick={() => (creating = true)}>Neues Team</Button>{/if}
   {/snippet}
 
-  <DataTable model={list} rowKey={(t) => t.id} onopen={(t) => router.navigate(`/teams/${t.id}`)} emptyText="Du bist noch in keinem Team.">
+  <DataTable model={list} rowKey={(t) => t.id} onopen={(t) => router.navigate(`/teams/${t.id}`)}
+    menu={(t) => [{ label: 'Öffnen', run: () => router.navigate(`/teams/${t.id}`) }]} emptyText="Du bist noch in keinem Team.">
     {#snippet cell(team, column)}
       {#if column.key === 'mine'}
         {#if session.isInTeam(team.id)}<Tag tone="blue">Mein Team</Tag>{/if}

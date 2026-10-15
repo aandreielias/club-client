@@ -15,7 +15,7 @@ const member = (id: string, roles: Role[], extra: Partial<Member> = {}): Member 
 
 function policyFor(roles: Role[]): MemberPolicy {
   const session = new SessionStore(new ApiClient({ send: vi.fn(), upload: vi.fn(), url: (p) => p }, async () => false));
-  session.me = { member: member('me', roles), teams: [], missing: [] };
+  session.me = { member: member('me', roles), teams: [], missing: [], wardIds: [] };
   return new MemberPolicy(session);
 }
 

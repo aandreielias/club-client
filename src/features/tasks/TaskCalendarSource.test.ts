@@ -10,9 +10,11 @@ const task = (id: string, dueAt: string | null, status: Task['status'] = 'OPEN')
 });
 
 describe('TaskCalendarSource', () => {
-  it('returns due dates in range as all-day entries, done ones inactive', async () => {
-    const api = { list: async () => [task('a', '2026-10-20T16:00:00.000Z'), task('b', null), task('c', '2026-12-01T00:00:00.000Z'), task('d', '2026-10-21T08:00:00.000Z', 'DONE')] };
+  it('asks the server for the range and returns due dates as all-day entries, done ones inactive', async () => {
+    const queries: unknown[] = [];
+    const api = { list: async (q: unknown) => (queries.push(q), [task('a', '2026-10-20T16:00:00.000Z'), task('d', '2026-10-21T08:00:00.000Z', 'DONE')]) };
     const entries = await new TaskCalendarSource(api as unknown as TasksApi).load('2026-10-19T00:00:00Z', '2026-10-26T00:00:00Z');
+    expect(queries).toEqual([{ mine: false, teamId: null, includeDone: true, dueFrom: '2026-10-19T00:00:00Z', dueTo: '2026-10-26T00:00:00Z' }]);
     expect(entries.map((e) => [e.key, e.allDay, e.inactive])).toEqual([['task:a', true, false], ['task:d', true, true]]);
     expect(entries[0].window).toEqual({ kind: 'task', id: 'a' });
   });

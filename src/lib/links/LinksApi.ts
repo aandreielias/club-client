@@ -5,17 +5,13 @@ interface ItemList {
   items: { id: string; name: string; category: string | null; quantity: number }[];
 }
 
-interface FolderList {
-  items: { id: string; name: string }[];
-}
-
-interface FileList {
-  items: { id: string; folderId: string; name: string; contentType: string; sizeBytes: number }[];
+interface FileHits {
+  files: { id: string; folderId: string; folderName: string; name: string; contentType: string; sizeBytes: number }[];
 }
 
 /**
  * The `/links` endpoints of appointments and tasks, plus the read-only lookups the pickers need
- * (inventory, folders, files). Lives in lib so calendar and tasks share it without importing the
+ * (inventory, file search). Lives in lib so calendar and tasks share it without importing the
  * inventory or files features.
  */
 export class LinksApi {
@@ -36,23 +32,14 @@ export class LinksApi {
     return items.map((i) => ({ id: i.id, name: i.name, stock: i.quantity, label: i.category ? `${i.name} (${i.category})` : i.name }));
   }
 
-  /**
-   * Every file in every visible folder, labelled "Ordner / Datei".
-   * shortcut: one request per folder, fine for a club's few folders; use a search endpoint once the server has one.
-   */
-  async files(): Promise<FileOption[]> {
-    const { items: folders } = await this.api.get<FolderList>('/api/v1/folders');
-    const lists = await Promise.all(
-      folders.map(async (folder) => {
-        const { items } = await this.api.get<FileList>(`/api/v1/folders/${encodeURIComponent(folder.id)}/files`);
-        return items.map((f) => ({
-          id: f.id,
-          label: `${folder.name} / ${f.name}`,
-          file: { id: f.id, folderId: f.folderId, name: f.name, contentType: f.contentType, sizeBytes: f.sizeBytes, deleted: false },
-        }));
-      }),
-    );
-    return lists.flat().sort((a, b) => a.label.localeCompare(b.label, 'de'));
+  /** Visible files whose name contains `query`, labelled "Ordner / Datei". */
+  async files(query: string, limit: number): Promise<FileOption[]> {
+    const { files } = await this.api.get<FileHits>('/api/v1/files', { q: query.trim(), limit });
+    return files.map((f) => ({
+      id: f.id,
+      label: `${f.folderName} / ${f.name}`,
+      file: { id: f.id, folderId: f.folderId, name: f.name, contentType: f.contentType, sizeBytes: f.sizeBytes, deleted: false },
+    }));
   }
 
   /** Short-lived download link of a file. */

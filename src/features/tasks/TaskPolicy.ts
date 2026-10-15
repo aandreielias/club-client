@@ -5,7 +5,7 @@ import type { Task } from './model';
 
 /**
  * Client-side mirror of the server's task rules (TaskHandlers.Viewer), used only to show or hide
- * actions; the server decides. Tasks of a member's minors are not recognised as "own" yet.
+ * actions; the server decides.
  */
 export class TaskPolicy {
   constructor(
@@ -29,8 +29,10 @@ export class TaskPolicy {
     return this.permissions.filterableTeams();
   }
 
+  /** Assigned to the member or one of their minors (server: Viewer.self). */
   isAssigned(task: Task): boolean {
-    return task.assignees.includes(this.session.member.id);
+    const self = [this.session.member.id, ...this.session.wardIds];
+    return task.assignees.some((id) => self.includes(id));
   }
 
   /** Edit details, delete. */

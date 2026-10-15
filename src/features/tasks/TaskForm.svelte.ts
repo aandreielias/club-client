@@ -121,6 +121,7 @@ export class TaskForm {
     if (next.title !== original.title) patch.title = next.title;
     if ((next.description ?? '') !== (original.description ?? '')) patch.description = next.description ?? '';
     if (next.dueAt && next.dueAt !== original.dueAt) patch.dueAt = next.dueAt;
+    if (!next.dueAt && original.dueAt) patch.clearDue = true;
     if (!TaskForm.sameSet(next.assignees, original.assignees)) patch.assignees = next.assignees;
     if (this.checklistChanged()) patch.checklist = next.checklist;
     return patch;
@@ -145,7 +146,6 @@ export class TaskForm {
     const title = this.title.trim();
     if (!title || title.length > limits.titleMaxLength) errors.title = `Titel mit 1 bis ${limits.titleMaxLength} Zeichen angeben.`;
     if (this.description.length > limits.descriptionMaxLength) errors.description = `Höchstens ${limits.descriptionMaxLength} Zeichen.`;
-    if (this.original?.dueAt && !this.due) errors.dueAt = 'Ein Fälligkeitsdatum lässt sich ändern, aber nicht entfernen.';
     if (this.assignees.length === 0 || this.assignees.length > limits.maxAssignees) {
       errors.assignees = `1 bis ${limits.maxAssignees} Personen zuweisen.`;
     }

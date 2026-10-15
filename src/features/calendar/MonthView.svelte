@@ -2,6 +2,7 @@
   import { settings } from '../../settings';
   import { session, windows } from '../../lib/container';
   import type { CalendarModel } from './CalendarModel.svelte';
+  import { menu } from '../../ui/contextMenu';
   import EntryChip from './EntryChip.svelte';
   import { appointmentPolicy as policy } from './services';
 
@@ -16,6 +17,14 @@
     const team = model.teamId ? `team=${model.teamId}&` : '';
     windows.open('appointment-new', `${team}date=${date}`);
   }
+
+  /** Right-click on a day: new appointment there, or the week around it. */
+  function dayMenu(date: string) {
+    return [
+      ...(policy.canCreate() ? [{ label: `Neuer Termin am ${session.format.date(date)}`, run: () => create(date), command: 'page.new' as const }] : []),
+      { label: 'Woche anzeigen', run: () => void model.goTo(date, 'week'), command: 'calendar.week' as const },
+    ];
+  }
 </script>
 
 <div class="month" aria-label={session.format.month(model.anchor)} role="group">
@@ -27,7 +36,7 @@
       {@const entries = model.entriesOn(day)}
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
       <div class="cell" class:outside={!model.inAnchorMonth(day)} class:today={day === model.today} class:creatable={policy.canCreate()}
-        role="group" aria-label={session.format.dayHeading(day)} ondblclick={() => create(day)}>
+        role="group" aria-label={session.format.dayHeading(day)} ondblclick={() => create(day)} {@attach menu(() => dayMenu(day))}>
         <div class="day-head">
           <span class="number">{Number(day.slice(8))}</span>
           {#if policy.canCreate()}

@@ -1,7 +1,7 @@
 // Mock of the club-server calendar and attendance modules (visibility, edit rights, series, answers).
 import { settings } from '../../settings';
 import { directory, type MockDirectory } from '../../lib/mock/core';
-import { MockLinks } from '../../lib/mock/MockLinks';
+import { itemUseSources, MockLinks, type ItemUse } from '../../lib/mock/MockLinks';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import { ZonedClock, type LocalDate } from '../../lib/time/ZonedClock';
@@ -38,6 +38,19 @@ export class MockCalendar {
 
   getLinks(member: Member, id: string) {
     return this.links.get(member, this.visible(member, id).id);
+  }
+
+  /** server: CalendarHandlers.itemUses */
+  itemUses(member: Member, itemId: string): ItemUse[] {
+    const now = Date.now();
+    return this.links.owners(itemId)
+      .flatMap(([id, quantity]) => {
+        const a = this.appointments.data.find((x) => x.id === id);
+        return a && this.canSee(member, a) && !a.cancelled && Date.parse(a.endsAt) > now
+          ? [{ kind: 'APPOINTMENT' as const, id: a.id, title: a.title, at: a.startsAt, quantity }]
+          : [];
+      })
+      .sort((x, y) => x.at!.localeCompare(y.at!));
   }
 
   setLinks(member: Member, id: string, body: Record<string, unknown>) {
@@ -297,6 +310,8 @@ export class MockCalendar {
 }
 
 export const calendar = new MockCalendar(directory);
+
+itemUseSources.push((member, itemId) => calendar.itemUses(member, itemId));
 
 const actor = (req: MockRequest) => directory.actor(req);
 

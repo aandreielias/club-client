@@ -4,26 +4,22 @@ import { Resource } from '../state/Resource.svelte';
 import type { LinksApi } from './LinksApi';
 import type { FileOption, FileRef, ItemOption, Links, Need } from './model';
 
-interface Options {
-  items: ItemOption[];
-  files: FileOption[];
-}
-
 /**
  * "Benötigt" list and attachments of one appointment or task: the saved state plus an edit draft.
  * Deleted entries stay in the draft until removed; the server keeps them, but refuses adding them anew.
  */
 export class LinksModel {
   readonly links: Resource<Links>;
-  readonly options: Resource<Options>;
+  /** Inventory for the item picker, loaded when editing starts. */
+  readonly items: Resource<ItemOption[]>;
   readonly save = new Action();
 
   editing = $state(false);
+  #found: FileOption[] = [];
   needs = $state<Need[]>([]);
   files = $state<FileRef[]>([]);
 
   readonly itemChoices: ItemOption[];
-  readonly fileChoices: FileOption[];
   readonly valid: boolean;
 
   /** `owner` is the resource path, e.g. `/api/v1/appointments/a-1`. */
@@ -32,12 +28,8 @@ export class LinksModel {
     readonly owner: string,
   ) {
     this.links = new Resource(() => this.api.get(this.owner));
-    this.options = new Resource(async () => {
-      const [items, files] = await Promise.all([this.api.items(), this.api.files()]);
-      return { items, files };
-    });
-    this.itemChoices = $derived((this.options.value?.items ?? []).filter((o) => !this.needs.some((n) => n.itemId === o.id)));
-    this.fileChoices = $derived((this.options.value?.files ?? []).filter((o) => !this.files.some((f) => f.id === o.id)));
+    this.items = new Resource(() => this.api.items());
+    this.itemChoices = $derived((this.items.value ?? []).filter((o) => !this.needs.some((n) => n.itemId === o.id)));
     this.valid = $derived(this.needs.every((n) => LinksModel.quantityError(n.quantity) === null));
   }
 
@@ -56,7 +48,7 @@ export class LinksModel {
     this.files = links.files.map((f) => ({ ...f }));
     this.save.reset();
     this.editing = true;
-    void this.options.load();
+    void this.items.load();
   }
 
   cancel(): void {
@@ -64,7 +56,7 @@ export class LinksModel {
   }
 
   addItem(itemId: string, quantity = 1): void {
-    const option = this.options.value?.items.find((o) => o.id === itemId);
+    const option = this.items.value?.find((o) => o.id === itemId);
     if (!option || this.needs.some((n) => n.itemId === itemId)) return;
     this.needs.push({ itemId, name: option.name, quantity, stock: option.stock, deleted: false });
   }
@@ -73,8 +65,21 @@ export class LinksModel {
     this.needs = this.needs.filter((n) => n.itemId !== itemId);
   }
 
+  /** Item picker: inventory entries not listed yet whose label contains the query. */
+  findItems(query: string): ItemOption[] {
+    const q = query.trim().toLocaleLowerCase();
+    return this.itemChoices.filter((o) => o.label.toLocaleLowerCase().includes(q));
+  }
+
+  /** File picker: visible files not attached yet whose name contains the query (server search). */
+  async findFiles(query: string): Promise<FileOption[]> {
+    const hits = await this.api.files(query, settings.links.fileResults);
+    this.#found = hits;
+    return hits.filter((h) => !this.files.some((f) => f.id === h.id));
+  }
+
   addFile(fileId: string): void {
-    const option = this.options.value?.files.find((o) => o.id === fileId);
+    const option = this.#found.find((o) => o.id === fileId);
     if (option && !this.files.some((f) => f.id === fileId)) this.files.push({ ...option.file });
   }
 

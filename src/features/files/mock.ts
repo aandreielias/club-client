@@ -100,6 +100,18 @@ export class MockFiles {
     return this.files.data.filter((f) => f.folderId === folder.id && (viewer.canManage(folder) || this.consented(f)));
   }
 
+  /** server: FileHandlers.searchFiles */
+  search(member: Member, query: string, limit: number) {
+    const viewer = this.viewer(member);
+    const q = query.trim().toLocaleLowerCase();
+    return this.files.data
+      .map((f) => ({ f, folder: this.folders.data.find((d) => d.id === f.folderId)! }))
+      .filter(({ f, folder }) => viewer.canSee(folder) && (viewer.canManage(folder) || this.consented(f)) && f.name.toLocaleLowerCase().includes(q))
+      .sort((a, b) => a.f.name.toLocaleLowerCase().localeCompare(b.f.name.toLocaleLowerCase()))
+      .slice(0, Math.min(Math.max(limit, 1), 50))
+      .map(({ f, folder }) => ({ id: f.id, folderId: f.folderId, folderName: folder.name, name: f.name, contentType: f.contentType, sizeBytes: f.sizeBytes }));
+  }
+
   async upload(req: MockRequest): Promise<StoredFile> {
     const viewer = this.viewer(directory.actor(req));
     const folder = this.visibleFolder(viewer, req.params.folderId);
@@ -360,6 +372,7 @@ mockServer
   .on('DELETE', '/api/v1/folders/:id', (req) => files.deleteFolder(actor(req), req.params.id))
   .on('GET', '/api/v1/folders/:folderId/files', (req) => ({ items: files.listFiles(actor(req), req.params.folderId) }))
   .on('POST', '/api/v1/folders/:folderId/files', (req) => files.upload(req))
+  .on('GET', '/api/v1/files', (req) => ({ files: files.search(actor(req), req.query.get('q') ?? '', Number(req.query.get('limit') ?? 20)) }))
   .on('GET', '/api/v1/files/:id/link', (req) => files.link(actor(req), req.params.id, req.query.get('thumbnail') === 'true'))
   .on('PUT', '/api/v1/files/:id/tags', (req) => files.tag(actor(req), req.params.id, req.body?.memberIds))
   .on('DELETE', '/api/v1/files/:id', (req) => files.deleteFile(actor(req), req.params.id));

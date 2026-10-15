@@ -73,6 +73,8 @@ export interface Me {
   member: Member;
   teams: Team[];
   missing: MissingProfileField[];
+  /** The member's minors; their tasks count as the member's own. */
+  wardIds: string[];
 }
 
 export interface Device {

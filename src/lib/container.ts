@@ -31,6 +31,8 @@ import { PreferencesService } from './preferences/PreferencesService.svelte';
 import { ThemeService } from './theme/ThemeService';
 import { WindowService } from './window/WindowService.svelte';
 import { LinksApi } from './links/LinksApi';
+import { ContextMenuService } from './overlay/ContextMenuService.svelte';
+import { TooltipService } from './overlay/TooltipService.svelte';
 import { LINK_MESSAGES } from './links/messages';
 import type { StepUp } from './types';
 
@@ -97,6 +99,10 @@ export const navCatalog = new NavCatalog();
 export const confirmation = new ConfirmService();
 
 export const toasts = new ToastService(settings.notify.toastMs, settings.notify.errorToastMs);
+
+export const tooltips = new TooltipService(settings.overlay.tooltipDelayMs, settings.overlay.tooltipSkipDelayMs);
+
+export const contextMenu = new ContextMenuService();
 
 export const errors = new ErrorMessages(STATUS_MESSAGES, UNKNOWN_MESSAGE).register(CORE_MESSAGES).register(LINK_MESSAGES);
 

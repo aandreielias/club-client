@@ -16,7 +16,9 @@
   import Empty from './ui/Empty.svelte';
   import PinDialog from './ui/PinDialog.svelte';
   import Sidebar from './ui/Sidebar.svelte';
+  import ContextMenuHost from './ui/ContextMenuHost.svelte';
   import Toasts from './ui/Toasts.svelte';
+  import TooltipHost from './ui/TooltipHost.svelte';
 
   const app = new AppController({ auth, session, directory, router, features, live, errors, toasts, commands, keyboard, windows, preferences });
   const logout = () => app.logout();
@@ -72,6 +74,8 @@
 <PinDialog />
 <ConfirmDialog />
 <Toasts />
+<TooltipHost />
+<ContextMenuHost />
 
 <style>
   .shell {

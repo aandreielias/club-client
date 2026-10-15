@@ -373,10 +373,24 @@ export const settings = {
     maxQuantity: 100_000,
   },
 
+  /** Custom tooltips (ui/tooltip.ts) and context menus (ui/contextMenu.ts). */
+  overlay: {
+    /** Pause on hover before a tooltip shows; keyboard focus shows it at once. */
+    tooltipDelayMs: 500,
+    /** After one tooltip, the next shows without delay if the pointer moves on within this time. */
+    tooltipSkipDelayMs: 400,
+    tooltipMaxWidthPx: 320,
+    /** Gap between anchor (or pointer) and tooltip/menu, and to the viewport edge. */
+    offsetPx: 6,
+  },
+
   /** "Benötigt" lists and attached files of appointments and tasks (server: platform.LinkResolver). */
   links: {
     maxEntries: 50,
     maxQuantity: 10_000,
+    /** File picker: hits per search (server allows up to 50) and typing pause before searching. */
+    fileResults: 20,
+    searchDebounceMs: 200,
   },
 } as const;
 

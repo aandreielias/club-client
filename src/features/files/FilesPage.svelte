@@ -5,6 +5,7 @@
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
+  import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
   import DataTable from '../../ui/DataTable.svelte';
   import Empty from '../../ui/Empty.svelte';
   import Page from '../../ui/Page.svelte';
@@ -77,6 +78,18 @@
     }
   }
 
+  /** Folder: open. File: open, download, delete (where allowed). */
+  function itemMenu(item: FolderItem): MenuEntry[] {
+    if (item.kind === 'folder') return [{ label: 'Öffnen', run: () => open(item) }];
+    const image = fileTypes.isImage(item.file.contentType);
+    return [
+      ...(image ? [{ label: 'Öffnen', run: () => open(item) }] : []),
+      { label: 'Herunterladen', run: () => void download(item) },
+      { separator: true },
+      ...(folder && filePolicy.canModify(item.file, folder) ? [{ label: 'Löschen', danger: true, run: () => void removeFile(item) }] : []),
+    ];
+  }
+
   function created(newFolder: Folder) {
     creating = false;
     tree.add(newFolder);
@@ -119,7 +132,7 @@
     {#if shownView === 'gallery'}
       <FolderGallery model={list} onopen={open} />
     {:else}
-      <DataTable model={list} rowKey={(item) => item.id} onopen={open} emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'}>
+      <DataTable model={list} rowKey={(item) => item.id} onopen={open} menu={itemMenu} emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'}>
         {#snippet cell(item, column)}
           {#if column.key === 'actions'}
             {#if item.kind === 'file' && folder && filePolicy.canModify(item.file, folder)}

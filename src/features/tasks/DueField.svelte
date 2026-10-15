@@ -20,6 +20,10 @@
     editing = true;
   }
 
+  async function clear() {
+    if (await detail.setDue(null)) toasts.show('Fälligkeit entfernt.');
+  }
+
   async function save(event: SubmitEvent) {
     event.preventDefault();
     if (!value) return;
@@ -45,8 +49,10 @@
     <TaskDue {task} />
     {#if editable}
       <Button variant="ghost" onclick={start}>{task.dueAt ? 'Ändern' : 'Festlegen'}</Button>
+      {#if task.dueAt}<Button variant="ghost" busy={detail.dueAction.busy} onclick={clear}>Entfernen</Button>{/if}
     {/if}
   </span>
+  {#if editable}<ErrorNote error={detail.dueAction.error} />{/if}
 {/if}
 
 <style>

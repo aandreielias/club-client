@@ -5,6 +5,7 @@
   import { ROLE_LABELS } from '../../lib/types';
   import type { DevAccount } from '../../lib/mock/core';
   import Button from '../../ui/Button.svelte';
+  import { tooltip } from '../../ui/tooltip';
   import Centered from '../../ui/Centered.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
@@ -54,7 +55,7 @@
       <ul class="stack">
         {#each dev.accounts as account (account.email)}
           <li>
-            <Button variant="ghost" onclick={() => signInAs(account)} title={account.email}>
+            <Button variant="ghost" onclick={() => signInAs(account)} {@attach tooltip(account.email)}>
               {account.name}
               <span class="muted">{account.roles.map((r) => ROLE_LABELS[r]).join(', ')}</span>
             </Button>

@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { commands, live, store, windows } from '../../lib/container';
+  import { commands, live, router, store, windows } from '../../lib/container';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { onLive } from '../../lib/live/onLive.svelte';
   import Button from '../../ui/Button.svelte';
   import DataTable from '../../ui/DataTable.svelte';
+  import { windowMenu } from '../../lib/window/windowMenu';
+
   import Page from '../../ui/Page.svelte';
   import { ITEM_CHANGED } from './events';
   import { InventoryListModel } from './InventoryListModel.svelte';
@@ -26,6 +28,7 @@
     model={list}
     rowKey={(i) => i.id}
     onopen={(i) => windows.open('item', i.id)}
+    menu={(i) => windowMenu(windows, router, 'item', i.id)}
     selected={windows.current?.kind === 'item' ? windows.current.id : null}
     emptyText="Noch nichts im Inventar."
   />

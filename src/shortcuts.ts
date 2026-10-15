@@ -54,6 +54,7 @@ export const SHORTCUTS = {
   'list.next': { label: 'Nächste Zeile', group: 'Listen', context: 'list', keys: 'j' },
   'list.previous': { label: 'Vorherige Zeile', group: 'Listen', context: 'list', keys: 'k' },
   'list.open': { label: 'Zeile öffnen', group: 'Listen', context: 'list', keys: 'Enter' },
+  'list.menu': { label: 'Kontextmenü der Zeile', group: 'Listen', context: 'list', keys: 'Shift+F10' },
   'list.reset': { label: 'Filter zurücksetzen', group: 'Listen', context: 'list', keys: 'Shift+X' },
 
   // ---- Kalender ----

@@ -75,10 +75,11 @@ describe('TaskForm', () => {
     expect(form.toPatch()).toEqual({ checklist: ['Abholen', 'Zurückbringen bis Montag'] });
   });
 
-  it('refuses to clear an existing due date, which the server cannot do', () => {
+  it('clears an existing due date', () => {
     const form = TaskForm.edit(clock, existing);
     form.due = '';
-    expect(form.errors.dueAt).toBeDefined();
+    expect(form.valid).toBe(true);
+    expect(form.toPatch()).toEqual({ clearDue: true });
   });
 
   it('drops assignees that are no longer candidates', () => {

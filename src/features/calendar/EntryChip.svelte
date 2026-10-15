@@ -1,11 +1,17 @@
 <script lang="ts">
-  import { session, windows } from '../../lib/container';
+  import { router, session, windows } from '../../lib/container';
   import type { CalendarEntry } from '../../lib/calendar/CalendarSources';
+  import { windowMenu } from '../../lib/window/windowMenu';
+  import { menu } from '../../ui/contextMenu';
+  import { tooltip } from '../../ui/tooltip';
 
   /** One calendar entry as a compact, clickable chip in the entry's hue. */
   let { entry, showTime = true, fill = false }: { entry: CalendarEntry; showTime?: boolean; fill?: boolean } = $props();
 
   const time = $derived(showTime ? session.format.time(entry.start) : '');
+  const hint = $derived(
+    `${entry.label}: ${entry.title}\n${entry.allDay ? session.format.date(session.clock.localDate(entry.start)) : entry.end ? session.format.range(entry.start, entry.end, true) : session.format.dateTime(entry.start)}`,
+  );
 </script>
 
 <button
@@ -14,7 +20,9 @@
   class:fill
   style:--chip-bg="var(--color-tag-{entry.hue}-bg)"
   style:--chip-text="var(--color-tag-{entry.hue}-text)"
-  title="{entry.label}: {entry.title}"
+  aria-label="{entry.label}: {entry.title}"
+  {@attach tooltip(hint)}
+  {@attach menu(() => windowMenu(windows, router, entry.window.kind, entry.window.id))}
   onclick={(e) => (e.stopPropagation(), windows.open(entry.window.kind, entry.window.id))}
 >
   {#if time}<span class="time">{time}</span>{/if}

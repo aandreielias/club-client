@@ -69,6 +69,34 @@ describe('mock links', () => {
   });
 });
 
+describe('mock gaps', () => {
+  it('lists where an item is needed, only what the member sees', () => {
+    const forBoard = [...calendar.itemUses(member('vorstand'), 'i-balls'), ...tasks.itemUses(member('vorstand'), 'i-balls')];
+    expect(forBoard.map((u) => u.kind)).toEqual(['APPOINTMENT']);
+    expect(calendar.itemUses(member('spieler'), 'i-balls')).toEqual([]); // U16 player cannot see the Damen match
+    stepUp('trainer');
+    tasks.setLinks(member('trainer'), 't-3', { needs: [{ itemId: 'i-training-balls', quantity: 30 }], fileIds: [] });
+    expect(tasks.itemUses(member('spieler'), 'i-training-balls')).toMatchObject([{ kind: 'TASK', id: 't-3', quantity: 30 }]);
+  });
+
+  it('searches visible files by name', () => {
+    expect(files.search(member('spielerin'), 'budget', 20)).toEqual([]);
+    expect(files.search(member('vorstand'), 'BUDGET', 20).map((f) => [f.name, f.folderName])).toEqual([['Budget 2027.xlsx', 'Vorstand intern']]);
+    expect(files.search(member('vorstand'), '', 2)).toHaveLength(2);
+  });
+
+  it('filters tasks by due range and clears due dates', () => {
+    const t1 = tasks.get(member('trainer'), 't-1');
+    const from = new Date(Date.parse(t1.dueAt!) - 1000).toISOString();
+    const to = new Date(Date.parse(t1.dueAt!) + 1000).toISOString();
+    expect(tasks.list(member('trainer'), false, null, true, from, to).map((t) => t.id)).toEqual(['t-1']);
+    expect(() => tasks.list(member('trainer'), false, null, true, to, from)).toThrow(code('task.range-invalid'));
+    stepUp('trainer');
+    expect(() => tasks.update(member('trainer'), 't-1', { clearDue: true, dueAt: to })).toThrow(code('task.due-conflict'));
+    expect(tasks.update(member('trainer'), 't-1', { clearDue: true }).dueAt).toBeNull();
+  });
+});
+
 describe('inventory client', () => {
   it('validates the item form like the server', () => {
     const form = ItemForm.blank();

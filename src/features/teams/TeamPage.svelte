@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { confirmation, directory, errors, live, store, toasts, windows } from '../../lib/container';
+  import { confirmation, directory, errors, live, router, store, toasts, windows } from '../../lib/container';
   import { onLive } from '../../lib/live/onLive.svelte';
   import type { RosterEntry, TeamRole } from '../../lib/types';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
+  import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
+  import { windowMenu } from '../../lib/window/windowMenu';
   import DataTable from '../../ui/DataTable.svelte';
   import Page from '../../ui/Page.svelte';
   import Select from '../../ui/Select.svelte';
@@ -54,6 +56,14 @@
   function open(entry: RosterEntry) {
     if (policy.canOpenProfile(model.teamId, entry)) windows.open('member', entry.memberId);
   }
+
+  function rowMenu(entry: RosterEntry): MenuEntry[] {
+    return [
+      ...(policy.canOpenProfile(model.teamId, entry) ? windowMenu(windows, router, 'member', entry.memberId) : []),
+      { separator: true },
+      ...(policy.canRemove(model.teamId, entry) ? [{ label: 'Aus dem Team entfernen', danger: true, run: () => void remove(entry) }] : []),
+    ];
+  }
 </script>
 
 <Page title={model.roster.value?.team.name ?? 'Team'} back={{ href: '/teams', label: 'Teams' }}>
@@ -73,7 +83,7 @@
 
   <AsyncView resource={model.roster}>
     {#snippet children()}
-      <DataTable model={list} rowKey={(e) => e.memberId} onopen={open} emptyText="Noch keine Mitglieder im Team.">
+      <DataTable model={list} rowKey={(e) => e.memberId} onopen={open} menu={rowMenu} emptyText="Noch keine Mitglieder im Team.">
         {#snippet cell(entry, column)}
           {#if column.key === 'role'}
             {#if policy.canAssign()}

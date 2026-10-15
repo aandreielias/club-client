@@ -40,7 +40,11 @@
   {/snippet}
 
   <ErrorNote error={center.markAllAction.error} />
-  <DataTable model={list} rowKey={(n) => n.id} onopen={open} emptyText="Noch keine Benachrichtigungen.">
+  <DataTable model={list} rowKey={(n) => n.id} onopen={open}
+    menu={(n) => [
+      { label: 'Öffnen', run: () => void open(n) },
+      { label: 'Als gelesen markieren', disabled: n.readAt !== null, run: () => void center.markRead(n) },
+    ]} emptyText="Noch keine Benachrichtigungen.">
     {#snippet cell(notification, column)}
       {#if column.key === 'title'}
         <span class:unread={!notification.readAt}>{notification.title}</span>

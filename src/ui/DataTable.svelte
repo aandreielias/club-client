@@ -3,9 +3,11 @@
   import { commands } from '../lib/container';
   import { useCommands } from '../lib/keyboard/useCommands.svelte';
   import type { ListColumn, ListModel } from '../lib/list/ListModel.svelte';
+  import type { MenuEntry } from '../lib/overlay/ContextMenuService.svelte';
   import AsyncView from './AsyncView.svelte';
   import Empty from './Empty.svelte';
   import ListToolbar from './ListToolbar.svelte';
+  import { menu as contextMenu, openMenuAt } from './contextMenu';
 
   /**
    * The one list of the app (Notion database style): toolbar, sortable header, clickable rows.
@@ -22,6 +24,7 @@
     emptyText = 'Keine Einträge.',
     selected = null,
     toolbar = true,
+    menu,
   }: {
     model: ListModel<T>;
     rowKey: (item: T) => string;
@@ -33,6 +36,8 @@
     emptyText?: string;
     selected?: string | null;
     toolbar?: boolean;
+    /** Right-click menu of a row (also Shift+F10 / context-menu key on the keyboard row). */
+    menu?: (item: T) => readonly MenuEntry[];
   } = $props();
 
   /** Keyboard cursor (J/K/Enter); -1 = none. */
@@ -58,6 +63,13 @@
     'list.search': {
       run: () => container?.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
       when: () => !!onopen && toolbar && model.searchable,
+    },
+    'list.menu': {
+      run: () => {
+        const row = container?.querySelector('tr.cursor');
+        if (row && menu) openMenuAt(row, menu(model.rows[cursor]));
+      },
+      when: () => !!menu && navigable() && cursor >= 0 && cursor < model.rows.length,
     },
     'list.reset': { run: () => model.reset(), when: () => !!onopen && model.activeFilters > 0 },
   });
@@ -94,7 +106,8 @@
           <tbody>
             {#each model.rows as item, rowIndex (rowKey(item))}
               <tr class:clickable={!!onopen} class:selected={selected === rowKey(item)} class:cursor={rowIndex === cursor}
-                onclick={() => ((cursor = rowIndex), onopen?.(item))}>
+                onclick={() => ((cursor = rowIndex), onopen?.(item))}
+                {@attach menu ? contextMenu(() => ((cursor = rowIndex), menu(item))) : undefined}>
                 {#each model.columns as column, index (column.key)}
                   <td data-label={column.label} class:end={column.align === 'end'} class:optional={column.hideOnCompact} class:primary={index === 0}>
                     {#if index === 0 && onopen}

@@ -6,7 +6,7 @@
   import type { FileRef } from '../lib/links/model';
   import Button from './Button.svelte';
   import ErrorNote from './ErrorNote.svelte';
-  import Select from './Select.svelte';
+  import SearchSelect from './SearchSelect.svelte';
   import Tag from './Tag.svelte';
 
   /**
@@ -20,8 +20,6 @@
     if (!model.editing && !model.save.busy) void model.load();
   });
 
-  let itemPick = $state('');
-  let filePick = $state('');
 
   async function download(file: FileRef) {
     try {
@@ -62,15 +60,12 @@
       </ul>
     {/if}
     <div class="add">
-      <Select
-        bind:value={itemPick}
-        options={model.itemChoices.map((o) => ({ value: o.id, label: o.label }))}
-        placeholder={model.options.loading ? 'Inventar wird geladen' : 'Gegenstand wählen'}
+      <SearchSelect
+        search={(q) => model.findItems(q).map((o) => ({ value: o.id, label: o.label }))}
+        onpick={(id) => model.addItem(id)}
+        placeholder={model.items.loading ? 'Inventar wird geladen' : 'Gegenstand suchen und hinzufügen'}
+        emptyText={model.items.value?.length === 0 ? 'Das Inventar ist leer.' : 'Kein passender Gegenstand.'}
         aria-label="Gegenstand hinzufügen"
-        onchange={(id) => {
-          model.addItem(id);
-          itemPick = '';
-        }}
       />
     </div>
 
@@ -89,19 +84,17 @@
       </ul>
     {/if}
     <div class="add">
-      <Select
-        bind:value={filePick}
-        options={model.fileChoices.map((o) => ({ value: o.id, label: o.label }))}
-        placeholder={model.options.loading ? 'Dateien werden geladen' : 'Datei wählen'}
+      <SearchSelect
+        search={async (q) => (await model.findFiles(q)).map((o) => ({ value: o.id, label: o.label }))}
+        onpick={(id) => model.addFile(id)}
+        debounceMs={settings.links.searchDebounceMs}
+        placeholder="Datei suchen und hinzufügen"
+        emptyText="Keine passende Datei."
         aria-label="Datei hinzufügen"
-        onchange={(id) => {
-          model.addFile(id);
-          filePick = '';
-        }}
       />
     </div>
 
-    <ErrorNote error={model.save.error ?? model.options.error} />
+    <ErrorNote error={model.save.error ?? model.items.error} />
     <div class="row">
       <Button variant="primary" busy={model.save.busy} disabled={!model.valid} onclick={save}>Speichern</Button>
       <Button variant="ghost" onclick={() => model.cancel()}>Abbrechen</Button>
