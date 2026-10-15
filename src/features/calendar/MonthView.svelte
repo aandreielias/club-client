@@ -3,6 +3,7 @@
   import { session, windows } from '../../lib/container';
   import type { CalendarModel } from './CalendarModel.svelte';
   import { menu } from '../../ui/contextMenu';
+  import { tooltip } from '../../ui/tooltip';
   import EntryChip from './EntryChip.svelte';
   import { appointmentPolicy as policy } from './services';
 
@@ -40,7 +41,8 @@
         <div class="day-head">
           <span class="number">{Number(day.slice(8))}</span>
           {#if policy.canCreate()}
-            <button class="add" onclick={() => create(day)} aria-label="Termin am {session.format.dayHeading(day)} anlegen">Neu</button>
+            <button class="add" onclick={() => create(day)} aria-label="Termin am {session.format.dayHeading(day)} anlegen"
+              {@attach tooltip(`Termin am ${session.format.date(day)} anlegen`)}>Neu</button>
           {/if}
         </div>
         <div class="entries">
@@ -48,7 +50,7 @@
             <EntryChip {entry} showTime={!entry.allDay} />
           {/each}
           {#if entries.length > max}
-            <button class="more" onclick={() => model.goTo(day, 'week')}>+{entries.length - max} weitere</button>
+            <button class="more" onclick={() => model.goTo(day, 'week')} {@attach tooltip('Alle Einträge dieser Woche anzeigen')}>+{entries.length - max} weitere</button>
           {/if}
         </div>
       </div>

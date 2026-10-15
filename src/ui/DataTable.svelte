@@ -7,6 +7,7 @@
   import AsyncView from './AsyncView.svelte';
   import Empty from './Empty.svelte';
   import ListToolbar from './ListToolbar.svelte';
+  import { tooltip } from './tooltip';
   import { menu as contextMenu, openMenuAt } from './contextMenu';
 
   /**
@@ -95,7 +96,8 @@
                   {#if column.sortable === false}
                     {column.label}
                   {:else}
-                    <button class="sort" class:active={model.sort.key === column.key} onclick={() => model.toggleSort(column.key)}>
+                    <button class="sort" class:active={model.sort.key === column.key} onclick={() => model.toggleSort(column.key)}
+                      {@attach tooltip(() => (model.sort.key === column.key ? 'Sortierrichtung umkehren' : `Nach „${column.label}“ sortieren`))}>
                       {column.label}
                     </button>
                   {/if}
@@ -111,7 +113,8 @@
                 {#each model.columns as column, index (column.key)}
                   <td data-label={column.label} class:end={column.align === 'end'} class:optional={column.hideOnCompact} class:primary={index === 0}>
                     {#if index === 0 && onopen}
-                      <button class="open" onclick={(e) => (e.stopPropagation(), onopen(item))}>
+                      <button class="open" onclick={(e) => (e.stopPropagation(), onopen(item))}
+                        {@attach tooltip(menu ? 'Öffnen; Rechtsklick für weitere Aktionen' : 'Öffnen')}>
                         {#if cell}{@render cell(item, column)}{:else}{model.display(item, column)}{/if}
                       </button>
                     {:else if cell}

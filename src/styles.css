@@ -108,6 +108,12 @@ textarea:focus {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 2px var(--color-tag-blue-bg);
 }
+/* No browser glyphs in search fields (house rule: no icons); Escape clears them. */
+input[type='search']::-webkit-search-cancel-button,
+input[type='search']::-webkit-search-decoration {
+  appearance: none;
+}
+
 input::placeholder,
 textarea::placeholder {
   color: var(--color-text-faint);

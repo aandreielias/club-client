@@ -10,6 +10,7 @@
 
 <script lang="ts" generics="V extends string">
   import { tick } from 'svelte';
+  import { tooltip } from './tooltip';
 
   /**
    * The one dropdown of the app, drawn in the house style (select-only combobox, WAI-ARIA pattern).
@@ -175,6 +176,7 @@
     aria-controls={listId}
     onclick={() => (open ? hide() : void show())}
     onkeydown={triggerKey}
+    {@attach tooltip(() => (open ? null : (ariaLabel ?? placeholder)))}
   >
     <span class="value" class:placeholder={!selected}>{selected?.label ?? placeholder ?? ''}</span>
   </button>

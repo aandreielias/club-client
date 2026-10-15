@@ -373,6 +373,16 @@ export const settings = {
     maxQuantity: 100_000,
   },
 
+  /** Global search (sidebar field, /search). server: SearchController. */
+  search: {
+    minQueryLength: 2,
+    maxQueryLength: 100,
+    /** Hits per kind (appointments, tasks, ...); the server allows up to 25. */
+    perKind: 8,
+    /** Typing pause before the results update. */
+    debounceMs: 250,
+  },
+
   /** Custom tooltips (ui/tooltip.ts) and context menus (ui/contextMenu.ts). */
   overlay: {
     /** Pause on hover before a tooltip shows; keyboard focus shows it at once. */

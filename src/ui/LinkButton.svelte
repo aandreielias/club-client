@@ -1,11 +1,17 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { tooltip } from './tooltip';
 
   /** Navigation styled like a Button (it is a link, so it stays a link for assistive tech). */
-  let { href, variant = 'default', children }: { href: string; variant?: 'default' | 'primary'; children: Snippet } = $props();
+  let {
+    href,
+    variant = 'default',
+    tooltip: hint,
+    children,
+  }: { href: string; variant?: 'default' | 'primary'; tooltip: string; children: Snippet } = $props();
 </script>
 
-<a {href} class={variant}>{@render children()}</a>
+<a {href} class={variant} {@attach tooltip(hint)}>{@render children()}</a>
 
 <style>
   a {

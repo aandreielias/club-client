@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tooltip } from '../../ui/tooltip';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Empty from '../../ui/Empty.svelte';
   import ListToolbar from '../../ui/ListToolbar.svelte';
@@ -17,7 +18,8 @@
         <ul class="tiles">
           {#each model.rows as item (item.id)}
             <li>
-              <button class="tile" onclick={() => onopen(item)} aria-label={item.kind === 'folder' ? `Ordner ${item.name} öffnen` : `${item.name} öffnen`}>
+              <button class="tile" onclick={() => onopen(item)} aria-label={item.kind === 'folder' ? `Ordner ${item.name} öffnen` : `${item.name} öffnen`}
+                {@attach tooltip(item.name)}>
                 <span class="preview">
                   {#if item.kind === 'file'}
                     <Thumbnail file={item.file} />

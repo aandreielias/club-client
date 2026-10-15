@@ -8,6 +8,7 @@
   import ErrorNote from './ErrorNote.svelte';
   import SearchSelect from './SearchSelect.svelte';
   import Tag from './Tag.svelte';
+  import { tooltip } from './tooltip';
 
   /**
    * "Benötigt" (inventory items with quantity) and "Dateien" of an appointment or task, shared by
@@ -135,7 +136,7 @@
               <span class="name">{file.name}</span>
               <Tag tone="danger">Gelöscht</Tag>
             {:else}
-              <button type="button" class="name link" onclick={() => download(file)}>{file.name}</button>
+              <button type="button" class="name link" onclick={() => download(file)} {@attach tooltip(`${file.name} herunterladen`)}>{file.name}</button>
               <span></span>
             {/if}
             <span></span>

@@ -30,7 +30,8 @@
           options={[{ value: '', label: filter.allLabel ?? filter.label }, ...(filter.options?.() ?? [])]}
         />
       {:else}
-        <Button size="sm" pressed={!!model.filters[filter.key]} onclick={() => model.setFilter(filter.key, model.filters[filter.key] ? '' : '1')}>
+        <Button size="sm" pressed={!!model.filters[filter.key]} onclick={() => model.setFilter(filter.key, model.filters[filter.key] ? '' : '1')}
+          tooltip="Filter „{filter.label}“ {model.filters[filter.key] ? 'ausschalten' : 'einschalten'}">
           {filter.label}
         </Button>
       {/if}

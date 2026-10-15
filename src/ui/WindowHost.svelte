@@ -3,7 +3,7 @@
   import { windows } from '../lib/container';
   import { DOCKS, type Dock } from '../lib/window/WindowService.svelte';
   import Button from './Button.svelte';
-  import { tooltip, withKeys } from './tooltip';
+  import { withKeys } from './tooltip';
 
   /**
    * Renders the single detail window. Placement (center, side, bottom) animates between positions;
@@ -86,14 +86,14 @@
         <div class="docks" role="group" aria-label="Fensterposition">
           {#each DOCKS as dock (dock)}
             <Button size="sm" variant="ghost" pressed={windows.dock === dock} onclick={() => windows.setDock(dock)}
-              {@attach tooltip(HINTS[dock])}>{LABELS[dock]}</Button>
+              tooltip={HINTS[dock]}>{LABELS[dock]}</Button>
           {/each}
         </div>
         {#if content.page}
           <Button size="sm" variant="ghost" onclick={() => handle.navigate(content.page!(target.id))}
-            {@attach tooltip(withKeys('Als eigene Seite öffnen', 'window.page'))}>Als Seite öffnen</Button>
+            tooltip={withKeys('Als eigene Seite öffnen', 'window.page')}>Als Seite öffnen</Button>
         {/if}
-        <Button size="sm" variant="ghost" onclick={() => windows.close()} {@attach tooltip(withKeys('Fenster schließen', 'window.close'))}>Schließen</Button>
+        <Button size="sm" variant="ghost" onclick={() => windows.close()} tooltip={withKeys('Fenster schließen', 'window.close')}>Schließen</Button>
       </div>
     </header>
     <div class="body">

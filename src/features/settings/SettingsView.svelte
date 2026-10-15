@@ -2,6 +2,7 @@
   import type { Component } from 'svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Detail from '../../ui/Detail.svelte';
+  import { tooltip } from '../../ui/tooltip';
   import AppearanceSection from './AppearanceSection.svelte';
   import GeneralSection from './GeneralSection.svelte';
   import SecuritySection from './SecuritySection.svelte';
@@ -41,7 +42,8 @@
     <div class="tabs" role="tablist" aria-label="Bereiche" aria-orientation="vertical" tabindex="-1" onkeydown={keydown}>
       {#each SECTIONS as item (item.id)}
         <button id="settings-tab-{item.id}" role="tab" aria-selected={current === item.id} aria-controls="settings-panel"
-          tabindex={current === item.id ? 0 : -1} class:active={current === item.id} onclick={() => (current = item.id)}>
+          tabindex={current === item.id ? 0 : -1} class:active={current === item.id} onclick={() => (current = item.id)}
+          {@attach tooltip(`Einstellungen für ${item.label} anzeigen`)}>
           {item.label}
         </button>
       {/each}

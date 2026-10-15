@@ -39,7 +39,7 @@
       {:else if column.key === 'actions'}
         <span class="actions">
           <Button size="sm" onclick={() => (recording = row.id)}>Ändern</Button>
-          {#if keymap.keys(row.id)}<Button size="sm" variant="ghost" onclick={() => keymap.clear(row.id)}>Entfernen</Button>{/if}
+          {#if keymap.keys(row.id)}<Button size="sm" variant="ghost" onclick={() => keymap.clear(row.id)} tooltip="Tastenkürzel entfernen">Entfernen</Button>{/if}
           {#if keymap.isCustom(row.id)}<Button size="sm" variant="ghost" onclick={() => keymap.reset(row.id)}>Standard</Button>{/if}
         </span>
       {:else}

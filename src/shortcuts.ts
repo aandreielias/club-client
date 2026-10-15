@@ -22,6 +22,7 @@ export interface ShortcutDefinition {
 
 export const SHORTCUTS = {
   // ---- Allgemein ----
+  'search.focus': { label: 'Suchen', group: 'Allgemein', context: 'global', keys: 'Mod+Shift+F' },
   'palette.open': { label: 'Befehlspalette öffnen', group: 'Allgemein', context: 'global', keys: 'Mod+K' },
   'settings.open': { label: 'Einstellungen öffnen', group: 'Allgemein', context: 'global', keys: 'Mod+,' },
   'help.shortcuts': { label: 'Tastenkürzel anzeigen', group: 'Allgemein', context: 'global', keys: '?' },

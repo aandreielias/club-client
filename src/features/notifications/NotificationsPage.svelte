@@ -33,7 +33,7 @@
 
 <Page title="Benachrichtigungen">
   {#snippet actions()}
-    <LinkButton href="#/notifications/settings">Einstellungen</LinkButton>
+    <LinkButton href="#/notifications/settings" tooltip="Festlegen, worüber und wie du benachrichtigt wirst">Einstellungen</LinkButton>
     <Button variant="primary" busy={center.markAllAction.busy} disabled={center.unread === 0} onclick={() => center.markAllRead()}>
       Alle als gelesen markieren
     </Button>

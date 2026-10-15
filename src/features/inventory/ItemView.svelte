@@ -9,6 +9,7 @@
   import Detail from '../../ui/Detail.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Tag from '../../ui/Tag.svelte';
+  import { tooltip } from '../../ui/tooltip';
   import { ITEM_CHANGED, type ItemChanged } from './events';
   import { ItemForm } from './ItemForm.svelte';
   import ItemEditor from './ItemEditor.svelte';
@@ -107,7 +108,8 @@
               <ul class="uses">
                 {#each list as use (use.kind + use.id)}
                   <li>
-                    <button type="button" onclick={() => windows.open(use.kind === 'APPOINTMENT' ? 'appointment' : 'task', use.id)}>
+                    <button type="button" onclick={() => windows.open(use.kind === 'APPOINTMENT' ? 'appointment' : 'task', use.id)}
+                      {@attach tooltip(use.kind === 'APPOINTMENT' ? 'Termin öffnen' : 'Aufgabe öffnen')}>
                       <span class="title">{use.title}</span>
                       <span class="muted">{use.kind === 'APPOINTMENT' ? 'Termin' : 'Aufgabe'}{use.at ? `, ${session.format.dateTime(use.at)}` : ''}</span>
                       <span class="quantity" class:short={use.quantity > value.quantity}>{use.quantity}</span>

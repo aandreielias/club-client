@@ -53,8 +53,7 @@
 
   function open(item: FolderItem) {
     if (item.kind === 'folder') router.navigate(`/files/${item.id}`);
-    else if (fileTypes.isImage(item.file.contentType)) windows.open('photo', `${item.file.folderId}:${item.file.id}`);
-    else void download(item);
+    else windows.open('file', `${item.file.folderId}:${item.file.id}`);
   }
 
   async function download(item: FolderItem) {
@@ -81,9 +80,8 @@
   /** Folder: open. File: open, download, delete (where allowed). */
   function itemMenu(item: FolderItem): MenuEntry[] {
     if (item.kind === 'folder') return [{ label: 'Öffnen', run: () => open(item) }];
-    const image = fileTypes.isImage(item.file.contentType);
     return [
-      ...(image ? [{ label: 'Öffnen', run: () => open(item) }] : []),
+      { label: 'Öffnen', run: () => open(item) },
       { label: 'Herunterladen', run: () => void download(item) },
       { separator: true },
       ...(folder && filePolicy.canModify(item.file, folder) ? [{ label: 'Löschen', danger: true, run: () => void removeFile(item) }] : []),

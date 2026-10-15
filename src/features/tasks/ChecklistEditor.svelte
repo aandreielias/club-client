@@ -15,7 +15,7 @@
       {#each form.checklist as line, index (line.key)}
         <li class="row">
           <input bind:value={line.text} maxlength={limits.checklistItemMaxLength} aria-label="Punkt {index + 1}" />
-          <Button variant="ghost" onclick={() => form.removeLine(line.key)}>Entfernen</Button>
+          <Button variant="ghost" onclick={() => form.removeLine(line.key)} tooltip="Checklistenpunkt entfernen">Entfernen</Button>
         </li>
       {/each}
     </ol>

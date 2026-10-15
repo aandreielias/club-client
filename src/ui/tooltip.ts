@@ -8,11 +8,16 @@ import type { CommandId } from '../shortcuts';
  * delay from settings.overlay, keyboard focus at once; Escape, leaving or pressing hides it.
  * Use it for supplementary text only; the element needs its own accessible name.
  */
-export function tooltip(text: string | null | undefined): Attachment<HTMLElement> {
+export function tooltip(text: string | null | undefined | (() => string | null | undefined)): Attachment<HTMLElement> {
   return (node) => {
     if (!text) return;
-    const enter = () => tooltips.show(node, text);
-    const focus = () => node.matches(':focus-visible') && tooltips.show(node, text, true);
+    // A function is read when the tooltip opens, so it follows the element's current state.
+    const show = (immediate: boolean) => {
+      const value = typeof text === 'function' ? text() : text;
+      if (value) tooltips.show(node, value, immediate);
+    };
+    const enter = () => show(false);
+    const focus = () => node.matches(':focus-visible') && show(true);
     const leave = () => tooltips.hide(node);
     const key = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || !tooltips.isOwner(node)) return;
@@ -24,6 +29,7 @@ export function tooltip(text: string | null | undefined): Attachment<HTMLElement
       ['pointerenter', enter],
       ['pointerleave', leave],
       ['pointerdown', leave],
+      ['input', leave],
       ['focus', focus],
       ['blur', leave],
       ['keydown', key as EventListener],

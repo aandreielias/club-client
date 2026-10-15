@@ -10,11 +10,11 @@
   import { FolderContents } from './FolderContents.svelte';
   import { FolderTree } from './FolderTree.svelte';
   import type { Folder, StoredFile } from './model';
-  import { fileDownloads, fileLinks, filePolicy, filesApi } from './services';
+  import { fileDownloads, fileLinks, filePolicy, filesApi, fileTypes } from './services';
   import TagEditor from './TagEditor.svelte';
   import Thumbnail from './Thumbnail.svelte';
 
-  /** One photo in the window; `id` is `<folderId>:<fileId>` (the server has no single-file endpoint). */
+  /** One file in the window, photos with preview and tags; `id` is `<folderId>:<fileId>` (the server has no single-file endpoint). */
   let { id, handle }: { id: string; handle?: WindowHandle } = $props();
 
   // svelte-ignore state_referenced_locally
@@ -27,7 +27,7 @@
     await Promise.all([tree.load(), contents.load()]);
     const folder = tree.get(folderId);
     const file = contents.files.value?.find((f) => f.id === fileId);
-    if (!folder || !file) throw new Error('Foto nicht gefunden.');
+    if (!folder || !file) throw new Error('Datei nicht gefunden.');
     return { folder, file };
   });
   void data.load();
@@ -39,11 +39,14 @@
     if (file) handle?.setTitle(file.name);
   });
 
+  const image = $derived(!!file && fileTypes.isImage(file.contentType));
+
   async function remove(target: StoredFile) {
-    const ok = await confirmation.ask({ title: 'Foto löschen', message: `„${target.name}“ wird endgültig gelöscht.`, confirmLabel: 'Löschen', danger: true });
+    const noun = fileTypes.isImage(target.contentType) ? 'Foto' : 'Datei';
+    const ok = await confirmation.ask({ title: `${noun} löschen`, message: `„${target.name}“ wird endgültig gelöscht.`, confirmLabel: 'Löschen', danger: true });
     if (!ok) return;
     if (await contents.delete(target)) {
-      toasts.show('Foto gelöscht.');
+      toasts.show(`${noun} gelöscht.`);
       handle?.close();
     } else {
       toasts.error(errors.text(contents.deleteAction.error));
@@ -65,25 +68,29 @@
       <Detail title={file.name}>
         {#snippet actions()}
           <Button onclick={() => download(file)}>Herunterladen</Button>
-          {#if filePolicy.canTag(file, folder) && !tagging}<Button onclick={() => (tagging = true)}>Personen markieren</Button>{/if}
+          {#if image && filePolicy.canTag(file, folder) && !tagging}<Button onclick={() => (tagging = true)}>Personen markieren</Button>{/if}
           {#if filePolicy.canModify(file, folder)}
-            <Button variant="danger" busy={contents.deleteAction.busy} onclick={() => remove(file)}>Löschen</Button>
+            <Button variant="danger" busy={contents.deleteAction.busy} onclick={() => remove(file)} tooltip="{image ? 'Foto' : 'Datei'} endgültig löschen">Löschen</Button>
           {/if}
         {/snippet}
 
-        <div class="image"><Thumbnail {file} full /></div>
+        {#if image}<div class="image"><Thumbnail {file} full /></div>{/if}
 
         <dl class="props">
           <dt>Ordner</dt>
           <dd>{folder.name}</dd>
+          <dt>Typ</dt>
+          <dd>{fileTypes.label(file.contentType)}</dd>
           <dt>Hochgeladen</dt>
           <dd>{session.format.dateTime(file.createdAt)}, {directory.nameOf(file.uploadedBy)}</dd>
           <dt>Größe</dt>
           <dd>{session.format.bytes(file.sizeBytes)}{file.width && file.height ? `, ${file.width} × ${file.height}` : ''}</dd>
-          <dt>Markiert</dt>
-          <dd>
-            {#each file.taggedMemberIds as member (member)}<Tag tone="gray">{directory.nameOf(member)}</Tag>{:else}<span class="muted">Niemand</span>{/each}
-          </dd>
+          {#if image}
+            <dt>Markiert</dt>
+            <dd>
+              {#each file.taggedMemberIds as member (member)}<Tag tone="gray">{directory.nameOf(member)}</Tag>{:else}<span class="muted">Niemand</span>{/each}
+            </dd>
+          {/if}
         </dl>
 
         {#if tagging}

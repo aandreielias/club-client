@@ -52,7 +52,7 @@
     {/if}
     <ErrorNote error={action.error} />
     <div class="row">
-      <Button type="submit" variant="primary" busy={action.busy}>Weiter</Button>
+      <Button type="submit" variant="primary" busy={action.busy} tooltip="Speichern und zum nächsten Schritt">Weiter</Button>
       <Button variant="ghost" onclick={onlogout}>Abmelden</Button>
     </div>
   </form>

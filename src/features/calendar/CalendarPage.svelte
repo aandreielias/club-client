@@ -78,7 +78,8 @@
 
 {#snippet filters()}
   {#each calendarSources.all as source (source.id)}
-    <Button size="sm" pressed={model.isShown(source.id)} onclick={() => model.toggleSource(source.id)}>{source.label}</Button>
+    <Button size="sm" pressed={model.isShown(source.id)} onclick={() => model.toggleSource(source.id)}
+      tooltip="{source.label} im Kalender {model.isShown(source.id) ? 'ausblenden' : 'einblenden'}">{source.label}</Button>
   {/each}
   {#if teamOptions.length}
     <Select inline aria-label="Team" value={model.teamId ?? ''} options={[{ value: '', label: 'Alle Teams' }, ...teamOptions]}
@@ -97,9 +98,9 @@
     <h2 class="period" aria-live="polite">{title}</h2>
   {/snippet}
   {#snippet contextEnd()}
-    <Button size="sm" onclick={() => model.previous()}>Zurück</Button>
+    <Button size="sm" onclick={() => model.previous()} tooltip="Vorheriger Zeitraum" command="calendar.previous">Zurück</Button>
     <Button size="sm" onclick={() => model.goToday()}>Heute</Button>
-    <Button size="sm" onclick={() => model.next()}>Weiter</Button>
+    <Button size="sm" onclick={() => model.next()} tooltip="Nächster Zeitraum" command="calendar.next">Weiter</Button>
   {/snippet}
 
 

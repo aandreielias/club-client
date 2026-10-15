@@ -4,7 +4,9 @@
   import { SHORTCUTS, type CommandId } from '../shortcuts';
   import { commands, keyboard, keymap } from '../lib/container';
   import { KeySpec } from '../lib/keyboard/KeySpec';
+  import GlobalSearch from './GlobalSearch.svelte';
   import Kbd from './Kbd.svelte';
+  import { tooltip, withKeys } from './tooltip';
 
   let {
     title,
@@ -39,17 +41,19 @@
   }
 </script>
 
-<button class="toggle" aria-expanded={open} aria-controls="sidebar" onclick={() => (open = !open)}>
+<button class="toggle" aria-expanded={open} aria-controls="sidebar" onclick={() => (open = !open)}
+  {@attach tooltip(() => (open ? 'Navigation schließen' : 'Navigation öffnen'))}>
   {open ? 'Schließen' : 'Menü'}{#if !open && pending}<span class="badge toggle-badge">{pending}<span class="visually-hidden"> neu</span></span>{/if}
 </button>
 
 <nav id="sidebar" class:open aria-label="Hauptnavigation">
   <div class="title">{title}</div>
+  <div class="search"><GlobalSearch /></div>
   <ul>
     {#each items.filter((i) => !i.footer) as item (item.path)}
       <li>
         <a href="#{item.path}" class:active={isActive(item.path)} aria-current={isActive(item.path) ? 'page' : undefined}
-          title="{item.label}{navKeys(item.path)}" onclick={() => (open = false)}>
+          {@attach tooltip(`Zu ${item.label}${navKeys(item.path)}`)} onclick={() => (open = false)}>
           <span>{item.label}</span>
           {#if item.badge}<span class="badge">{item.badge}<span class="visually-hidden"> neu</span></span>{/if}
         </a>
@@ -61,21 +65,25 @@
       <span class="connection" role="status">Verbindung unterbrochen, Aktualisierung pausiert</span>
     {/if}
     <span class="muted user">{user}</span>
-    <button class="link commands" onclick={() => ((open = false), (commands.paletteOpen = true))}>
+    <button class="link commands" onclick={() => ((open = false), (commands.paletteOpen = true))}
+      {@attach tooltip(() => withKeys('Alle Befehle durchsuchen und ausführen', 'palette.open'))}>
       <span>Befehle</span>
       <Kbd keys={keymap.keys('palette.open')} />
     </button>
     {#each items.filter((i) => i.footer) as item (item.path)}
       <a href="#{item.path}" class:active={isActive(item.path)} aria-current={isActive(item.path) ? 'page' : undefined}
-        title="{item.label}{navKeys(item.path)}" onclick={() => (open = false)}>
+        {@attach tooltip(`Zu ${item.label}${navKeys(item.path)}`)} onclick={() => (open = false)}>
         <span>{item.label}</span>
       </a>
     {/each}
-    <button class="link" onclick={onlogout}>Abmelden</button>
+    <button class="link" onclick={onlogout} {@attach tooltip('Auf diesem Gerät abmelden')}>Abmelden</button>
   </div>
 </nav>
 
 <style>
+  .search {
+    padding: 0 var(--space-sm) var(--space-sm);
+  }
   nav {
     position: sticky;
     top: 0;

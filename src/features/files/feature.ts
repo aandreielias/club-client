@@ -9,6 +9,7 @@ export const filesFeature: Feature = {
     { path: '/files', component: FilesPage, nav: 'Dateien' },
     { path: '/files/:id', component: FilesPage },
   ],
-  windows: { photo: { component: PhotoView } },
+  // `photo` stays for links that name it; both show any file.
+  windows: { file: { component: PhotoView }, photo: { component: PhotoView } },
   messages: FILE_MESSAGES,
 };

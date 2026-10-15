@@ -49,7 +49,7 @@
     <TaskDue {task} />
     {#if editable}
       <Button variant="ghost" onclick={start}>{task.dueAt ? 'Ändern' : 'Festlegen'}</Button>
-      {#if task.dueAt}<Button variant="ghost" busy={detail.dueAction.busy} onclick={clear}>Entfernen</Button>{/if}
+      {#if task.dueAt}<Button variant="ghost" busy={detail.dueAction.busy} onclick={clear} tooltip="Fälligkeit entfernen">Entfernen</Button>{/if}
     {/if}
   </span>
   {#if editable}<ErrorNote error={detail.dueAction.error} />{/if}
