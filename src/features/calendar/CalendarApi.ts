@@ -1,0 +1,66 @@
+import type { ApiClient } from '../../lib/http/ApiClient';
+import type {
+  Appointment,
+  AppointmentList,
+  AppointmentPatch,
+  Attendance,
+  AttendanceResponse,
+  FeedLink,
+  NewAppointment,
+  ResponseStatus,
+} from './model';
+
+/** Typed access to the calendar and attendance endpoints of club-server. */
+export class CalendarApi {
+  static readonly APPOINTMENTS = '/api/v1/appointments';
+  static readonly FEED = '/api/v1/me/ical-token';
+
+  constructor(private readonly api: ApiClient) {}
+
+  /** Visible appointments overlapping [from, to) (UTC instants, at most 366 days), incl. cancelled ones. */
+  async list(from: string, to: string, teamId: string | null): Promise<Appointment[]> {
+    const { items } = await this.api.get<AppointmentList>(CalendarApi.APPOINTMENTS, { from, to, teamId });
+    return items;
+  }
+
+  get(id: string): Promise<Appointment> {
+    return this.api.get<Appointment>(this.path(id));
+  }
+
+  /** Creates one appointment or a weekly series; returns every created occurrence. */
+  async create(appointment: NewAppointment): Promise<Appointment[]> {
+    return (await this.api.post<AppointmentList>(CalendarApi.APPOINTMENTS, appointment)).items;
+  }
+
+  update(id: string, patch: AppointmentPatch): Promise<Appointment> {
+    return this.api.patch<Appointment>(this.path(id), patch);
+  }
+
+  /** Cancels the occurrence, or it and all later ones of its series. Returns the cancelled ones. */
+  async cancel(id: string, includeFollowing: boolean): Promise<Appointment[]> {
+    return (await this.api.post<AppointmentList>(`${this.path(id)}/cancel`, undefined, { includeFollowing })).items;
+  }
+
+  attendance(id: string): Promise<Attendance> {
+    return this.api.get<Attendance>(`${this.path(id)}/attendance`);
+  }
+
+  /** Answers for oneself (memberId null) or for one's minor. */
+  respond(id: string, status: ResponseStatus, reason: string | null, memberId: string | null = null): Promise<AttendanceResponse> {
+    return this.api.put<AttendanceResponse>(`${this.path(id)}/attendance`, { memberId, status, reason });
+  }
+
+  /** Creates or rotates the personal iCal feed; the absolute URL is only available now. */
+  async issueFeed(): Promise<string> {
+    const { url } = await this.api.post<FeedLink>(CalendarApi.FEED);
+    return this.api.url(url);
+  }
+
+  revokeFeed(): Promise<void> {
+    return this.api.delete(CalendarApi.FEED);
+  }
+
+  private path(id: string): string {
+    return `${CalendarApi.APPOINTMENTS}/${encodeURIComponent(id)}`;
+  }
+}

@@ -1,0 +1,102 @@
+// Mock of the server's platform.LinkResolver plus the link tables of one module (calendar or tasks).
+import { settings } from '../../settings';
+import type { FileRef, Links, Need } from '../links/model';
+import type { Member } from '../types';
+import { MockServer } from './MockServer';
+import { MockTable } from './MockTable';
+
+const fail = MockServer.fail;
+const limits = settings.links;
+
+interface NeedRow {
+  itemId: string;
+  name: string;
+  quantity: number;
+}
+
+/** server: FilesApi.FileLink */
+export interface FileLink {
+  fileId: string;
+  folderId: string | null;
+  name: string | null;
+}
+
+interface Rows {
+  needs: NeedRow[];
+  files: FileLink[];
+}
+
+/**
+ * Lookups the inventory and files mocks register (server: InventoryApi.REFS, FilesApi.FILE_REFS
+ * over the bus), so link handling needs no feature imports.
+ */
+export const linkRefs = {
+  items: (_ids: readonly string[]): Map<string, { name: string; quantity: number }> => new Map(),
+  files: (_member: Member, _links: readonly FileLink[]): FileRef[] => [],
+};
+
+export class MockLinks {
+  /** ownerId → stored rows */
+  readonly table: MockTable<Record<string, Rows>>;
+
+  constructor(name: string, seed: () => Record<string, Rows> = () => ({})) {
+    this.table = new MockTable(name, seed);
+  }
+
+  get(member: Member, ownerId: string): Links {
+    return MockLinks.resolve(member, this.rows(ownerId));
+  }
+
+  /** Callers check visibility and edit rights first. */
+  set(member: Member, ownerId: string, body: { needs?: unknown; fileIds?: unknown }): Links {
+    const needs = Array.isArray(body.needs) ? (body.needs as { itemId?: string; quantity?: number }[]) : [];
+    const fileIds = Array.isArray(body.fileIds) ? (body.fileIds as string[]) : [];
+    const stored = this.rows(ownerId);
+    if (needs.length > limits.maxEntries || fileIds.length > limits.maxEntries) fail(400, 'links.too-many');
+    for (const need of needs) {
+      if (!need?.itemId || !Number.isInteger(need.quantity) || need.quantity! < 1 || need.quantity! > limits.maxQuantity) {
+        fail(400, 'links.quantity-invalid');
+      }
+    }
+    if (new Set(needs.map((n) => n.itemId)).size !== needs.length || new Set(fileIds).size !== fileIds.length || fileIds.some((id) => !id)) {
+      fail(400, 'links.duplicate');
+    }
+    const items = linkRefs.items(needs.map((n) => n.itemId!));
+    const needRows = needs.map((n): NeedRow => {
+      const name = items.get(n.itemId!)?.name ?? stored.needs.find((s) => s.itemId === n.itemId)?.name;
+      if (!name) return fail(400, 'links.item-unknown');
+      return { itemId: n.itemId!, name, quantity: n.quantity! };
+    });
+    const asked = [...stored.files, ...fileIds.filter((id) => !stored.files.some((f) => f.fileId === id)).map((id) => ({ fileId: id, folderId: null, name: null }))];
+    const refs = new Map(linkRefs.files(member, asked).map((r) => [r.id, r]));
+    const fileRows = fileIds.map((id): FileLink => {
+      const ref = refs.get(id) ?? fail(400, 'links.file-unknown');
+      return { fileId: id, folderId: ref.folderId, name: ref.name };
+    });
+    // Attachments the actor cannot see stay attached.
+    fileRows.push(...stored.files.filter((f) => !refs.has(f.fileId)));
+    this.table.data[ownerId] = { needs: needRows, files: fileRows };
+    this.table.save();
+    return MockLinks.resolve(member, this.table.data[ownerId]);
+  }
+
+  remove(ownerId: string): void {
+    delete this.table.data[ownerId];
+    this.table.save();
+  }
+
+  private rows(ownerId: string): Rows {
+    return this.table.data[ownerId] ?? { needs: [], files: [] };
+  }
+
+  private static resolve(member: Member, rows: Rows): Links {
+    const items = linkRefs.items(rows.needs.map((n) => n.itemId));
+    const needs = rows.needs.map((n): Need => {
+      const ref = items.get(n.itemId);
+      return ref
+        ? { itemId: n.itemId, name: ref.name, quantity: n.quantity, stock: ref.quantity, deleted: false }
+        : { itemId: n.itemId, name: n.name, quantity: n.quantity, stock: null, deleted: true };
+    });
+    return { needs, files: rows.files.length ? linkRefs.files(member, rows.files) : [] };
+  }
+}

@@ -1,0 +1,318 @@
+/*
+ * Base element styles. Every value comes from the custom properties generated from src/settings.ts
+ * (ThemeService). One visual language for all controls: text inputs, selects, textareas, checkboxes
+ * and buttons share height, radius, background and focus treatment.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: var(--font-line-height);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-tag-blue-bg);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 var(--space-sm);
+  line-height: 1.25;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
+}
+h1 {
+  font-size: var(--font-size-h1);
+}
+h2 {
+  margin-top: var(--space-xl);
+  font-size: var(--font-size-h2);
+}
+h3 {
+  font-size: var(--font-size-h3);
+}
+p {
+  margin: 0 0 var(--space-md);
+}
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--color-border-strong);
+  text-underline-offset: 3px;
+}
+a:hover {
+  text-decoration-color: currentColor;
+}
+
+/* ---- Controls ---- */
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']),
+select,
+textarea {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0 var(--control-padding-x);
+  font-size: var(--font-size-base);
+  line-height: 1.3;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-field);
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+textarea {
+  padding: var(--space-xs) var(--control-padding-x);
+  resize: vertical;
+}
+/* Single-line controls are exactly one control row high, like buttons and text next to them. */
+input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']),
+select {
+  height: var(--control-height);
+}
+input:not([type='checkbox'], [type='radio']):hover,
+select:hover,
+textarea:hover {
+  border-color: var(--color-border-strong);
+}
+input:not([type='checkbox'], [type='radio']):focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-tag-blue-bg);
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-text-faint);
+}
+input:disabled,
+select:disabled,
+textarea:disabled {
+  color: var(--color-text-faint);
+  cursor: not-allowed;
+}
+
+/* Native look removed; the caret is drawn with two gradients (no icon asset). */
+select {
+  appearance: none;
+  padding-right: calc(var(--control-padding-x) + 14px);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
+    linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
+  background-position:
+    right calc(var(--control-padding-x) + 4px) center,
+    right var(--control-padding-x) center;
+  background-size:
+    4px 4px,
+    4px 4px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+select.inline {
+  width: auto;
+}
+
+/* Checkbox and radio drawn in the house style; the checkmark is two CSS borders, no image. */
+input[type='checkbox'],
+input[type='radio'] {
+  appearance: none;
+  display: inline-grid;
+  flex-shrink: 0;
+  place-content: center;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  cursor: pointer;
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast);
+}
+input[type='radio'] {
+  border-radius: 50%;
+}
+input[type='checkbox']::before {
+  content: '';
+  width: 8px;
+  height: 4px;
+  margin-top: -2px;
+  border-bottom: 2px solid var(--color-on-accent);
+  border-left: 2px solid var(--color-on-accent);
+  transform: rotate(-45deg) scale(0);
+  transition: transform var(--motion-fast);
+}
+input[type='radio']::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-on-accent);
+  transform: scale(0);
+  transition: transform var(--motion-fast);
+}
+input[type='checkbox']:checked,
+input[type='radio']:checked {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+input[type='checkbox']:checked::before {
+  transform: rotate(-45deg) scale(1);
+}
+input[type='radio']:checked::before {
+  transform: scale(1);
+}
+input[type='checkbox']:hover:not(:checked, :disabled),
+input[type='radio']:hover:not(:checked, :disabled) {
+  border-color: var(--color-text-muted);
+}
+input[type='checkbox']:disabled,
+input[type='radio']:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+input[type='date'],
+input[type='datetime-local'],
+input[type='time'] {
+  font-variant-numeric: tabular-nums;
+}
+
+progress {
+  height: 4px;
+  border: 0;
+  border-radius: 2px;
+  background: var(--color-hover);
+  accent-color: var(--color-accent);
+}
+progress::-webkit-progress-bar {
+  border-radius: 2px;
+  background: var(--color-hover);
+}
+progress::-webkit-progress-value {
+  border-radius: 2px;
+  background: var(--color-accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* A checkbox or radio with its text */
+label.check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+}
+
+/* ---- Utilities shared across features ---- */
+
+.muted {
+  color: var(--color-text-muted);
+}
+.small {
+  font-size: var(--font-size-small);
+}
+.mono {
+  font-family: var(--font-mono);
+}
+.stack {
+  display: grid;
+  gap: var(--space-md);
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.narrow {
+  max-width: var(--layout-field-width);
+}
+.readable {
+  max-width: var(--layout-readable-width);
+}
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-md);
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Notion-style property list: muted label column, values aligned */
+.props {
+  display: grid;
+  grid-template-columns: minmax(8rem, 11rem) 1fr;
+  gap: 2px var(--space-lg);
+  margin: 0;
+}
+.props dt {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-height);
+  color: var(--color-text-muted);
+}
+.props dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: var(--control-height);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+:root[data-layout='compact'] .props {
+  grid-template-columns: minmax(6rem, 8rem) 1fr;
+}
+
+/* Long free text (descriptions, comments) */
+.prose {
+  max-width: var(--layout-readable-width);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
