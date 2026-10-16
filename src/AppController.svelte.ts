@@ -104,6 +104,8 @@ export class AppController {
   startSession(): () => void {
     const { live, features, session, directory, keyboard, bus } = this.deps;
     live.start();
+    // Own teams' rosters: names and which profiles a coach may open (links, windows by URL).
+    directory.loadRosters().catch(() => {});
     const detachKeyboard = keyboard.attach();
     const removeCommands = this.registerGlobalCommands();
     const wake = () => document.visibilityState === 'visible' && live.wake();

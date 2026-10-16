@@ -8,10 +8,11 @@ export const kindLabel = (kind: Notification['kind']): string => NOTIFICATION_KI
 
 /** The inbox as a list; its data mirrors the NotificationCenter (shared with the sidebar badge). */
 export class NotificationListModel extends ListModel<Notification> {
-  constructor(center: NotificationCenter, format: () => Formatter, store: LocalStore) {
+  /** `id` keys the remembered filters, so the start page's list does not share the inbox's. */
+  constructor(center: NotificationCenter, format: () => Formatter, store: LocalStore, id = 'notifications') {
     super(
       {
-        id: 'notifications',
+        id,
         load: async () => {
           await center.inbox.load();
           return center.inbox.value?.items ?? [];

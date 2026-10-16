@@ -2,6 +2,7 @@ import type { Feature } from '../Feature';
 import { NOTIFICATION_MESSAGES } from './messages';
 import NotificationSettingsPage from './NotificationSettingsPage.svelte';
 import NotificationsPage from './NotificationsPage.svelte';
+import NotificationsHome from './NotificationsHome.svelte';
 import { notificationCenter } from './services';
 
 export const notificationsFeature: Feature = {
@@ -12,4 +13,5 @@ export const notificationsFeature: Feature = {
   ],
   messages: NOTIFICATION_MESSAGES,
   start: () => notificationCenter.start(),
+  home: { id: 'notifications', component: NotificationsHome },
 };

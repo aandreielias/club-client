@@ -102,6 +102,14 @@ export class TeamDirectory {
     return this.#rosters[teamId]?.entries.find((e) => e.memberId === memberId)?.teamRole ?? null;
   }
 
+  /** Names of the loaded teams whose roster contains the member, sorted. */
+  teamsOf(memberId: string): string[] {
+    return Object.values(this.#rosters)
+      .filter((r) => r.entries.some((e) => e.memberId === memberId))
+      .map((r) => r.team.name)
+      .sort((a, b) => a.localeCompare(b, 'de'));
+  }
+
   /** Forgets the team list (e.g. after a team was created) so the next loadTeams reloads it. */
   forgetTeams(): void {
     this.#teamsLoad = null;

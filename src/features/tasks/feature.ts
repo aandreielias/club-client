@@ -1,3 +1,4 @@
+import { PRIVILEGED } from '../../lib/types';
 import type { Feature } from '../Feature';
 import { TASK_MESSAGES } from './messages';
 import { tasksApi } from './services';
@@ -15,7 +16,7 @@ export const tasksFeature: Feature = {
   ],
   windows: {
     task: { component: TaskView, page: (id) => `/tasks/${encodeURIComponent(id)}` },
-    'task-new': { component: TaskCreateView },
+    'task-new': { component: TaskCreateView, roles: PRIVILEGED },
   },
   calendar: new TaskCalendarSource(tasksApi),
   messages: TASK_MESSAGES,

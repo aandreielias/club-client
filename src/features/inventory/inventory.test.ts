@@ -8,13 +8,14 @@ import { tasks } from '../tasks/mock';
 import { ItemForm } from './ItemForm.svelte';
 import { InventoryListModel } from './InventoryListModel.svelte';
 import { inventory } from './mock';
+import { mockServer } from '../../lib/mock/MockServer';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
 const stepUp = (id: string) => directory.stepUp(member(id), MockDirectory.PIN);
 const code = (c: string) => expect.objectContaining({ code: c });
 
 describe('mock inventory', () => {
-  it('lets everyone read and only privileged members with a step-up change items', () => {
+  it('lets only privileged members with a step-up change items', () => {
     expect(inventory.list().length).toBeGreaterThan(0);
     const body = { name: 'Netzantennen', category: 'Ausrüstung', quantity: 4, location: null, description: null };
     expect(() => inventory.create(member('spielerin'), body)).toThrow(code('access.denied'));
@@ -26,6 +27,12 @@ describe('mock inventory', () => {
     inventory.delete(member('trainer'), item.id);
     expect(() => inventory.get(item.id)).toThrow(code('inventory.not-found'));
   });
+
+  it('is visible to admin, board and coaches only', () => {
+    const read = (id: string) => mockServer.handle('GET', '/api/v1/inventory', null, member(id).email);
+    expect(() => read('spielerin')).toThrow(code('access.denied'));
+    expect(read('trainer')).toMatchObject({ items: expect.any(Array) });
+  });
 });
 
 describe('mock links', () => {
@@ -33,7 +40,9 @@ describe('mock links', () => {
     const match = calendar.appointments.data.find((a) => a.type === 'MATCH')!;
     const links = calendar.getLinks(member('spielerin'), match.id);
     expect(links.needs.find((n) => n.itemId === 'i-old-cart')).toMatchObject({ name: 'Ballwagen alt', deleted: true, stock: null });
-    expect(links.needs.find((n) => n.itemId === 'i-balls')).toMatchObject({ deleted: false, stock: 24 });
+    // Members see what is needed, but the stock only admin, board and coaches.
+    expect(links.needs.find((n) => n.itemId === 'i-balls')).toMatchObject({ deleted: false, stock: null });
+    expect(calendar.getLinks(member('trainer'), match.id).needs.find((n) => n.itemId === 'i-balls')).toMatchObject({ stock: 24 });
     expect(links.files.map((f) => [f.name, f.deleted])).toEqual([['Spielplan Herbst.xlsx', false], ['Aufstellung Vorsaison.pdf', true]]);
     // The deleted team file stays hidden from members outside the team.
     expect(() => calendar.getLinks(member('spieler'), match.id)).toThrow(code('appointment.not-found'));

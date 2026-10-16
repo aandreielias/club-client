@@ -8,7 +8,7 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import type { FileRef } from '../../lib/links/model';
 import type { Member } from '../../lib/types';
-import type { Folder, FolderKind, FolderScope, StoredFile } from './model';
+import type { DownloadLink, Folder, FolderKind, FolderScope, StoredFile } from './model';
 
 type StoredFolder = Omit<Folder, 'canUpload' | 'canManage'>;
 
@@ -152,10 +152,15 @@ export class MockFiles {
     return stored;
   }
 
-  link(member: Member, fileId: string, thumbnail: boolean): { url: string; expiresAt: string } {
+  link(member: Member, fileId: string, thumbnail: boolean): DownloadLink | Promise<DownloadLink> {
     const file = this.visibleFile(this.viewer(member), fileId);
     if (thumbnail && !file.hasThumbnail) fail(404, 'file.no-thumbnail');
-    return { url: this.objectUrl(file), expiresAt: new Date(Date.now() + LINK_LIFETIME_MS).toISOString() };
+    const answer = () => ({ url: this.objectUrl(file), expiresAt: new Date(Date.now() + LINK_LIFETIME_MS).toISOString() });
+    // Seeded Word files get real content (built asynchronously), so the preview has something to show.
+    if (file.contentType === OFFICE.docx && !this.#blobs.has(file.id)) {
+      return MockFiles.docx(file).then((blob) => (this.#blobs.set(file.id, blob), answer()));
+    }
+    return answer();
   }
 
   tag(member: Member, fileId: string, memberIds: unknown): StoredFile {
@@ -283,6 +288,7 @@ export class MockFiles {
 
   /** Stand-in content for seeded files and for uploads lost on reload. */
   private static placeholder(file: StoredFile): Blob {
+    if (file.contentType === 'application/pdf') return MockFiles.pdf(file.name);
     if (!file.contentType.startsWith('image/')) {
       return new Blob([`Beispieldatei "${file.name}" (Testmodus ohne Server).`], { type: 'text/plain' });
     }
@@ -292,6 +298,44 @@ export class MockFiles {
       + `<rect width="100%" height="100%" fill="#e2e2e2"/>`
       + `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="${Math.round(h / 14)}" fill="#777">${w} × ${h}</text></svg>`;
     return new Blob([svg], { type: 'image/svg+xml' });
+  }
+
+  /** A one-page PDF with the file name, built by hand (offsets in the xref table must be exact). */
+  static pdf(title: string): Blob {
+    // Standard PDF fonts only cover Latin-1 reliably: spell umlauts out, escape the string delimiters.
+    const text = (s: string) => s.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue').replace(/ß/g, 'ss')
+      .replace(/[^\x20-\x7e]/g, '?').replace(/([()\\])/g, '\\$1');
+    const stream = `BT /F1 20 Tf 72 760 Td (${text(title)}) Tj 0 -32 Td /F1 12 Tf (Beispieldokument im Testmodus ohne Server.) Tj ET`;
+    const objects = [
+      '<< /Type /Catalog /Pages 2 0 R >>',
+      '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+      `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+      '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    ];
+    let body = '%PDF-1.4\n';
+    const offsets = objects.map((object, i) => {
+      const offset = body.length;
+      body += `${i + 1} 0 obj\n${object}\nendobj\n`;
+      return offset;
+    });
+    const xref = body.length;
+    body += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`;
+    body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+    return new Blob([body], { type: 'application/pdf' });
+  }
+
+  /** A minimal Word document with the file name as heading and one paragraph. */
+  static async docx(file: StoredFile): Promise<Blob> {
+    const { default: JSZip } = await import('jszip');
+    const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+    zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+    const paragraph = (text: string, size: number, bold = false) =>
+      `<w:p><w:r><w:rPr>${bold ? '<w:b/>' : ''}<w:sz w:val="${size}"/></w:rPr><w:t>${escape(text)}</w:t></w:r></w:p>`;
+    zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paragraph(file.name.replace(/\.docx$/i, ''), 36, true)}${paragraph('Beispieldokument im Testmodus ohne Server.', 24)}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>`);
+    return zip.generateAsync({ type: 'blob', mimeType: file.contentType });
   }
 
   /** server: FileType.detect (magic bytes; Office files by ZIP signature plus extension) */

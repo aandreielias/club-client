@@ -1,5 +1,5 @@
 import { features } from './features';
-import { calendarSources, errors, links, navCatalog, preferences, theme, windows } from './lib/container';
+import { calendarSources, errors, homeSections, links, navCatalog, preferences, theme, windows } from './lib/container';
 
 /** One-time setup before the first render. */
 export function bootstrap(): void {
@@ -8,5 +8,6 @@ export function bootstrap(): void {
   features.registerLinks(links);
   features.registerWindows(windows);
   features.registerCalendarSources(calendarSources);
+  features.registerHome(homeSections);
   features.registerNavigation(navCatalog);
 }

@@ -1,5 +1,6 @@
 import type { ErrorMessages } from '../lib/errors/ErrorMessages';
 import type { CalendarSources } from '../lib/calendar/CalendarSources';
+import type { HomeSections } from '../lib/home/HomeSections';
 import type { LinkResolver } from '../lib/router/LinkResolver';
 import { NavCatalog } from '../lib/navigation/NavCatalog';
 import type { WindowService } from '../lib/window/WindowService.svelte';
@@ -66,6 +67,10 @@ export class FeatureRegistry {
 
   registerCalendarSources(sources: CalendarSources): void {
     for (const feature of this.features) if (feature.calendar) sources.register(feature.calendar);
+  }
+
+  registerHome(sections: HomeSections): void {
+    for (const feature of this.features) if (feature.home) sections.register(feature.home);
   }
 
   /** Starts every feature's session work; the returned function stops all of it. */

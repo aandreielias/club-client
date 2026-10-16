@@ -1,3 +1,4 @@
+import { PRIVILEGED } from '../../lib/types';
 import type { Feature } from '../Feature';
 import { AppointmentCalendarSource } from './AppointmentCalendarSource';
 import AppointmentCreateView from './AppointmentCreateView.svelte';
@@ -15,7 +16,7 @@ export const calendarFeature: Feature = {
   ],
   windows: {
     appointment: { component: AppointmentView, page: (id) => `/calendar/${encodeURIComponent(id)}` },
-    'appointment-new': { component: AppointmentCreateView },
+    'appointment-new': { component: AppointmentCreateView, roles: PRIVILEGED },
   },
   calendar: new AppointmentCalendarSource(calendarApi),
   messages: CALENDAR_MESSAGES,

@@ -49,7 +49,8 @@ mockServer.on('GET', '/api/v1/search', async (req) => {
     list(req, `/api/v1/appointments?from=${from}&to=${to}`),
     list(req, '/api/v1/tasks?includeDone=true'),
     list(req, `/api/v1/teams?mine=${!board}`),
-    list(req, '/api/v1/inventory'),
+    // server: SearchController - item hits only for admin, board and coaches.
+    directory.isPrivileged(directory.actor(req)) ? list(req, '/api/v1/inventory') : Promise.resolve([]),
     list(req, '/api/v1/folders'),
     list(req, `/api/v1/files?q=${encodeURIComponent(query)}&limit=${limit}`),
   ]);

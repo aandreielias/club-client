@@ -4,6 +4,7 @@
   import { WINDOW_CLOSE } from '../channels';
   import { type Dock } from '../lib/window/WindowService.svelte';
   import Button from './Button.svelte';
+  import { provideWindowHandle } from './windowContext';
   import ChoiceGroup, { type Choice } from './ChoiceGroup.svelte';
   import { withKeys } from './tooltip';
 
@@ -26,6 +27,7 @@
   const content = $derived(target ? windows.content(target.kind) : undefined);
   const modal = $derived(windows.dock === 'center');
   const handle = windows.handle();
+  provideWindowHandle(handle);
 
   let element: HTMLElement | undefined = $state();
   let opener: HTMLElement | null = null;
@@ -52,6 +54,16 @@
 
   $effect(() => {
     documentTitle.window = target ? windows.title : '';
+  });
+
+  // A new record starts without the previous one's title until it has loaded (also for links opened by URL).
+  let shownKey = '';
+  $effect(() => {
+    const key = target ? `${target.kind}/${target.id}` : '';
+    if (key !== shownKey) {
+      shownKey = key;
+      windows.title = '';
+    }
   });
 
   // When the focused control disappears (edit mode ends, a panel closes), keep focus in the window

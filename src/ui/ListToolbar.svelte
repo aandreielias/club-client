@@ -21,7 +21,8 @@
     {#if model.searchable}
       <label class="search">
         <Icon name="search" small />
-        <input type="search" bind:value={model.search} placeholder="Suchen" aria-label="Suchen" />
+        <input type="search" bind:value={model.search} placeholder="Suchen" aria-label="Suchen"
+          onkeydown={(e) => e.key === 'Enter' && e.preventDefault()} />
       </label>
     {/if}
     {#each model.filterDefinitions as filter (filter.key)}

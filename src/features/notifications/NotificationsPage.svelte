@@ -1,14 +1,11 @@
 <script lang="ts">
-  import { bus, commands, links, session, store } from '../../lib/container';
-  import { NAVIGATE, WINDOW_OPEN } from '../../channels';
+  import { commands, session, store } from '../../lib/container';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import Button from '../../ui/Button.svelte';
-  import DataTable from '../../ui/DataTable.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import LinkButton from '../../ui/LinkButton.svelte';
   import Page from '../../ui/Page.svelte';
-  import Tag from '../../ui/Tag.svelte';
-  import type { Notification } from './model';
+  import NotificationTable from './NotificationTable.svelte';
   import { NotificationListModel } from './NotificationListModel.svelte';
   import { notificationCenter as center } from './services';
 
@@ -23,13 +20,6 @@
 
   useCommands(commands, { 'notifications.readAll': { run: () => void center.markAllRead(), when: () => center.unread > 0 } });
 
-  async function open(notification: Notification) {
-    await center.markRead(notification);
-    const target = links.resolve(notification.link);
-    if (!target) return;
-    if ('window' in target) bus.publish(WINDOW_OPEN, { kind: target.window.kind, id: target.window.id });
-    else bus.publish(NAVIGATE, { path: target.path });
-  }
 </script>
 
 <Page title="Benachrichtigungen">
@@ -41,26 +31,5 @@
   {/snippet}
 
   <ErrorNote error={center.markAllAction.error} />
-  <DataTable model={list} rowKey={(n) => n.id} onopen={open}
-    menu={(n) => [
-      { label: 'Öffnen', run: () => void open(n) },
-      { label: 'Als gelesen markieren', disabled: n.readAt !== null, run: () => void center.markRead(n) },
-    ]} emptyText="Noch keine Benachrichtigungen.">
-    {#snippet cell(notification, column)}
-      {#if column.key === 'title'}
-        <span class:unread={!notification.readAt}>{notification.title}</span>
-        {#if !notification.readAt}<Tag tone="blue">Neu</Tag>{/if}
-      {:else if column.key === 'body'}
-        <span class="muted">{notification.body}</span>
-      {:else}
-        {list.display(notification, column)}
-      {/if}
-    {/snippet}
-  </DataTable>
+  <NotificationTable {list} />
 </Page>
-
-<style>
-  .unread {
-    font-weight: var(--font-weight-bold);
-  }
-</style>

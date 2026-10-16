@@ -20,6 +20,7 @@ import { ConfirmService } from './notify/ConfirmService.svelte';
 import { TOAST, ToastService } from './notify/ToastService.svelte';
 import { ClubPermissions } from './policy/ClubPermissions';
 import { CalendarSources } from './calendar/CalendarSources';
+import { HomeSections } from './home/HomeSections';
 import { LinkResolver } from './router/LinkResolver';
 import { NavCatalog } from './navigation/NavCatalog';
 import { BackStack } from './navigation/BackStack.svelte';
@@ -111,9 +112,12 @@ export const router = new Router(bus, (change) => motion.transition(change));
 
 export const links = new LinkResolver();
 
-export const windows = new WindowService(router, store, settings.window.defaultDock, bus, () => backStack.mayLeave());
+export const windows = new WindowService(router, store, settings.window.defaultDock, bus, () => backStack.mayLeave(), (roles) => session.hasRole(...roles));
 
 export const calendarSources = new CalendarSources();
+
+/** Start page sections of the features (e.g. notifications). */
+export const homeSections = new HomeSections();
 
 /** "Benötigt" lists and attachments of appointments and tasks. */
 export const linksApi = new LinksApi(api);

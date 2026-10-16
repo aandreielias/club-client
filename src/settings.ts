@@ -336,6 +336,8 @@ export const settings = {
     defaultDurationMinutes: 90,
     /** server: calendar + attendance modules */
     maxRangeDays: 366,
+    /** .ics export: upcoming appointments within this many days (weekly series run at most 2 years). */
+    exportDays: 2 * 366,
     maxDurationDays: 7,
     maxSeriesOccurrences: 104,
     maxIntervalWeeks: 4,
@@ -377,6 +379,14 @@ export const settings = {
       compact: { label: 'Kompakt', controlHeight: '26px' },
       comfortable: { label: 'Breit', controlHeight: '36px' },
     },
+  },
+
+  /** Start page. */
+  home: {
+    /** Days of the agenda. */
+    agendaDays: 7,
+    /** Newest notifications shown. */
+    notificationCount: 5,
   },
 
   notifications: {

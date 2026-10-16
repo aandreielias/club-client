@@ -40,6 +40,8 @@ Reactive state is still read directly from services where it is rendered (`sessi
   - `DataTable` + `ListToolbar` render every list (search, filters, sort).
   - `WindowHost` renders the single detail window; it can be centered or docked to the side or the bottom, the placement is remembered and the window is in the URL as `?open=kind/id`.
   - `Detail` and `DetailPage` lay out detail views. `Select`, `Button`, `Tag` and `Field` keep all controls consistent.
+  - `RecordLink` / `MemberName` make names of records clickable (open in the window, with a way back inside one); without permission they stay plain text or the generic placeholder.
+  - `PeoplePicker` chooses people (photo tags, task assignees) in the standard list with checkboxes (`DataTable` `check`, `PersonListModel`).
   - `Icon` renders the house icon set from `src/icons.ts` (Lucide). Use icons only where they carry meaning: navigation, add/edit/delete, window controls, search, status.
 - `src/lib/list/ListModel.svelte.ts`: the generic list (columns, client and server filters, sort, search, remembered state). Each list is a subclass with its own definition (e.g. `TaskListModel`).
 - `src/lib/window/WindowService.svelte.ts`: opens, closes and docks the detail window. Features register their window kinds in `Feature.windows`.
@@ -52,6 +54,7 @@ Reactive state is still read directly from services where it is rendered (`sessi
 2. Add a service class for the endpoints that takes `ApiClient`, with DTO types in `model.ts`. Instantiate it in `services.ts` from the container.
 3. Put page state in view-model classes (`Resource`, `Action`, `$state`/`$derived` fields). Keep pages thin.
 4. `mock.ts` registers fake endpoints with `mockServer.on(...)`. It is loaded automatically in mock mode. After a write, it publishes the server's event with `mockServer.events.publish({ type, data, audience })`. Events without an `audience` stay inside the mock server, for other mock modules.
+5. Access: routes and windows take `roles` (windows also `canOpen(id)` for per-record rules); a window the member may not open does not appear, also when opened by URL or notification link. The server decides as well, so restrict both.
 5. Lists extend `ListModel` and render with `DataTable`. Details are window contents (`{ id, handle }` props) registered in `Feature.windows`, plus an optional full-page route that wraps the same view in `DetailPage`.
 6. Live updates: declare the event in `events.ts` with `liveEvent<T>('<module>.<event>')`, then call `useBus(bus, EVENT, handler)` in a page and reload what it shows (record views use `DetailController.watch`). Commands go over the bus too: `bus.publish(TOAST, { text })`, `await bus.request(CONFIRM, {...})`.
    Escape means "one view back": any inner state (edit mode, inline editor, panel) registers `backStack.while(() => open, () => close())`; `EditSession` does this itself and asks before discarding typed changes. With no inner state left, Escape returns to the record previously shown in the window (opened from inside it with `DetailController.open`), then closes the window. Shift+Escape closes it directly; Mod+Enter submits the focused form. Optional `Feature` fields: `links` maps server links from notifications to routes, `start` runs while signed in, and a route's `badge` adds a count in the sidebar.

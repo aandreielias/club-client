@@ -1,4 +1,5 @@
 <script lang="ts">
+  import MemberName from '../../ui/MemberName.svelte';
   import { settings } from '../../settings';
   import { directory, session } from '../../lib/container';
   import Button from '../../ui/Button.svelte';
@@ -23,7 +24,7 @@
     {#each task.comments as comment (comment.id)}
       <li>
         <div class="head">
-          <span class="author">{directory.nameOf(comment.authorId)}</span>
+          <span class="author"><MemberName memberId={comment.authorId} /></span>
           <time class="muted" datetime={comment.createdAt}>{session.format.dateTime(comment.createdAt)}</time>
         </div>
         <p>{comment.text}</p>

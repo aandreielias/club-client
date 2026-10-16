@@ -1,7 +1,7 @@
 // Mock of the server's platform.LinkResolver plus the link tables of one module (calendar or tasks).
 import { settings } from '../../settings';
 import type { FileRef, Links, Need } from '../links/model';
-import type { Member } from '../types';
+import { PRIVILEGED, type Member } from '../types';
 import { MockServer } from './MockServer';
 import { MockTable } from './MockTable';
 
@@ -107,12 +107,13 @@ export class MockLinks {
     return this.table.data[ownerId] ?? { needs: [], files: [] };
   }
 
+  /** server: LinkResolver.resolve - stock is inventory data, privileged viewers only. */
   private static resolve(member: Member, rows: Rows): Links {
     const items = linkRefs.items(rows.needs.map((n) => n.itemId));
     const needs = rows.needs.map((n): Need => {
       const ref = items.get(n.itemId);
       return ref
-        ? { itemId: n.itemId, name: ref.name, quantity: n.quantity, stock: ref.quantity, deleted: false }
+        ? { itemId: n.itemId, name: ref.name, quantity: n.quantity, stock: member.roles.some((r) => PRIVILEGED.includes(r)) ? ref.quantity : null, deleted: false }
         : { itemId: n.itemId, name: n.name, quantity: n.quantity, stock: null, deleted: true };
     });
     return { needs, files: rows.files.length ? linkRefs.files(member, rows.files) : [] };

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings } from '../settings';
-  import { backStack, bus } from '../lib/container';
+  import { backStack, bus, permissions } from '../lib/container';
+  import RecordLink from './RecordLink.svelte';
   import { TOAST } from '../channels';
   import { FILES_CHANGED } from '../features/files/events';
   import { ITEM_CHANGED } from '../features/inventory/events';
@@ -47,7 +48,10 @@
         {#each model.needs as need (need.itemId)}
           {@const error = LinksModel.quantityError(need.quantity)}
           <li class:deleted={need.deleted}>
-            <span class="name">{need.name}</span>
+            <span class="name">
+              <!-- Members see what is needed; only admin, board and coaches open the inventory. -->
+              <RecordLink kind="item" id={need.itemId} allowed={!need.deleted && permissions.isPrivileged} hint="Gegenstand öffnen">{need.name}</RecordLink>
+            </span>
             {#if need.deleted}<Tag tone="danger">Gelöscht</Tag>{:else}<span></span>{/if}
             <input
               class="quantity"
@@ -140,10 +144,10 @@
               <span class="name">{file.name}</span>
               <Tag tone="danger">Gelöscht</Tag>
             {:else}
-              <button type="button" class="name link" onclick={() => download(file)} {@attach tooltip(`${file.name} herunterladen`)}>{file.name}</button>
+              <span class="name"><RecordLink kind="file" id="{file.folderId}:{file.id}" hint="Vorschau öffnen">{file.name}</RecordLink></span>
               <span></span>
             {/if}
-            <span></span>
+            {#if file.deleted}<span></span>{:else}<Button size="sm" variant="ghost" icon="download" onclick={() => download(file)} tooltip="{file.name} herunterladen" />{/if}
             <span></span>
             <span></span>
           </li>
@@ -180,19 +184,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-  .link {
-    padding: 0;
-    border: 0;
-    background: none;
-    text-align: left;
-    text-decoration: underline;
-    text-decoration-color: var(--color-border-strong);
-    text-underline-offset: 3px;
-    cursor: pointer;
-  }
-  .link:hover {
-    text-decoration-color: currentColor;
   }
   .deleted .name {
     color: var(--color-danger);

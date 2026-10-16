@@ -14,7 +14,9 @@ import ChevronRight from '@lucide/svelte/icons/chevron-right';
 import CircleAlert from '@lucide/svelte/icons/circle-alert';
 import Command from '@lucide/svelte/icons/command';
 import Copy from '@lucide/svelte/icons/copy';
+import Download from '@lucide/svelte/icons/download';
 import ExternalLink from '@lucide/svelte/icons/external-link';
+import FileText from '@lucide/svelte/icons/file-text';
 import Folder from '@lucide/svelte/icons/folder';
 import House from '@lucide/svelte/icons/house';
 import Inbox from '@lucide/svelte/icons/inbox';
@@ -60,6 +62,8 @@ export const ICONS = {
   alert: CircleAlert,
   empty: Inbox,
   copy: Copy,
+  download: Download,
+  document: FileText,
   page: ExternalLink,
   dockCenter: AppWindow,
   dockSide: PanelRight,

@@ -141,6 +141,11 @@ export class MockDirectory {
     return this.hasRole(member, MANAGERS);
   }
 
+  /** Server: actor.requireRole(roles) = one of the roles, no step-up (restricted reads). */
+  requireRole(member: Member, roles: readonly Role[] = PRIVILEGED): void {
+    if (!this.hasRole(member, roles)) fail(403, 'access.denied');
+  }
+
   /** Server: actor.requirePrivileged(roles) = one of the roles + a step-up within the last minutes. */
   requirePrivileged(member: Member, roles: readonly Role[] = PRIVILEGED): void {
     if (!this.hasRole(member, roles)) fail(403, 'access.denied');

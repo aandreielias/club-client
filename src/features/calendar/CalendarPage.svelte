@@ -2,7 +2,10 @@
   import { untrack } from 'svelte';
   import { settings } from '../../settings';
   import { bus, calendarSources, commands, directory, live, permissions, preferences, router, session, store, windows } from '../../lib/container';
-  import { WINDOW_OPEN } from '../../channels';
+  import { APP_ERROR, TOAST, WINDOW_OPEN } from '../../channels';
+  import { BrowserFile } from '../../lib/files/BrowserFile';
+  import { Action } from '../../lib/state/Action.svelte';
+  import { CalendarExport } from './CalendarExport';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import Button from '../../ui/Button.svelte';
@@ -21,10 +24,10 @@
   import { APPOINTMENTS_CHANGED } from './events';
   import FeedDialog from './FeedDialog.svelte';
   import MonthView from './MonthView.svelte';
-  import { appointmentPolicy as policy } from './services';
+  import { appointmentPolicy as policy, calendarExport } from './services';
   import WeekView from './WeekView.svelte';
 
-  // Other features' events (task changes) are not imported; every live event that can touch the calendar reloads it.
+  // Every live event that can touch the calendar (appointments, task due dates) reloads it.
   const RELOAD_ON = [APPOINTMENTS_CHANGED, TASK_CHANGED];
 
   const model = new CalendarModel(calendarSources, session.clock, settings.calendar.agendaDays, store, {
@@ -34,6 +37,20 @@
   });
   const list = new CalendarListModel(() => model.visible, () => session.format, directory, store);
   let subscribing = $state(false);
+  const exporting = new Action();
+
+  /** Every upcoming appointment the member sees, as a file for any calendar app. */
+  async function exportIcs() {
+    let count = 0;
+    const club = session.club?.name ?? '';
+    const ok = await exporting.run(async () => {
+      const appointments = await calendarExport.appointments();
+      count = appointments.length;
+      BrowserFile.save(new Blob([calendarExport.ics(appointments, club)], { type: 'text/calendar;charset=utf-8' }), CalendarExport.fileName(club));
+    });
+    if (ok) bus.publish(TOAST, { text: `${count} Termine exportiert.` });
+    else bus.publish(APP_ERROR, exporting.error);
+  }
 
   void model.load();
   directory.loadRosters();
@@ -93,6 +110,7 @@
   {#snippet actions()}
     <ChoiceGroup name="calendar-view" label="Ansicht" options={CALENDAR_VIEWS}
       bind:value={() => model.view, (view) => view && model.setView(view)} />
+    <Button icon="download" busy={exporting.busy} onclick={exportIcs} tooltip="Alle kommenden Termine als .ics-Datei für deine Kalender-App herunterladen">Exportieren</Button>
     <Button onclick={() => (subscribing = true)}>Abonnieren</Button>
     {#if policy.canCreate()}<Button variant="primary" icon="add" onclick={newAppointment}>Neuer Termin</Button>{/if}
   {/snippet}

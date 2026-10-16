@@ -99,8 +99,11 @@
       </a>
     {/each}
     <div class="user">
-      <span class="avatar" aria-hidden="true">{user.split(' ').map((w) => w[0]).join('').slice(0, 2)}</span>
-      <span class="label">{user}</span>
+      <a class="profile" href="#/account" class:active={isActive('/account')} aria-current={isActive('/account') ? 'page' : undefined}
+        {@attach tooltip(`Mein Konto${navKeys('/account')}`)} onclick={() => (open = false)}>
+        <span class="avatar" aria-hidden="true">{user.split(' ').map((w) => w[0]).join('').slice(0, 2)}</span>
+        <span class="label">{user}</span>
+      </a>
       <button class="icon-button" onclick={onlogout} aria-label="Abmelden" {@attach tooltip('Auf diesem Gerät abmelden')}>
         <Icon name="logout" />
       </button>
@@ -258,12 +261,21 @@
   .user {
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
+    gap: var(--space-xxs);
     margin-top: var(--space-sm);
-    padding: var(--space-sm) var(--space-xs) 0 var(--space-sm);
+    padding-top: var(--space-sm);
     border-top: 1px solid var(--color-border);
     font-size: var(--font-size-small);
-    font-weight: var(--font-weight-medium);
+  }
+  .user .profile {
+    flex: 1;
+    min-width: 0;
+    min-height: 34px;
+    padding: 0 var(--space-xs);
+    color: var(--color-text);
+  }
+  .user .profile.active {
+    background: var(--color-selected);
   }
   .avatar {
     display: grid;

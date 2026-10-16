@@ -28,6 +28,7 @@
     selected = null,
     toolbar = true,
     menu,
+    check,
   }: {
     model: ListModel<T>;
     rowKey: (item: T) => string;
@@ -41,6 +42,8 @@
     toolbar?: boolean;
     /** Right-click menu of a row (also Shift+F10 / context-menu key on the keyboard row). */
     menu?: (item: T) => readonly MenuEntry[];
+    /** Checkbox column (choosing people etc.): checked state, toggle and optional lock per row. */
+    check?: { checked: (item: T) => boolean; toggle: (item: T) => void; disabled?: (item: T) => boolean; label: (item: T) => string };
   } = $props();
 
   /** Keyboard cursor (J/K/Enter); -1 = none. */
@@ -92,13 +95,14 @@
         <table aria-busy={model.data.loading}>
           <thead>
             <tr>
+              {#if check}<th class="check" scope="col"><span class="visually-hidden">Auswahl</span></th>{/if}
               {#each model.columns as column (column.key)}
                 <th scope="col" style:width={column.width} class:end={column.align === 'end'} class:optional={column.hideOnCompact}
                   aria-sort={sortState(column)}>
                   {#if column.sortable === false}
                     {column.label}
                   {:else}
-                    <button class="sort" class:active={model.sort.key === column.key} onclick={() => model.toggleSort(column.key)}
+                    <button type="button" class="sort" class:active={model.sort.key === column.key} onclick={() => model.toggleSort(column.key)}
                       {@attach tooltip(() => (model.sort.key === column.key ? 'Sortierrichtung umkehren' : `Nach „${column.label}“ sortieren`))}>
                       {column.label}
                       {#if model.sort.key === column.key}
@@ -114,12 +118,19 @@
             {#each model.rows as item, rowIndex (rowKey(item))}
               <tr class:clickable={!!onopen} class:selected={selected === rowKey(item)} class:cursor={rowIndex === cursor}
                 in:motion.rise|global={{ delay: motion.stagger(rowIndex), distance: 4 }} animate:flip={{ duration: motion.ms('base') }}
-                onclick={() => ((cursor = rowIndex), onopen?.(item))}
+                class:checked={!!check?.checked(item)}
+                onclick={() => ((cursor = rowIndex), onopen ? onopen(item) : check && !check.disabled?.(item) && check.toggle(item))}
                 {@attach menu ? contextMenu(() => ((cursor = rowIndex), menu(item))) : undefined}>
+                {#if check}
+                  <td class="check">
+                    <input type="checkbox" checked={check.checked(item)} disabled={check.disabled?.(item)} aria-label={check.label(item)}
+                      onclick={(e) => e.stopPropagation()} onchange={() => check.toggle(item)} />
+                  </td>
+                {/if}
                 {#each model.columns as column, index (column.key)}
                   <td data-label={column.label} class:end={column.align === 'end'} class:optional={column.hideOnCompact} class:primary={index === 0}>
                     {#if index === 0 && onopen}
-                      <button class="open" onclick={(e) => (e.stopPropagation(), onopen(item))}
+                      <button type="button" class="open" onclick={(e) => (e.stopPropagation(), onopen(item))}
                         {@attach tooltip(menu ? 'Öffnen; Rechtsklick für weitere Aktionen' : 'Öffnen')}>
                         {#if cell}{@render cell(item, column)}{:else}{model.display(item, column)}{/if}
                       </button>
@@ -211,8 +222,17 @@
   .direction:not(.desc) {
     rotate: 180deg;
   }
-  tr.clickable {
+  tr.clickable,
+  tr:has(td.check input:not(:disabled)) {
     cursor: pointer;
+  }
+  th.check,
+  td.check {
+    width: 2.25rem;
+    padding-right: 0;
+  }
+  tr.checked td {
+    background: var(--color-accent-soft);
   }
   tbody tr.clickable:hover td {
     background: var(--color-hover);
@@ -273,7 +293,12 @@
     border: 0;
     text-align: left;
   }
-  :global([data-layout='compact']) td:not(.primary)::before {
+  :global([data-layout='compact']) td.check {
+    float: left;
+    min-height: 0;
+    padding-top: 4px;
+  }
+  :global([data-layout='compact']) td:not(.primary, .check)::before {
     content: attr(data-label);
     flex: 0 0 7rem;
     color: var(--color-text-muted);

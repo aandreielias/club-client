@@ -11,6 +11,7 @@
   import LinksSection from '../../ui/LinksSection.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Tag from '../../ui/Tag.svelte';
+  import MemberName from '../../ui/MemberName.svelte';
   import Checklist from './Checklist.svelte';
   import Comments from './Comments.svelte';
   import DueField from './DueField.svelte';
@@ -79,7 +80,8 @@
         {/if}
       {/snippet}
       {#snippet meta()}
-        {#if !edit.form}<Tag tone={statusHue(task.status)}>{statusLabel(task.status)}</Tag>{/if}
+        <!-- Members who work on the task change the status in the slider below; others only read it. -->
+        {#if !edit.form && !policy.canWork(task)}<Tag tone={statusHue(task.status)}>{statusLabel(task.status)}</Tag>{/if}
       {/snippet}
 
       {#if edit.form}
@@ -87,26 +89,27 @@
           <TaskEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={submit} />
         </div>
       {:else}
-        {#if policy.canWork(task)}
-          <div class="stack">
+        <!-- Who works on it and where it stands, side by side: the two things looked at first. -->
+        <div class="top-row">
+          <div class="assignees">
+            <span class="muted label">Zugewiesen</span>
+            {#each task.assignees as assignee (assignee)}<MemberName memberId={assignee} tag />{:else}<span class="muted">Niemand</span>{/each}
+          </div>
+          {#if policy.canWork(task)}
             <ChoiceGroup name="task-status-{task.id}" label="Status" options={TASK_STATUSES} disabled={detail.statusAction.busy}
               bind:value={() => task.status, (status) => status && detail.setStatus(status)} />
-            <ErrorNote error={detail.statusAction.error} />
-          </div>
-        {/if}
+          {/if}
+        </div>
+        <ErrorNote error={detail.statusAction.error} />
 
         <dl class="props">
           <dt>Fällig</dt>
           <dd><DueField {task} {detail} editable={policy.canManage(task)} /></dd>
           <dt>Für</dt>
           <dd>{task.teamId ? (directory.teamName(task.teamId) ?? 'Team') : 'Ganzer Verein'}</dd>
-          <dt>Zugewiesen</dt>
-          <dd>
-            {#each task.assignees as assignee (assignee)}<Tag tone="gray">{directory.nameOf(assignee)}</Tag>{/each}
-          </dd>
           <dt>Erstellt</dt>
           <dd>
-            {session.format.dateTime(task.createdAt)}{directory.knownName(task.createdBy) ? `, ${directory.knownName(task.createdBy)}` : ''}
+            {session.format.dateTime(task.createdAt)}{#if directory.knownName(task.createdBy)},&nbsp;<MemberName memberId={task.createdBy} />{/if}
           </dd>
           {#if task.completedAt}
             <dt>Erledigt</dt>
@@ -132,6 +135,26 @@
 </AsyncView>
 
 <style>
+  .top-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-sm) var(--space-lg);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .assignees {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs);
+    min-width: 0;
+  }
+  .assignees .label {
+    margin-right: var(--space-xs);
+    font-size: var(--font-size-small);
+  }
   .editing {
     display: contents;
   }

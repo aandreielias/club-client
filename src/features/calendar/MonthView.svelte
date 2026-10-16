@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../../ui/Icon.svelte';
   import { settings } from '../../settings';
   import { bus, session } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
@@ -43,7 +44,7 @@
           <span class="number">{Number(day.slice(8))}</span>
           {#if policy.canCreate()}
             <button class="add" onclick={() => create(day)} aria-label="Termin am {session.format.dayHeading(day)} anlegen"
-              {@attach tooltip(`Termin am ${session.format.date(day)} anlegen`)}>Neu</button>
+              {@attach tooltip(`Termin am ${session.format.date(day)} anlegen`)}><Icon name="add" small /></button>
           {/if}
         </div>
         <div class="entries">
@@ -123,21 +124,32 @@
   }
   .add {
     order: 1;
-    visibility: hidden;
-    padding: 0 var(--space-xs);
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
     border: 0;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     background: none;
     color: var(--color-text-muted);
-    font-size: var(--font-size-small);
     cursor: pointer;
+    opacity: 0;
+    transform: scale(0.8);
+    transition:
+      opacity var(--motion-fast),
+      transform var(--motion-base) var(--motion-easing),
+      background var(--motion-fast),
+      color var(--motion-fast);
   }
   .cell:hover .add,
   .add:focus-visible {
-    visibility: visible;
+    opacity: 1;
+    transform: none;
   }
   .add:hover {
-    background: var(--color-hover);
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
   }
   .entries {
     display: grid;

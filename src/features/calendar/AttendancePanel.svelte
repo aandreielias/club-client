@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { session, store } from '../../lib/container';
+  import { permissions, session, store } from '../../lib/container';
+  import RecordLink from '../../ui/RecordLink.svelte';
   import DataTable from '../../ui/DataTable.svelte';
   import Tag from '../../ui/Tag.svelte';
   import type { AppointmentDetailModel } from './AppointmentDetailModel.svelte';
@@ -38,6 +39,9 @@
   {#snippet cell(entry, column)}
     {#if column.key === 'status'}
       <Tag tone={responseHue(entry.status)}>{responseLabel(entry.status)}</Tag>
+    {:else if column.key === 'name'}
+      <!-- Profiles open in the window where the viewer may see them (coaches: their teams). -->
+      <RecordLink kind="member" id={entry.memberId} allowed={permissions.isPrivileged && permissions.canSeeMember(entry.memberId)} hint="Profil öffnen">{entry.name}</RecordLink>
     {:else if column.key === 'reason'}
       <span class="muted">{entry.reason ?? ''}</span>
     {:else}

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { bus, calendarSources, directory, router, session, store, windows } from '../../lib/container';
+  import { settings } from '../../settings';
+  import { bus, calendarSources, directory, homeSections, router, session, store, windows } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
   import DataTable from '../../ui/DataTable.svelte';
   import { windowMenu } from '../../lib/window/windowMenu';
@@ -8,7 +9,7 @@
   import Tag from '../../ui/Tag.svelte';
   import { HomeAgendaModel } from './HomeAgendaModel.svelte';
 
-  const DAYS = 7;
+  const DAYS = settings.home.agendaDays;
   const agenda = new HomeAgendaModel(calendarSources, session.clock, DAYS, () => session.format, directory, store);
   void agenda.load();
   directory.loadRosters();
@@ -33,6 +34,10 @@
       {/if}
     {/snippet}
   </DataTable>
+
+  {#each homeSections.visible((...roles) => session.hasRole(...roles)) as section (section.id)}
+    <section.component />
+  {/each}
 </Page>
 
 <style>

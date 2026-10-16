@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { directory, MockDirectory } from '../../lib/mock/core';
 import type { MockRequest } from '../../lib/mock/MockServer';
 import type { Member } from '../../lib/types';
-import { files } from './mock';
+import { files, MockFiles } from './mock';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
 const stepUp = (id: string) => directory.stepUp(member(id), MockDirectory.PIN);
@@ -64,5 +64,17 @@ describe('mock files', () => {
     for (let depth = 3; depth <= 5; depth++) parent = files.createFolder(member('admin'), { parentId: parent, name: `L${depth}`, kind: 'DOCUMENTS' }).id;
     expect(files.listFolders(member('admin')).find((f) => f.id === parent)).toMatchObject({ scope: 'CLUB', teamId: null });
     expect(() => files.createFolder(member('admin'), { parentId: parent, name: 'L6', kind: 'DOCUMENTS' })).toThrow(expect.objectContaining({ code: 'folder.too-deep' }));
+  });
+});
+
+describe('mock sample documents', () => {
+  it('builds a PDF whose xref offsets point at its objects', async () => {
+    const text = await MockFiles.pdf('Satzung (2026).pdf').text();
+    expect(text.startsWith('%PDF-1.4')).toBe(true);
+    const offsets = [...text.matchAll(/^(\d{10}) 00000 n $/gm)].map((m) => Number(m[1]));
+    expect(offsets).toHaveLength(5);
+    offsets.forEach((offset, i) => expect(text.slice(offset).startsWith(`${i + 1} 0 obj`)).toBe(true));
+    expect(Number(/startxref\n(\d+)/.exec(text)![1])).toBe(text.indexOf('xref\n'));
+    expect(text).toContain('(Satzung \\(2026\\).pdf)');
   });
 });

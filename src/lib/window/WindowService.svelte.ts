@@ -2,6 +2,7 @@ import type { Component } from 'svelte';
 import { defineEvent, type EventBus } from '../bus';
 import type { Router } from '../router/Router.svelte';
 import type { LocalStore } from '../storage/LocalStore';
+import type { Role } from '../types';
 
 export type Dock = 'center' | 'side' | 'bottom';
 
@@ -38,6 +39,10 @@ export interface WindowContent {
   component: Component<WindowContentProps>;
   /** Full-page route for "Als Seite öffnen"; omitted when there is none. */
   page?: (id: string) => string;
+  /** Only members with one of these roles may open it; others see no window (also via links). */
+  roles?: readonly Role[];
+  /** Finer check per record (e.g. coaches see only their teams' members); read reactively. */
+  canOpen?: (id: string) => boolean;
 }
 
 /**
@@ -66,6 +71,8 @@ export class WindowService {
     bus: EventBus,
     /** Asked before the window closes (unsaved changes); false keeps it open. */
     private readonly mayClose: () => boolean | Promise<boolean> = () => true,
+    /** Role check of the signed-in member. */
+    private readonly hasRole: (roles: readonly Role[]) => boolean = () => true,
   ) {
     // Opening from outside (lists, calendar, links) starts a fresh window history.
     bus.subscribe(WINDOW_OPEN, ({ kind, id, dock }) => {
@@ -164,6 +171,8 @@ export class WindowService {
     if (slash <= 0) return null;
     const kind = raw.slice(0, slash);
     const id = decodeURIComponent(raw.slice(slash + 1));
-    return id && this.#contents.has(kind) ? { kind, id } : null;
+    const content = this.#contents.get(kind);
+    const allowed = !!content && (!content.roles || this.hasRole(content.roles)) && (!content.canOpen || content.canOpen(id));
+    return id && allowed ? { kind, id } : null;
   }
 }

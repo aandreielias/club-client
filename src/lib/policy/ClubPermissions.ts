@@ -1,6 +1,6 @@
 import type { TeamDirectory } from '../directory/TeamDirectory.svelte';
 import type { SessionStore } from '../session/SessionStore.svelte';
-import { MANAGERS, type Team } from '../types';
+import { MANAGERS, PRIVILEGED, type Team } from '../types';
 
 /**
  * The club-wide permission pattern shared by calendar and tasks (server: requireMayEdit /
@@ -15,6 +15,20 @@ export class ClubPermissions {
 
   get isManager(): boolean {
     return this.session.hasRole(...MANAGERS);
+  }
+
+  /** Admin, board or coach: inventory, profiles of team members, creating entries. */
+  get isPrivileged(): boolean {
+    return this.session.hasRole(...PRIVILEGED);
+  }
+
+  /**
+   * Whose profile the member may open (server: requireMaySee): admin/board everyone, coaches the
+   * members of their teams (exact once those rosters are loaded), everyone themselves.
+   */
+  canSeeMember(memberId: string): boolean {
+    if (this.isManager || memberId === this.session.member.id) return true;
+    return this.session.teams.some((t) => this.isCoachOf(t.id) && this.directory.teamRole(t.id, memberId) !== null);
   }
 
   get isCoach(): boolean {

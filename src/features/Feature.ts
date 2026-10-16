@@ -6,6 +6,7 @@ import type { WindowContent } from '../lib/window/WindowService.svelte';
 import type { RouteParams } from '../lib/router/Router.svelte';
 import type { Role } from '../lib/types';
 import type { IconName } from '../icons';
+import type { HomeSection } from '../lib/home/HomeSections';
 
 /** Props every routed page receives. */
 export interface PageProps {
@@ -41,6 +42,8 @@ export interface Feature {
   readonly windows?: Readonly<Record<string, WindowContent>>;
   /** Entries this feature contributes to the calendar. */
   readonly calendar?: CalendarSource;
+  /** A section this feature adds to the start page, below the agenda. */
+  readonly home?: HomeSection;
   /** Runs while a member is signed in with a complete profile; returns its cleanup. */
   readonly start?: () => (() => void) | void;
 }

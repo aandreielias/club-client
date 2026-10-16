@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
   import { settings } from '../../settings';
-  import { directory, permissions, session } from '../../lib/container';
-  import { Resource } from '../../lib/state/Resource.svelte';
-  import AsyncView from '../../ui/AsyncView.svelte';
+  import { directory, permissions, session, store } from '../../lib/container';
+  import { PersonListModel } from '../../lib/directory/PersonListModel.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
+  import PeoplePicker from '../../ui/PeoplePicker.svelte';
   import type { FolderContents } from './FolderContents.svelte';
   import type { Folder, StoredFile } from './model';
 
@@ -23,14 +22,22 @@
   // svelte-ignore state_referenced_locally
   let selected = $state<string[]>([...file.taggedMemberIds]);
 
-  const candidates = new Resource(async () => {
-    if (folder.teamId) return directory.candidates(folder.teamId);
-    if (permissions.isManager) return directory.candidates(null);
-    const rosters = await Promise.all(session.teams.map((t) => directory.roster(t.id)));
-    const unique = new Map(rosters.flatMap((r) => r?.entries ?? []).map((e) => [e.memberId, e] as const));
-    return [...unique.values()].sort((a, b) => a.name.localeCompare(b.name));
-  });
-  untrack(() => candidates.load());
+  // svelte-ignore state_referenced_locally
+  const list = new PersonListModel(
+    async () => {
+      await directory.loadRosters(); // team column and filter
+      if (folder.teamId) return directory.candidates(folder.teamId);
+      if (permissions.isManager) return directory.candidates(null);
+      const rosters = await Promise.all(session.teams.map((t) => directory.roster(t.id)));
+      const unique = new Map(rosters.flatMap((r) => r?.entries ?? []).map((e) => [e.memberId, e] as const));
+      return [...unique.values()];
+    },
+    directory,
+    (id) => selected.includes(id),
+    store,
+    'photo-tags',
+  );
+  void list.load();
 
   function toggle(id: string) {
     selected = selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id];
@@ -43,39 +50,13 @@
 </script>
 
 <div class="stack">
-  <AsyncView resource={candidates}>
-    {#snippet children(list)}
-      <ul class="options">
-        {#each list as candidate (candidate.memberId)}
-          <li>
-            <label>
-              <input type="checkbox" checked={selected.includes(candidate.memberId)} onchange={() => toggle(candidate.memberId)}
-                disabled={!selected.includes(candidate.memberId) && selected.length >= settings.files.maxTags} />
-              {candidate.name}
-            </label>
-          </li>
-        {/each}
-      </ul>
-    {/snippet}
-  </AsyncView>
+  <PeoplePicker {list} chosen={selected} ontoggle={toggle} max={settings.files.maxTags} />
   <p class="muted hint">Nur Personen mit Foto-Einwilligung können markiert werden.</p>
   <ErrorNote error={contents.tagAction.error} />
   <div><Button variant="primary" busy={contents.tagAction.busy} onclick={save}>Markierungen speichern</Button></div>
 </div>
 
 <style>
-  .options {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-    gap: var(--space-xs) var(--space-md);
-    max-height: 14rem;
-    overflow-y: auto;
-  }
-  label {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-sm);
-  }
   .hint {
     margin: 0;
     font-size: var(--font-size-small);

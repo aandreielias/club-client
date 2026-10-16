@@ -72,7 +72,7 @@ export class MockInventory {
   }
 
   private changed(itemId: string, change: string): void {
-    mockServer.events.publish({ type: 'inventory.item-changed', data: { itemId, change }, audience: { everyone: true } });
+    mockServer.events.publish({ type: 'inventory.item-changed', data: { itemId, change }, audience: { roles: PRIVILEGED } });
   }
 
   /** server: Item constructor checks */
@@ -117,13 +117,19 @@ linkRefs.items = (ids) =>
   new Map(inventory.items.data.filter((i) => ids.includes(i.id)).map((i) => [i.id, { name: i.name, quantity: i.quantity }]));
 
 const actor = (req: MockRequest) => directory.actor(req);
+/** server: InventoryHandlers.requireMaySee - only admin, board and coaches see the inventory. */
+const viewer = (req: MockRequest) => {
+  const member = actor(req);
+  directory.requireRole(member);
+  return member;
+};
 
 mockServer
-  .on('GET', '/api/v1/inventory', (req) => (actor(req), { items: inventory.list() }))
+  .on('GET', '/api/v1/inventory', (req) => (viewer(req), { items: inventory.list() }))
   .on('POST', '/api/v1/inventory', (req) => inventory.create(actor(req), req.body ?? {}))
-  .on('GET', '/api/v1/inventory/:id', (req) => (actor(req), inventory.get(req.params.id)))
+  .on('GET', '/api/v1/inventory/:id', (req) => (viewer(req), inventory.get(req.params.id)))
   .on('GET', '/api/v1/inventory/:id/uses', (req) => {
-    const member = actor(req);
+    const member = viewer(req);
     inventory.get(req.params.id);
     const uses = itemUseSources.flatMap((source) => source(member, req.params.id));
     return { uses: uses.sort((a, b) => (a.at === b.at ? 0 : a.at === null ? 1 : b.at === null ? -1 : a.at.localeCompare(b.at))) };

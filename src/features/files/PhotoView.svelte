@@ -1,4 +1,5 @@
 <script lang="ts">
+  import MemberName from '../../ui/MemberName.svelte';
   import { settings } from '../../settings';
   import { bus, directory, session } from '../../lib/container';
   import { APP_ERROR, CONFIRM, TOAST } from '../../channels';
@@ -11,7 +12,8 @@
   import { FolderContents } from './FolderContents.svelte';
   import { FolderTree } from './FolderTree.svelte';
   import type { Folder, StoredFile } from './model';
-  import { fileDownloads, fileLinks, filePolicy, filesApi, fileTypes } from './services';
+  import { fileDownloads, fileLinks, filePolicy, filePreviews, filesApi, fileTypes } from './services';
+  import DocumentPreview from './DocumentPreview.svelte';
   import TagEditor from './TagEditor.svelte';
   import Thumbnail from './Thumbnail.svelte';
 
@@ -68,7 +70,7 @@
     {#if file}
       <Detail title={file.name}>
         {#snippet actions()}
-          <Button onclick={() => download(file)}>Herunterladen</Button>
+          <Button icon="download" onclick={() => download(file)}>Herunterladen</Button>
           {#if image && filePolicy.canTag(file, folder) && !tagging}<Button onclick={() => (tagging = true)}>Personen markieren</Button>{/if}
           {#if filePolicy.canModify(file, folder)}
             <Button variant="danger" busy={contents.deleteAction.busy} onclick={() => remove(file)} tooltip="{image ? 'Foto' : 'Datei'} endgültig löschen">Löschen</Button>
@@ -76,6 +78,7 @@
         {/snippet}
 
         {#if image}<div class="image"><Thumbnail {file} full /></div>{/if}
+        {#if !image && filePreviews.kind(file.contentType)}<DocumentPreview {file} />{/if}
 
         <dl class="props">
           <dt>Ordner</dt>
@@ -83,13 +86,13 @@
           <dt>Typ</dt>
           <dd>{fileTypes.label(file.contentType)}</dd>
           <dt>Hochgeladen</dt>
-          <dd>{session.format.dateTime(file.createdAt)}, {directory.nameOf(file.uploadedBy)}</dd>
+          <dd>{session.format.dateTime(file.createdAt)},&nbsp;<MemberName memberId={file.uploadedBy} /></dd>
           <dt>Größe</dt>
           <dd>{session.format.bytes(file.sizeBytes)}{file.width && file.height ? `, ${file.width} × ${file.height}` : ''}</dd>
           {#if image}
             <dt>Markiert</dt>
             <dd>
-              {#each file.taggedMemberIds as member (member)}<Tag tone="gray">{directory.nameOf(member)}</Tag>{:else}<span class="muted">Niemand</span>{/each}
+              {#each file.taggedMemberIds as member (member)}<MemberName memberId={member} tag />{:else}<span class="muted">Niemand</span>{/each}
             </dd>
           {/if}
         </dl>
