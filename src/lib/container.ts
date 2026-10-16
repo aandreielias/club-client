@@ -2,6 +2,7 @@
  * Composition root: creates every shared service once and wires their dependencies.
  * Components and features import services from here; nothing else constructs them.
  */
+import { ActivityApi } from './activity/ActivityApi';
 import { settings } from '../settings';
 import { EventBusBuilder } from './bus';
 import { ErrorReporter } from './errors/ErrorReporter';
@@ -130,6 +131,7 @@ export const homeSections = new HomeSections();
 
 /** "Benötigt" lists and attachments of appointments and tasks. */
 export const linksApi = new LinksApi(api);
+export const activityApi = new ActivityApi(api);
 
 export const navCatalog = new NavCatalog();
 

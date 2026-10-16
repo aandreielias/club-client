@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ActivitySection from '../../ui/ActivitySection.svelte';
   import { backStack, bus, commands, directory, linksApi, permissions, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
@@ -142,6 +143,8 @@
           <h2>Fahrgemeinschaft</h2>
           <RidesPanel appointmentId={appointment.id} open={!policy.isPast(appointment)} />
         {/if}
+
+        <ActivitySection kind="APPOINTMENT" id={appointment.id} />
 
         {#if policy.canEdit(appointment)}
           <CancelDialog bind:open={cancelOpen} {detail} {appointment} oncancelled={() => view.notify('Termin abgesagt.')} />

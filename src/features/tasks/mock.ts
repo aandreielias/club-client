@@ -1,4 +1,5 @@
 // Mock of the club-server tasks module (TaskHandlers): visibility, work and manage rights, validation.
+import { activity, MockActivity } from '../../lib/mock/MockActivity';
 import { settings } from '../../settings';
 import { directory, type MockDirectory } from '../../lib/mock/core';
 import { itemUseSources, MockLinks, type ItemUse } from '../../lib/mock/MockLinks';
@@ -79,6 +80,7 @@ export class MockTasks {
     this.requireMayManage(viewer, task.teamId);
     const links = this.links.set(member, task.id, body);
     this.changed(task, 'UPDATED');
+    MockActivity.record('TASK', task.id, member, 'UPDATED', task.title);
     return links;
   }
 
@@ -123,6 +125,7 @@ export class MockTasks {
     this.tasks.data.push(task);
     this.tasks.save();
     this.changed(task, 'CREATED');
+    MockActivity.record('TASK', task.id, member, 'CREATED', task.title);
     this.assigned(task, []);
     return { ...task, comments: [] };
   }
@@ -147,6 +150,7 @@ export class MockTasks {
     Object.assign(current, next);
     this.tasks.save();
     this.changed(current, 'UPDATED', previousAssignees);
+    MockActivity.record('TASK', current.id, member, 'UPDATED', current.title);
     this.assigned(current, previousAssignees);
     return this.withComments(current);
   }
@@ -169,12 +173,14 @@ export class MockTasks {
       this.tasks.data.push(next);
       task.repeatWeeks = null;
       this.changed(next, 'CREATED');
+      MockActivity.record('TASK', next.id, member, 'CREATED', next.title);
       this.assigned(next, []);
     }
     task.status = status as TaskStatus;
     task.completedAt = status === 'DONE' ? (task.completedAt ?? new Date().toISOString()) : null;
     this.tasks.save();
     this.changed(task, 'STATUS');
+    MockActivity.record('TASK', task.id, member, 'STATUS', task.status);
     return this.withComments(task);
   }
 
@@ -185,6 +191,7 @@ export class MockTasks {
     item.done = !!done;
     this.tasks.save();
     this.changed(task, 'UPDATED');
+    MockActivity.record('TASK', task.id, member, 'UPDATED', task.title);
     return this.withComments(task);
   }
 
@@ -194,6 +201,7 @@ export class MockTasks {
     (this.comments.data[id] ??= []).push({ id: crypto.randomUUID(), authorId: member.id, text, createdAt: new Date().toISOString() });
     this.comments.save();
     this.changed(task, 'COMMENTED');
+    MockActivity.record('TASK', task.id, member, 'COMMENTED', null);
     return this.withComments(task);
   }
 
@@ -202,6 +210,7 @@ export class MockTasks {
     const task = this.visible(viewer, id);
     this.requireMayManage(viewer, task.teamId);
     this.changed(task, 'DELETED'); // audience computed before the task is gone
+    MockActivity.record('TASK', task.id, member, 'DELETED', task.title);
     this.tasks.data.splice(this.tasks.data.indexOf(task), 1);
     delete this.comments.data[id];
     this.links.remove(id);
@@ -347,6 +356,7 @@ const actor = (req: MockRequest) => directory.actor(req);
 const flag = (req: MockRequest, name: string) => req.query.get(name) === 'true';
 
 mockServer
+  .on('GET', '/api/v1/tasks/:id/activity', (req) => activity.list(actor(req), 'TASK', tasks.get(actor(req), req.params.id).id))
   .on('GET', '/api/v1/tasks', (req) =>
     ({ items: tasks.list(actor(req), flag(req, 'mine'), req.query.get('teamId'), flag(req, 'includeDone'), req.query.get('dueFrom'), req.query.get('dueTo')) }))
   .on('POST', '/api/v1/tasks', (req) => tasks.create(actor(req), req.body ?? {}))

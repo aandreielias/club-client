@@ -1,5 +1,6 @@
 // Mock of the club-server files module (FileHandlers): folder visibility and management, content
 // type detection, a fake virus scan (EICAR), photo consent for tags. File bytes live in memory only.
+import { activity, MockActivity } from '../../lib/mock/MockActivity';
 import { settings } from '../../settings';
 import { directory, type MockDirectory } from '../../lib/mock/core';
 import type { MockAudience } from '../../lib/mock/MockEventBus';
@@ -150,6 +151,7 @@ export class MockFiles {
     }
     this.files.save();
     this.changed(folder, file.id, 'UPDATED');
+    MockActivity.record('FILE', file.id, viewer.member, 'UPDATED', file.name);
     if (target !== folder) this.changed(target, file.id, 'UPDATED');
     return file;
   }
@@ -241,6 +243,7 @@ export class MockFiles {
     this.files.data.push(stored);
     this.files.save();
     this.changed(folder, stored.id, 'UPLOADED');
+    MockActivity.record('FILE', stored.id, viewer.member, 'UPLOADED', stored.name);
     return stored;
   }
 
@@ -266,6 +269,7 @@ export class MockFiles {
     file.taggedMemberIds = ids;
     this.files.save();
     this.changed(folder, file.id, 'TAGGED');
+    MockActivity.record('FILE', file.id, viewer.member, 'TAGGED', null);
     return file;
   }
 
@@ -278,6 +282,7 @@ export class MockFiles {
     this.files.save();
     this.#blobs.delete(file.id);
     this.changed(folder, file.id, 'DELETED');
+    MockActivity.record('FILE', file.id, viewer.member, 'DELETED', file.name);
   }
 
   /** server: FileHandlers.fileRefs. Deleted files keep their last name for viewers of their last folder. */
@@ -551,6 +556,10 @@ linkRefs.files = (member, links) => files.refs(member, links);
 const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer
+  .on('GET', '/api/v1/files/:id/activity', (req) => {
+    const [ref] = files.refs(actor(req), [{ fileId: req.params.id, folderId: null, name: null }]);
+    return ref && !ref.deleted ? activity.list(actor(req), 'FILE', ref.id) : MockServer.fail(404, 'file.not-found');
+  })
   .on('GET', '/api/v1/folders', (req) => ({ items: files.listFolders(actor(req)) }))
   .on('POST', '/api/v1/folders', (req) => files.createFolder(actor(req), req.body ?? {}))
   .on('PATCH', '/api/v1/folders/:id', (req) => files.updateFolder(actor(req), req.params.id, req.body ?? {}))

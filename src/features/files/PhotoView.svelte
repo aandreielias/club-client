@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ActivitySection from '../../ui/ActivitySection.svelte';
   import MemberName from '../../ui/MemberName.svelte';
   import { settings } from '../../settings';
   import { bus, directory, pendingDeletes, session } from '../../lib/container';
@@ -97,6 +98,7 @@
           <h2>Personen markieren</h2>
           <TagEditor {file} {folder} {contents} ondone={() => (tagging = false)} />
         {/if}
+        <ActivitySection kind="FILE" id={file.id} describe={(e) => (e.action === 'UPDATED' && e.detail ? `umbenannt oder verschoben: ${e.detail}` : null)} />
       </Detail>
     {/if}
   {/snippet}

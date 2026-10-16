@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ActivitySection from '../../ui/ActivitySection.svelte';
   import { backStack, bus, commands, directory, linksApi, pendingDeletes, permissions, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
@@ -16,7 +17,7 @@
   import Comments from './Comments.svelte';
   import DueField from './DueField.svelte';
   import { TASK_CHANGED } from './events';
-  import { repeatLabel, statusHue, statusLabel, TASK_STATUSES } from './model';
+  import { repeatLabel, statusHue, statusLabel, type TaskStatus, TASK_STATUSES } from './model';
   import { TaskDetailModel } from './TaskDetailModel.svelte';
   import TaskEditor from './TaskEditor.svelte';
   import { TaskForm } from './TaskForm.svelte';
@@ -133,6 +134,7 @@
 
         <h2>Kommentare</h2>
         <Comments {task} {detail} />
+        <ActivitySection kind="TASK" id={task.id} describe={(e) => (e.action === 'STATUS' && e.detail ? `Status: ${statusLabel(e.detail as TaskStatus)}` : null)} />
       {/if}
     </Detail>
   {/snippet}

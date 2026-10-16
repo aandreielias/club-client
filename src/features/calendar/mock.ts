@@ -1,4 +1,5 @@
 // Mock of the club-server calendar and attendance modules (visibility, edit rights, series, answers).
+import { activity, MockActivity } from '../../lib/mock/MockActivity';
 import { settings } from '../../settings';
 import { directory, type MockDirectory } from '../../lib/mock/core';
 import { itemUseSources, MockLinks, type ItemUse } from '../../lib/mock/MockLinks';
@@ -72,6 +73,7 @@ export class MockCalendar {
     this.requireMayEdit(member, appointment.teamId);
     const links = this.links.set(member, appointment.id, body);
     this.changed([appointment], 'UPDATED');
+    MockActivity.record('APPOINTMENT', appointment.id, member, 'UPDATED', appointment.title);
     return links;
   }
 
@@ -108,6 +110,7 @@ export class MockCalendar {
     this.appointments.data.push(...created);
     this.appointments.save();
     this.changed(created, 'CREATED');
+    created.forEach((a) => MockActivity.record('APPOINTMENT', a.id, member, 'CREATED', a.title));
     return created;
   }
 
@@ -119,6 +122,7 @@ export class MockCalendar {
     Object.assign(current, next);
     this.appointments.save();
     this.changed([current], 'UPDATED');
+    MockActivity.record('APPOINTMENT', current.id, member, 'UPDATED', current.title);
     return current;
   }
 
@@ -132,6 +136,7 @@ export class MockCalendar {
     targets.forEach((a) => (a.cancelled = true));
     this.appointments.save();
     this.changed(targets, 'CANCELLED');
+    targets.forEach((a) => MockActivity.record('APPOINTMENT', a.id, member, 'CANCELLED', a.title));
     return targets;
   }
 
@@ -452,6 +457,7 @@ itemUseSources.push((member, itemId) => calendar.itemUses(member, itemId));
 const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer
+  .on('GET', '/api/v1/appointments/:id/activity', (req) => activity.list(actor(req), 'APPOINTMENT', calendar.visible(actor(req), req.params.id).id))
   .on('GET', '/api/v1/appointments', (req) =>
     ({ items: calendar.list(actor(req), req.query.get('from'), req.query.get('to'), req.query.get('teamId')) }))
   .on('POST', '/api/v1/appointments', (req) => ({ items: calendar.create(actor(req), req.body ?? {}) }))
