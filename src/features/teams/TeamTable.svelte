@@ -4,7 +4,7 @@
   import { windowMenu } from '../../lib/window/windowMenu';
   import DataTable from '../../ui/DataTable.svelte';
   import Tag from '../../ui/Tag.svelte';
-  import type { TeamListModel } from './TeamListModel.svelte';
+  import type { TeamListModel } from '../../lib/directory/TeamListModel.svelte';
 
   /** Teams as rows (teams page, start page); the member's own teams are marked. */
   let { list, toolbar = true, limit }: { list: TeamListModel; toolbar?: boolean; limit?: number } = $props();

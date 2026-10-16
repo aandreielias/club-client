@@ -1,14 +1,14 @@
-import { ListModel } from '../../lib/list/ListModel.svelte';
-import type { SessionStore } from '../../lib/session/SessionStore.svelte';
-import type { LocalStore } from '../../lib/storage/LocalStore';
-import type { Team } from '../../lib/types';
+import { ListModel } from '../list/ListModel.svelte';
+import type { SessionStore } from '../session/SessionStore.svelte';
+import type { LocalStore } from '../storage/LocalStore';
+import type { Team } from '../types';
 
-/** Teams: every team for admin/board, otherwise the member's own. */
+/** Teams as the app's standard list (teams page, start page, choosing folder teams). */
 export class TeamListModel extends ListModel<Team> {
-  constructor(load: () => Promise<Team[]>, session: SessionStore, store: LocalStore | null) {
+  constructor(load: () => Promise<Team[]>, session: SessionStore, store: LocalStore | null, id = 'teams') {
     super(
       {
-        id: 'teams',
+        id,
         load,
         defaultSort: { key: 'season', dir: 'desc' },
         searchText: (t) => t.name,
@@ -23,7 +23,7 @@ export class TeamListModel extends ListModel<Team> {
             label: 'Saison',
             kind: 'select',
             allLabel: 'Alle Saisonen',
-            options: () => [...new Set((this.data.value ?? []).map((t) => t.season))].sort().reverse().map((s) => ({ value: s, label: s })),
+            options: (items) => [...new Set(items.map((t) => t.season))].sort().reverse().map((s) => ({ value: s, label: s })),
             test: (t, value) => t.season === value,
           },
           { key: 'mine', label: 'Nur meine', kind: 'toggle', test: (t, on) => !on || session.isInTeam(t.id) },

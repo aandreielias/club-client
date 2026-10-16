@@ -7,7 +7,7 @@
   import TeamTable from './TeamTable.svelte';
   import Page from '../../ui/Page.svelte';
   import CreateTeamDialog from './CreateTeamDialog.svelte';
-  import { TeamListModel } from './TeamListModel.svelte';
+  import { TeamListModel } from '../../lib/directory/TeamListModel.svelte';
   import { teamPolicy, teamsApi } from './services';
 
   const list = new TeamListModel(async () => [...(permissions.isManager ? await teamsApi.list(false) : session.teams)], session, store);

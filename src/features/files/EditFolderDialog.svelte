@@ -9,7 +9,9 @@
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
-  import CheckList from '../../ui/CheckList.svelte';
+  import TeamPicker from '../../ui/TeamPicker.svelte';
+  import { TeamListModel } from '../../lib/directory/TeamListModel.svelte';
+  import { session } from '../../lib/container';
   import { tooltip } from '../../ui/tooltip';
   import { FolderEditForm } from './FolderEditForm.svelte';
   import { FOLDER_COLORS, FOLDER_SCOPES, scopeLabel, type Folder } from './model';
@@ -28,7 +30,13 @@
   const teams = filePolicy.rootTeams();
   // Teams already on the folder stay listed even if the member could not choose them (e.g. admin-made shared folders).
   // svelte-ignore state_referenced_locally
-  const teamOptions = [...teams.map((t) => ({ value: t.id, label: t.name })), ...folder.teamIds.filter((id) => !teams.some((t) => t.id === id)).map((id) => ({ value: id, label: directory.teamName(id) ?? 'Team' }))];
+  const teamList = new TeamListModel(
+    async () => [...teams, ...folder.teamIds.filter((id) => !teams.some((t) => t.id === id)).map((id) => ({ id, name: directory.teamName(id) ?? 'Team', season: '' }))],
+    session,
+    null,
+    'folder-teams',
+  );
+  void teamList.load();
   // svelte-ignore state_referenced_locally
   const photos = new Resource(async () => (await filesApi.files(folder.id)).filter((f) => fileTypes.isImage(f.contentType)));
   void photos.load();
@@ -44,7 +52,7 @@
   }
 </script>
 
-<Dialog open title="Ordner bearbeiten" {onclose}>
+<Dialog open wide={form.scope === 'TEAM'} title="Ordner bearbeiten" {onclose}>
   <form class="stack" onsubmit={submit} novalidate>
     <Field label="Name" error={form.error('name')}>
       <!-- svelte-ignore a11y_autofocus -->
@@ -56,7 +64,11 @@
         <Select bind:value={form.scope} options={scopes} />
       </Field>
       {#if form.scope === 'TEAM'}
-        <CheckList legend="Teams" bind:value={form.teamIds} options={teamOptions} error={form.error('team')} />
+        <div class="teams">
+          <span class="legend">Teams</span>
+          <TeamPicker list={teamList} chosen={form.teamIds} error={form.error('team')}
+            ontoggle={(id) => (form.teamIds = form.teamIds.includes(id) ? form.teamIds.filter((t) => t !== id) : [...form.teamIds, id])} />
+        </div>
       {/if}
     {:else}
       <p class="muted hint">Sichtbar für: {scopeLabel(folder.scope)}. Unterordner übernehmen die Sichtbarkeit vom obersten Ordner.</p>
@@ -107,6 +119,15 @@
 </Dialog>
 
 <style>
+  .teams {
+    display: grid;
+    gap: var(--space-xs);
+  }
+  .legend {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+  }
   .hint {
     margin: 0;
     font-size: var(--font-size-small);

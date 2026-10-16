@@ -2,7 +2,13 @@
   import type { Snippet } from 'svelte';
 
   /** Small modal prompt (PIN, confirm, short forms). Details open in the WindowHost instead. */
-  let { open, title, onclose, children }: { open: boolean; title: string; onclose: () => void; children: Snippet } = $props();
+  let {
+    open,
+    title,
+    onclose,
+    wide = false,
+    children,
+  }: { open: boolean; title: string; onclose: () => void; /** Room for a list (e.g. choosing teams). */ wide?: boolean; children: Snippet } = $props();
 
   let element: HTMLDialogElement;
 
@@ -12,7 +18,7 @@
   });
 </script>
 
-<dialog bind:this={element} {onclose} aria-label={title}>
+<dialog bind:this={element} {onclose} aria-label={title} class:wide>
   <h3>{title}</h3>
   {@render children()}
 </dialog>
@@ -26,6 +32,9 @@
     background: var(--color-elevated);
     color: var(--color-text);
     box-shadow: var(--color-shadow-window);
+  }
+  dialog.wide {
+    width: min(720px, calc(100vw - 2 * var(--space-lg)));
   }
   dialog[open] {
     animation: dialog-in var(--motion-base) var(--motion-easing);
