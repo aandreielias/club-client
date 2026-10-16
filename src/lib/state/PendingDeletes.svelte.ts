@@ -4,8 +4,8 @@ import { APP_ERROR } from '../errors/ErrorReporter';
 import { TOAST } from '../notify/ToastService.svelte';
 
 export interface PendingDelete {
-  /** Record id; lists hide rows with this key while the delete is pending. */
-  id: string;
+  /** Record ids; lists hide rows with these keys while the delete is pending. */
+  ids: readonly string[];
   /** Toast text, e.g. "„Ballwagen“ gelöscht." */
   text: string;
   /** The real delete, run when the undo time is over. */
@@ -30,17 +30,18 @@ export class PendingDeletes {
   }
 
   schedule(entry: PendingDelete): void {
-    this.#hidden.add(entry.id);
-    this.#pending.set(entry.id, { entry, timer: setTimeout(() => void this.commit(entry.id), this.undoMs) });
-    this.bus.publish(TOAST, { text: entry.text, durationMs: this.undoMs, action: { label: 'Rückgängig', run: () => this.undo(entry.id) } });
+    const key = crypto.randomUUID();
+    entry.ids.forEach((id) => this.#hidden.add(id));
+    this.#pending.set(key, { entry, timer: setTimeout(() => void this.commit(key), this.undoMs) });
+    this.bus.publish(TOAST, { text: entry.text, durationMs: this.undoMs, action: { label: 'Rückgängig', run: () => this.undo(key) } });
   }
 
-  undo(id: string): void {
-    const pending = this.#pending.get(id);
+  private undo(key: string): void {
+    const pending = this.#pending.get(key);
     if (!pending) return;
     clearTimeout(pending.timer);
-    this.#pending.delete(id);
-    this.#hidden.delete(id);
+    this.#pending.delete(key);
+    pending.entry.ids.forEach((id) => this.#hidden.delete(id));
     this.bus.publish(TOAST, { text: 'Wiederhergestellt.' });
   }
 
@@ -49,16 +50,16 @@ export class PendingDeletes {
     for (const id of [...this.#pending.keys()]) void this.commit(id);
   }
 
-  private async commit(id: string): Promise<void> {
-    const pending = this.#pending.get(id);
+  private async commit(key: string): Promise<void> {
+    const pending = this.#pending.get(key);
     if (!pending) return;
     clearTimeout(pending.timer);
-    this.#pending.delete(id);
+    this.#pending.delete(key);
     try {
       await pending.entry.commit();
     } catch (error) {
-      // The record still exists: show it again and say why.
-      this.#hidden.delete(id);
+      // The records still exist: show them again and say why.
+      pending.entry.ids.forEach((id) => this.#hidden.delete(id));
       this.bus.publish(APP_ERROR, error);
     }
   }

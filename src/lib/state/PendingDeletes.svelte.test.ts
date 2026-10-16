@@ -20,7 +20,7 @@ describe('PendingDeletes', () => {
   it('hides at once and deletes after the undo time', async () => {
     const { deletes, toasts } = setup();
     const commit = vi.fn(async () => {});
-    deletes.schedule({ id: 'a', text: 'Gelöscht.', commit });
+    deletes.schedule({ ids: ['a'], text: 'Gelöscht.', commit });
     expect(deletes.isHidden('a')).toBe(true);
     expect(toasts[0].action?.label).toBe('Rückgängig');
     await vi.advanceTimersByTimeAsync(4999);
@@ -30,15 +30,16 @@ describe('PendingDeletes', () => {
   });
 
   it('undo keeps the record; a failed delete shows it again with the error', async () => {
-    const { deletes, errors } = setup();
+    const { deletes, errors, toasts } = setup();
     const commit = vi.fn(async () => {});
-    deletes.schedule({ id: 'a', text: 'x', commit });
-    deletes.undo('a');
+    deletes.schedule({ ids: ['a', 'c'], text: 'x', commit });
+    toasts.at(-1)!.action!.run();
+    expect(deletes.isHidden('c')).toBe(false);
     await vi.advanceTimersByTimeAsync(6000);
     expect(commit).not.toHaveBeenCalled();
     expect(deletes.isHidden('a')).toBe(false);
 
-    deletes.schedule({ id: 'b', text: 'y', commit: () => Promise.reject(new Error('nope')) });
+    deletes.schedule({ ids: ['b'], text: 'y', commit: () => Promise.reject(new Error('nope')) });
     await vi.advanceTimersByTimeAsync(5000);
     expect(deletes.isHidden('b')).toBe(false);
     expect(errors).toHaveLength(1);

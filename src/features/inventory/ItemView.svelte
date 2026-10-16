@@ -48,7 +48,7 @@
 
   /** Termine und Aufgaben, die ihn benötigen, zeigen ihn danach als gelöscht an. */
   function destroy(name: string) {
-    pendingDeletes.schedule({ id, text: `„${name}“ gelöscht.`, commit: () => inventoryApi.delete(id) });
+    pendingDeletes.schedule({ ids: [id], text: `„${name}“ gelöscht.`, commit: () => inventoryApi.delete(id) });
     view.leave();
   }
 </script>

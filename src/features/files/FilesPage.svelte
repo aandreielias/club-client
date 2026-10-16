@@ -23,7 +23,12 @@
   import EditFolderDialog from './EditFolderDialog.svelte';
   import Icon from '../../ui/Icon.svelte';
   import { colorHue } from './model';
-  import { fileDownloads, fileLinks, filePolicy, filesApi, fileTypes } from './services';
+  import { fileDownloads, fileLinks, fileMover, filePolicy, filesApi, fileTypes, folderZip } from './services';
+  import { FileMover } from './FileMover';
+  import MoveFilesDialog from './MoveFilesDialog.svelte';
+  import { SvelteSet } from 'svelte/reactivity';
+  import type { RowDrag } from '../../ui/rowDrag';
+  import { BrowserFile } from '../../lib/files/BrowserFile';
   import UploadPanel from './UploadPanel.svelte';
 
   /** '/files' (root folders) or '/files/:id' (one folder). */
@@ -77,7 +82,7 @@
     if (item.kind !== 'file') return;
     const file = item.file;
     pendingDeletes.schedule({
-      id: file.id,
+      ids: [file.id],
       text: `„${file.name}“ gelöscht.`,
       commit: async () => {
         await filesApi.deleteFile(file.id);
@@ -94,6 +99,7 @@
         { label: 'Öffnen', run: () => open(item) },
         ...(target.canManage ? [{ label: 'Bearbeiten', icon: 'edit' as const, run: () => (editingFolder = target) }] : []),
         { separator: true },
+        { label: 'Als ZIP herunterladen', icon: 'download', run: () => void downloadZip(target) },
         { label: 'Link kopieren', icon: 'copy', run: () => void LinkClipboard.copy(bus, `/files/${target.id}`) },
       ];
     }
@@ -110,6 +116,70 @@
 
   // Empty folder: create a subfolder (uploading has its own panel below).
   const emptyAction = $derived(canCreate ? { label: folderId ? 'Neuer Unterordner' : 'Neuer Ordner', icon: 'add' as const, run: () => (creating = true) } : null);
+
+  // ---- Selection, moving, ZIP ----
+  const selected = new SvelteSet<string>();
+  const selectedFiles = $derived((contents?.files.value ?? []).filter((f) => selected.has(f.id) && !pendingDeletes.isHidden(f.id)));
+  const toggleSelected = (id: string) => (selected.has(id) ? selected.delete(id) : selected.add(id));
+  let moving = $state(false);
+  let zipping = $state(false);
+
+  /** Files dragged onto a folder row, tile or breadcrumb (a selected file carries the whole selection). */
+  function moveIds(ids: readonly string[], target: Folder) {
+    const files = (contents?.files.value ?? []).filter((f) => ids.includes(f.id));
+    if (!folder || !fileMover.canMove(files, folder, target)) {
+      bus.publish(TOAST, { text: 'In diesen Ordner kannst du diese Dateien nicht verschieben.', tone: 'error' });
+      return;
+    }
+    void fileMover.move(files, target).then(() => (selected.clear(), list.load()));
+  }
+
+  const drag: RowDrag<FolderItem> = {
+    type: FileMover.DRAG_TYPE,
+    can: (item) => item.kind === 'file' && !!folder?.canManage,
+    payload: (item) => JSON.stringify(selected.has(item.id) ? [...selected] : [item.id]),
+    accepts: (item) => item.kind === 'folder' && item.folder.canManage,
+    drop: (item, payload) => item.kind === 'folder' && moveIds(JSON.parse(payload), item.folder),
+  };
+  const crumbDrag: RowDrag<Folder> = {
+    type: FileMover.DRAG_TYPE,
+    can: () => false,
+    payload: () => '',
+    accepts: (target) => target.canManage && target.id !== folderId,
+    drop: (target, payload) => moveIds(JSON.parse(payload), target),
+  };
+
+  function removeSelected() {
+    const files = selectedFiles.filter((f) => folder && filePolicy.canModify(f, folder));
+    if (!files.length) return;
+    pendingDeletes.schedule({
+      ids: files.map((f) => f.id),
+      text: files.length === 1 ? `„${files[0].name}“ gelöscht.` : `${files.length} Dateien gelöscht.`,
+      commit: async () => {
+        for (const f of files) await filesApi.deleteFile(f.id);
+        void list.load();
+      },
+    });
+    selected.clear();
+  }
+
+  /** The folder with its subfolders, or the selection, as one ZIP file. */
+  async function downloadZip(target: Folder, only?: readonly StoredFile[]) {
+    zipping = true;
+    try {
+      const entries = only ? only.map((file) => ({ path: file.name, file })) : await folderZip.entries(target, tree);
+      if (!entries.length) {
+        bus.publish(TOAST, { text: 'Der Ordner ist leer.' });
+        return;
+      }
+      BrowserFile.save(await folderZip.build(entries), `${target.name}.zip`);
+      bus.publish(TOAST, { text: `ZIP mit ${entries.length} ${entries.length === 1 ? 'Datei' : 'Dateien'} heruntergeladen.` });
+    } catch (error) {
+      bus.publish(APP_ERROR, error);
+    } finally {
+      zipping = false;
+    }
+  }
 
   let editingFolder = $state<Folder | null>(null);
   let editingFile = $state<StoredFile | null>(null);
@@ -157,6 +227,7 @@
   {#snippet actions()}
     <ChoiceGroup name="files-view" label="Ansicht" options={VIEWS} bind:value={() => shownView, (v) => v && preferences.set('filesView', v)} />
     {#if folder}
+      <Button icon="download" busy={zipping} onclick={() => downloadZip(folder)} tooltip="Ordner mit Unterordnern als ZIP herunterladen" />
       <Button icon="copy" onclick={() => LinkClipboard.copy(bus, `/files/${folder.id}`)} tooltip="Link zu diesem Ordner kopieren" />
     {/if}
     {#if folder?.canManage}
@@ -166,16 +237,29 @@
     {#if canCreate}<Button variant="primary" onclick={() => (creating = true)}>{folderId ? 'Neuer Unterordner' : 'Neuer Ordner'}</Button>{/if}
   {/snippet}
   {#snippet context()}
-    <Breadcrumb path={folder ? tree.path(folder.id) : []} />
+    <Breadcrumb path={folder ? tree.path(folder.id) : []} drag={crumbDrag} />
   {/snippet}
 
   {#if folderId && tree.folders.value && !folder}
     <Empty text="Ordner nicht gefunden." />
   {:else}
+    {#if selectedFiles.length && folder}
+      <div class="selection" role="toolbar" aria-label="Auswahl">
+        <span class="count">{selectedFiles.length} ausgewählt</span>
+        {#if folder.canManage}<Button size="sm" icon="move" onclick={() => (moving = true)}>Verschieben</Button>{/if}
+        <Button size="sm" icon="download" busy={zipping} onclick={() => downloadZip(folder, selectedFiles)} tooltip="Auswahl als ZIP herunterladen">Als ZIP</Button>
+        {#if selectedFiles.every((f) => filePolicy.canModify(f, folder))}
+          <Button size="sm" variant="danger" icon="delete" onclick={removeSelected} tooltip="Ausgewählte Dateien löschen">Löschen</Button>
+        {/if}
+        <Button size="sm" variant="ghost" onclick={() => selected.clear()}>Auswahl aufheben</Button>
+      </div>
+    {/if}
     {#if shownView === 'gallery'}
-      <FolderGallery model={list} onopen={open} menu={itemMenu} emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'} {emptyAction} />
+      <FolderGallery model={list} onopen={open} menu={itemMenu} emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'} {emptyAction} {drag}
+        selected={(item) => selected.has(item.id)} onselect={(item) => toggleSelected(item.id)} />
     {:else}
-      <DataTable model={list} rowKey={(item) => item.id} onopen={open} menu={itemMenu} emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'} {emptyAction}>
+      <DataTable model={list} rowKey={(item) => item.id} onopen={open} menu={itemMenu} emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'} {emptyAction} {drag}
+        check={contents ? { checked: (item) => selected.has(item.id), toggle: (item) => toggleSelected(item.id), hidden: (item) => item.kind === 'folder', label: (item) => `${item.name} auswählen` } : undefined}>
         {#snippet cell(item, column)}
           {#if column.key === 'actions'}
             {#if item.kind === 'file' && folder && filePolicy.canModify(item.file, folder)}
@@ -208,6 +292,9 @@
   {/if}
 </Page>
 
+{#if moving && folder}
+  <MoveFilesDialog files={selectedFiles} {folder} {tree} onclose={() => (moving = false)} onmoved={() => ((moving = false), selected.clear(), list.load())} />
+{/if}
 {#if editingFolder}
   <EditFolderDialog folder={editingFolder} onsaved={folderSaved} onclose={() => (editingFolder = null)} />
 {/if}
@@ -220,6 +307,21 @@
 {/if}
 
 <style>
+  .selection {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-lg);
+    background: var(--color-accent-soft);
+    animation: rise var(--motion-base) var(--motion-easing);
+  }
+  .count {
+    margin-right: auto;
+    font-weight: var(--font-weight-medium);
+  }
   .name-cell {
     display: inline-flex;
     align-items: center;

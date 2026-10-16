@@ -65,7 +65,7 @@
   }
 
   function remove(title: string) {
-    pendingDeletes.schedule({ id: detail.id, text: `Aufgabe „${title}“ gelöscht.`, commit: () => tasksApi.delete(detail.id) });
+    pendingDeletes.schedule({ ids: [detail.id], text: `Aufgabe „${title}“ gelöscht.`, commit: () => tasksApi.delete(detail.id) });
     view.leave();
   }
 </script>

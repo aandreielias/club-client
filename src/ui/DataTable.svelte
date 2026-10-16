@@ -8,6 +8,7 @@
   import type { MenuEntry } from '../lib/overlay/ContextMenuService.svelte';
   import AsyncView from './AsyncView.svelte';
   import Empty, { type EmptyAction } from './Empty.svelte';
+  import { RowDragging, type RowDrag } from './rowDrag';
   import ListToolbar from './ListToolbar.svelte';
   import { tooltip } from './tooltip';
   import { menu as contextMenu, openMenuAt } from './contextMenu';
@@ -31,6 +32,7 @@
     check,
     limit,
     emptyAction,
+    drag,
   }: {
     model: ListModel<T>;
     rowKey: (item: T) => string;
@@ -49,8 +51,13 @@
     /** Shows only the first rows (start page sections); the toolbar and counts still see all. */
     limit?: number;
     /** Checkbox column (choosing people etc.): checked state, toggle and optional lock per row. */
-    check?: { checked: (item: T) => boolean; toggle: (item: T) => void; disabled?: (item: T) => boolean; label: (item: T) => string };
+    check?: { checked: (item: T) => boolean; toggle: (item: T) => void; disabled?: (item: T) => boolean; hidden?: (item: T) => boolean; label: (item: T) => string };
+    /** Drag rows onto other rows (e.g. files onto folders): the payload travels as `type`. */
+    drag?: RowDrag<T>;
   } = $props();
+
+  /** Row currently under a dragged payload it accepts. */
+  let dropKey = $state<string | null>(null);
 
   // Rows being deleted (with undo) disappear right away.
   const shownRows = $derived(model.rows.filter((item) => !pendingDeletes.isHidden(rowKey(item))));
@@ -130,12 +137,18 @@
               <tr class:clickable={!!onopen} class:selected={selected === rowKey(item)} class:cursor={rowIndex === cursor}
                 in:motion.rise|global={{ delay: motion.stagger(rowIndex), distance: 4 }} animate:flip={{ duration: motion.ms('base') }}
                 class:checked={!!check?.checked(item)}
+                class:drop-target={dropKey === rowKey(item)}
+                draggable={drag?.can(item) ? 'true' : undefined}
+                ondragstart={(e) => drag && RowDragging.start(drag, item, e)}
+                ondragover={(e) => drag && RowDragging.over(drag, item, e) && (dropKey = rowKey(item))}
+                ondragleave={() => dropKey === rowKey(item) && (dropKey = null)}
+                ondrop={(e) => ((dropKey = null), drag && RowDragging.drop(drag, item, e))}
                 onclick={() => ((cursor = rowIndex), onopen ? onopen(item) : check && !check.disabled?.(item) && check.toggle(item))}
                 {@attach menu ? contextMenu(() => ((cursor = rowIndex), menu(item))) : undefined}>
                 {#if check}
                   <td class="check">
-                    <input type="checkbox" checked={check.checked(item)} disabled={check.disabled?.(item)} aria-label={check.label(item)}
-                      onclick={(e) => e.stopPropagation()} onchange={() => check.toggle(item)} />
+                    {#if !check.hidden?.(item)}<input type="checkbox" checked={check.checked(item)} disabled={check.disabled?.(item)} aria-label={check.label(item)}
+                      onclick={(e) => e.stopPropagation()} onchange={() => check.toggle(item)} />{/if}
                   </td>
                 {/if}
                 {#each model.columns as column, index (column.key)}
@@ -245,6 +258,13 @@
   }
   tr.checked td {
     background: var(--color-accent-soft);
+  }
+  tr.drop-target td {
+    background: var(--color-accent-soft);
+    box-shadow: inset 0 0 0 1px var(--color-accent);
+  }
+  tr[draggable='true'] {
+    cursor: grab;
   }
   tbody tr.clickable:hover td {
     background: var(--color-hover);

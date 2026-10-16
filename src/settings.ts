@@ -407,6 +407,8 @@ export const settings = {
   },
 
   files: {
+    /** ZIP downloads are packed in the browser; larger folders must be downloaded in parts. */
+    zipMaxBytes: 500 * 1024 * 1024,
     /** Excel/PowerPoint previews show at most this much. */
     preview: { maxRows: 500, maxColumns: 50, maxSlides: 100 },
     /** View of every folder until the member picks another one. */

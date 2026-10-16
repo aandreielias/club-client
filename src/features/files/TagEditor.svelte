@@ -1,12 +1,13 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { directory, permissions, session, store } from '../../lib/container';
+  import { directory, store } from '../../lib/container';
   import { PersonListModel } from '../../lib/directory/PersonListModel.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import PeoplePicker from '../../ui/PeoplePicker.svelte';
   import type { FolderContents } from './FolderContents.svelte';
   import type { Folder, StoredFile } from './model';
+  import { tagCandidates } from './services';
 
   /**
    * Marks members on a photo. Candidates: the folder's team, or for club folders the member list
@@ -24,17 +25,7 @@
 
   // svelte-ignore state_referenced_locally
   const list = new PersonListModel(
-    async () => {
-      await directory.loadRosters(); // team column and filter
-      if (folder.teamIds.length) {
-        const lists = await Promise.all(folder.teamIds.map((id) => directory.candidates(id)));
-        return [...new Map(lists.flat().map((p) => [p.memberId, p] as const)).values()];
-      }
-      if (permissions.isManager) return directory.candidates(null);
-      const rosters = await Promise.all(session.teams.map((t) => directory.roster(t.id)));
-      const unique = new Map(rosters.flatMap((r) => r?.entries ?? []).map((e) => [e.memberId, e] as const));
-      return [...unique.values()];
-    },
+    () => tagCandidates.load(folder),
     directory,
     (id) => selected.includes(id),
     store,

@@ -1,9 +1,11 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { errors } from '../../lib/container';
+  import { directory, errors, store } from '../../lib/container';
+  import { PersonListModel } from '../../lib/directory/PersonListModel.svelte';
+  import PeoplePicker from '../../ui/PeoplePicker.svelte';
   import Button from '../../ui/Button.svelte';
   import type { Folder, StoredFile } from './model';
-  import { filesApi, fileTypes } from './services';
+  import { filesApi, fileTypes, tagCandidates } from './services';
   import { UploadQueue } from './UploadQueue.svelte';
 
   /** Drop zone + file picker + per-file progress for one folder. */
@@ -14,16 +16,26 @@
   let input: HTMLInputElement;
   let dragging = $state(false);
 
+  // Members marked on every photo of the next uploads (several photos at once).
+  let tagging = $state(false);
+  let tags = $state<string[]>([]);
+  // svelte-ignore state_referenced_locally
+  const people = new PersonListModel(() => tagCandidates.load(folder), directory, (id) => tags.includes(id), store, 'upload-tags');
+  $effect(() => {
+    if (tagging) void people.load();
+  });
+  const toggleTag = (id: string) => (tags = tags.includes(id) ? tags.filter((t) => t !== id) : [...tags, id]);
+
   const STATE_LABELS = { waiting: 'Wartet', uploading: 'Lädt hoch', done: 'Fertig', failed: 'Fehler' } as const;
 
   function drop(event: DragEvent) {
     event.preventDefault();
     dragging = false;
-    if (event.dataTransfer?.files.length) queue.add(event.dataTransfer.files);
+    if (event.dataTransfer?.files.length) queue.add(event.dataTransfer.files, tags);
   }
 
   function picked() {
-    if (input.files?.length) queue.add(input.files);
+    if (input.files?.length) queue.add(input.files, tags);
     input.value = '';
   }
 </script>
@@ -46,6 +58,17 @@
     <input bind:this={input} type="file" multiple accept={fileTypes.accept(folder.kind)} onchange={picked} hidden />
   </div>
 
+  <div class="tagging">
+    <Button size="sm" variant="ghost" icon="members" pressed={tagging} onclick={() => (tagging = !tagging)}
+      tooltip="Personen wählen, die auf allen Fotos der nächsten Uploads markiert werden">
+      Personen auf den Fotos markieren{tags.length ? ` (${tags.length})` : ''}
+    </Button>
+    {#if tagging}
+      <PeoplePicker list={people} chosen={tags} ontoggle={toggleTag} max={settings.files.maxTags} />
+      <p class="muted hint">Gilt für alle Fotos, die du jetzt hochlädst. Nur Personen mit Foto-Einwilligung können markiert werden.</p>
+    {/if}
+  </div>
+
   {#if queue.items.length}
     <ul class="queue" aria-live="polite">
       {#each queue.items as item (item.key)}
@@ -62,6 +85,15 @@
 </section>
 
 <style>
+  .tagging {
+    display: grid;
+    gap: var(--space-sm);
+    justify-items: start;
+  }
+  .tagging :global(.picker),
+  .tagging :global(.list) {
+    justify-self: stretch;
+  }
   .zone {
     display: grid;
     justify-items: center;

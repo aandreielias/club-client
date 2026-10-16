@@ -47,7 +47,7 @@
   const image = $derived(!!file && fileTypes.isImage(file.contentType));
 
   function remove(target: StoredFile) {
-    pendingDeletes.schedule({ id: target.id, text: `„${target.name}“ gelöscht.`, commit: () => filesApi.deleteFile(target.id) });
+    pendingDeletes.schedule({ ids: [target.id], text: `„${target.name}“ gelöscht.`, commit: () => filesApi.deleteFile(target.id) });
     handle?.close();
   }
 

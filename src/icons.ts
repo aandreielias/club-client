@@ -18,6 +18,7 @@ import Download from '@lucide/svelte/icons/download';
 import ExternalLink from '@lucide/svelte/icons/external-link';
 import FileText from '@lucide/svelte/icons/file-text';
 import Folder from '@lucide/svelte/icons/folder';
+import FolderInput from '@lucide/svelte/icons/folder-input';
 import House from '@lucide/svelte/icons/house';
 import Inbox from '@lucide/svelte/icons/inbox';
 import ListChecks from '@lucide/svelte/icons/list-checks';
@@ -41,6 +42,7 @@ export const ICONS = {
   calendar: Calendar,
   tasks: ListChecks,
   files: Folder,
+  move: FolderInput,
   inventory: Package,
   teams: Users,
   notifications: Bell,

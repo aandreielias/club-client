@@ -11,6 +11,7 @@
   import CoverImage from './CoverImage.svelte';
   import Icon from '../../ui/Icon.svelte';
   import { colorHue } from './model';
+  import { RowDragging, type RowDrag } from '../../ui/rowDrag';
 
   /** Gallery view of the same list model as the table: tiles for folders, photos and documents. */
   let {
@@ -19,8 +20,22 @@
     menu,
     emptyText = 'Noch nichts hochgeladen.',
     emptyAction,
-  }: { model: FolderItemListModel; onopen: (item: FolderItem) => void; menu?: (item: FolderItem) => readonly MenuEntry[]; emptyText?: string; emptyAction?: EmptyAction | null } =
-    $props();
+    selected,
+    onselect,
+    drag,
+  }: {
+    model: FolderItemListModel;
+    onopen: (item: FolderItem) => void;
+    menu?: (item: FolderItem) => readonly MenuEntry[];
+    emptyText?: string;
+    emptyAction?: EmptyAction | null;
+    /** File tiles get a checkbox when given. */
+    selected?: (item: FolderItem) => boolean;
+    onselect?: (item: FolderItem) => void;
+    drag?: RowDrag<FolderItem>;
+  } = $props();
+
+  let dropId = $state<string | null>(null);
 </script>
 
 <div class="gallery">
@@ -30,7 +45,15 @@
       {#if model.rows.some((item) => !pendingDeletes.isHidden(item.id))}
         <ul class="tiles">
           {#each model.rows.filter((item) => !pendingDeletes.isHidden(item.id)) as item (item.id)}
-            <li>
+            <li class="cell" class:chosen={selected?.(item)} class:drop-target={dropId === item.id}
+              draggable={drag?.can(item) ? 'true' : undefined}
+              ondragstart={(e) => drag && RowDragging.start(drag, item, e)}
+              ondragover={(e) => drag && RowDragging.over(drag, item, e) && (dropId = item.id)}
+              ondragleave={() => dropId === item.id && (dropId = null)}
+              ondrop={(e) => ((dropId = null), drag && RowDragging.drop(drag, item, e))}>
+              {#if selected && onselect && item.kind === 'file'}
+                <input type="checkbox" class="select" checked={selected(item)} onchange={() => onselect(item)} aria-label="{item.name} auswählen" />
+              {/if}
               <button class="tile" onclick={() => onopen(item)} aria-label={item.kind === 'folder' ? `Ordner ${item.name} öffnen` : `${item.name} öffnen`}
                 {@attach tooltip(item.name)} {@attach menu ? contextMenu(() => menu(item)) : undefined}>
                 <span class="preview">
@@ -74,6 +97,32 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
     gap: var(--space-md);
+  }
+  .cell {
+    position: relative;
+  }
+  .select {
+    position: absolute;
+    top: var(--space-sm);
+    left: var(--space-sm);
+    z-index: 1;
+    opacity: 0;
+    transition: opacity var(--motion-fast);
+  }
+  .cell:hover .select,
+  .cell.chosen .select,
+  .select:focus-visible {
+    opacity: 1;
+  }
+  .chosen .tile {
+    box-shadow: 0 0 0 2px var(--color-accent);
+  }
+  .drop-target .tile {
+    box-shadow: 0 0 0 2px var(--color-accent);
+    transform: scale(1.02);
+  }
+  .cell[draggable='true'] .tile {
+    cursor: grab;
   }
   .tile {
     display: grid;

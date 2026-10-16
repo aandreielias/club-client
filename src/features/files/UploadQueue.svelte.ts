@@ -12,6 +12,8 @@ export interface UploadItem {
   /** 0..1 */
   progress: number;
   error: string | null;
+  /** Members marked on the photo at upload. */
+  tags: string[];
 }
 
 /**
@@ -36,10 +38,12 @@ export class UploadQueue {
     this.busy = $derived(this.items.some((i) => i.state === 'waiting' || i.state === 'uploading'));
   }
 
-  add(files: Iterable<File>): void {
+  /** `tags`: members marked on every photo of this batch (documents are never tagged). */
+  add(files: Iterable<File>, tags: readonly string[] = []): void {
     for (const file of files) {
       const error = this.precheck(file);
-      this.items.push({ key: this.#next++, file, state: error ? 'failed' : 'waiting', progress: 0, error });
+      const photoTags = this.types.allows('PHOTOS', file.name) ? [...tags] : [];
+      this.items.push({ key: this.#next++, file, state: error ? 'failed' : 'waiting', progress: 0, error, tags: photoTags });
     }
     void this.run();
   }
@@ -74,7 +78,7 @@ export class UploadQueue {
   private async upload(item: UploadItem): Promise<void> {
     item.state = 'uploading';
     try {
-      const stored = await this.api.upload(this.folder().id, item.file, [], ({ loaded, total }) => {
+      const stored = await this.api.upload(this.folder().id, item.file, item.tags, ({ loaded, total }) => {
         item.progress = total > 0 ? Math.min(1, loaded / total) : 0;
       });
       item.progress = 1;

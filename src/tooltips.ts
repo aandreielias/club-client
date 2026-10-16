@@ -40,6 +40,8 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Link deaktivieren': { text: 'Abo-Link ungültig machen; abonnierte Kalender werden nicht mehr aktualisiert' },
   'Link senden': { text: 'Link zum Zurücksetzen des Passworts per E-Mail senden' },
   'Liste leeren': { text: 'Abgeschlossene Uploads aus der Liste entfernen' },
+  Verschieben: { text: 'In einen anderen Ordner verschieben; die Dateien sind dann für dessen Personen sichtbar' },
+  'Auswahl aufheben': { text: 'Keine Datei mehr ausgewählt' },
   Löschen: { text: 'Endgültig löschen' },
   'Markierungen speichern': { text: 'Markierte Personen auf dem Foto speichern' },
   'Mitglied hinzufügen': { text: 'Ein Mitglied in dieses Team aufnehmen' },
