@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LiveSocket } from './LiveSocket';
-import { CLOSE_CODES, LiveUpdates } from './LiveUpdates.svelte';
+import { EventBusBuilder } from '../bus';
+import { CLOSE_CODES, LiveUpdates, liveEvent } from './LiveUpdates.svelte';
 
 class FakeSocket implements LiveSocket {
   onopen: ((event: Event) => void) | null = null;
@@ -31,6 +32,7 @@ const options = { reconnectMinMs: 1000, reconnectMaxMs: 8000, reauthLeadMs: 60_0
 function setup(token: string | null = 'tok') {
   const sockets: FakeSocket[] = [];
   const onForbidden = vi.fn();
+  const bus = EventBusBuilder.create().withHierarchicalRouting().build();
   const live = new LiveUpdates(
     async () => {
       const socket = new FakeSocket();
@@ -39,9 +41,10 @@ function setup(token: string | null = 'tok') {
     },
     async () => token,
     options,
+    bus,
     onForbidden,
   );
-  return { live, sockets, onForbidden };
+  return { live, sockets, onForbidden, bus };
 }
 
 const flush = () => vi.advanceTimersByTimeAsync(0);
@@ -62,12 +65,12 @@ describe('LiveUpdates', () => {
     expect(live.status).toBe('online');
   });
 
-  it('dispatches events to subscribers of their type and to wildcards', async () => {
-    const { live, sockets } = setup();
+  it('publishes events on the bus by type and under the domain root', async () => {
+    const { live, sockets, bus } = setup();
     const tasks = vi.fn();
     const all = vi.fn();
-    const stop = live.subscribe(['tasks.task-changed'], tasks);
-    live.subscribe('*', all);
+    const sub = bus.subscribe(liveEvent('tasks.task-changed'), tasks);
+    bus.subscribeHierarchy('domain', all);
     live.start();
     await flush();
     sockets[0].receive({ type: 'tasks.task-changed', occurredAt: 'x', data: { taskId: '1' } });
@@ -75,7 +78,7 @@ describe('LiveUpdates', () => {
     expect(tasks).toHaveBeenCalledOnce();
     expect(tasks.mock.calls[0][0].data).toEqual({ taskId: '1' });
     expect(all).toHaveBeenCalledTimes(2);
-    stop();
+    sub.unsubscribe();
     sockets[0].receive({ type: 'tasks.task-changed', occurredAt: 'x', data: {} });
     expect(tasks).toHaveBeenCalledOnce();
   });

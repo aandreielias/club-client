@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { session, windows } from '../../lib/container';
+  import { bus, session } from '../../lib/container';
+  import { WINDOW_OPEN } from '../../channels';
   import type { CalendarModel } from './CalendarModel.svelte';
   import { menu } from '../../ui/contextMenu';
   import { tooltip } from '../../ui/tooltip';
@@ -16,7 +17,7 @@
   function create(date: string) {
     if (!policy.canCreate()) return;
     const team = model.teamId ? `team=${model.teamId}&` : '';
-    windows.open('appointment-new', `${team}date=${date}`);
+    bus.publish(WINDOW_OPEN, { kind: 'appointment-new', id: `${team}date=${date}` });
   }
 
   /** Right-click on a day: new appointment there, or the week around it. */

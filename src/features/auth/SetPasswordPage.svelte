@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { auth, router, toasts } from '../../lib/container';
+  import { auth, bus } from '../../lib/container';
+  import { NAVIGATE, TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
   import Button from '../../ui/Button.svelte';
   import Centered from '../../ui/Centered.svelte';
@@ -22,8 +23,8 @@
     mismatch = password !== repeat;
     if (weak || mismatch) return;
     if (await action.run(() => auth.updatePassword(password))) {
-      toasts.show('Passwort gespeichert.');
-      router.navigate('/');
+      bus.publish(TOAST, { text: 'Passwort gespeichert.' });
+      bus.publish(NAVIGATE, { path: '/' });
     }
   }
 </script>

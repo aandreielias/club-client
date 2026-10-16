@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings } from '../settings';
-  import { commands, router } from '../lib/container';
+  import { bus, commands, router } from '../lib/container';
+  import { NAVIGATE } from '../channels';
   import { useCommands } from '../lib/keyboard/useCommands.svelte';
   import { tooltip, withKeys } from './tooltip';
 
@@ -27,8 +28,8 @@
     if (!q && router.path !== PATH) return;
     const target = q ? `${PATH}?q=${encodeURIComponent(q)}` : PATH;
     // While on the results, update in place so Back leaves the search in one step.
-    if (router.path === PATH) router.replace(target);
-    else router.navigate(target);
+    if (router.path === PATH) bus.publish(NAVIGATE, { path: target, replace: true });
+    else bus.publish(NAVIGATE, { path: target });
   }
 
   function typed() {

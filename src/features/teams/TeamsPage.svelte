@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { commands, directory, permissions, router, session, store, toasts, windows } from '../../lib/container';
+  import { bus, commands, directory, permissions, router, session, store, windows } from '../../lib/container';
+  import { TOAST, WINDOW_OPEN } from '../../channels';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import type { Team } from '../../lib/types';
   import Button from '../../ui/Button.svelte';
@@ -20,8 +21,8 @@
   function created(team: Team) {
     creating = false;
     directory.forgetTeams();
-    toasts.show('Team angelegt.');
-    windows.open('team', team.id);
+    bus.publish(TOAST, { text: 'Team angelegt.' });
+    bus.publish(WINDOW_OPEN, { kind: 'team', id: team.id });
   }
 </script>
 
@@ -30,8 +31,8 @@
     {#if teamPolicy.canCreate()}<Button variant="primary" onclick={() => (creating = true)}>Neues Team</Button>{/if}
   {/snippet}
 
-  <DataTable model={list} rowKey={(t) => t.id} onopen={(t) => windows.open('team', t.id)}
-    menu={(t) => windowMenu(windows, router, 'team', t.id)} emptyText="Du bist noch in keinem Team.">
+  <DataTable model={list} rowKey={(t) => t.id} onopen={(t) => bus.publish(WINDOW_OPEN, { kind: 'team', id: t.id })}
+    menu={(t) => windowMenu(bus, windows, router, 'team', t.id)} emptyText="Du bist noch in keinem Team.">
     {#snippet cell(team, column)}
       {#if column.key === 'mine'}
         {#if session.isInTeam(team.id)}<Tag tone="blue">Mein Team</Tag>{/if}

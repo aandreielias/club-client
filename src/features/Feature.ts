@@ -34,7 +34,7 @@ export interface Feature {
   readonly messages?: MessageCatalog;
   /** Server links (in notifications) this feature can open. */
   readonly links?: readonly LinkRule[];
-  /** Detail windows this feature provides, by kind (opened with `windows.open(kind, id)`). */
+  /** Detail windows this feature provides, by kind (opened with `bus.publish(WINDOW_OPEN, { kind, id })`). */
   readonly windows?: Readonly<Record<string, WindowContent>>;
   /** Entries this feature contributes to the calendar. */
   readonly calendar?: CalendarSource;

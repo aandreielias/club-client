@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { EventBusBuilder } from '../bus';
 import { Router } from './Router.svelte';
+
+const bus = () => EventBusBuilder.create().build();
 
 describe('Router.match', () => {
   it('matches static and parameter segments', () => {
@@ -16,7 +19,7 @@ describe('Router.match', () => {
   });
 
   it('resolves the first matching route', () => {
-    const router = new Router();
+    const router = new Router(bus());
     router.path = '/calendar/new';
     const routes = [{ path: '/calendar/new' }, { path: '/calendar/:id' }];
     expect(router.resolve(routes)?.route).toBe(routes[0]);
@@ -27,7 +30,7 @@ describe('Router.match', () => {
 
 describe('Router query helpers', () => {
   it('changes single keys and keeps the others', () => {
-    const router = new Router();
+    const router = new Router(bus());
     router.path = '/calendar';
     router.query = new URLSearchParams('view=week&open=task/1');
     expect(router.withQuery({ date: '2026-10-20' })).toBe('/calendar?view=week&open=task%2F1&date=2026-10-20');

@@ -209,6 +209,12 @@ export const settings = {
     },
   },
 
+  /** Event bus (src/lib/bus): request timeout and debug history length. */
+  bus: {
+    requestTimeoutMs: 5000,
+    historySize: 200,
+  },
+
   /** Below this viewport width the layout switches to compact (sidebar as overlay). */
   compactBelowPx: 720,
 

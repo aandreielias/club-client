@@ -1,7 +1,9 @@
 // Live event types of the calendar and attendance modules (server: ClientEvent records).
 
-export const APPOINTMENTS_CHANGED = 'calendar.appointments-changed';
-export const RESPONSE_CHANGED = 'attendance.response-changed';
+import { liveEvent } from '../../lib/live/LiveUpdates.svelte';
+
+export const APPOINTMENTS_CHANGED = liveEvent<AppointmentsChanged>('calendar.appointments-changed');
+export const RESPONSE_CHANGED = liveEvent<ResponseChanged>('attendance.response-changed');
 
 export interface AppointmentsChanged {
   appointmentIds: string[];

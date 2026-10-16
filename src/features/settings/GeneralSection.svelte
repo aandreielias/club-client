@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { confirmation, preferences } from '../../lib/container';
+  import { bus, preferences } from '../../lib/container';
+  import { CONFIRM } from '../../channels';
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import Field from '../../ui/Field.svelte';
@@ -14,7 +15,7 @@
   const mockMode = settings.runtime.apiMode === 'mock';
 
   async function resetMockData() {
-    const ok = await confirmation.ask({
+    const ok = await bus.request(CONFIRM, {
       title: 'Testdaten zurücksetzen',
       message: 'Alle Änderungen an Terminen, Aufgaben, Dateien und Mitgliedern im Testmodus gehen verloren. Die Seite lädt danach neu.',
       confirmLabel: 'Zurücksetzen',

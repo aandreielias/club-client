@@ -1,3 +1,4 @@
+import { defineEvent, type EventBus, type EventChannel } from '../bus';
 import type { TokenSource } from '../http/Transport';
 import type { LiveSocket, SocketFactory } from './LiveSocket';
 
@@ -8,7 +9,13 @@ export interface LiveEvent<T = unknown> {
   data: T;
 }
 
-export type LiveHandler<T = unknown> = (event: LiveEvent<T>) => void;
+/** Bus root of every server event; subscribe to its hierarchy to see all of them. */
+export const LIVE_ROOT = 'domain';
+
+/** Bus channel of a server event type: 'tasks.task-changed' → 'domain/tasks/task-changed'. */
+export function liveEvent<T>(type: string): EventChannel<LiveEvent<T>> {
+  return defineEvent<LiveEvent<T>>(`${LIVE_ROOT}/${type.replaceAll('.', '/')}`);
+}
 
 export type LiveStatus = 'stopped' | 'connecting' | 'online' | 'reconnecting';
 
@@ -24,12 +31,11 @@ export const CLOSE_CODES = { badMessage: 4400, unauthenticated: 4401, forbidden:
 /**
  * Client of the server's live-update channel. Authenticates with the first message (never in the
  * URL), re-authenticates before the token expires, reconnects with exponential backoff and hands
- * every event to the subscribers of its type. Features subscribe and reload what they show.
+ * every event on the event bus (see `liveEvent`). Features subscribe there and reload what they show.
  */
 export class LiveUpdates {
   status = $state<LiveStatus>('stopped');
 
-  readonly #handlers = new Map<string, Set<LiveHandler>>();
   #socket: LiveSocket | null = null;
   #attempt = 0;
   #reconnectTimer: ReturnType<typeof setTimeout> | undefined;
@@ -41,6 +47,7 @@ export class LiveUpdates {
     private readonly openSocket: SocketFactory,
     private readonly token: TokenSource,
     private readonly options: LiveOptions,
+    private readonly bus: EventBus,
     /** Called when the server refuses the member (deactivated): the session is over. */
     private readonly onForbidden: () => void = () => {},
   ) {}
@@ -71,17 +78,6 @@ export class LiveUpdates {
     if (this.status !== 'reconnecting') return;
     clearTimeout(this.#reconnectTimer);
     void this.connect(this.#generation);
-  }
-
-  /** Registers a handler for one or more event types ('*' = all); returns the unsubscribe function. */
-  subscribe<T = unknown>(types: string | readonly string[], handler: LiveHandler<T>): () => void {
-    const list = typeof types === 'string' ? [types] : types;
-    for (const type of list) {
-      let set = this.#handlers.get(type);
-      if (!set) this.#handlers.set(type, (set = new Set()));
-      set.add(handler as LiveHandler);
-    }
-    return () => list.forEach((type) => this.#handlers.get(type)?.delete(handler as LiveHandler));
   }
 
   private async connect(generation: number): Promise<void> {
@@ -130,14 +126,10 @@ export class LiveUpdates {
   }
 
   private dispatch(event: LiveEvent): void {
-    for (const key of [event.type, '*']) {
-      for (const handler of this.#handlers.get(key) ?? []) {
-        try {
-          handler(event);
-        } catch (error) {
-          console.error(`Live handler for ${event.type} failed`, error);
-        }
-      }
+    try {
+      this.bus.publish(liveEvent(event.type), event);
+    } catch (error) {
+      console.error(`Live event ${event.type} rejected`, error); // malformed type
     }
   }
 

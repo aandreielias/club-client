@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { confirmation, directory, errors, session, toasts } from '../../lib/container';
+  import { bus, directory, session } from '../../lib/container';
+  import { APP_ERROR, CONFIRM, TOAST } from '../../channels';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
@@ -43,13 +44,13 @@
 
   async function remove(target: StoredFile) {
     const noun = fileTypes.isImage(target.contentType) ? 'Foto' : 'Datei';
-    const ok = await confirmation.ask({ title: `${noun} löschen`, message: `„${target.name}“ wird endgültig gelöscht.`, confirmLabel: 'Löschen', danger: true });
+    const ok = await bus.request(CONFIRM, { title: `${noun} löschen`, message: `„${target.name}“ wird endgültig gelöscht.`, confirmLabel: 'Löschen', danger: true });
     if (!ok) return;
     if (await contents.delete(target)) {
-      toasts.show(`${noun} gelöscht.`);
+      bus.publish(TOAST, { text: `${noun} gelöscht.` });
       handle?.close();
     } else {
-      toasts.error(errors.text(contents.deleteAction.error));
+      bus.publish(APP_ERROR, contents.deleteAction.error);
     }
   }
 
@@ -57,7 +58,7 @@
     try {
       await fileDownloads.download(target);
     } catch (error) {
-      toasts.error(errors.text(error));
+      bus.publish(APP_ERROR, error);
     }
   }
 </script>

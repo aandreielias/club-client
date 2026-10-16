@@ -1,7 +1,9 @@
 // Live event types of the tasks module (server: TasksApi.TaskChanged / TaskDueSoon).
 
-export const TASK_CHANGED = 'tasks.task-changed';
-export const TASK_DUE_SOON = 'tasks.task-due-soon';
+import { liveEvent } from '../../lib/live/LiveUpdates.svelte';
+
+export const TASK_CHANGED = liveEvent<TaskChanged>('tasks.task-changed');
+export const TASK_DUE_SOON = liveEvent<unknown>('tasks.task-due-soon');
 
 export interface TaskChanged {
   taskId: string;

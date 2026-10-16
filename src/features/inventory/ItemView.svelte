@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { confirmation, live, session, toasts, windows } from '../../lib/container';
-  import { onLive } from '../../lib/live/onLive.svelte';
+  import { bus, session } from '../../lib/container';
+  import { CONFIRM, TOAST, WINDOW_OPEN } from '../../channels';
+  import { useBus } from '../../lib/bus/useBus.svelte';
   import { Action } from '../../lib/state/Action.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
@@ -10,6 +11,8 @@
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { tooltip } from '../../ui/tooltip';
+  import { APPOINTMENTS_CHANGED } from '../calendar/events';
+  import { TASK_CHANGED } from '../tasks/events';
   import { ITEM_CHANGED, type ItemChanged } from './events';
   import { ItemForm } from './ItemForm.svelte';
   import ItemEditor from './ItemEditor.svelte';
@@ -29,17 +32,17 @@
   void uses.load();
 
   // Lists elsewhere change what needs this item.
-  onLive(live, ['calendar.appointments-changed', 'tasks.task-changed'], () => void uses.load());
+  useBus(bus, [APPOINTMENTS_CHANGED, TASK_CHANGED], () => void uses.load());
 
   $effect(() => {
     const name = item.value?.name;
     if (name) handle?.setTitle(name);
   });
 
-  onLive<ItemChanged>(live, ITEM_CHANGED, ({ data }) => {
+  useBus(bus, ITEM_CHANGED, ({ data }) => {
     if (data.itemId !== id || save.busy || remove.busy) return;
     if (data.change === 'DELETED') {
-      toasts.show('Dieser Gegenstand wurde gelöscht.');
+      bus.publish(TOAST, { text: 'Dieser Gegenstand wurde gelöscht.' });
       leave();
     } else if (!form) {
       void item.load();
@@ -56,19 +59,19 @@
     if (await save.run(async () => (updated = await inventoryApi.update(id, value.toPatch())))) {
       if (updated) item.set(updated);
       form = null;
-      toasts.show('Gegenstand gespeichert.');
+      bus.publish(TOAST, { text: 'Gegenstand gespeichert.' });
     }
   }
 
   async function destroy(name: string) {
-    const ok = await confirmation.ask({
+    const ok = await bus.request(CONFIRM, {
       title: 'Gegenstand löschen',
       message: `„${name}“ wird aus dem Inventar gelöscht. Termine und Aufgaben, die ihn benötigen, zeigen ihn weiter als gelöscht an.`,
       confirmLabel: 'Löschen',
       danger: true,
     });
     if (ok && (await remove.run(() => inventoryApi.delete(id)))) {
-      toasts.show('Gegenstand gelöscht.');
+      bus.publish(TOAST, { text: 'Gegenstand gelöscht.' });
       leave();
     }
   }
@@ -108,7 +111,7 @@
               <ul class="uses">
                 {#each list as use (use.kind + use.id)}
                   <li>
-                    <button type="button" onclick={() => windows.open(use.kind === 'APPOINTMENT' ? 'appointment' : 'task', use.id)}
+                    <button type="button" onclick={() => bus.publish(WINDOW_OPEN, { kind: use.kind === 'APPOINTMENT' ? 'appointment' : 'task', id: use.id })}
                       {@attach tooltip(use.kind === 'APPOINTMENT' ? 'Termin öffnen' : 'Aufgabe öffnen')}>
                       <span class="title">{use.title}</span>
                       <span class="muted">{use.kind === 'APPOINTMENT' ? 'Termin' : 'Aufgabe'}{use.at ? `, ${session.format.dateTime(use.at)}` : ''}</span>

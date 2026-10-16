@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { windows } from '../lib/container';
+  import { bus, windows } from '../lib/container';
+  import { WINDOW_CLOSE } from '../channels';
   import { DOCKS, type Dock } from '../lib/window/WindowService.svelte';
   import Button from './Button.svelte';
   import { withKeys } from './tooltip';
@@ -69,7 +70,7 @@
 {#if target && content}
   {#if modal}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="backdrop" onclick={() => windows.close()}></div>
+    <div class="backdrop" onclick={() => bus.publish(WINDOW_CLOSE)}></div>
   {/if}
   <div
     bind:this={element}
@@ -93,7 +94,7 @@
           <Button size="sm" variant="ghost" onclick={() => handle.navigate(content.page!(target.id))}
             tooltip={withKeys('Als eigene Seite öffnen', 'window.page')}>Als Seite öffnen</Button>
         {/if}
-        <Button size="sm" variant="ghost" onclick={() => windows.close()} tooltip={withKeys('Fenster schließen', 'window.close')}>Schließen</Button>
+        <Button size="sm" variant="ghost" onclick={() => bus.publish(WINDOW_CLOSE)} tooltip={withKeys('Fenster schließen', 'window.close')}>Schließen</Button>
       </div>
     </header>
     <div class="body">

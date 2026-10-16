@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { session, toasts } from '../../lib/container';
+  import { bus, session } from '../../lib/container';
+  import { TOAST } from '../../channels';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import type { TaskDetailModel } from './TaskDetailModel.svelte';
@@ -21,7 +22,7 @@
   }
 
   async function clear() {
-    if (await detail.setDue(null)) toasts.show('Fälligkeit entfernt.');
+    if (await detail.setDue(null)) bus.publish(TOAST, { text: 'Fälligkeit entfernt.' });
   }
 
   async function save(event: SubmitEvent) {
@@ -29,7 +30,7 @@
     if (!value) return;
     if (await detail.setDue(session.clock.toInstant(value))) {
       editing = false;
-      toasts.show('Fälligkeit gespeichert.');
+      bus.publish(TOAST, { text: 'Fälligkeit gespeichert.' });
     }
   }
 </script>

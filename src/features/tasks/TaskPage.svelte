@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { router } from '../../lib/container';
+  import { bus } from '../../lib/container';
+  import { NAVIGATE } from '../../channels';
   import DetailPage from '../../ui/DetailPage.svelte';
   import type { PageProps } from '../Feature';
   import TaskView from './TaskView.svelte';
@@ -9,5 +10,5 @@
 </script>
 
 <DetailPage back={{ href: '/tasks', label: 'Aufgaben' }}>
-  <TaskView id={params.id} onclosed={() => router.navigate('/tasks')} />
+  <TaskView id={params.id} onclosed={() => bus.publish(NAVIGATE, { path: '/tasks' })} />
 </DetailPage>

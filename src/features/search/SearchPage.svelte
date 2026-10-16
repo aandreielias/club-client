@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { router, session, store, windows } from '../../lib/container';
+  import { bus, router, session, store, windows } from '../../lib/container';
+  import { NAVIGATE, WINDOW_OPEN } from '../../channels';
   import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
   import { windowMenu } from '../../lib/window/windowMenu';
   import DataTable from '../../ui/DataTable.svelte';
@@ -22,13 +23,13 @@
 
   function open(hit: SearchHit) {
     const target = hitTarget(hit);
-    if ('window' in target) windows.open(target.window.kind, target.window.id);
-    else router.navigate(target.path);
+    if ('window' in target) bus.publish(WINDOW_OPEN, { kind: target.window.kind, id: target.window.id });
+    else bus.publish(NAVIGATE, { path: target.path });
   }
 
   function hitMenu(hit: SearchHit): MenuEntry[] {
     const target = hitTarget(hit);
-    return 'window' in target ? windowMenu(windows, router, target.window.kind, target.window.id) : [{ label: 'Öffnen', run: () => open(hit) }];
+    return 'window' in target ? windowMenu(bus, windows, router, target.window.kind, target.window.id) : [{ label: 'Öffnen', run: () => open(hit) }];
   }
 </script>
 

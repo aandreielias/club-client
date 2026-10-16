@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { toasts } from '../../lib/container';
+  import { bus } from '../../lib/container';
+  import { TOAST } from '../../channels';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import { IcalFeedModel } from './IcalFeedModel.svelte';
@@ -10,9 +11,9 @@
   async function copy(url: string) {
     try {
       await navigator.clipboard.writeText(url);
-      toasts.show('Link kopiert.');
+      bus.publish(TOAST, { text: 'Link kopiert.' });
     } catch {
-      toasts.error('Kopieren nicht möglich. Bitte den Link markieren und kopieren.');
+      bus.publish(TOAST, { text: 'Kopieren nicht möglich. Bitte den Link markieren und kopieren.', tone: 'error' });
     }
   }
 </script>

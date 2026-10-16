@@ -1,9 +1,10 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { settings } from '../../settings';
-  import { calendarSources, commands, directory, live, permissions, preferences, router, session, store, windows } from '../../lib/container';
+  import { bus, calendarSources, commands, directory, live, permissions, preferences, router, session, store, windows } from '../../lib/container';
+  import { WINDOW_OPEN } from '../../channels';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
-  import { onLive } from '../../lib/live/onLive.svelte';
+  import { useBus } from '../../lib/bus/useBus.svelte';
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import DataTable from '../../ui/DataTable.svelte';
@@ -16,6 +17,7 @@
   import AsyncView from '../../ui/AsyncView.svelte';
   import { CalendarListModel } from './CalendarListModel.svelte';
   import { CALENDAR_VIEWS, CalendarModel, type CalendarView } from './CalendarModel.svelte';
+  import { TASK_CHANGED } from '../tasks/events';
   import { APPOINTMENTS_CHANGED } from './events';
   import FeedDialog from './FeedDialog.svelte';
   import MonthView from './MonthView.svelte';
@@ -23,7 +25,7 @@
   import WeekView from './WeekView.svelte';
 
   // Other features' events (task changes) are not imported; every live event that can touch the calendar reloads it.
-  const RELOAD_ON = [APPOINTMENTS_CHANGED, 'tasks.task-changed'];
+  const RELOAD_ON = [APPOINTMENTS_CHANGED, TASK_CHANGED];
 
   const model = new CalendarModel(calendarSources, session.clock, settings.calendar.agendaDays, store, {
     view: (router.query.get('view') as CalendarView | null) ?? preferences.values.calendarView,
@@ -36,7 +38,7 @@
   void model.load();
   directory.loadRosters();
   if (permissions.isManager) directory.loadTeams().catch(() => {});
-  onLive(live, RELOAD_ON, () => void model.load());
+  useBus(bus, RELOAD_ON, () => void model.load());
 
   $effect(() => list.set(model.visible));
 
@@ -72,7 +74,7 @@
   function newAppointment() {
     const params = new URLSearchParams();
     if (model.teamId) params.set('team', model.teamId);
-    windows.open('appointment-new', params.toString() || '-');
+    bus.publish(WINDOW_OPEN, { kind: 'appointment-new', id: params.toString() || '-' });
   }
 </script>
 
@@ -106,7 +108,7 @@
 
   <div class="view" aria-busy={model.entries.loading}>
     {#if model.view === 'list'}
-      <DataTable model={list} rowKey={(e) => e.key} onopen={(e) => windows.open(e.window.kind, e.window.id)} menu={(e) => windowMenu(windows, router, e.window.kind, e.window.id)} leading={filters}
+      <DataTable model={list} rowKey={(e) => e.key} onopen={(e) => bus.publish(WINDOW_OPEN, { kind: e.window.kind, id: e.window.id })} menu={(e) => windowMenu(bus, windows, router, e.window.kind, e.window.id)} leading={filters}
         emptyText="Keine Einträge in diesem Zeitraum.">
         {#snippet cell(entry, column)}
           {#if column.key === 'title'}

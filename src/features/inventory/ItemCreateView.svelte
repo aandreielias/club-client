@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { toasts } from '../../lib/container';
+  import { bus } from '../../lib/container';
+  import { TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Detail from '../../ui/Detail.svelte';
@@ -21,7 +22,7 @@
   async function submit() {
     let created = '';
     if (await save.run(async () => (created = (await inventoryApi.create(form.toNew())).id))) {
-      toasts.show('Gegenstand angelegt.');
+      bus.publish(TOAST, { text: 'Gegenstand angelegt.' });
       handle.open('item', created);
     }
   }

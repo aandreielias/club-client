@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { LiveHandler, LiveUpdates } from '../../lib/live/LiveUpdates.svelte';
+import { EventBusBuilder } from '../../lib/bus';
 import { ToastService } from '../../lib/notify/ToastService.svelte';
 import { NOTIFICATION_CREATED, NotificationCenter } from './NotificationCenter.svelte';
 import type { NotificationsApi } from './NotificationsApi';
@@ -10,28 +10,27 @@ const entry = (id: string, read: boolean): Notification => ({
 });
 
 function setup(list: NotificationList) {
-  const handlers = new Map<string, LiveHandler>();
-  const live = { subscribe: (type: string, handler: LiveHandler) => (handlers.set(type, handler), () => handlers.delete(type)) } as unknown as LiveUpdates;
+  const bus = EventBusBuilder.create().build();
   const api = {
     list: vi.fn(async () => structuredClone(list)),
     markRead: vi.fn(async () => {}),
     markAllRead: vi.fn(async () => {}),
   } as unknown as NotificationsApi & { list: ReturnType<typeof vi.fn>; markRead: ReturnType<typeof vi.fn> };
-  const toasts = new ToastService(10, 10);
-  const center = new NotificationCenter(api, live, toasts, true);
-  return { center, api, handlers, toasts };
+  const toasts = new ToastService(bus, 10, 10);
+  const center = new NotificationCenter(api, bus, true);
+  return { center, api, bus, toasts };
 }
 
 describe('NotificationCenter', () => {
   it('loads on start and reloads plus toasts on a live notification', async () => {
-    const { center, api, handlers, toasts } = setup({ items: [entry('1', false)], unread: 1 });
+    const { center, api, bus, toasts } = setup({ items: [entry('1', false)], unread: 1 });
     const stop = center.start();
     await vi.waitFor(() => expect(center.unread).toBe(1));
-    handlers.get(NOTIFICATION_CREATED)!({ type: NOTIFICATION_CREATED, occurredAt: '', data: { notificationId: '2', kind: 'SECURITY', title: 'PIN geändert' } });
+    bus.publish(NOTIFICATION_CREATED, { type: 'notifications.notification-created', occurredAt: '', data: { notificationId: '2', kind: 'SECURITY', title: 'PIN geändert' } });
     expect(toasts.items.map((t) => t.text)).toEqual(['PIN geändert']);
     expect(api.list).toHaveBeenCalledTimes(2);
     stop();
-    expect(handlers.size).toBe(0);
+    expect(bus.registry.subscriberInfo(NOTIFICATION_CREATED.path)).toHaveLength(0);
     expect(center.unread).toBe(0);
   });
 

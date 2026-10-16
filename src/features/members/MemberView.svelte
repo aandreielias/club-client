@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { commands, confirmation, errors, session, toasts } from '../../lib/container';
+  import { bus, commands, session } from '../../lib/container';
+  import { APP_ERROR, CONFIRM, TOAST } from '../../channels';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { ROLE_LABELS, type Member, type Role } from '../../lib/types';
   import { roleHue } from './roles';
@@ -49,13 +50,13 @@
 
   async function saveRoles(member: Member) {
     if (await model.setRoles(roles)) {
-      toasts.show('Rollen gespeichert.');
+      bus.publish(TOAST, { text: 'Rollen gespeichert.' });
       if (policy.isSelf(member)) await session.loadMe();
     }
   }
 
   async function resetPin(member: Member) {
-    const ok = await confirmation.ask({
+    const ok = await bus.request(CONFIRM, {
       title: 'PIN zurücksetzen',
       message: `${member.firstName} ${member.lastName} muss danach eine neue PIN festlegen. Face-ID-Geräte werden entfernt.`,
       confirmLabel: 'Zurücksetzen',
@@ -63,23 +64,23 @@
     });
     if (!ok) return;
     if (!(await model.resetPin())) {
-      toasts.error(errors.text(model.resetAction.error));
+      bus.publish(APP_ERROR, model.resetAction.error);
       return;
     }
-    toasts.show('PIN zurückgesetzt.');
+    bus.publish(TOAST, { text: 'PIN zurückgesetzt.' });
     if (policy.isSelf(member)) await session.loadMe(); // own PIN gone: onboarding asks for a new one
   }
 
   async function deactivate(member: Member) {
-    const ok = await confirmation.ask({
+    const ok = await bus.request(CONFIRM, {
       title: 'Mitglied deaktivieren',
       message: `${member.firstName} ${member.lastName} kann sich danach nicht mehr anmelden und wird aus allen Teams entfernt.`,
       confirmLabel: 'Deaktivieren',
       danger: true,
     });
     if (!ok) return;
-    if (await model.deactivate()) toasts.show('Mitglied deaktiviert.');
-    else toasts.error(errors.text(model.deactivateAction.error));
+    if (await model.deactivate()) bus.publish(TOAST, { text: 'Mitglied deaktiviert.' });
+    else bus.publish(APP_ERROR, model.deactivateAction.error);
   }
 </script>
 

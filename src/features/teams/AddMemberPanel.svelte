@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { directory, toasts } from '../../lib/container';
+  import { bus, directory } from '../../lib/container';
+  import { TOAST } from '../../channels';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { TeamRole } from '../../lib/types';
   import AsyncView from '../../ui/AsyncView.svelte';
@@ -22,7 +23,7 @@
     event.preventDefault();
     if (!memberId) return;
     if (await model.assign(memberId, role)) {
-      toasts.show('Zum Team hinzugefügt.');
+      bus.publish(TOAST, { text: 'Zum Team hinzugefügt.' });
       memberId = '';
     }
   }

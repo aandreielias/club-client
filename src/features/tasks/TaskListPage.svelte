@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { commands, directory, errors, live, permissions, router, store, toasts, windows } from '../../lib/container';
+  import { bus, commands, directory, permissions, router, store, windows } from '../../lib/container';
+  import { APP_ERROR, TOAST, WINDOW_OPEN } from '../../channels';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
-  import { onLive } from '../../lib/live/onLive.svelte';
+  import { useBus } from '../../lib/bus/useBus.svelte';
   import Button from '../../ui/Button.svelte';
   import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
   import { windowMenu } from '../../lib/window/windowMenu';
@@ -18,12 +19,12 @@
   void list.load();
   directory.loadRosters();
   if (permissions.isManager) directory.loadTeams().catch(() => {});
-  onLive(live, TASK_CHANGED, () => void list.load());
+  useBus(bus, TASK_CHANGED, () => void list.load());
   /** Window entries plus done/reopen for members who work on the task. */
   function taskMenu(task: Task): MenuEntry[] {
     const done = task.status === 'DONE';
     return [
-      ...windowMenu(windows, router, 'task', task.id),
+      ...windowMenu(bus, windows, router, 'task', task.id),
       { separator: true },
       {
         label: done ? 'Wieder öffnen' : 'Als erledigt markieren',
@@ -31,30 +32,30 @@
         run: async () => {
           try {
             await tasksApi.setStatus(task.id, done ? 'OPEN' : 'DONE');
-            toasts.show(done ? 'Aufgabe wieder geöffnet.' : 'Aufgabe erledigt.');
+            bus.publish(TOAST, { text: done ? 'Aufgabe wieder geöffnet.' : 'Aufgabe erledigt.' });
             void list.load();
           } catch (error) {
-            toasts.error(errors.text(error));
+            bus.publish(APP_ERROR, error);
           }
         },
       },
     ];
   }
 
-  useCommands(commands, { 'page.new': { run: () => windows.open('task-new', list.filters.team || '-'), when: () => taskPolicy.canCreate() } });
+  useCommands(commands, { 'page.new': { run: () => bus.publish(WINDOW_OPEN, { kind: 'task-new', id: list.filters.team || '-' }), when: () => taskPolicy.canCreate() } });
 </script>
 
 <Page title="Aufgaben">
   {#snippet actions()}
     {#if taskPolicy.canCreate()}
-      <Button variant="primary" onclick={() => windows.open('task-new', list.filters.team || '-')}>Neue Aufgabe</Button>
+      <Button variant="primary" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'task-new', id: list.filters.team || '-' })}>Neue Aufgabe</Button>
     {/if}
   {/snippet}
 
   <DataTable
     model={list}
     rowKey={(t) => t.id}
-    onopen={(t) => windows.open('task', t.id)}
+    onopen={(t) => bus.publish(WINDOW_OPEN, { kind: 'task', id: t.id })}
     menu={taskMenu}
     selected={windows.current?.kind === 'task' ? windows.current.id : null}
     emptyText={list.filters.mine ? 'Dir ist keine offene Aufgabe zugewiesen.' : 'Keine Aufgaben.'}

@@ -3,6 +3,8 @@
  * Components and features import services from here; nothing else constructs them.
  */
 import { settings } from '../settings';
+import { EventBusBuilder } from './bus';
+import { ErrorReporter } from './errors/ErrorReporter';
 import { AuthService } from './auth/AuthService.svelte';
 import { DevAuthProvider } from './auth/DevAuthProvider';
 import { SupabaseAuthProvider } from './auth/SupabaseAuthProvider';
@@ -15,7 +17,7 @@ import { LazyTransport, type Transport } from './http/Transport';
 import { webSocketFactory, type SocketFactory } from './live/LiveSocket';
 import { LiveUpdates } from './live/LiveUpdates.svelte';
 import { ConfirmService } from './notify/ConfirmService.svelte';
-import { ToastService } from './notify/ToastService.svelte';
+import { TOAST, ToastService } from './notify/ToastService.svelte';
 import { ClubPermissions } from './policy/ClubPermissions';
 import { CalendarSources } from './calendar/CalendarSources';
 import { LinkResolver } from './router/LinkResolver';
@@ -37,6 +39,16 @@ import { LINK_MESSAGES } from './links/messages';
 import type { StepUp } from './types';
 
 const { runtime } = settings;
+
+/** The app's central event bus: server events, UI commands and app events all travel over it. */
+export const bus = EventBusBuilder.create()
+  .withHierarchicalRouting()
+  .withDefaultRequestTimeout(settings.bus.requestTimeoutMs)
+  .withMaxHistorySize(import.meta.env.DEV ? settings.bus.historySize : 0)
+  .build();
+
+// Debug access in development: window.__bus.registry.history()
+if (import.meta.env.DEV && typeof window !== 'undefined') Object.assign(window, { __bus: bus });
 
 export const store = new LocalStore(settings.storage.prefix);
 
@@ -83,11 +95,11 @@ export const directory = new TeamDirectory(api, session);
 
 export const permissions = new ClubPermissions(session, directory);
 
-export const router = new Router();
+export const router = new Router(bus);
 
 export const links = new LinkResolver();
 
-export const windows = new WindowService(router, store, settings.window.defaultDock);
+export const windows = new WindowService(router, store, settings.window.defaultDock, bus);
 
 export const calendarSources = new CalendarSources();
 
@@ -96,9 +108,9 @@ export const linksApi = new LinksApi(api);
 
 export const navCatalog = new NavCatalog();
 
-export const confirmation = new ConfirmService();
+export const confirmation = new ConfirmService(bus);
 
-export const toasts = new ToastService(settings.notify.toastMs, settings.notify.errorToastMs);
+export const toasts = new ToastService(bus, settings.notify.toastMs, settings.notify.errorToastMs);
 
 export const tooltips = new TooltipService(settings.overlay.tooltipDelayMs, settings.overlay.tooltipSkipDelayMs);
 
@@ -106,13 +118,15 @@ export const contextMenu = new ContextMenuService();
 
 export const errors = new ErrorMessages(STATUS_MESSAGES, UNKNOWN_MESSAGE).register(CORE_MESSAGES).register(LINK_MESSAGES);
 
+new ErrorReporter(bus, errors);
+
 const openSocket: SocketFactory =
   runtime.apiMode === 'http'
     ? webSocketFactory(runtime.apiUrl, settings.live.path)
     : async () => (await import('./mock')).createMockSocket();
 
-export const live = new LiveUpdates(openSocket, auth.token, settings.live, () => {
+export const live = new LiveUpdates(openSocket, auth.token, settings.live, bus, () => {
   // The server closes with 4403 when the member was deactivated: end the session here as well.
-  toasts.error('Dein Zugang ist nicht mehr aktiv.');
+  bus.publish(TOAST, { text: 'Dein Zugang ist nicht mehr aktiv.', tone: 'error' });
   void auth.signOut();
 });

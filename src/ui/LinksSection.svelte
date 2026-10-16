@@ -1,7 +1,10 @@
 <script lang="ts">
   import { settings } from '../settings';
-  import { live, toasts } from '../lib/container';
-  import { onLive } from '../lib/live/onLive.svelte';
+  import { bus } from '../lib/container';
+  import { TOAST } from '../channels';
+  import { FILES_CHANGED } from '../features/files/events';
+  import { ITEM_CHANGED } from '../features/inventory/events';
+  import { useBus } from '../lib/bus/useBus.svelte';
   import { LinksModel } from '../lib/links/LinksModel.svelte';
   import type { FileRef } from '../lib/links/model';
   import Button from './Button.svelte';
@@ -17,7 +20,7 @@
   let { model, editable }: { model: LinksModel; editable: boolean } = $props();
 
   // Renamed or deleted items and files show up without a reload.
-  onLive(live, ['inventory.item-changed', 'files.files-changed'], () => {
+  useBus(bus, [ITEM_CHANGED, FILES_CHANGED], () => {
     if (!model.editing && !model.save.busy) void model.load();
   });
 
@@ -26,12 +29,12 @@
     try {
       window.open(await model.downloadUrl(file), '_blank', 'noopener');
     } catch {
-      toasts.show('Die Datei lässt sich gerade nicht öffnen.');
+      bus.publish(TOAST, { text: 'Die Datei lässt sich gerade nicht öffnen.' });
     }
   }
 
   async function save() {
-    if (await model.commit()) toasts.show('Benötigt und Dateien gespeichert.');
+    if (await model.commit()) bus.publish(TOAST, { text: 'Benötigt und Dateien gespeichert.' });
   }
 </script>
 

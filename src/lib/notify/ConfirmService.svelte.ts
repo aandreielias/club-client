@@ -1,3 +1,5 @@
+import { defineRequest, type EventBus } from '../bus';
+
 export interface ConfirmRequest {
   title: string;
   message: string;
@@ -6,11 +8,18 @@ export interface ConfirmRequest {
   danger?: boolean;
 }
 
+/** Asks the user: `await bus.request(CONFIRM, {...})` resolves true when confirmed. */
+export const CONFIRM = defineRequest<ConfirmRequest, boolean>('ui/confirm', { timeoutMs: 0 });
+
 /** Promise-based confirmation dialog (rendered once by the app shell), instead of window.confirm. */
 export class ConfirmService {
   current = $state.raw<ConfirmRequest | null>(null);
 
   #resolve: ((ok: boolean) => void) | null = null;
+
+  constructor(bus: EventBus) {
+    bus.handleRequest(CONFIRM, (request) => this.ask(request));
+  }
 
   /** Resolves true when confirmed, false when cancelled; a new request cancels an open one. */
   ask(request: ConfirmRequest): Promise<boolean> {

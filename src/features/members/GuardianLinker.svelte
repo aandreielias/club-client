@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { directory, toasts } from '../../lib/container';
+  import { bus, directory } from '../../lib/container';
+  import { TOAST } from '../../channels';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { Member } from '../../lib/types';
   import AsyncView from '../../ui/AsyncView.svelte';
@@ -19,7 +20,7 @@
   async function submit(event: SubmitEvent) {
     event.preventDefault();
     if (guardianId && (await model.linkGuardian(guardianId))) {
-      toasts.show('Erziehungsberechtigte:r zugeordnet.');
+      bus.publish(TOAST, { text: 'Erziehungsberechtigte:r zugeordnet.' });
       guardianId = '';
     }
   }

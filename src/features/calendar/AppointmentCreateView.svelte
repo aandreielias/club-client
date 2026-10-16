@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { directory, permissions, session, toasts } from '../../lib/container';
+  import { bus, directory, permissions, session } from '../../lib/container';
+  import { TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
@@ -36,7 +37,7 @@
   async function submit(value: AppointmentForm) {
     let first = '';
     if (await save.run(async () => (first = (await calendarApi.create(value.toNew()))[0].id))) {
-      toasts.show('Termin angelegt.');
+      bus.publish(TOAST, { text: 'Termin angelegt.' });
       handle.open('appointment', first);
     }
   }

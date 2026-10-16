@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { auth, session, stepUp, toasts } from '../../lib/container';
+  import { auth, bus, session, stepUp } from '../../lib/container';
+  import { TOAST } from '../../channels';
   import { PasswordPolicy } from '../../lib/auth/PasswordPolicy';
   import { Action } from '../../lib/state/Action.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
@@ -35,7 +36,7 @@
     event.preventDefault();
     if (await pinAction.run(() => session.setPin(newPin, currentPin))) {
       currentPin = newPin = '';
-      toasts.show('PIN gespeichert.');
+      bus.publish(TOAST, { text: 'PIN gespeichert.' });
       void security.load();
     }
   }
@@ -47,7 +48,7 @@
     if (await passwordAction.run(() => auth.changePassword(currentPassword, newPassword))) {
       currentPassword = newPassword = repeatPassword = '';
       passwordSubmitted = false;
-      toasts.show('Passwort geändert.');
+      bus.publish(TOAST, { text: 'Passwort geändert.' });
     }
   }
 

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { router, session, windows } from '../../lib/container';
+  import { bus, router, session, windows } from '../../lib/container';
+  import { WINDOW_OPEN } from '../../channels';
   import type { CalendarEntry } from '../../lib/calendar/CalendarSources';
   import { windowMenu } from '../../lib/window/windowMenu';
   import { menu } from '../../ui/contextMenu';
@@ -22,8 +23,8 @@
   style:--chip-text="var(--color-tag-{entry.hue}-text)"
   aria-label="{entry.label}: {entry.title}"
   {@attach tooltip(hint)}
-  {@attach menu(() => windowMenu(windows, router, entry.window.kind, entry.window.id))}
-  onclick={(e) => (e.stopPropagation(), windows.open(entry.window.kind, entry.window.id))}
+  {@attach menu(() => windowMenu(bus, windows, router, entry.window.kind, entry.window.id))}
+  onclick={(e) => (e.stopPropagation(), bus.publish(WINDOW_OPEN, { kind: entry.window.kind, id: entry.window.id }))}
 >
   {#if time}<span class="time">{time}</span>{/if}
   <span class="title">{entry.title}</span>

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { calendarSources, directory, router, session, store, windows } from '../../lib/container';
+  import { bus, calendarSources, directory, router, session, store, windows } from '../../lib/container';
+  import { WINDOW_OPEN } from '../../channels';
   import DataTable from '../../ui/DataTable.svelte';
   import { windowMenu } from '../../lib/window/windowMenu';
 
@@ -20,7 +21,7 @@
   {/snippet}
 
   <h2 class="section">Die nächsten {DAYS} Tage</h2>
-  <DataTable model={agenda} rowKey={(e) => e.key} onopen={(e) => windows.open(e.window.kind, e.window.id)} menu={(e) => windowMenu(windows, router, e.window.kind, e.window.id)}
+  <DataTable model={agenda} rowKey={(e) => e.key} onopen={(e) => bus.publish(WINDOW_OPEN, { kind: e.window.kind, id: e.window.id })} menu={(e) => windowMenu(bus, windows, router, e.window.kind, e.window.id)}
     emptyText="In den nächsten Tagen steht nichts an.">
     {#snippet cell(entry, column)}
       {#if column.key === 'label'}

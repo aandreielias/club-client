@@ -1,6 +1,8 @@
 // Live event of the teams module (server: TeamsApi.MembershipChanged).
 
-export const MEMBERSHIP_CHANGED = 'teams.membership-changed';
+import { liveEvent } from '../../lib/live/LiveUpdates.svelte';
+
+export const MEMBERSHIP_CHANGED = liveEvent<MembershipChanged>('teams.membership-changed');
 
 export interface MembershipChanged {
   teamId: string;

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { session, toasts } from '../../lib/container';
+  import { bus, session } from '../../lib/container';
+  import { TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Button from '../../ui/Button.svelte';
@@ -27,7 +28,7 @@
     if (!form.valid) return;
     let invited = '';
     if (await action.run(async () => (invited = (await membersApi.invite(form.toInvitation())).id))) {
-      toasts.show('Einladung verschickt.');
+      bus.publish(TOAST, { text: 'Einladung verschickt.' });
       handle.open('member', invited);
     }
   }

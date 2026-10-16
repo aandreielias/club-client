@@ -1,11 +1,12 @@
-import type { LiveUpdates } from '../../lib/live/LiveUpdates.svelte';
-import type { ToastService } from '../../lib/notify/ToastService.svelte';
+import type { EventBus } from '../../lib/bus';
+import { liveEvent } from '../../lib/live/LiveUpdates.svelte';
+import { TOAST } from '../../lib/notify/ToastService.svelte';
 import { Action } from '../../lib/state/Action.svelte';
 import { Resource } from '../../lib/state/Resource.svelte';
 import type { NotificationsApi } from './NotificationsApi';
 import type { Notification, NotificationCreated, NotificationList } from './model';
 
-export const NOTIFICATION_CREATED = 'notifications.notification-created';
+export const NOTIFICATION_CREATED = liveEvent<NotificationCreated>('notifications.notification-created');
 
 /**
  * The member's inbox, shared by the sidebar badge and the inbox page. Loads once per session and
@@ -18,8 +19,7 @@ export class NotificationCenter {
 
   constructor(
     private readonly api: NotificationsApi,
-    private readonly live: LiveUpdates,
-    private readonly toasts: ToastService,
+    private readonly bus: EventBus,
     private readonly toastOnArrival: boolean,
   ) {
     this.inbox = new Resource(() => this.api.list());
@@ -29,12 +29,12 @@ export class NotificationCenter {
   /** Session hook: initial load plus live refresh; returns the cleanup. */
   start(): () => void {
     void this.inbox.load();
-    const stop = this.live.subscribe<NotificationCreated>(NOTIFICATION_CREATED, ({ data }) => {
-      if (this.toastOnArrival) this.toasts.show(data.title);
+    const subscription = this.bus.subscribe(NOTIFICATION_CREATED, ({ data }) => {
+      if (this.toastOnArrival) this.bus.publish(TOAST, { text: data.title });
       void this.inbox.load();
     });
     return () => {
-      stop();
+      subscription.unsubscribe();
       this.inbox.set({ items: [], unread: 0 });
     };
   }

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { commands, links, router, session, store, windows } from '../../lib/container';
+  import { bus, commands, links, session, store } from '../../lib/container';
+  import { NAVIGATE, WINDOW_OPEN } from '../../channels';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import Button from '../../ui/Button.svelte';
   import DataTable from '../../ui/DataTable.svelte';
@@ -26,8 +27,8 @@
     await center.markRead(notification);
     const target = links.resolve(notification.link);
     if (!target) return;
-    if ('window' in target) windows.open(target.window.kind, target.window.id);
-    else router.navigate(target.path);
+    if ('window' in target) bus.publish(WINDOW_OPEN, { kind: target.window.kind, id: target.window.id });
+    else bus.publish(NAVIGATE, { path: target.path });
   }
 </script>
 

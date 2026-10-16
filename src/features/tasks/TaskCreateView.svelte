@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { directory, permissions, session, toasts } from '../../lib/container';
+  import { bus, directory, permissions, session } from '../../lib/container';
+  import { TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
@@ -32,7 +33,7 @@
   async function submit(value: TaskForm) {
     let created = '';
     if (await save.run(async () => (created = (await tasksApi.create(value.toNew())).id))) {
-      toasts.show('Aufgabe angelegt.');
+      bus.publish(TOAST, { text: 'Aufgabe angelegt.' });
       handle.open('task', created);
     }
   }

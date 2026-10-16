@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { toasts } from '../../lib/container';
+  import { bus } from '../../lib/container';
+  import { TOAST } from '../../channels';
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -18,7 +19,7 @@
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (status && (await detail.respond(status, reason))) toasts.show('Antwort gespeichert.');
+    if (status && (await detail.respond(status, reason))) bus.publish(TOAST, { text: 'Antwort gespeichert.' });
   }
 </script>
 

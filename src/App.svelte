@@ -6,7 +6,7 @@
   import SetPasswordPage from './features/auth/SetPasswordPage.svelte';
   import { features } from './features';
   import OnboardingPage from './features/onboarding/OnboardingPage.svelte';
-  import { auth, commands, directory, errors, keyboard, live, preferences, router, session, toasts, windows } from './lib/container';
+  import { auth, bus, commands, directory, errors, keyboard, live, preferences, router, session, windows } from './lib/container';
   import Button from './ui/Button.svelte';
   import Centered from './ui/Centered.svelte';
   import ConfirmDialog from './ui/ConfirmDialog.svelte';
@@ -20,7 +20,7 @@
   import Toasts from './ui/Toasts.svelte';
   import TooltipHost from './ui/TooltipHost.svelte';
 
-  const app = new AppController({ auth, session, directory, router, features, live, errors, toasts, commands, keyboard, windows, preferences });
+  const app = new AppController({ auth, session, directory, router, features, live, errors, bus, commands, keyboard, windows, preferences });
   const logout = () => app.logout();
 
   onMount(() => {

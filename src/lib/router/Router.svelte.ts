@@ -1,3 +1,8 @@
+import { defineEvent, type EventBus } from '../bus';
+
+/** Goes to a hash path; `replace` skips the history entry. */
+export const NAVIGATE = defineEvent<{ path: string; replace?: boolean }>('ui/navigate');
+
 export type RouteParams = Record<string, string>;
 
 export interface Matchable {
@@ -18,6 +23,10 @@ export class Router {
   query = $state.raw(new URLSearchParams());
 
   #started = false;
+
+  constructor(bus: EventBus) {
+    bus.subscribe(NAVIGATE, ({ path, replace }) => (replace ? this.replace(path) : this.navigate(path)));
+  }
 
   start(): void {
     if (this.#started) return;

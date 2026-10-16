@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { commands, live, router, store, windows } from '../../lib/container';
+  import { bus, commands, router, store, windows } from '../../lib/container';
+  import { WINDOW_OPEN } from '../../channels';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
-  import { onLive } from '../../lib/live/onLive.svelte';
+  import { useBus } from '../../lib/bus/useBus.svelte';
   import Button from '../../ui/Button.svelte';
   import DataTable from '../../ui/DataTable.svelte';
   import { windowMenu } from '../../lib/window/windowMenu';
@@ -13,22 +14,22 @@
 
   const list = new InventoryListModel(inventoryApi, store);
   void list.load();
-  onLive(live, ITEM_CHANGED, () => void list.load());
-  useCommands(commands, { 'page.new': { run: () => windows.open('item-new', '-'), when: () => policy.canManage() } });
+  useBus(bus, ITEM_CHANGED, () => void list.load());
+  useCommands(commands, { 'page.new': { run: () => bus.publish(WINDOW_OPEN, { kind: 'item-new', id: '-' }), when: () => policy.canManage() } });
 </script>
 
 <Page title="Inventar">
   {#snippet actions()}
     {#if policy.canManage()}
-      <Button variant="primary" onclick={() => windows.open('item-new', '-')}>Neuer Gegenstand</Button>
+      <Button variant="primary" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'item-new', id: '-' })}>Neuer Gegenstand</Button>
     {/if}
   {/snippet}
 
   <DataTable
     model={list}
     rowKey={(i) => i.id}
-    onopen={(i) => windows.open('item', i.id)}
-    menu={(i) => windowMenu(windows, router, 'item', i.id)}
+    onopen={(i) => bus.publish(WINDOW_OPEN, { kind: 'item', id: i.id })}
+    menu={(i) => windowMenu(bus, windows, router, 'item', i.id)}
     selected={windows.current?.kind === 'item' ? windows.current.id : null}
     emptyText="Noch nichts im Inventar."
   />

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { toasts } from '../../lib/container';
+  import { bus } from '../../lib/container';
+  import { TOAST } from '../../channels';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -12,7 +13,7 @@
   void model.load();
 
   async function save() {
-    if (await model.save()) toasts.show('Einstellungen gespeichert.');
+    if (await model.save()) bus.publish(TOAST, { text: 'Einstellungen gespeichert.' });
   }
 </script>
 

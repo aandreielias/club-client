@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { commands, confirmation, directory, linksApi, live, permissions, session, toasts } from '../../lib/container';
+  import { bus, commands, directory, linksApi, permissions, session } from '../../lib/container';
+  import { CONFIRM, TOAST } from '../../channels';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { LinksModel } from '../../lib/links/LinksModel.svelte';
-  import { onLive } from '../../lib/live/onLive.svelte';
+  import { useBus } from '../../lib/bus/useBus.svelte';
   import { Action } from '../../lib/state/Action.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
@@ -42,10 +43,10 @@
     if (title) handle?.setTitle(title);
   });
 
-  onLive<TaskChanged>(live, TASK_CHANGED, ({ data }) => {
+  useBus(bus, TASK_CHANGED, ({ data }) => {
     if (data.taskId !== detail.id || detail.deleteAction.busy || save.busy) return;
     if (data.change === 'DELETED') {
-      toasts.show('Diese Aufgabe wurde gelöscht.');
+      bus.publish(TOAST, { text: 'Diese Aufgabe wurde gelöscht.' });
       leave();
     } else {
       if (!form) void detail.load();
@@ -74,20 +75,20 @@
     const original = value.original;
     if (await save.run(() => tasksApi.update(original.id, value.toPatch()))) {
       form = null;
-      toasts.show('Aufgabe gespeichert.');
+      bus.publish(TOAST, { text: 'Aufgabe gespeichert.' });
       void detail.load();
     }
   }
 
   async function remove(title: string) {
-    const ok = await confirmation.ask({
+    const ok = await bus.request(CONFIRM, {
       title: 'Aufgabe löschen',
       message: `„${title}“ wird mit Checkliste und Kommentaren gelöscht.`,
       confirmLabel: 'Löschen',
       danger: true,
     });
     if (ok && (await detail.delete())) {
-      toasts.show('Aufgabe gelöscht.');
+      bus.publish(TOAST, { text: 'Aufgabe gelöscht.' });
       leave();
     }
   }

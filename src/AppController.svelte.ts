@@ -10,7 +10,9 @@ import type { LiveUpdates } from './lib/live/LiveUpdates.svelte';
 import type { PreferencesService } from './lib/preferences/PreferencesService.svelte';
 import type { WindowService } from './lib/window/WindowService.svelte';
 import { SHORTCUTS, type CommandId } from './shortcuts';
-import type { ToastService } from './lib/notify/ToastService.svelte';
+import type { EventBus } from './lib/bus';
+import { APP_ERROR, NAVIGATE, WINDOW_CLOSE, WINDOW_OPEN } from './channels';
+import { MEMBERSHIP_CHANGED } from './features/teams/events';
 import type { RouteParams, Router } from './lib/router/Router.svelte';
 import type { SessionStore } from './lib/session/SessionStore.svelte';
 
@@ -27,7 +29,7 @@ export interface AppDependencies {
   features: FeatureRegistry;
   live: LiveUpdates;
   errors: ErrorMessages;
-  toasts: ToastService;
+  bus: EventBus;
   commands: CommandRegistry;
   keyboard: KeyboardService;
   windows: WindowService;
@@ -58,11 +60,11 @@ export class AppController {
   }
 
   async start(): Promise<void> {
-    const { auth, router, session, errors } = this.deps;
+    const { auth, router, session, errors, bus } = this.deps;
     try {
       const needsPassword = await auth.init();
       router.start();
-      if (needsPassword) router.replace(AUTH_PATHS.setPassword);
+      if (needsPassword) bus.publish(NAVIGATE, { path: AUTH_PATHS.setPassword, replace: true });
       await session.loadClub();
     } catch (error) {
       this.failure = errors.text(error);
@@ -74,7 +76,7 @@ export class AppController {
    * sign-out (also when the sign-out did not come from `logout`). Call from an effect.
    */
   syncMember(): void {
-    const { auth, session, directory, errors, toasts } = this.deps;
+    const { auth, session, directory, bus } = this.deps;
     if (!auth.signedIn) {
       if (session.me) {
         session.clear();
@@ -87,7 +89,7 @@ export class AppController {
     session
       .loadMe()
       .catch((error) => {
-        toasts.error(errors.text(error));
+        bus.publish(APP_ERROR, error);
         return this.logout();
       })
       .finally(() => (this.#loadingMe = false));
@@ -98,7 +100,7 @@ export class AppController {
    * Returns the cleanup; call from an effect that depends on `screen === 'shell'`.
    */
   startSession(): () => void {
-    const { live, features, session, directory, keyboard } = this.deps;
+    const { live, features, session, directory, keyboard, bus } = this.deps;
     live.start();
     const detachKeyboard = keyboard.attach();
     const removeCommands = this.registerGlobalCommands();
@@ -107,10 +109,10 @@ export class AppController {
     document.addEventListener('visibilitychange', wake);
     const stops = [
       features.start(),
-      live.subscribe<{ teamId: string; memberId: string }>('teams.membership-changed', ({ data }) => {
+      bus.subscribe(MEMBERSHIP_CHANGED, ({ data }) => {
         directory.forgetRoster(data.teamId);
         if (data.memberId === session.me?.member.id) void session.loadMe();
-      }),
+      }).unsubscribe,
       detachKeyboard,
       removeCommands,
       () => removeEventListener('online', wake),
@@ -124,25 +126,25 @@ export class AppController {
 
   /** App-wide commands: palette, settings, theme, navigation and window placement. */
   private registerGlobalCommands(): () => void {
-    const { commands, windows, preferences, router } = this.deps;
+    const { commands, windows, preferences, bus } = this.deps;
     const windowOpen = () => windows.current !== null;
     const navigation = Object.fromEntries(
       (Object.entries(SHORTCUTS) as [CommandId, (typeof SHORTCUTS)[CommandId]][])
         .filter(([, definition]) => 'path' in definition)
         .map(([id, definition]) => {
           const path = (definition as { path: string }).path;
-          return [id, { run: () => router.navigate(path), when: () => this.allowedRoutes.some((r) => r.path === path) }];
+          return [id, { run: () => bus.publish(NAVIGATE, { path }), when: () => this.allowedRoutes.some((r) => r.path === path) }];
         }),
     );
     return commands.register({
       ...navigation,
       'palette.open': { run: () => (commands.paletteOpen = !commands.paletteOpen) },
-      'settings.open': { run: () => windows.open('settings', 'appearance'), when: () => !!windows.content('settings') },
-      'help.shortcuts': { run: () => windows.open('settings', 'shortcuts'), when: () => !!windows.content('settings') },
+      'settings.open': { run: () => bus.publish(WINDOW_OPEN, { kind: 'settings', id: 'appearance' }), when: () => !!windows.content('settings') },
+      'help.shortcuts': { run: () => bus.publish(WINDOW_OPEN, { kind: 'settings', id: 'shortcuts' }), when: () => !!windows.content('settings') },
       'theme.toggle': { run: () => preferences.toggleScheme(matchMedia('(prefers-color-scheme: dark)').matches) },
       'auth.logout': { run: () => void this.logout() },
       'nav.back': { run: () => history.back() },
-      'window.close': { run: () => windows.close(), when: windowOpen },
+      'window.close': { run: () => bus.publish(WINDOW_CLOSE), when: windowOpen },
       'window.center': { run: () => windows.setDock('center'), when: windowOpen },
       'window.side': { run: () => windows.setDock('side'), when: windowOpen },
       'window.bottom': { run: () => windows.setDock('bottom'), when: windowOpen },
@@ -158,11 +160,11 @@ export class AppController {
   }
 
   async logout(): Promise<void> {
-    const { auth, session, directory, router } = this.deps;
+    const { auth, session, directory, bus } = this.deps;
     await auth.signOut();
     session.clear();
     directory.clear();
-    router.navigate('/');
+    bus.publish(NAVIGATE, { path: '/' });
   }
 
   private computeScreen(): Screen {

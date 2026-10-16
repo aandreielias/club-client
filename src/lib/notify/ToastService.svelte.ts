@@ -1,3 +1,14 @@
+import type { EventBus } from '../bus';
+import { defineEvent } from '../bus';
+
+export interface ToastRequest {
+  text: string;
+  tone?: 'info' | 'error';
+}
+
+/** Shows a toast: `bus.publish(TOAST, { text })`. */
+export const TOAST = defineEvent<ToastRequest>('ui/toast');
+
 export interface Toast {
   id: number;
   text: string;
@@ -11,9 +22,12 @@ export class ToastService {
   #next = 0;
 
   constructor(
+    bus: EventBus,
     private readonly durationMs: number,
     private readonly errorDurationMs: number,
-  ) {}
+  ) {
+    bus.subscribe(TOAST, ({ text, tone }) => (tone === 'error' ? this.error(text) : this.show(text)));
+  }
 
   show(text: string): void {
     this.push(text, false, this.durationMs);

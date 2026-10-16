@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { commands, directory, linksApi, live, permissions, session, toasts } from '../../lib/container';
+  import { bus, commands, directory, linksApi, permissions, session } from '../../lib/container';
+  import { TOAST } from '../../channels';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { LinksModel } from '../../lib/links/LinksModel.svelte';
-  import { onLive } from '../../lib/live/onLive.svelte';
+  import { useBus } from '../../lib/bus/useBus.svelte';
   import { Action } from '../../lib/state/Action.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
@@ -43,18 +44,18 @@
     if (title) handle?.setTitle(title);
   });
 
-  onLive<AppointmentsChanged>(live, APPOINTMENTS_CHANGED, ({ data }) => {
+  useBus(bus, APPOINTMENTS_CHANGED, ({ data }) => {
     if (!data.appointmentIds.includes(detail.id)) return;
     if (!save.busy && !form) void detail.appointment.load();
     if (!links.editing && !links.save.busy) void links.load();
   });
-  onLive<ResponseChanged>(live, RESPONSE_CHANGED, ({ data }) => {
+  useBus(bus, RESPONSE_CHANGED, ({ data }) => {
     if (data.appointmentId === detail.id && !detail.respondAction.busy) void detail.attendance.load();
   });
 
   const canAnswer = () => !form && !!detail.appointment.value && !!detail.attendance.value && policy.canRespond(detail.appointment.value);
   async function answer(status: 'YES' | 'MAYBE' | 'NO') {
-    if (await detail.respond(status, detail.ownEntry?.reason ?? '')) toasts.show('Antwort gespeichert.');
+    if (await detail.respond(status, detail.ownEntry?.reason ?? '')) bus.publish(TOAST, { text: 'Antwort gespeichert.' });
   }
   useCommands(commands, {
     'appointment.edit': {
@@ -85,7 +86,7 @@
     if (!original) return;
     if (await save.run(() => calendarApi.update(original.id, value.toPatch()))) {
       form = null;
-      toasts.show('Termin gespeichert.');
+      bus.publish(TOAST, { text: 'Termin gespeichert.' });
       void detail.appointment.load();
     }
   }
@@ -142,7 +143,7 @@
         </AsyncView>
 
         {#if policy.canEdit(appointment)}
-          <CancelDialog bind:open={cancelOpen} {detail} {appointment} oncancelled={() => toasts.show('Termin abgesagt.')} />
+          <CancelDialog bind:open={cancelOpen} {detail} {appointment} oncancelled={() => bus.publish(TOAST, { text: 'Termin abgesagt.' })} />
         {/if}
       {/if}
     </Detail>

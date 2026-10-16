@@ -1,7 +1,9 @@
 // Live events of the members module (server: MembersApi.MemberInvited / MemberDeactivated).
 
-export const MEMBER_INVITED = 'members.member-invited';
-export const MEMBER_DEACTIVATED = 'members.member-deactivated';
+import { liveEvent } from '../../lib/live/LiveUpdates.svelte';
+
+export const MEMBER_INVITED = liveEvent<MemberEvent>('members.member-invited');
+export const MEMBER_DEACTIVATED = liveEvent<MemberEvent>('members.member-deactivated');
 
 export interface MemberEvent {
   memberId: string;

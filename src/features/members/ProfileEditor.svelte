@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { session, toasts } from '../../lib/container';
+  import { bus, session } from '../../lib/container';
+  import { TOAST } from '../../channels';
   import type { Member } from '../../lib/types';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -21,7 +22,7 @@
     if (!form.valid) return;
     const patch = form.toPatch();
     if (!Object.keys(patch).length || (await model.saveProfile(patch))) {
-      toasts.show('Profil gespeichert.');
+      bus.publish(TOAST, { text: 'Profil gespeichert.' });
       ondone();
     }
   }

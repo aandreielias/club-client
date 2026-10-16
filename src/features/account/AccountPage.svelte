@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { session, toasts, windows } from '../../lib/container';
+  import { bus, session } from '../../lib/container';
+  import { TOAST, WINDOW_OPEN } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
   import { ROLE_LABELS } from '../../lib/types';
   import Button from '../../ui/Button.svelte';
@@ -16,14 +17,14 @@
 
   async function submitPhone(event: SubmitEvent) {
     event.preventDefault();
-    if (await savePhone.run(() => session.updateProfile({ phone: phone.trim() || null }))) toasts.show('Telefonnummer gespeichert.');
+    if (await savePhone.run(() => session.updateProfile({ phone: phone.trim() || null }))) bus.publish(TOAST, { text: 'Telefonnummer gespeichert.' });
   }
 </script>
 
 <Page title="Mein Konto">
   {#snippet actions()}
-    <Button onclick={() => windows.open('settings', 'security')}>PIN und Passwort</Button>
-    <Button onclick={() => windows.open('settings', 'appearance')}>Einstellungen</Button>
+    <Button onclick={() => bus.publish(WINDOW_OPEN, { kind: 'settings', id: 'security' })}>PIN und Passwort</Button>
+    <Button onclick={() => bus.publish(WINDOW_OPEN, { kind: 'settings', id: 'appearance' })}>Einstellungen</Button>
   {/snippet}
 
   <dl class="props">

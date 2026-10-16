@@ -1,4 +1,5 @@
 import type { Component } from 'svelte';
+import { defineEvent, type EventBus } from '../bus';
 import type { Router } from '../router/Router.svelte';
 import type { LocalStore } from '../storage/LocalStore';
 
@@ -11,6 +12,10 @@ export interface WindowTarget {
   kind: string;
   id: string;
 }
+
+/** Opens a record in the window, optionally moving the window to `dock` first. */
+export const WINDOW_OPEN = defineEvent<WindowTarget & { dock?: Dock }>('ui/window/open');
+export const WINDOW_CLOSE = defineEvent('ui/window/close');
 
 /** Given to window contents so they can talk to their window. */
 export interface WindowHandle {
@@ -53,7 +58,13 @@ export class WindowService {
     private readonly router: Router,
     private readonly store: LocalStore,
     defaultDock: Dock,
+    bus: EventBus,
   ) {
+    bus.subscribe(WINDOW_OPEN, ({ kind, id, dock }) => {
+      if (dock) this.setDock(dock);
+      this.open(kind, id);
+    });
+    bus.subscribe(WINDOW_CLOSE, () => this.close());
     const stored = store.get<Dock>(WindowService.DOCK_KEY);
     this.dock = stored && DOCKS.includes(stored) ? stored : defaultDock;
     this.current = $derived(this.parse(this.router.query.get(WindowService.PARAM)));

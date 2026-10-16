@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { commands, live, router, session, store, toasts, windows } from '../../lib/container';
+  import { bus, commands, router, session, store, windows } from '../../lib/container';
+  import { TOAST, WINDOW_OPEN } from '../../channels';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
-  import { onLive } from '../../lib/live/onLive.svelte';
+  import { useBus } from '../../lib/bus/useBus.svelte';
   import { ROLE_LABELS } from '../../lib/types';
   import Button from '../../ui/Button.svelte';
   import DataTable from '../../ui/DataTable.svelte';
@@ -18,14 +19,14 @@
   // The list needs a step-up: the PIN dialog appears on first load.
   const list = new MemberListModel(membersApi, store);
   void list.load();
-  onLive(live, [MEMBER_INVITED, MEMBER_DEACTIVATED], () => void list.load());
+  useBus(bus, [MEMBER_INVITED, MEMBER_DEACTIVATED], () => void list.load());
 
   let resetting = $state(false);
-  useCommands(commands, { 'page.new': { run: () => windows.open('member-new', '-'), when: () => policy.canInvite() } });
+  useCommands(commands, { 'page.new': { run: () => bus.publish(WINDOW_OPEN, { kind: 'member-new', id: '-' }), when: () => policy.canInvite() } });
 
   async function resetDone(count: number) {
     resetting = false;
-    toasts.show(`${count} PINs zurückgesetzt.`);
+    bus.publish(TOAST, { text: `${count} PINs zurückgesetzt.` });
     await session.loadMe(); // the own PIN is gone as well: onboarding asks for a new one
   }
 </script>
@@ -33,14 +34,14 @@
 <Page title="Mitglieder">
   {#snippet actions()}
     {#if policy.canResetAll()}<Button variant="danger" onclick={() => (resetting = true)}>Alle PINs zurücksetzen</Button>{/if}
-    {#if policy.canInvite()}<Button variant="primary" onclick={() => windows.open('member-new', '-')}>Einladen</Button>{/if}
+    {#if policy.canInvite()}<Button variant="primary" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'member-new', id: '-' })}>Einladen</Button>{/if}
   {/snippet}
 
   <DataTable
     model={list}
     rowKey={(m) => m.id}
-    onopen={(m) => windows.open('member', m.id)}
-    menu={(m) => windowMenu(windows, router, 'member', m.id)}
+    onopen={(m) => bus.publish(WINDOW_OPEN, { kind: 'member', id: m.id })}
+    menu={(m) => windowMenu(bus, windows, router, 'member', m.id)}
     selected={windows.current?.kind === 'member' ? windows.current.id : null}
     emptyText="Noch keine Mitglieder."
   >

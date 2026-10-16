@@ -1,7 +1,8 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { commands, confirmation, directory, errors, live, permissions, router, session, store, toasts, windows } from '../../lib/container';
-  import { onLive } from '../../lib/live/onLive.svelte';
+  import { bus, commands, directory, permissions, session, store } from '../../lib/container';
+  import { APP_ERROR, CONFIRM, NAVIGATE, TOAST, WINDOW_OPEN } from '../../channels';
+  import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
@@ -38,7 +39,7 @@
   directory.loadRosters();
   if (permissions.isManager) directory.loadTeams().catch(() => {});
 
-  onLive<FilesChanged>(live, FILES_CHANGED, ({ data }) => {
+  useBus(bus, FILES_CHANGED, ({ data }) => {
     if (data.folderId !== folderId) return;
     fileLinks.forget(data.fileId);
     void list.load();
@@ -52,8 +53,8 @@
   useCommands(commands, { 'page.new': { run: () => (creating = true), when: () => canCreate } });
 
   function open(item: FolderItem) {
-    if (item.kind === 'folder') router.navigate(`/files/${item.id}`);
-    else windows.open('file', `${item.file.folderId}:${item.file.id}`);
+    if (item.kind === 'folder') bus.publish(NAVIGATE, { path: `/files/${item.id}` });
+    else bus.publish(WINDOW_OPEN, { kind: 'file', id: `${item.file.folderId}:${item.file.id}` });
   }
 
   async function download(item: FolderItem) {
@@ -61,19 +62,19 @@
     try {
       await fileDownloads.download(item.file);
     } catch (error) {
-      toasts.error(errors.text(error));
+      bus.publish(APP_ERROR, error);
     }
   }
 
   async function removeFile(item: FolderItem) {
     if (item.kind !== 'file' || !contents) return;
-    const ok = await confirmation.ask({ title: 'Datei löschen', message: `„${item.name}“ wird endgültig gelöscht.`, confirmLabel: 'Löschen', danger: true });
+    const ok = await bus.request(CONFIRM, { title: 'Datei löschen', message: `„${item.name}“ wird endgültig gelöscht.`, confirmLabel: 'Löschen', danger: true });
     if (!ok) return;
     if (await contents.delete(item.file)) {
       list.refresh();
-      toasts.show('Datei gelöscht.');
+      bus.publish(TOAST, { text: 'Datei gelöscht.' });
     } else {
-      toasts.error(errors.text(contents.deleteAction.error));
+      bus.publish(APP_ERROR, contents.deleteAction.error);
     }
   }
 
@@ -92,11 +93,11 @@
     creating = false;
     tree.add(newFolder);
     list.refresh();
-    toasts.show('Ordner angelegt.');
+    bus.publish(TOAST, { text: 'Ordner angelegt.' });
   }
 
   async function deleteFolder(target: Folder) {
-    const ok = await confirmation.ask({
+    const ok = await bus.request(CONFIRM, {
       title: 'Ordner löschen',
       message: `„${target.name}“ wird gelöscht. Das geht nur, wenn er leer ist.`,
       confirmLabel: 'Löschen',
@@ -106,10 +107,10 @@
     try {
       await filesApi.deleteFolder(target.id);
       tree.remove(target.id);
-      toasts.show('Ordner gelöscht.');
-      router.navigate(target.parentId ? `/files/${target.parentId}` : '/files');
+      bus.publish(TOAST, { text: 'Ordner gelöscht.' });
+      bus.publish(NAVIGATE, { path: target.parentId ? `/files/${target.parentId}` : '/files' });
     } catch (error) {
-      toasts.error(errors.text(error));
+      bus.publish(APP_ERROR, error);
     }
   }
 </script>

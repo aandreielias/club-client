@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { confirmation, directory, errors, live, router, store, toasts, windows } from '../../lib/container';
-  import { onLive } from '../../lib/live/onLive.svelte';
+  import { bus, directory, router, store, windows } from '../../lib/container';
+  import { APP_ERROR, CONFIRM, TOAST, WINDOW_OPEN } from '../../channels';
+  import { useBus } from '../../lib/bus/useBus.svelte';
   import type { RosterEntry, TeamRole } from '../../lib/types';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
@@ -44,28 +45,28 @@
     if (name) handle?.setTitle(name);
   });
 
-  onLive<MembershipChanged>(live, MEMBERSHIP_CHANGED, ({ data }) => {
+  useBus(bus, MEMBERSHIP_CHANGED, ({ data }) => {
     if (data.teamId === model.teamId && !model.busy) void model.load();
   });
 
   async function changeRole(entry: RosterEntry, role: TeamRole) {
-    if (role !== entry.teamRole && !(await model.assign(entry.memberId, role))) toasts.error(errors.text(model.assignAction.error));
+    if (role !== entry.teamRole && !(await model.assign(entry.memberId, role))) bus.publish(APP_ERROR, model.assignAction.error);
   }
 
   async function remove(entry: RosterEntry) {
-    const ok = await confirmation.ask({ title: 'Aus dem Team entfernen', message: `${entry.name} wird aus dem Team entfernt.`, confirmLabel: 'Entfernen', danger: true });
+    const ok = await bus.request(CONFIRM, { title: 'Aus dem Team entfernen', message: `${entry.name} wird aus dem Team entfernt.`, confirmLabel: 'Entfernen', danger: true });
     if (!ok) return;
-    if (await model.remove(entry)) toasts.show('Aus dem Team entfernt.');
-    else toasts.error(errors.text(model.removeAction.error));
+    if (await model.remove(entry)) bus.publish(TOAST, { text: 'Aus dem Team entfernt.' });
+    else bus.publish(APP_ERROR, model.removeAction.error);
   }
 
   function open(entry: RosterEntry) {
-    if (policy.canOpenProfile(model.teamId, entry)) windows.open('member', entry.memberId);
+    if (policy.canOpenProfile(model.teamId, entry)) bus.publish(WINDOW_OPEN, { kind: 'member', id: entry.memberId });
   }
 
   function rowMenu(entry: RosterEntry): MenuEntry[] {
     return [
-      ...(policy.canOpenProfile(model.teamId, entry) ? windowMenu(windows, router, 'member', entry.memberId) : []),
+      ...(policy.canOpenProfile(model.teamId, entry) ? windowMenu(bus, windows, router, 'member', entry.memberId) : []),
       { separator: true },
       ...(policy.canRemove(model.teamId, entry) ? [{ label: 'Aus dem Team entfernen', danger: true, run: () => void remove(entry) }] : []),
     ];

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { CommandId } from '../../shortcuts';
-  import { confirmation, keyboard, keymap, store } from '../../lib/container';
+  import { bus, keyboard, keymap, store } from '../../lib/container';
+  import { CONFIRM } from '../../channels';
   import Button from '../../ui/Button.svelte';
   import DataTable from '../../ui/DataTable.svelte';
   import Kbd from '../../ui/Kbd.svelte';
@@ -13,7 +14,7 @@
   let recording = $state<CommandId | null>(null);
 
   async function resetAll() {
-    const ok = await confirmation.ask({
+    const ok = await bus.request(CONFIRM, {
       title: 'Alle Tastenkürzel zurücksetzen',
       message: 'Alle eigenen Änderungen gehen verloren; es gelten wieder die Standardtasten.',
       confirmLabel: 'Zurücksetzen',
