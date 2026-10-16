@@ -21,6 +21,7 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Alle als gelesen markieren': { text: 'Alle Benachrichtigungen als gelesen markieren', command: 'notifications.readAll' },
   'Alle zurücksetzen': { text: 'Alle Tastenkürzel auf die Standardbelegung zurücksetzen' },
   'Als Seite öffnen': { text: 'Als eigene Seite öffnen', command: 'window.page' },
+  'Ältere laden': { text: 'Weitere, ältere Änderungen laden' },
   Anlegen: { text: 'Neuen Eintrag speichern', command: 'form.submit' },
   Anmelden: { text: 'Mit E-Mail und Passwort anmelden' },
   'Antwort speichern': { text: 'Antwort und Begründung für diesen Termin speichern' },

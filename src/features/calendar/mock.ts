@@ -73,7 +73,7 @@ export class MockCalendar {
     this.requireMayEdit(member, appointment.teamId);
     const links = this.links.set(member, appointment.id, body);
     this.changed([appointment], 'UPDATED');
-    MockActivity.record('APPOINTMENT', appointment.id, member, 'UPDATED', appointment.title);
+    MockActivity.record('APPOINTMENT', appointment.id, member, 'UPDATED', { title: appointment.title, teamIds: appointment.teamId ? [appointment.teamId] : [] });
     return links;
   }
 
@@ -110,7 +110,7 @@ export class MockCalendar {
     this.appointments.data.push(...created);
     this.appointments.save();
     this.changed(created, 'CREATED');
-    created.forEach((a) => MockActivity.record('APPOINTMENT', a.id, member, 'CREATED', a.title));
+    created.forEach((a) => MockActivity.record('APPOINTMENT', a.id, member, 'CREATED', { title: a.title, teamIds: a.teamId ? [a.teamId] : [] }));
     return created;
   }
 
@@ -122,7 +122,7 @@ export class MockCalendar {
     Object.assign(current, next);
     this.appointments.save();
     this.changed([current], 'UPDATED');
-    MockActivity.record('APPOINTMENT', current.id, member, 'UPDATED', current.title);
+    MockActivity.record('APPOINTMENT', current.id, member, 'UPDATED', { title: current.title, teamIds: current.teamId ? [current.teamId] : [] });
     return current;
   }
 
@@ -136,7 +136,7 @@ export class MockCalendar {
     targets.forEach((a) => (a.cancelled = true));
     this.appointments.save();
     this.changed(targets, 'CANCELLED');
-    targets.forEach((a) => MockActivity.record('APPOINTMENT', a.id, member, 'CANCELLED', a.title));
+    targets.forEach((a) => MockActivity.record('APPOINTMENT', a.id, member, 'CANCELLED', { title: a.title, teamIds: a.teamId ? [a.teamId] : [] }));
     return targets;
   }
 

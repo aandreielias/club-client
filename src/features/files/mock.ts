@@ -151,7 +151,7 @@ export class MockFiles {
     }
     this.files.save();
     this.changed(folder, file.id, 'UPDATED');
-    MockActivity.record('FILE', file.id, viewer.member, 'UPDATED', file.name);
+    MockActivity.record('FILE', file.id, viewer.member, 'UPDATED', { title: file.name, teamIds: target.teamIds, parentId: target.id });
     if (target !== folder) this.changed(target, file.id, 'UPDATED');
     return file;
   }
@@ -243,7 +243,7 @@ export class MockFiles {
     this.files.data.push(stored);
     this.files.save();
     this.changed(folder, stored.id, 'UPLOADED');
-    MockActivity.record('FILE', stored.id, viewer.member, 'UPLOADED', stored.name);
+    MockActivity.record('FILE', stored.id, viewer.member, 'UPLOADED', { title: stored.name, teamIds: folder.teamIds, parentId: folder.id });
     return stored;
   }
 
@@ -269,7 +269,7 @@ export class MockFiles {
     file.taggedMemberIds = ids;
     this.files.save();
     this.changed(folder, file.id, 'TAGGED');
-    MockActivity.record('FILE', file.id, viewer.member, 'TAGGED', null);
+    MockActivity.record('FILE', file.id, viewer.member, 'TAGGED', { title: file.name, teamIds: folder.teamIds, parentId: folder.id });
     return file;
   }
 
@@ -282,7 +282,7 @@ export class MockFiles {
     this.files.save();
     this.#blobs.delete(file.id);
     this.changed(folder, file.id, 'DELETED');
-    MockActivity.record('FILE', file.id, viewer.member, 'DELETED', file.name);
+    MockActivity.record('FILE', file.id, viewer.member, 'DELETED', { title: file.name, teamIds: folder.teamIds, parentId: folder.id });
   }
 
   /** server: FileHandlers.fileRefs. Deleted files keep their last name for viewers of their last folder. */

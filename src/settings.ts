@@ -407,6 +407,11 @@ export const settings = {
     calendarDays: 30,
   },
 
+  activity: {
+    /** Changes loaded per page of the "Logs" page (server: at most 100). */
+    pageSize: 50,
+  },
+
   notifications: {
     /** Show a toast when a new notification arrives live. */
     toastOnArrival: true,

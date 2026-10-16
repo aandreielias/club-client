@@ -8,6 +8,7 @@ import Bell from '@lucide/svelte/icons/bell';
 import BookUser from '@lucide/svelte/icons/book-user';
 import Calendar from '@lucide/svelte/icons/calendar';
 import Check from '@lucide/svelte/icons/check';
+import History from '@lucide/svelte/icons/history';
 import ChevronDown from '@lucide/svelte/icons/chevron-down';
 import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 import ChevronRight from '@lucide/svelte/icons/chevron-right';
@@ -72,6 +73,7 @@ export const ICONS = {
   dockSide: PanelRight,
   dockBottom: PanelBottom,
   sidebar: PanelLeft,
+  activity: History,
 } as const;
 
 export type IconName = keyof typeof ICONS;

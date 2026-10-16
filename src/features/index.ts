@@ -1,4 +1,5 @@
 import { accountFeature } from './account/feature';
+import { activityFeature } from './activity/feature';
 import { calendarFeature } from './calendar/feature';
 import { FeatureRegistry } from './FeatureRegistry';
 import { filesFeature } from './files/feature';
@@ -24,6 +25,7 @@ export const features = new FeatureRegistry([
   teamsFeature,
   notificationsFeature,
   membersFeature,
+  activityFeature,
   accountFeature,
   settingsFeature,
   searchFeature,

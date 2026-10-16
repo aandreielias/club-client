@@ -500,7 +500,8 @@ mockServer
   .on('GET', '/api/v1/me', (req) => {
     const member = directory.actor(req, true);
     const own = directory.teamRoles(member.id);
-    return { member, teams: directory.teams.data.filter((t) => t.id in own), missing: directory.missing(member), wardIds: directory.wardsOf(member.id) };
+    return { member, teams: directory.teams.data.filter((t) => t.id in own), missing: directory.missing(member), wardIds: directory.wardsOf(member.id),
+      wardNames: Object.fromEntries(directory.wardsOf(member.id).map((id) => [id, directory.name(id) ?? ''])) };
   })
   // Own profile also works before onboarding is complete (birth date step).
   .on('PATCH', '/api/v1/members/:id', (req) => {

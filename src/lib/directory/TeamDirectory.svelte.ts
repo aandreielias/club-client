@@ -89,7 +89,7 @@ export class TeamDirectory {
   knownName(memberId: string): string | null {
     const me = this.session.me?.member;
     if (me && me.id === memberId) return `${me.firstName} ${me.lastName}`;
-    return this.#names[memberId] ?? null;
+    return this.#names[memberId] ?? this.session.me?.wardNames?.[memberId] ?? null;
   }
 
   teamName(teamId: string | null): string | null {

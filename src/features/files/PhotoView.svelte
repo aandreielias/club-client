@@ -98,7 +98,7 @@
           <h2>Personen markieren</h2>
           <TagEditor {file} {folder} {contents} ondone={() => (tagging = false)} />
         {/if}
-        <ActivitySection kind="FILE" id={file.id} describe={(e) => (e.action === 'UPDATED' && e.detail ? `umbenannt oder verschoben: ${e.detail}` : null)} />
+        <ActivitySection kind="FILE" id={file.id} describe={(e) => (e.action === 'UPDATED' ? 'umbenannt oder verschoben' : null)} />
       </Detail>
     {/if}
   {/snippet}

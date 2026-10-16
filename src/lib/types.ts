@@ -75,6 +75,8 @@ export interface Me {
   missing: MissingProfileField[];
   /** The member's minors; their tasks count as the member's own. */
   wardIds: string[];
+  /** Names of the minors, also for members who may not open member profiles. */
+  wardNames: Record<string, string>;
 }
 
 export interface Device {

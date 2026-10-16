@@ -20,6 +20,7 @@ describe('TaskPolicy', () => {
       teams: [],
       missing: [],
       wardIds: ['kid'],
+      wardNames: { kid: 'Kind' },
     };
     const policy = new TaskPolicy(session, new ClubPermissions(session, new TeamDirectory(api, session)));
     expect(policy.isAssigned(task(['kid']))).toBe(true);

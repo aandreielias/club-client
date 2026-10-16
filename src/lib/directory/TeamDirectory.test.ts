@@ -14,6 +14,7 @@ const me: Me = {
   ],
   missing: [],
   wardIds: [],
+  wardNames: {},
 };
 
 const rosters: Record<string, Roster> = {

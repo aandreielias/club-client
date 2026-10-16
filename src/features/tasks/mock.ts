@@ -80,7 +80,7 @@ export class MockTasks {
     this.requireMayManage(viewer, task.teamId);
     const links = this.links.set(member, task.id, body);
     this.changed(task, 'UPDATED');
-    MockActivity.record('TASK', task.id, member, 'UPDATED', task.title);
+    MockActivity.record('TASK', task.id, member, 'UPDATED', { title: task.title, teamIds: task.teamId ? [task.teamId] : [] });
     return links;
   }
 
@@ -125,7 +125,7 @@ export class MockTasks {
     this.tasks.data.push(task);
     this.tasks.save();
     this.changed(task, 'CREATED');
-    MockActivity.record('TASK', task.id, member, 'CREATED', task.title);
+    MockActivity.record('TASK', task.id, member, 'CREATED', { title: task.title, teamIds: task.teamId ? [task.teamId] : [] });
     this.assigned(task, []);
     return { ...task, comments: [] };
   }
@@ -150,7 +150,7 @@ export class MockTasks {
     Object.assign(current, next);
     this.tasks.save();
     this.changed(current, 'UPDATED', previousAssignees);
-    MockActivity.record('TASK', current.id, member, 'UPDATED', current.title);
+    MockActivity.record('TASK', current.id, member, 'UPDATED', { title: current.title, teamIds: current.teamId ? [current.teamId] : [] });
     this.assigned(current, previousAssignees);
     return this.withComments(current);
   }
@@ -173,14 +173,14 @@ export class MockTasks {
       this.tasks.data.push(next);
       task.repeatWeeks = null;
       this.changed(next, 'CREATED');
-      MockActivity.record('TASK', next.id, member, 'CREATED', next.title);
+      MockActivity.record('TASK', next.id, member, 'CREATED', { title: next.title, teamIds: next.teamId ? [next.teamId] : [] });
       this.assigned(next, []);
     }
     task.status = status as TaskStatus;
     task.completedAt = status === 'DONE' ? (task.completedAt ?? new Date().toISOString()) : null;
     this.tasks.save();
     this.changed(task, 'STATUS');
-    MockActivity.record('TASK', task.id, member, 'STATUS', task.status);
+    MockActivity.record('TASK', task.id, member, 'STATUS', { title: task.title, teamIds: task.teamId ? [task.teamId] : [], detail: task.status });
     return this.withComments(task);
   }
 
@@ -191,7 +191,7 @@ export class MockTasks {
     item.done = !!done;
     this.tasks.save();
     this.changed(task, 'UPDATED');
-    MockActivity.record('TASK', task.id, member, 'UPDATED', task.title);
+    MockActivity.record('TASK', task.id, member, 'UPDATED', { title: task.title, teamIds: task.teamId ? [task.teamId] : [] });
     return this.withComments(task);
   }
 
@@ -201,7 +201,7 @@ export class MockTasks {
     (this.comments.data[id] ??= []).push({ id: crypto.randomUUID(), authorId: member.id, text, createdAt: new Date().toISOString() });
     this.comments.save();
     this.changed(task, 'COMMENTED');
-    MockActivity.record('TASK', task.id, member, 'COMMENTED', null);
+    MockActivity.record('TASK', task.id, member, 'COMMENTED', { title: task.title, teamIds: task.teamId ? [task.teamId] : [] });
     return this.withComments(task);
   }
 
@@ -210,7 +210,7 @@ export class MockTasks {
     const task = this.visible(viewer, id);
     this.requireMayManage(viewer, task.teamId);
     this.changed(task, 'DELETED'); // audience computed before the task is gone
-    MockActivity.record('TASK', task.id, member, 'DELETED', task.title);
+    MockActivity.record('TASK', task.id, member, 'DELETED', { title: task.title, teamIds: task.teamId ? [task.teamId] : [] });
     this.tasks.data.splice(this.tasks.data.indexOf(task), 1);
     delete this.comments.data[id];
     this.links.remove(id);
