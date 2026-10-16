@@ -7,4 +7,3 @@ export { CONFIRM, type ConfirmRequest } from './lib/notify/ConfirmService.svelte
 export { TOAST, type ToastRequest } from './lib/notify/ToastService.svelte';
 export { NAVIGATE } from './lib/router/Router.svelte';
 export { WINDOW_CLOSE, WINDOW_OPEN } from './lib/window/WindowService.svelte';
-export { LIVE_ROOT, liveEvent } from './lib/live/LiveUpdates.svelte';

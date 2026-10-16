@@ -20,7 +20,7 @@ import type { SessionStore } from './lib/session/SessionStore.svelte';
 /** Which top-level screen the app shows; derived from auth, profile and route state. */
 export type Screen = 'failed' | 'loading' | 'set-password' | 'forgot-password' | 'login' | 'onboarding' | 'shell';
 
-export const AUTH_PATHS = { setPassword: '/set-password', forgotPassword: '/forgot-password' } as const;
+const AUTH_PATHS = { setPassword: '/set-password', forgotPassword: '/forgot-password' } as const;
 
 export interface AppDependencies {
   auth: AuthService;

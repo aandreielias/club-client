@@ -4,7 +4,7 @@ import type { LocalStore } from '../../lib/storage/LocalStore';
 import { NOTIFICATION_KINDS, type Notification } from './model';
 import type { NotificationCenter } from './NotificationCenter.svelte';
 
-export const kindLabel = (kind: Notification['kind']): string => NOTIFICATION_KINDS.find((k) => k.value === kind)?.label ?? kind;
+const kindLabel = (kind: Notification['kind']): string => NOTIFICATION_KINDS.find((k) => k.value === kind)?.label ?? kind;
 
 /** The inbox as a list; its data mirrors the NotificationCenter (shared with the sidebar badge). */
 export class NotificationListModel extends ListModel<Notification> {

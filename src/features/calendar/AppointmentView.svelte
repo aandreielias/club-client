@@ -1,11 +1,11 @@
 <script lang="ts">
-  import ActivitySection from '../../ui/ActivitySection.svelte';
   import { backStack, bus, commands, directory, linksApi, permissions, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { LinksModel } from '../../lib/links/LinksModel.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
+  import ActivitySection from '../../ui/ActivitySection.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
@@ -21,7 +21,6 @@
   import { typeHue, typeLabel, type Appointment } from './model';
   import ResponseForm from './ResponseForm.svelte';
   import RidesPanel from './RidesPanel.svelte';
-  import { settings } from '../../settings';
   import { appointmentPolicy as policy, calendarApi } from './services';
 
   /** One appointment: properties, own answer, attendance; edit and cancel for managers. Window and page. */
@@ -139,7 +138,7 @@
           {/snippet}
         </AsyncView>
 
-        {#if !appointment.cancelled && (settings.calendar.rideTypes as readonly string[]).includes(appointment.type)}
+        {#if policy.hasRides(appointment)}
           <h2>Fahrgemeinschaft</h2>
           <RidesPanel appointmentId={appointment.id} open={!policy.isPast(appointment)} />
         {/if}

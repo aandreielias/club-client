@@ -10,6 +10,7 @@
 
 <script lang="ts" generics="V extends string">
   import { tick } from 'svelte';
+  import { AnchoredList } from '../lib/overlay/AnchoredList.svelte';
   import { tooltip } from './tooltip';
 
   /**
@@ -39,50 +40,27 @@
   } = $props();
 
   const listId = `select-list-${nextId++}`;
-  let open = $state(false);
   let active = $state(-1);
   let trigger: HTMLButtonElement | undefined = $state();
   let list: HTMLUListElement | undefined = $state();
   let typed = '';
   let typedTimer: ReturnType<typeof setTimeout> | undefined;
+  const popover = new AnchoredList(() => trigger, () => list, () => hide(false), 'min');
 
   const selectedIndex = $derived(options.findIndex((o) => o.value === value));
   const selected = $derived(selectedIndex >= 0 ? options[selectedIndex] : undefined);
 
   async function show() {
-    if (disabled || open || !trigger || !list) return;
+    if (disabled || popover.open) return;
     active = selectedIndex >= 0 ? selectedIndex : firstEnabled(0, 1);
-    open = true;
-    place();
-    list.showPopover();
+    if (!popover.show()) return;
     await tick();
-    list.focus();
-    scrollActive();
-    document.addEventListener('pointerdown', outside, true);
+    list?.focus();
+    popover.scrollActive();
   }
 
   function hide(focusTrigger = true) {
-    if (!open) return;
-    open = false;
-    if (list?.matches(':popover-open')) list.hidePopover();
-    document.removeEventListener('pointerdown', outside, true);
-    if (focusTrigger) trigger?.focus();
-  }
-
-  function outside(event: PointerEvent) {
-    const target = event.target as Node;
-    if (!list?.contains(target) && !trigger?.contains(target)) hide(false);
-  }
-
-  /** Below the trigger, or above when there is no room; at least as wide as the trigger. */
-  function place() {
-    if (!trigger || !list) return;
-    const rect = trigger.getBoundingClientRect();
-    const height = Math.min(list.scrollHeight || 280, 280);
-    const below = innerHeight - rect.bottom >= height + 8 || rect.top < height + 8;
-    list.style.minWidth = `${rect.width}px`;
-    list.style.left = `${Math.min(rect.left, innerWidth - Math.max(rect.width, 160) - 8)}px`;
-    list.style.top = below ? `${rect.bottom + 4}px` : `${rect.top - height - 4}px`;
+    if (popover.hide() && focusTrigger) trigger?.focus();
   }
 
   function choose(index: number) {
@@ -105,11 +83,7 @@
   function moveActive(step: 1 | -1) {
     const next = firstEnabled(active + step, step);
     if (next >= 0) active = next;
-    scrollActive();
-  }
-
-  function scrollActive() {
-    void tick().then(() => list?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' }));
+    popover.scrollActive();
   }
 
   /** Letters jump to the next option starting with what was typed. */
@@ -122,7 +96,7 @@
     const match = ordered.find((i) => !options[i].disabled && options[i].label.toLocaleLowerCase().startsWith(typed));
     if (match !== undefined) {
       active = match;
-      scrollActive();
+      popover.scrollActive();
     }
   }
 
@@ -143,8 +117,8 @@
     const keys: Record<string, () => void> = {
       ArrowDown: () => moveActive(1),
       ArrowUp: () => moveActive(-1),
-      Home: () => ((active = firstEnabled(0, 1)), scrollActive()),
-      End: () => ((active = firstEnabled(options.length - 1, -1)), scrollActive()),
+      Home: () => ((active = firstEnabled(0, 1)), popover.scrollActive()),
+      End: () => ((active = firstEnabled(options.length - 1, -1)), popover.scrollActive()),
       Enter: () => choose(active),
       ' ': () => choose(active),
       Escape: () => hide(),
@@ -175,11 +149,11 @@
     {disabled}
     aria-label={ariaLabel}
     aria-haspopup="listbox"
-    aria-expanded={open}
+    aria-expanded={popover.open}
     aria-controls={listId}
-    onclick={() => (open ? hide() : void show())}
+    onclick={() => (popover.open ? hide() : void show())}
     onkeydown={triggerKey}
-    {@attach tooltip(() => (open ? null : (ariaLabel ?? placeholder)))}
+    {@attach tooltip(() => (popover.open ? null : (ariaLabel ?? placeholder)))}
   >
     <span class="value" class:placeholder={!selected}>{selected?.label ?? placeholder ?? ''}</span>
   </button>

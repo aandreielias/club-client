@@ -259,7 +259,8 @@ export class MockCalendar {
     const target = body.memberId ?? member.id;
     if (target !== member.id && !this.people.wardsOf(member.id).includes(target)) fail(404, 'member.not-found');
     const all = this.rides.data.filter((r) => r.appointmentId === appointment.id);
-    if (all.some((r) => r.driverId === target)) fail(target === ride.driverId ? 400 : 409, target === ride.driverId ? 'ride.driver-is-passenger' : 'ride.is-driver');
+    if (target === ride.driverId) fail(400, 'ride.driver-is-passenger');
+    if (all.some((r) => r.driverId === target)) fail(409, 'ride.is-driver');
     if (!ride.passengers.includes(target) && ride.passengers.length >= ride.seats) fail(409, 'ride.full');
     all.forEach((r) => (r.passengers = r.passengers.filter((p) => p !== target)));
     ride.passengers.push(target);

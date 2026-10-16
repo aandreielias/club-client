@@ -4,6 +4,7 @@
 
 <script lang="ts">
   import { tick } from 'svelte';
+  import { AnchoredList } from '../lib/overlay/AnchoredList.svelte';
   import type { SelectOption } from './Select.svelte';
 
   /**
@@ -30,7 +31,6 @@
   const listId = `search-select-${nextId++}`;
   let query = $state('');
   let options = $state.raw<readonly SelectOption[]>([]);
-  let open = $state(false);
   let loading = $state(false);
   let failed = $state(false);
   let active = $state(-1);
@@ -38,6 +38,7 @@
   let list: HTMLUListElement | undefined = $state();
   let timer: ReturnType<typeof setTimeout> | undefined;
   let sequence = 0;
+  const popover = new AnchoredList(() => input, () => list, () => hide(), 'match');
 
   async function run(text: string) {
     const current = ++sequence;
@@ -54,7 +55,7 @@
       if (current === sequence) loading = false;
     }
     await tick();
-    place();
+    popover.place();
   }
 
   function schedule() {
@@ -65,34 +66,11 @@
   }
 
   function show() {
-    if (open || !list) return;
-    open = true;
-    list.showPopover();
-    place();
-    document.addEventListener('pointerdown', outside, true);
+    popover.show();
   }
 
   function hide() {
-    if (!open) return;
-    open = false;
-    if (list?.matches(':popover-open')) list.hidePopover();
-    document.removeEventListener('pointerdown', outside, true);
-  }
-
-  function outside(event: PointerEvent) {
-    const target = event.target as Node;
-    if (!list?.contains(target) && !input?.contains(target)) hide();
-  }
-
-  /** Below the field, or above when there is no room; as wide as the field. */
-  function place() {
-    if (!input || !list) return;
-    const rect = input.getBoundingClientRect();
-    const height = Math.min(list.scrollHeight || 280, 280);
-    const below = innerHeight - rect.bottom >= height + 8 || rect.top < height + 8;
-    list.style.width = `${rect.width}px`;
-    list.style.left = `${rect.left}px`;
-    list.style.top = below ? `${rect.bottom + 4}px` : `${rect.top - height - 4}px`;
+    popover.hide();
   }
 
   function pick(index: number) {
@@ -109,18 +87,18 @@
   function move(step: 1 | -1) {
     if (!options.length) return;
     active = (active + step + options.length) % options.length;
-    void tick().then(() => list?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' }));
+    popover.scrollActive();
   }
 
   function keydown(event: KeyboardEvent) {
     const keys: Record<string, () => void> = {
-      ArrowDown: () => (open ? move(1) : schedule()),
+      ArrowDown: () => (popover.open ? move(1) : schedule()),
       ArrowUp: () => move(-1),
-      Enter: () => open && pick(active),
+      Enter: () => popover.open && pick(active),
       Escape: () => hide(),
     };
     const action = keys[event.key];
-    if (!action || (event.key === 'Escape' && !open)) {
+    if (!action || (event.key === 'Escape' && !popover.open)) {
       if (event.key === 'Tab') hide();
       return;
     }
@@ -141,9 +119,9 @@
     {placeholder}
     aria-label={ariaLabel}
     aria-autocomplete="list"
-    aria-expanded={open}
+    aria-expanded={popover.open}
     aria-controls={listId}
-    aria-activedescendant={open && active >= 0 ? `${listId}-${active}` : undefined}
+    aria-activedescendant={popover.open && active >= 0 ? `${listId}-${active}` : undefined}
     oninput={schedule}
     onfocus={schedule}
     onkeydown={keydown}

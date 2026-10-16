@@ -5,10 +5,10 @@ import type { LocalStore } from '../../lib/storage/LocalStore';
 import type { Formatter } from '../../lib/time/Formatter';
 import { statusLabel, type TaskStatus } from '../tasks/model';
 
-export const KIND_LABELS: Readonly<Record<ActivityKind, string>> = { TASK: 'Aufgabe', APPOINTMENT: 'Termin', FILE: 'Datei' };
+const KIND_LABELS: Readonly<Record<ActivityKind, string>> = { TASK: 'Aufgabe', APPOINTMENT: 'Termin', FILE: 'Datei' };
 
 /** German text of one change, e.g. "Status: Erledigt". */
-export function changeText(e: FeedEntry): string {
+function changeText(e: FeedEntry): string {
   if (e.action === 'STATUS' && e.detail) return `Status: ${statusLabel(e.detail as TaskStatus)}`;
   if (e.kind === 'FILE' && e.action === 'UPDATED') return 'umbenannt oder verschoben';
   return ACTIVITY_ACTIONS[e.action] ?? e.action;

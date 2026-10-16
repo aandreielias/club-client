@@ -23,3 +23,15 @@ export function tooltipPosition(anchor: DOMRectReadOnly, tip: Size, viewport: Si
   const x = Math.min(Math.max(gap, centred), viewport.width - tip.width - gap);
   return { x, y };
 }
+
+/**
+ * A dropdown list below its anchor, above when there is no room below (and room above);
+ * `x` keeps a list of `minWidth` inside the viewport.
+ */
+export function dropdownPosition(anchor: DOMRectReadOnly, listHeight: number, minWidth: number, viewport: Size, gap: number): Point {
+  const below = viewport.height - anchor.bottom >= listHeight + 2 * gap || anchor.top < listHeight + 2 * gap;
+  return {
+    x: Math.min(anchor.left, viewport.width - Math.max(anchor.width, minWidth) - 2 * gap),
+    y: below ? anchor.bottom + gap : anchor.top - listHeight - gap,
+  };
+}

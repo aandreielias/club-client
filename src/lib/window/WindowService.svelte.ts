@@ -6,7 +6,7 @@ import type { Role } from '../types';
 
 export type Dock = 'center' | 'side' | 'bottom';
 
-export const DOCKS: readonly Dock[] = ['center', 'side', 'bottom'];
+const DOCKS: readonly Dock[] = ['center', 'side', 'bottom'];
 
 /** What a window shows: a registered content kind plus the record id. */
 export interface WindowTarget {

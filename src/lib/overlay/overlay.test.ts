@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ContextMenuService, isSeparator, type MenuEntry } from './ContextMenuService.svelte';
-import { menuPosition, tooltipPosition } from './placement';
+import { dropdownPosition, menuPosition, tooltipPosition } from './placement';
 import { TooltipService } from './TooltipService.svelte';
 
 /** Stand-in for a DOM element (tests run without a DOM). */
@@ -71,5 +71,17 @@ describe('TooltipService', () => {
     now = 2000;
     tips.show(a, 'Drei', true); // keyboard focus
     expect(tips.current?.text).toBe('Drei');
+  });
+});
+
+describe('dropdownPosition', () => {
+  const viewport = { width: 1000, height: 800 };
+  const rect = (left: number, top: number, width = 200, height = 32) =>
+    ({ left, top, width, height, right: left + width, bottom: top + height }) as DOMRectReadOnly;
+
+  it('opens below, above when there is no room below, and stays inside the viewport', () => {
+    expect(dropdownPosition(rect(100, 100), 280, 160, viewport, 4)).toEqual({ x: 100, y: 136 });
+    expect(dropdownPosition(rect(100, 700), 280, 160, viewport, 4)).toEqual({ x: 100, y: 416 });
+    expect(dropdownPosition(rect(900, 100, 50), 280, 160, viewport, 4).x).toBe(832);
   });
 });

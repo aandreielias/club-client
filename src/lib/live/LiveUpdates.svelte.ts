@@ -10,7 +10,7 @@ export interface LiveEvent<T = unknown> {
 }
 
 /** Bus root of every server event; subscribe to its hierarchy to see all of them. */
-export const LIVE_ROOT = 'domain';
+const LIVE_ROOT = 'domain';
 
 /** Bus channel of a server event type: 'tasks.task-changed' → 'domain/tasks/task-changed'. */
 export function liveEvent<T>(type: string): EventChannel<LiveEvent<T>> {

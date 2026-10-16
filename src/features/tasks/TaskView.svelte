@@ -1,10 +1,10 @@
 <script lang="ts">
-  import ActivitySection from '../../ui/ActivitySection.svelte';
   import { backStack, bus, commands, directory, linksApi, pendingDeletes, permissions, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { LinksModel } from '../../lib/links/LinksModel.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
+  import ActivitySection from '../../ui/ActivitySection.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';

@@ -1,3 +1,4 @@
+import { settings } from '../../settings';
 import type { ClubPermissions } from '../../lib/policy/ClubPermissions';
 import type { SessionStore } from '../../lib/session/SessionStore.svelte';
 import type { Team } from '../../lib/types';
@@ -31,6 +32,11 @@ export class AppointmentPolicy {
 
   canEdit(appointment: Appointment): boolean {
     return !appointment.cancelled && this.permissions.canManage(appointment.teamId);
+  }
+
+  /** Car pools are offered for away games and events (settings.calendar.rideTypes), not for cancelled ones. */
+  hasRides(appointment: Appointment): boolean {
+    return !appointment.cancelled && (settings.calendar.rideTypes as readonly string[]).includes(appointment.type);
   }
 
   isPast(appointment: Appointment, now: Date = new Date()): boolean {
