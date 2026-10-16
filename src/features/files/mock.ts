@@ -72,17 +72,93 @@ export class MockFiles {
     if (body.parentId) {
       const parent = this.visibleFolder(viewer, body.parentId);
       if (this.depth(parent) >= limits.maxFolderDepth) fail(400, 'folder.too-deep');
-      folder = { id: crypto.randomUUID(), parentId: parent.id, name, kind: body.kind, scope: parent.scope, teamId: parent.teamId, membersCanUpload: !!body.membersCanUpload };
+      folder = { id: crypto.randomUUID(), parentId: parent.id, name, kind: body.kind, scope: parent.scope, teamId: parent.teamId, membersCanUpload: !!body.membersCanUpload, color: null, coverFileId: null };
     } else {
       const scope = body.scope as FolderScope;
       if (!['CLUB', 'TEAM', 'BOARD'].includes(scope)) fail(400, 'folder.kind-or-scope-missing');
       if ((scope === 'TEAM') !== !!body.teamId) fail(400, 'folder.team-scope-mismatch');
-      folder = { id: crypto.randomUUID(), parentId: null, name, kind: body.kind, scope, teamId: body.teamId ?? null, membersCanUpload: !!body.membersCanUpload };
+      folder = { id: crypto.randomUUID(), parentId: null, name, kind: body.kind, scope, teamId: body.teamId ?? null, membersCanUpload: !!body.membersCanUpload, color: null, coverFileId: null };
     }
     this.requireManage(viewer, folder);
     this.folders.data.push(folder);
     this.folders.save();
     return this.toDto(folder, viewer);
+  }
+
+  /** server: FileHandlers.updateFolder */
+  updateFolder(member: Member, id: string, body: Record<string, any>): Folder {
+    const viewer = this.viewer(member);
+    const folder = this.visibleFolder(viewer, id);
+    this.requireManage(viewer, folder);
+    const name = body.name === undefined ? folder.name : String(body.name).trim();
+    if (!name || name.length > limits.folderNameMaxLength) fail(400, 'folder.name-invalid');
+    const scope: FolderScope = body.scope ?? folder.scope;
+    const teamId: string | null = body.scope ? (body.teamId ?? null) : folder.teamId;
+    const scopeChanged = scope !== folder.scope || teamId !== folder.teamId;
+    if (scopeChanged && folder.parentId) fail(400, 'folder.scope-inherited');
+    if ((scope === 'TEAM') !== !!teamId) fail(400, 'folder.team-scope-mismatch');
+    let cover = body.clearCover ? null : (folder.coverFileId ?? null);
+    if (body.coverFileId && !body.clearCover) {
+      const file = this.files.data.find((f) => f.id === body.coverFileId && f.folderId === folder.id && f.contentType.startsWith('image/'));
+      if (!file) fail(400, 'folder.cover-invalid');
+      cover = body.coverFileId;
+    }
+    const color = body.clearColor ? null : (body.color ?? folder.color ?? null);
+    const changed: StoredFolder = { ...folder, name, scope, teamId, color, coverFileId: cover };
+    this.requireManage(viewer, changed);
+    const before = { ...folder };
+    Object.assign(folder, changed);
+    if (scopeChanged) for (const sub of this.descendants(folder.id)) Object.assign(sub, { scope, teamId });
+    this.folders.save();
+    this.changed(before, null, 'FOLDER_UPDATED');
+    if (scopeChanged) this.changed(folder, null, 'FOLDER_UPDATED');
+    return this.toDto(folder, viewer);
+  }
+
+  /** server: FileHandlers.updateFile */
+  updateFile(member: Member, fileId: string, body: Record<string, any>): StoredFile {
+    const viewer = this.viewer(member);
+    const file = this.visibleFile(viewer, fileId);
+    const folder = this.folder(file.folderId);
+    this.requireModify(viewer, folder, file);
+    let target = folder;
+    if (body.folderId && body.folderId !== folder.id) {
+      target = this.visibleFolder(viewer, body.folderId);
+      this.requireManage(viewer, folder);
+      this.requireManage(viewer, target);
+      if (target.kind === 'PHOTOS' && !file.contentType.startsWith('image/')) fail(400, 'file.type-not-allowed');
+    }
+    if (body.name !== undefined) {
+      const extension = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : '';
+      const base = String(body.name).replace(/\.[^.]*$/, '').replace(/[^\p{L}\p{N} ._()-]/gu, '_').trim().slice(0, 100) || 'datei';
+      file.name = base + extension;
+    }
+    if (target !== folder) {
+      file.folderId = target.id;
+      for (const f of this.folders.data) if (f.coverFileId === file.id && f.id !== target.id) f.coverFileId = null;
+      this.folders.save();
+    }
+    this.files.save();
+    this.changed(folder, file.id, 'UPDATED');
+    if (target !== folder) this.changed(target, file.id, 'UPDATED');
+    return file;
+  }
+
+  private descendants(id: string): StoredFolder[] {
+    const found: StoredFolder[] = [];
+    const parents = new Set([id]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const f of this.folders.data) {
+        if (f.parentId && parents.has(f.parentId) && !parents.has(f.id)) {
+          parents.add(f.id);
+          found.push(f);
+          grew = true;
+        }
+      }
+    }
+    return found;
   }
 
   deleteFolder(member: Member, id: string): void {
@@ -157,8 +233,9 @@ export class MockFiles {
     if (thumbnail && !file.hasThumbnail) fail(404, 'file.no-thumbnail');
     const answer = () => ({ url: this.objectUrl(file), expiresAt: new Date(Date.now() + LINK_LIFETIME_MS).toISOString() });
     // Seeded Word files get real content (built asynchronously), so the preview has something to show.
-    if (file.contentType === OFFICE.docx && !this.#blobs.has(file.id)) {
-      return MockFiles.docx(file).then((blob) => (this.#blobs.set(file.id, blob), answer()));
+    const sample = { [OFFICE.docx]: MockFiles.docx, [OFFICE.xlsx]: MockFiles.xlsx, [OFFICE.pptx]: MockFiles.pptx }[file.contentType];
+    if (sample && !this.#blobs.has(file.id)) {
+      return sample(file).then((blob) => (this.#blobs.set(file.id, blob), answer()));
     }
     return answer();
   }
@@ -267,11 +344,12 @@ export class MockFiles {
 
   private toDto(f: StoredFolder, viewer: Viewer): Folder {
     const manage = viewer.canManage(f);
-    return { ...f, canManage: manage, canUpload: manage || (f.membersCanUpload && viewer.canSee(f)) };
+    // Folders stored before colours existed have neither field.
+    return { ...f, color: f.color ?? null, coverFileId: f.coverFileId ?? null, canManage: manage, canUpload: manage || (f.membersCanUpload && viewer.canSee(f)) };
   }
 
   /** server: FileHandlers.audience */
-  private changed(folder: StoredFolder, fileId: string, change: 'UPLOADED' | 'DELETED' | 'TAGGED'): void {
+  private changed(folder: StoredFolder, fileId: string | null, change: 'UPLOADED' | 'DELETED' | 'TAGGED' | 'UPDATED' | 'FOLDER_UPDATED'): void {
     const audience: MockAudience =
       folder.scope === 'CLUB' ? { everyone: true } : folder.scope === 'BOARD' ? { roles: ['ADMIN', 'BOARD'] } : this.people.teamAudience(folder.teamId);
     mockServer.events.publish({ type: 'files.files-changed', data: { folderId: folder.id, fileId, change }, audience });
@@ -338,6 +416,50 @@ export class MockFiles {
     return zip.generateAsync({ type: 'blob', mimeType: file.contentType });
   }
 
+  /** A small workbook: one sheet with a header row and a few lines (shared and inline strings, numbers). */
+  static async xlsx(file: StoredFile): Promise<Blob> {
+    const { default: JSZip } = await import('jszip');
+    const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const rows = [
+      ['Datum', 'Gegner', 'Ort', 'Punkte'],
+      ['19.10.2026', 'VC Musterstadt', 'Heim', 3],
+      ['26.10.2026', 'SV Bergdorf', 'Auswärts', 1],
+      ['09.11.2026', 'TSV Seeblick', 'Heim', 0],
+    ];
+    const cell = (value: string | number, column: number, row: number) => {
+      const ref = String.fromCharCode(65 + column) + (row + 1);
+      return typeof value === 'number' ? `<c r="${ref}"><v>${value}</v></c>` : `<c r="${ref}" t="inlineStr"><is><t>${escape(value)}</t></is></c>`;
+    };
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');
+    zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+    zip.file('xl/workbook.xml', `<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${escape(file.name.replace(/\.xlsx$/i, '').slice(0, 31))}" sheetId="1" r:id="rId1"/></sheets></workbook>`);
+    zip.file('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>');
+    zip.file('xl/worksheets/sheet1.xml', `<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows.map((r, i) => `<row r="${i + 1}">${r.map((v, c) => cell(v, c, i)).join('')}</row>`).join('')}</sheetData></worksheet>`);
+    return zip.generateAsync({ type: 'blob', mimeType: file.contentType });
+  }
+
+  /** A three-slide presentation with titles and bullet points. */
+  static async pptx(file: StoredFile): Promise<Blob> {
+    const { default: JSZip } = await import('jszip');
+    const slides = [
+      ['Saisonplanung 2026/27', 'Ziele, Termine und Aufgaben'],
+      ['Ziele', 'Klassenerhalt Damen 1', 'Zweites Nachwuchsteam', 'Neue Trikots'],
+      ['Nächste Schritte', 'Hallenzeiten bestätigen', 'Trainerteam einteilen'],
+    ];
+    const ns = 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>${slides.map((_, i) => `<Override PartName="/ppt/slides/slide${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`).join('')}</Types>`);
+    zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>');
+    zip.file('ppt/presentation.xml', `<?xml version="1.0" encoding="UTF-8"?><p:presentation ${ns}><p:sldIdLst>${slides.map((_, i) => `<p:sldId id="${256 + i}" r:id="rId${i + 1}"/>`).join('')}</p:sldIdLst></p:presentation>`);
+    zip.file('ppt/_rels/presentation.xml.rels', `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${slides.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${i + 1}.xml"/>`).join('')}</Relationships>`);
+    slides.forEach((lines, i) => {
+      const paragraphs = lines.map((text) => `<a:p><a:r><a:t>${text}</a:t></a:r></a:p>`).join('');
+      zip.file(`ppt/slides/slide${i + 1}.xml`, `<?xml version="1.0" encoding="UTF-8"?><p:sld ${ns}><p:cSld><p:spTree><p:sp><p:txBody>${paragraphs}</p:txBody></p:sp></p:spTree></p:cSld></p:sld>`);
+    });
+    return zip.generateAsync({ type: 'blob', mimeType: file.contentType });
+  }
+
   /** server: FileType.detect (magic bytes; Office files by ZIP signature plus extension) */
   private static detect(bytes: Uint8Array, name: string): { contentType: string; image: boolean; heic: boolean } | null {
     const starts = (...sig: number[]) => sig.every((b, i) => bytes[i] === b);
@@ -372,13 +494,14 @@ export class MockFiles {
   }
 
   private static seedFolders(): StoredFolder[] {
-    const folder = (id: string, name: string, kind: FolderKind, scope: FolderScope, teamId: string | null, membersCanUpload: boolean, parentId: string | null = null): StoredFolder =>
-      ({ id, parentId, name, kind, scope, teamId, membersCanUpload });
+    const folder = (id: string, name: string, kind: FolderKind, scope: FolderScope, teamId: string | null, membersCanUpload: boolean, parentId: string | null = null,
+      style: Pick<StoredFolder, 'color' | 'coverFileId'> = { color: null, coverFileId: null }): StoredFolder =>
+      ({ id, parentId, name, kind, scope, teamId, membersCanUpload, ...style });
     return [
       folder('f-docs', 'Vereinsdokumente', 'DOCUMENTS', 'CLUB', null, false),
       folder('f-minutes', 'Protokolle', 'DOCUMENTS', 'CLUB', null, false, 'f-docs'),
-      folder('f-photos', 'Fotos Saison 2026/27', 'PHOTOS', 'CLUB', null, true),
-      folder('f-damen', 'Damen 1', 'DOCUMENTS', 'TEAM', 't-damen', true),
+      folder('f-photos', 'Fotos Saison 2026/27', 'PHOTOS', 'CLUB', null, true, null, { color: 'BLUE', coverFileId: 'file-5' }),
+      folder('f-damen', 'Damen 1', 'DOCUMENTS', 'TEAM', 't-damen', true, null, { color: 'GREEN', coverFileId: null }),
       folder('f-u16', 'U16 Fotos', 'PHOTOS', 'TEAM', 't-u16', true),
       folder('f-board', 'Vorstand intern', 'DOCUMENTS', 'BOARD', null, false),
     ];
@@ -400,6 +523,7 @@ export class MockFiles {
       file('file-6', 'f-photos', 'Saisonauftakt-2.jpg', 'image/jpeg', 2_100_000, 'trainer', 10, { width: 1600, height: 1067, tags: ['spielerin'] }),
       file('file-7', 'f-u16', 'Training U16.jpg', 'image/jpeg', 1_800_000, 'trainer', 4, { width: 1200, height: 1600, tags: ['spieler'] }),
       file('file-8', 'f-board', 'Budget 2027.xlsx', OFFICE.xlsx, 31_000, 'admin', 3),
+      file('file-9', 'f-docs', 'Saisonplanung 2026-27.pptx', OFFICE.pptx, 88_000, 'vorstand', 6),
     ];
   }
 }
@@ -413,6 +537,8 @@ const actor = (req: MockRequest) => directory.actor(req);
 mockServer
   .on('GET', '/api/v1/folders', (req) => ({ items: files.listFolders(actor(req)) }))
   .on('POST', '/api/v1/folders', (req) => files.createFolder(actor(req), req.body ?? {}))
+  .on('PATCH', '/api/v1/folders/:id', (req) => files.updateFolder(actor(req), req.params.id, req.body ?? {}))
+  .on('PATCH', '/api/v1/files/:id', (req) => files.updateFile(actor(req), req.params.id, req.body ?? {}))
   .on('DELETE', '/api/v1/folders/:id', (req) => files.deleteFolder(actor(req), req.params.id))
   .on('GET', '/api/v1/folders/:folderId/files', (req) => ({ items: files.listFiles(actor(req), req.params.folderId) }))
   .on('POST', '/api/v1/folders/:folderId/files', (req) => files.upload(req))

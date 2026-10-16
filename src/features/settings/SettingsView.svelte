@@ -8,13 +8,15 @@
   import SecuritySection from './SecuritySection.svelte';
   import ShortcutsSection from './ShortcutsSection.svelte';
   import SidebarSection from './SidebarSection.svelte';
+  import HomeSettingsSection from './HomeSettingsSection.svelte';
 
   /** Settings in the window or on a page; `id` is the section shown first. */
   let { id, handle }: { id: string; handle?: WindowHandle } = $props();
 
-  type SectionId = 'appearance' | 'sidebar' | 'shortcuts' | 'security' | 'general';
+  type SectionId = 'appearance' | 'home' | 'sidebar' | 'shortcuts' | 'security' | 'general';
   const SECTIONS: readonly { id: SectionId; label: string; component: Component }[] = [
     { id: 'appearance', label: 'Darstellung', component: AppearanceSection },
+    { id: 'home', label: 'Startseite', component: HomeSettingsSection },
     { id: 'sidebar', label: 'Seitenleiste', component: SidebarSection },
     { id: 'shortcuts', label: 'Tastenkürzel', component: ShortcutsSection },
     { id: 'security', label: 'Sicherheit', component: SecuritySection },

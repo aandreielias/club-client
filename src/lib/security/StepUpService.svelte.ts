@@ -4,6 +4,8 @@
  */
 export class StepUpService {
   open = $state(false);
+  /** Counts cancelled prompts, so views waiting for the PIN can react (e.g. a window closes). */
+  cancelled = $state(0);
 
   #pending: Promise<boolean> | null = null;
   #resolve: (ok: boolean) => void = () => {};
@@ -26,6 +28,7 @@ export class StepUpService {
   }
 
   cancel(): void {
+    this.cancelled++;
     this.settle(false);
   }
 

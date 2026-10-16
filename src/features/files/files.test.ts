@@ -13,7 +13,7 @@ import { UploadQueue } from './UploadQueue.svelte';
 const types = new FileTypes(settings.files.imageExtensions, settings.files.documentExtensions);
 
 const folder = (id: string, parentId: string | null, name = id): Folder => ({
-  id, parentId, name, kind: 'DOCUMENTS', scope: 'CLUB', teamId: null, membersCanUpload: true, canUpload: true, canManage: false,
+  id, parentId, name, kind: 'DOCUMENTS', scope: 'CLUB', teamId: null, membersCanUpload: true, color: null, coverFileId: null, canUpload: true, canManage: false,
 });
 
 describe('FileTypes', () => {

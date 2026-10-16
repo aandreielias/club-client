@@ -1,6 +1,6 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { bus, commands, directory, permissions, session, store } from '../../lib/container';
+  import { bus, commands, directory, permissions, preferences, session, store } from '../../lib/container';
   import { APP_ERROR, CONFIRM, NAVIGATE, TOAST, WINDOW_OPEN } from '../../channels';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
@@ -17,7 +17,11 @@
   import FolderGallery from './FolderGallery.svelte';
   import { FolderItemListModel, type FolderItem } from './FolderItemListModel.svelte';
   import { FolderTree } from './FolderTree.svelte';
-  import type { Folder } from './model';
+  import type { Folder, StoredFile } from './model';
+  import EditFileDialog from './EditFileDialog.svelte';
+  import EditFolderDialog from './EditFolderDialog.svelte';
+  import Icon from '../../ui/Icon.svelte';
+  import { colorHue } from './model';
   import { fileDownloads, fileLinks, filePolicy, filesApi, fileTypes } from './services';
   import UploadPanel from './UploadPanel.svelte';
 
@@ -40,15 +44,16 @@
   if (permissions.isManager) directory.loadTeams().catch(() => {});
 
   useBus(bus, FILES_CHANGED, ({ data }) => {
-    if (data.folderId !== folderId) return;
-    fileLinks.forget(data.fileId);
+    // Folder changes (name, colour, cover, visibility) also show in the parent's listing.
+    if (data.folderId !== folderId && data.change !== 'FOLDER_UPDATED') return;
+    if (data.fileId) fileLinks.forget(data.fileId);
     void list.load();
   });
 
   const folder = $derived(folderId ? tree.get(folderId) : undefined);
   const canCreate = $derived(folderId ? !!folder && filePolicy.canCreateIn(folder, tree.depth(folder.id), tree.maxDepth) : filePolicy.canCreateRoot());
-  let view = $state<View | null>(null);
-  const shownView = $derived<View>(view ?? (folder?.kind === 'PHOTOS' ? 'gallery' : 'table'));
+  // One view for all folders (Einstellungen remember it per browser).
+  const shownView = $derived<View>(preferences.values.filesView);
   let creating = $state(false);
   useCommands(commands, { 'page.new': { run: () => (creating = true), when: () => canCreate } });
 
@@ -78,15 +83,40 @@
     }
   }
 
-  /** Folder: open. File: open, download, delete (where allowed). */
+  /** Folder: open, edit. File: open, download, edit, delete (where allowed). */
   function itemMenu(item: FolderItem): MenuEntry[] {
-    if (item.kind === 'folder') return [{ label: 'Öffnen', run: () => open(item) }];
+    if (item.kind === 'folder') {
+      const target = item.folder;
+      return [
+        { label: 'Öffnen', run: () => open(item) },
+        ...(target.canManage ? [{ label: 'Bearbeiten', icon: 'edit' as const, run: () => (editingFolder = target) }] : []),
+      ];
+    }
+    const modifiable = !!folder && filePolicy.canModify(item.file, folder);
+    const file = item.file;
     return [
       { label: 'Öffnen', run: () => open(item) },
-      { label: 'Herunterladen', run: () => void download(item) },
+      { label: 'Herunterladen', icon: 'download', run: () => void download(item) },
+      ...(modifiable ? [{ label: 'Bearbeiten', icon: 'edit' as const, run: () => (editingFile = file) }] : []),
       { separator: true },
-      ...(folder && filePolicy.canModify(item.file, folder) ? [{ label: 'Löschen', danger: true, run: () => void removeFile(item) }] : []),
+      ...(modifiable ? [{ label: 'Löschen', icon: 'delete' as const, danger: true, run: () => void removeFile(item) }] : []),
     ];
+  }
+
+  let editingFolder = $state<Folder | null>(null);
+  let editingFile = $state<StoredFile | null>(null);
+
+  function folderSaved() {
+    editingFolder = null;
+    void list.load(); // visibility changes reach subfolders too
+    bus.publish(TOAST, { text: 'Ordner gespeichert.' });
+  }
+
+  function fileSaved(saved: StoredFile) {
+    const moved = saved.folderId !== editingFile?.folderId;
+    editingFile = null;
+    void list.load();
+    bus.publish(TOAST, { text: moved ? 'Datei verschoben.' : 'Datei gespeichert.' });
   }
 
   function created(newFolder: Folder) {
@@ -117,8 +147,11 @@
 
 <Page title={folder?.name ?? 'Dateien'}>
   {#snippet actions()}
-    <ChoiceGroup name="files-view" label="Ansicht" options={VIEWS} bind:value={() => shownView, (v) => (view = v)} />
-    {#if folder?.canManage}<Button variant="danger" onclick={() => deleteFolder(folder)}>Ordner löschen</Button>{/if}
+    <ChoiceGroup name="files-view" label="Ansicht" options={VIEWS} bind:value={() => shownView, (v) => v && preferences.set('filesView', v)} />
+    {#if folder?.canManage}
+      <Button icon="edit" onclick={() => (editingFolder = folder)} tooltip="Name, Sichtbarkeit, Farbe und Titelbild ändern">Bearbeiten</Button>
+      <Button variant="danger" icon="delete" onclick={() => deleteFolder(folder)}>Ordner löschen</Button>
+    {/if}
     {#if canCreate}<Button variant="primary" onclick={() => (creating = true)}>{folderId ? 'Neuer Unterordner' : 'Neuer Ordner'}</Button>{/if}
   {/snippet}
   {#snippet context()}
@@ -129,16 +162,26 @@
     <Empty text="Ordner nicht gefunden." />
   {:else}
     {#if shownView === 'gallery'}
-      <FolderGallery model={list} onopen={open} />
+      <FolderGallery model={list} onopen={open} menu={itemMenu} />
     {:else}
       <DataTable model={list} rowKey={(item) => item.id} onopen={open} menu={itemMenu} emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'}>
         {#snippet cell(item, column)}
           {#if column.key === 'actions'}
             {#if item.kind === 'file' && folder && filePolicy.canModify(item.file, folder)}
-              <Button size="sm" variant="ghost" onclick={(e) => (e.stopPropagation(), removeFile(item))}>Löschen</Button>
+              {@const file = item.file}
+              <Button size="sm" variant="ghost" icon="edit" onclick={(e) => (e.stopPropagation(), (editingFile = file))} tooltip="Umbenennen oder verschieben" />
+              <Button size="sm" variant="ghost" icon="delete" onclick={(e) => (e.stopPropagation(), removeFile(item))} tooltip="Datei löschen" />
+            {:else if item.kind === 'folder' && item.folder.canManage}
+              {@const target = item.folder}
+              <Button size="sm" variant="ghost" icon="edit" onclick={(e) => (e.stopPropagation(), (editingFolder = target))} tooltip="Ordner bearbeiten" />
             {/if}
           {:else if column.key === 'name'}
-            <span>{item.name}</span>
+            <span class="name-cell">
+              {#if item.kind === 'folder'}
+                <span class="folder-icon" style:color={colorHue(item.folder.color) ? `var(--color-tag-${colorHue(item.folder.color)}-text)` : null}><Icon name="files" small /></span>
+              {/if}
+              <span>{item.name}</span>
+            </span>
           {:else}
             {list.display(item, column)}
           {/if}
@@ -154,11 +197,27 @@
   {/if}
 </Page>
 
+{#if editingFolder}
+  <EditFolderDialog folder={editingFolder} onsaved={folderSaved} onclose={() => (editingFolder = null)} />
+{/if}
+{#if editingFile && folder}
+  <EditFileDialog file={editingFile} {folder} {tree} onsaved={fileSaved} onclose={() => (editingFile = null)} />
+{/if}
+
 {#if creating}
   <CreateFolderDialog parent={folder ?? null} oncreated={created} onclose={() => (creating = false)} />
 {/if}
 
 <style>
+  .name-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+  .folder-icon {
+    display: inline-flex;
+    color: var(--color-text-faint);
+  }
   .upload {
     margin-top: var(--space-xl);
   }

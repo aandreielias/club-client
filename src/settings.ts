@@ -395,6 +395,10 @@ export const settings = {
   },
 
   files: {
+    /** Excel/PowerPoint previews show at most this much. */
+    preview: { maxRows: 500, maxColumns: 50, maxSlides: 100 },
+    /** View of every folder until the member picks another one. */
+    defaultView: 'gallery' as 'gallery' | 'table',
     /** server: spring.servlet.multipart.max-file-size (25MB) */
     maxUploadBytes: 25 * 1024 * 1024,
     /** server: FileHandlers / Folder */

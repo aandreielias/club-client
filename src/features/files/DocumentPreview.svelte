@@ -3,6 +3,9 @@
   import AsyncView from '../../ui/AsyncView.svelte';
   import type { StoredFile } from './model';
   import { filePreviews } from './services';
+  import type { Sheet, Slide } from './OfficeReader';
+  import SheetPreview from './SheetPreview.svelte';
+  import SlidesPreview from './SlidesPreview.svelte';
 
   /** Preview of a PDF or Word document inside the file window. */
   let { file }: { file: StoredFile } = $props();
@@ -22,6 +25,15 @@
     return () => URL.revokeObjectURL(url);
   });
 
+  // Excel and PowerPoint: their text, read once the content is there.
+  // svelte-ignore state_referenced_locally
+  const office = new Resource<Sheet[] | Slide[]>(async () => {
+    await content.load();
+    if (!content.value) throw content.error ?? new Error('Vorschau nicht verfügbar.');
+    return kind === 'xlsx' ? filePreviews.office.sheets(content.value) : filePreviews.office.slides(content.value);
+  });
+  if (kind === 'xlsx' || kind === 'pptx') void office.load();
+
   let docxError = $state<unknown>(null);
   function renderDocx(target: HTMLElement) {
     const blob = content.value;
@@ -39,6 +51,16 @@
           <p class="muted note">Für dieses Dokument gibt es keine Vorschau. Bitte herunterladen.</p>
         {:else}
           <div class="docx" {@attach renderDocx}></div>
+        {/if}
+      {:else if kind === 'xlsx' || kind === 'pptx'}
+        {#if office.error}
+          <p class="muted note">Für diese Datei gibt es keine Vorschau. Bitte herunterladen.</p>
+        {:else}
+          <AsyncView resource={office}>
+            {#snippet children(parsed)}
+              {#if kind === 'xlsx'}<SheetPreview sheets={parsed as Sheet[]} />{:else}<SlidesPreview slides={parsed as Slide[]} />{/if}
+            {/snippet}
+          </AsyncView>
         {/if}
       {/if}
     {/snippet}

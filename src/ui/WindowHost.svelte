@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { tick } from 'svelte';
-  import { backStack, bus, documentTitle, motion, windows } from '../lib/container';
+  import { tick, untrack } from 'svelte';
+  import { backStack, bus, documentTitle, motion, stepUp, windows } from '../lib/container';
   import { WINDOW_CLOSE } from '../channels';
   import { type Dock } from '../lib/window/WindowService.svelte';
   import Button from './Button.svelte';
@@ -28,6 +28,19 @@
   const modal = $derived(windows.dock === 'center');
   const handle = windows.handle();
   provideWindowHandle(handle);
+
+  // A PIN prompt before the member has done anything in the window belongs to opening it: the window
+  // stays hidden behind the prompt and appears once the PIN is accepted; cancelling closes it.
+  // Prompts after that (e.g. on save) leave the window visible.
+  let interacted = $state(false);
+  const waitingForPin = $derived(!!target && stepUp.open && !interacted);
+  let seenCancels = stepUp.cancelled;
+  $effect(() => {
+    const cancels = stepUp.cancelled;
+    if (cancels === seenCancels) return;
+    seenCancels = cancels;
+    if (untrack(() => !!target && !interacted)) windows.close();
+  });
 
   let element: HTMLElement | undefined = $state();
   let opener: HTMLElement | null = null;
@@ -63,6 +76,7 @@
     if (key !== shownKey) {
       shownKey = key;
       windows.title = '';
+      interacted = false;
     }
   });
 
@@ -118,16 +132,20 @@
 {#if target && content}
   {#if modal}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="backdrop" onclick={() => bus.publish(WINDOW_CLOSE)} transition:motion.fade></div>
+    <div class="backdrop" class:waiting={waitingForPin} onclick={() => bus.publish(WINDOW_CLOSE)} transition:motion.fade></div>
   {/if}
   <div
     bind:this={element}
     class="window {windows.dock}"
+    class:waiting={waitingForPin}
+    aria-hidden={waitingForPin}
     role="dialog"
     aria-modal={modal}
     aria-labelledby="window-title"
     tabindex="-1"
     onkeydown={keydown}
+    onpointerdown={() => (interacted = true)}
+    onkeydowncapture={() => (interacted = true)}
     in:enter
     out:enter
   >
@@ -180,7 +198,14 @@
       left var(--motion-window) var(--motion-easing),
       width var(--motion-window) var(--motion-easing),
       height var(--motion-window) var(--motion-easing),
-      border-radius var(--motion-window) var(--motion-easing);
+      border-radius var(--motion-window) var(--motion-easing),
+      opacity var(--motion-base) var(--motion-easing),
+      scale var(--motion-base) var(--motion-easing);
+  }
+  .waiting {
+    visibility: hidden;
+    opacity: 0;
+    scale: 0.98;
   }
   .center {
     top: calc((100dvh - var(--window-center-height)) / 2);

@@ -6,6 +6,8 @@ type Appearance = Settings['appearance'];
 
 export type CalendarViewPreference = 'month' | 'week' | 'list';
 
+export type FilesViewPreference = 'gallery' | 'table';
+
 export interface Preferences {
   scheme: ColorScheme;
   accent: keyof Appearance['accents'];
@@ -15,6 +17,11 @@ export interface Preferences {
   calendarView: CalendarViewPreference;
   /** Paths of the main sidebar entries in the user's order; [] = default order. */
   navOrder: string[];
+  /** One view for every folder; changing it in any folder changes it everywhere. */
+  filesView: FilesViewPreference;
+  /** Start page section ids in the user's order ([] = default) and the ones switched off. */
+  homeOrder: string[];
+  homeHidden: string[];
 }
 
 const STORE_KEY = 'preferences';
@@ -30,7 +37,7 @@ export class PreferencesService {
 
   constructor(
     readonly appearance: Appearance,
-    defaults: { scheme: ColorScheme; calendarView: CalendarViewPreference },
+    defaults: { scheme: ColorScheme; calendarView: CalendarViewPreference; filesView: FilesViewPreference },
     private readonly store: LocalStore | null,
     private readonly onChange: (preferences: Preferences) => void = () => {},
   ) {
@@ -42,6 +49,9 @@ export class PreferencesService {
       reduceMotion: false,
       calendarView: defaults.calendarView,
       navOrder: [],
+      filesView: defaults.filesView,
+      homeOrder: [],
+      homeHidden: [],
     };
     this.values = this.sanitize({ ...this.#defaults, ...(store?.get<Partial<Preferences>>(STORE_KEY) ?? {}) });
   }
@@ -86,8 +96,15 @@ export class PreferencesService {
       density: values.density in this.appearance.densities ? values.density : d.density,
       reduceMotion: values.reduceMotion === true,
       calendarView: ['month', 'week', 'list'].includes(values.calendarView) ? values.calendarView : d.calendarView,
-      navOrder: Array.isArray(values.navOrder) ? values.navOrder.filter((p): p is string => typeof p === 'string') : [],
+      navOrder: PreferencesService.strings(values.navOrder),
+      filesView: values.filesView === 'table' || values.filesView === 'gallery' ? values.filesView : d.filesView,
+      homeOrder: PreferencesService.strings(values.homeOrder),
+      homeHidden: PreferencesService.strings(values.homeHidden),
     };
+  }
+
+  private static strings(value: unknown): string[] {
+    return Array.isArray(value) ? value.filter((p): p is string => typeof p === 'string') : [];
   }
 
   private static first<T extends object>(options: T): keyof T {

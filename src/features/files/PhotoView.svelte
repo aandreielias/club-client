@@ -15,6 +15,7 @@
   import { fileDownloads, fileLinks, filePolicy, filePreviews, filesApi, fileTypes } from './services';
   import DocumentPreview from './DocumentPreview.svelte';
   import TagEditor from './TagEditor.svelte';
+  import EditFileDialog from './EditFileDialog.svelte';
   import Thumbnail from './Thumbnail.svelte';
 
   /** One file in the window, photos with preview and tags; `id` is `<folderId>:<fileId>` (the server has no single-file endpoint). */
@@ -25,6 +26,7 @@
   const contents = new FolderContents(filesApi, fileLinks, folderId);
   const tree = new FolderTree(filesApi, settings.files.maxFolderDepth);
   let tagging = $state(false);
+  let editing = $state(false);
 
   const data = new Resource<{ folder: Folder; file: StoredFile }>(async () => {
     await Promise.all([tree.load(), contents.load()]);
@@ -71,6 +73,7 @@
       <Detail title={file.name}>
         {#snippet actions()}
           <Button icon="download" onclick={() => download(file)}>Herunterladen</Button>
+          {#if filePolicy.canModify(file, folder)}<Button icon="edit" onclick={() => (editing = true)} tooltip="Umbenennen oder verschieben">Bearbeiten</Button>{/if}
           {#if image && filePolicy.canTag(file, folder) && !tagging}<Button onclick={() => (tagging = true)}>Personen markieren</Button>{/if}
           {#if filePolicy.canModify(file, folder)}
             <Button variant="danger" busy={contents.deleteAction.busy} onclick={() => remove(file)} tooltip="{image ? 'Foto' : 'Datei'} endgültig löschen">Löschen</Button>
@@ -105,6 +108,17 @@
     {/if}
   {/snippet}
 </AsyncView>
+
+{#if editing && file && data.value}
+  <EditFileDialog {file} folder={data.value.folder} {tree} onclose={() => (editing = false)}
+    onsaved={(saved) => {
+      editing = false;
+      bus.publish(TOAST, { text: 'Datei gespeichert.' });
+      // A moved file lives under a new window id.
+      if (saved.folderId !== folderId) handle?.replace('file', `${saved.folderId}:${saved.id}`);
+      else void contents.load();
+    }} />
+{/if}
 
 <style>
   .image {

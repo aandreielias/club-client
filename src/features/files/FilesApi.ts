@@ -1,6 +1,6 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
 import type { ProgressListener } from '../../lib/http/Transport';
-import type { DownloadLink, FileList, Folder, FolderList, NewFolder, StoredFile } from './model';
+import type { DownloadLink, FileList, FilePatch, Folder, FolderList, FolderPatch, NewFolder, StoredFile } from './model';
 
 /** Typed access to the files endpoints of club-server. */
 export class FilesApi {
@@ -15,6 +15,14 @@ export class FilesApi {
 
   createFolder(folder: NewFolder): Promise<Folder> {
     return this.api.post<Folder>(`${FilesApi.BASE}/folders`, folder);
+  }
+
+  updateFolder(id: string, patch: FolderPatch): Promise<Folder> {
+    return this.api.patch<Folder>(`${FilesApi.BASE}/folders/${encodeURIComponent(id)}`, patch);
+  }
+
+  updateFile(id: string, patch: FilePatch): Promise<StoredFile> {
+    return this.api.patch<StoredFile>(`${FilesApi.BASE}/files/${encodeURIComponent(id)}`, patch);
   }
 
   /** Only empty folders (no files, no subfolders). */

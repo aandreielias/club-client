@@ -60,7 +60,7 @@ export const theme = new ThemeService(settings.theme, settings.compactBelowPx);
 
 export const preferences = new PreferencesService(
   settings.appearance,
-  { scheme: settings.theme.scheme, calendarView: settings.calendar.defaultView },
+  { scheme: settings.theme.scheme, calendarView: settings.calendar.defaultView, filesView: settings.files.defaultView },
   store,
   () => theme.apply(preferences.themeOverrides()),
 );

@@ -65,6 +65,7 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   Speichern: { text: 'Änderungen speichern', command: 'form.submit' },
   Standard: { text: 'Standardbelegung dieses Tastenkürzels wiederherstellen' },
   Standardreihenfolge: { text: 'Ursprüngliche Reihenfolge der Seitenleiste wiederherstellen' },
+  'Standard wiederherstellen': { text: 'Alle Abschnitte der Startseite in der ursprünglichen Reihenfolge zeigen' },
   'Testdaten zurücksetzen': { text: 'Alle Testdaten auf den Anfangszustand zurücksetzen' },
   'Trotzdem speichern': { text: 'Speichern; das andere Kürzel verliert diese Tasten' },
   Weiter: { text: 'Weiter zum nächsten Schritt' },

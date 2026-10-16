@@ -1,51 +1,55 @@
 <script lang="ts">
-  import { settings } from '../../settings';
-  import { bus, calendarSources, directory, homeSections, router, session, store, windows } from '../../lib/container';
+  import { bus, homeSections, preferences, session } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
-  import DataTable from '../../ui/DataTable.svelte';
-  import { windowMenu } from '../../lib/window/windowMenu';
-
+  import Button from '../../ui/Button.svelte';
   import Page from '../../ui/Page.svelte';
   import Tag from '../../ui/Tag.svelte';
-  import { HomeAgendaModel } from './HomeAgendaModel.svelte';
 
-  const DAYS = settings.home.agendaDays;
-  const agenda = new HomeAgendaModel(calendarSources, session.clock, DAYS, () => session.format, directory, store);
-  void agenda.load();
-  directory.loadRosters();
+  /** Greeting plus the sections the member chose in Einstellungen > Startseite, each on its own card. */
+  const sections = $derived(
+    homeSections.shown(preferences.values.homeOrder, preferences.values.homeHidden, (...roles) => session.hasRole(...roles)),
+  );
 </script>
 
 <Page title="Hallo {session.member.firstName}">
+  {#snippet actions()}
+    <Button icon="settings" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'settings', id: 'home' })} tooltip="Abschnitte der Startseite auswählen und ordnen">Anpassen</Button>
+  {/snippet}
   {#snippet context()}
     <span class="muted">{session.club?.name}</span>
     {#each session.teams as team (team.id)}<Tag tone="blue">{team.name}</Tag>{/each}
   {/snippet}
 
-  <h2 class="section">Die nächsten {DAYS} Tage</h2>
-  <DataTable model={agenda} rowKey={(e) => e.key} onopen={(e) => bus.publish(WINDOW_OPEN, { kind: e.window.kind, id: e.window.id })} menu={(e) => windowMenu(bus, windows, router, e.window.kind, e.window.id)}
-    emptyText="In den nächsten Tagen steht nichts an.">
-    {#snippet cell(entry, column)}
-      {#if column.key === 'label'}
-        <Tag tone={entry.hue}>{entry.label}</Tag>
-      {:else if column.key === 'title'}
-        <span class:inactive={entry.inactive}>{entry.title}</span>
-      {:else}
-        {agenda.display(entry, column)}
-      {/if}
-    {/snippet}
-  </DataTable>
-
-  {#each homeSections.visible((...roles) => session.hasRole(...roles)) as section (section.id)}
-    <section.component />
-  {/each}
+  <div class="sections">
+    {#each sections as section (section.id)}
+      <section class="card">
+        <section.component />
+      </section>
+    {:else}
+      <p class="muted">Alle Abschnitte sind ausgeblendet. Unter „Anpassen“ lassen sie sich wieder einschalten.</p>
+    {/each}
+  </div>
 </Page>
 
 <style>
-  .section {
-    margin-top: 0;
+  .sections {
+    display: grid;
+    gap: var(--space-lg);
   }
-  .inactive {
-    color: var(--color-text-muted);
-    text-decoration: line-through;
+  /* Each section on its own light card, so they stay apart. */
+  .card {
+    display: grid;
+    gap: var(--space-sm);
+    min-width: 0;
+    padding: var(--space-lg) var(--space-xl) var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-surface);
+  }
+  .card :global(h2:first-child) {
+    margin: 0;
+  }
+  :global([data-layout='compact']) .card {
+    padding: var(--space-md);
   }
 </style>
