@@ -38,7 +38,7 @@
 <DataTable model={list} rowKey={(e) => e.memberId} emptyText="Noch keine Antworten.">
   {#snippet cell(entry, column)}
     {#if column.key === 'status'}
-      <Tag tone={responseHue(entry.status)}>{responseLabel(entry.status)}</Tag>
+      {#if entry.absent}<Tag tone="gray">Abwesend</Tag>{:else}<Tag tone={responseHue(entry.status)}>{responseLabel(entry.status)}</Tag>{/if}
     {:else if column.key === 'name'}
       <!-- Profiles open in the window where the viewer may see them (coaches: their teams). -->
       <RecordLink kind="member" id={entry.memberId} allowed={permissions.isPrivileged && permissions.canSeeMember(entry.memberId)} hint="Profil öffnen">{entry.name}</RecordLink>

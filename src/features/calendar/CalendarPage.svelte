@@ -10,6 +10,7 @@
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import Button from '../../ui/Button.svelte';
+  import LinkButton from '../../ui/LinkButton.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import DataTable from '../../ui/DataTable.svelte';
   import { windowMenu } from '../../lib/window/windowMenu';
@@ -113,6 +114,7 @@
     <ChoiceGroup name="calendar-view" label="Ansicht" options={CALENDAR_VIEWS}
       bind:value={() => model.view, (view) => view && model.setView(view)} />
     <Button icon="download" busy={exporting.busy} onclick={exportIcs} tooltip="Alle kommenden Termine als .ics-Datei für deine Kalender-App herunterladen">Exportieren</Button>
+    <LinkButton href="#/calendar/absences" tooltip="Urlaub oder Verletzung eintragen: Termine an diesen Tagen zählen als „Nein“">Abwesend melden</LinkButton>
     <Button onclick={() => (subscribing = true)}>Abonnieren</Button>
     {#if policy.canCreate()}<Button variant="primary" icon="add" onclick={newAppointment}>Neuer Termin</Button>{/if}
   {/snippet}

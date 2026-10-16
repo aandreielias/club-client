@@ -6,7 +6,7 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import { ZonedClock, type LocalDate } from '../../lib/time/ZonedClock';
 import type { Member } from '../../lib/types';
-import type { Appointment, AppointmentType, Attendance, AttendanceEntry, NewAppointment, ResponseStatus } from './model';
+import type { Absence, Appointment, AppointmentType, Attendance, AttendanceEntry, NewAppointment, ResponseStatus } from './model';
 
 interface StoredResponse {
   status: ResponseStatus;
@@ -26,6 +26,8 @@ export class MockCalendar {
   readonly responses: MockTable<Record<string, Record<string, StoredResponse>>>;
   /** memberId → feed token */
   readonly feeds = new MockTable<Record<string, string>>('ical', () => ({}));
+  /** server: attendance_absence */
+  readonly absences = new MockTable<Absence[]>('absences', () => []);
 
   constructor(private readonly people: MockDirectory) {
     this.appointments = new MockTable('appointments', () => this.seedAppointments());
@@ -152,25 +154,59 @@ export class MockCalendar {
     const answers = this.responses.data[id] ?? {};
     const expected = new Set(Object.keys(answers));
     if (appointment.teamId) this.people.teamMembers(appointment.teamId).forEach((m) => expected.add(m));
+    // server: an absence on the appointment's local day counts as NO until the member answers.
+    const day = this.people.clock.localDate(appointment.startsAt);
     const showReasons =
       this.people.isManager(member) ||
       (appointment.teamId !== null && this.people.teamRoles(member.id)[appointment.teamId] === 'COACH');
     const entries: AttendanceEntry[] = [...expected]
-      .flatMap((memberId) => {
+      .flatMap((memberId): AttendanceEntry[] => {
         const name = this.people.name(memberId);
         if (!name) return [];
         const answer = answers[memberId];
+        const away = answer ? undefined : this.absences.data.find((a) => a.memberId === memberId && a.from <= day && day <= a.to);
+        if (away) {
+          return [{ memberId, name, status: 'NO' as const, reason: showReasons ? (away.reason ? `Abwesend: ${away.reason}` : 'Abwesend') : null, updatedAt: null, absent: true }];
+        }
         return [{
           memberId,
           name,
           status: answer?.status ?? null,
           reason: showReasons ? (answer?.reason ?? null) : null,
           updatedAt: answer?.updatedAt ?? null,
+          absent: false,
         }];
       })
       .sort((a, b) => a.name.localeCompare(b.name));
     const count = (status: ResponseStatus | null) => entries.filter((e) => e.status === status).length;
     return { appointmentId: id, yes: count('YES'), no: count('NO'), maybe: count('MAYBE'), open: count(null), entries };
+  }
+
+  /** server: AttendanceHandlers.addAbsence / listAbsences / deleteAbsence */
+  addAbsence(member: Member, body: { memberId?: string | null; from?: string; to?: string; reason?: string | null }): Absence {
+    const target = body.memberId ?? member.id;
+    if (target !== member.id && !this.people.wardsOf(member.id).includes(target)) fail(404, 'member.not-found');
+    const date = /^\d{4}-\d{2}-\d{2}$/;
+    if (!body.from || !body.to || !date.test(body.from) || !date.test(body.to) || body.to < body.from) fail(400, 'absence.range-invalid');
+    if ((Date.parse(body.to!) - Date.parse(body.from!)) / 86_400_000 >= 366) fail(400, 'absence.too-long');
+    if ((body.reason?.length ?? 0) > limits.reasonMaxLength) fail(400, 'absence.reason-too-long');
+    const absence: Absence = { id: crypto.randomUUID(), memberId: target, from: body.from!, to: body.to!, reason: body.reason?.trim() || null };
+    this.absences.data.push(absence);
+    this.absences.save();
+    return absence;
+  }
+
+  listAbsences(member: Member): Absence[] {
+    const mine = new Set([member.id, ...this.people.wardsOf(member.id)]);
+    const today = this.people.clock.today();
+    return this.absences.data.filter((a) => mine.has(a.memberId) && a.to >= today).sort((a, b) => a.from.localeCompare(b.from));
+  }
+
+  deleteAbsence(member: Member, id: string): void {
+    const absence = this.absences.data.find((a) => a.id === id);
+    if (!absence || (absence.memberId !== member.id && !this.people.wardsOf(member.id).includes(absence.memberId))) fail(404, 'absence.not-found');
+    this.absences.data.splice(this.absences.data.indexOf(absence!), 1);
+    this.absences.save();
   }
 
   issueFeed(member: Member): { url: string } {
@@ -326,6 +362,9 @@ mockServer
   .on('GET', '/api/v1/appointments/:id/links', (req) => calendar.getLinks(actor(req), req.params.id))
   .on('PUT', '/api/v1/appointments/:id/links', (req) => calendar.setLinks(actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/appointments/:id/attendance', (req) => calendar.overview(actor(req), req.params.id))
+  .on('GET', '/api/v1/me/absences', (req) => ({ items: calendar.listAbsences(actor(req)) }))
+  .on('POST', '/api/v1/me/absences', (req) => calendar.addAbsence(actor(req), req.body ?? {}))
+  .on('DELETE', '/api/v1/me/absences/:id', (req) => calendar.deleteAbsence(actor(req), req.params.id))
   .on('PUT', '/api/v1/appointments/:id/attendance', (req) => calendar.respond(actor(req), req.params.id, req.body ?? {}))
   .on('POST', '/api/v1/me/ical-token', (req) => calendar.issueFeed(actor(req)))
   .on('DELETE', '/api/v1/me/ical-token', (req) => calendar.revokeFeed(actor(req)));

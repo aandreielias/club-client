@@ -7,6 +7,7 @@ import AppointmentCreateView from './AppointmentCreateView.svelte';
 import AppointmentPage from './AppointmentPage.svelte';
 import AppointmentView from './AppointmentView.svelte';
 import CalendarPage from './CalendarPage.svelte';
+import AbsencesPage from './AbsencesPage.svelte';
 import { CALENDAR_MESSAGES } from './messages';
 import { calendarApi } from './services';
 
@@ -14,6 +15,7 @@ export const calendarFeature: Feature = {
   id: 'calendar',
   routes: [
     { path: '/calendar', component: CalendarPage, nav: 'Kalender', icon: 'calendar' },
+    { path: '/calendar/absences', component: AbsencesPage },
     { path: '/calendar/:id', component: AppointmentPage },
   ],
   windows: {

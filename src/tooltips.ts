@@ -42,6 +42,7 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Liste leeren': { text: 'Abgeschlossene Uploads aus der Liste entfernen' },
   Verschieben: { text: 'In einen anderen Ordner verschieben; die Dateien sind dann für dessen Personen sichtbar' },
   'Auswahl aufheben': { text: 'Keine Datei mehr ausgewählt' },
+  'Abwesenheit eintragen': { text: 'Termine an diesen Tagen zählen als „Nein“, bis du antwortest' },
   Löschen: { text: 'Endgültig löschen' },
   'Markierungen speichern': { text: 'Markierte Personen auf dem Foto speichern' },
   'Mitglied hinzufügen': { text: 'Ein Mitglied in dieses Team aufnehmen' },

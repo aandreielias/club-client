@@ -1,5 +1,7 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
 import type {
+  Absence,
+  AbsenceList,
   Appointment,
   AppointmentList,
   AppointmentPatch,
@@ -7,6 +9,7 @@ import type {
   AttendanceResponse,
   FeedLink,
   NewAppointment,
+  NewAbsence,
   ResponseStatus,
 } from './model';
 
@@ -62,5 +65,18 @@ export class CalendarApi {
 
   private path(id: string): string {
     return `${CalendarApi.APPOINTMENTS}/${encodeURIComponent(id)}`;
+  }
+
+  /** Current and future absences of the member and their minors. */
+  async absences(): Promise<Absence[]> {
+    return (await this.api.get<AbsenceList>('/api/v1/me/absences')).items;
+  }
+
+  addAbsence(absence: NewAbsence): Promise<Absence> {
+    return this.api.post<Absence>('/api/v1/me/absences', absence);
+  }
+
+  deleteAbsence(id: string): Promise<void> {
+    return this.api.delete(`/api/v1/me/absences/${encodeURIComponent(id)}`);
   }
 }

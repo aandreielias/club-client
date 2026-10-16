@@ -49,6 +49,8 @@ export interface AttendanceEntry {
   /** Only visible to coaches of the team, admin and board. */
   reason: string | null;
   updatedAt: string | null;
+  /** No answer, but an absence covers the day: counts as NO. */
+  absent: boolean;
 }
 
 export interface Attendance {
@@ -104,3 +106,23 @@ export const typeLabel = (type: AppointmentType): string => APPOINTMENT_TYPES.fi
 
 export const responseLabel = (status: ResponseStatus | null): string =>
   status ? (RESPONSE_OPTIONS.find((o) => o.value === status)?.label ?? status) : 'Offen';
+
+/** A planned away period (club-local dates, both inclusive) of the member or one of their minors. */
+export interface Absence {
+  id: string;
+  memberId: string;
+  from: string;
+  to: string;
+  reason: string | null;
+}
+
+export interface AbsenceList {
+  items: Absence[];
+}
+
+export interface NewAbsence {
+  memberId: string | null;
+  from: string;
+  to: string;
+  reason: string | null;
+}

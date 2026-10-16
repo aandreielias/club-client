@@ -5,6 +5,7 @@
   import { Action } from '../../lib/state/Action.svelte';
   import { ROLE_LABELS } from '../../lib/types';
   import Button from '../../ui/Button.svelte';
+  import LinkButton from '../../ui/LinkButton.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import Page from '../../ui/Page.svelte';
@@ -25,6 +26,7 @@
   {#snippet actions()}
     <Button onclick={() => bus.publish(WINDOW_OPEN, { kind: 'settings', id: 'security' })}>PIN und Passwort</Button>
     <Button onclick={() => bus.publish(WINDOW_OPEN, { kind: 'settings', id: 'appearance' })}>Einstellungen</Button>
+    <LinkButton href="#/calendar/absences" tooltip="Urlaub oder Verletzung eintragen">Abwesenheiten</LinkButton>
   {/snippet}
 
   <dl class="props">
