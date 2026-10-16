@@ -11,6 +11,8 @@ import type {
   NewAppointment,
   NewAbsence,
   ResponseStatus,
+  Ride,
+  RideList,
 } from './model';
 
 /** Typed access to the calendar and attendance endpoints of club-server. */
@@ -78,5 +80,27 @@ export class CalendarApi {
 
   deleteAbsence(id: string): Promise<void> {
     return this.api.delete(`/api/v1/me/absences/${encodeURIComponent(id)}`);
+  }
+
+  /** Car pools of the appointment. */
+  async rides(appointmentId: string): Promise<Ride[]> {
+    return (await this.api.get<RideList>(`${this.path(appointmentId)}/rides`)).items;
+  }
+
+  offerRide(appointmentId: string, seats: number, note: string | null): Promise<Ride> {
+    return this.api.post<Ride>(`${this.path(appointmentId)}/rides`, { seats, note });
+  }
+
+  cancelRide(rideId: string): Promise<void> {
+    return this.api.delete(`/api/v1/rides/${encodeURIComponent(rideId)}`);
+  }
+
+  /** Takes a seat for oneself (memberId null) or for one's minor. */
+  joinRide(rideId: string, memberId: string | null = null): Promise<Ride> {
+    return this.api.put<Ride>(`/api/v1/rides/${encodeURIComponent(rideId)}/passengers`, { memberId });
+  }
+
+  leaveRide(rideId: string, memberId: string): Promise<Ride> {
+    return this.api.delete<Ride>(`/api/v1/rides/${encodeURIComponent(rideId)}/passengers/${encodeURIComponent(memberId)}`);
   }
 }

@@ -76,4 +76,21 @@ describe('mock calendar', () => {
     expect(coachView.entries.find((e) => e.memberId === 'spielerin')?.reason).toBe('Krank');
     expect(calendar.overview(member('neu'), open.id).entries.find((e) => e.memberId === 'spielerin')?.reason).toBeNull();
   });
+
+  it('car pools: one seat per member and appointment, full cars refuse', () => {
+    stepUp('admin');
+    const [created] = calendar.create(member('admin'), draft(null, { type: 'MATCH', title: 'Auswärts' }));
+    const ride = calendar.offerRide(member('admin'), created.id, { seats: 1, note: ' ab Halle ' });
+    expect(ride.note).toBe('ab Halle');
+    expect(() => calendar.offerRide(member('admin'), created.id, { seats: 2 })).toThrow(expect.objectContaining({ code: 'ride.exists' }));
+    expect(calendar.joinRide(member('spieler'), ride.id, {}).passengers.map((p) => p.memberId)).toEqual(['spieler']);
+    expect(() => calendar.joinRide(member('trainer'), ride.id, {})).toThrow(expect.objectContaining({ code: 'ride.full' }));
+    expect(() => calendar.leaveRide(member('trainer'), ride.id, 'spieler')).toThrow(expect.objectContaining({ status: 403 }));
+    // Offering an own car frees the seat elsewhere.
+    calendar.offerRide(member('spieler'), created.id, { seats: 3 });
+    expect(calendar.listRides(member('admin'), created.id).find((r) => r.id === ride.id)!.passengers).toEqual([]);
+    expect(() => calendar.cancelRide(member('trainer'), ride.id)).toThrow(expect.objectContaining({ code: 'ride.not-driver' }));
+    calendar.cancelRide(member('admin'), ride.id);
+    expect(calendar.listRides(member('admin'), created.id)).toHaveLength(1);
+  });
 });

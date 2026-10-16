@@ -6,7 +6,17 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import { ZonedClock, type LocalDate } from '../../lib/time/ZonedClock';
 import type { Member } from '../../lib/types';
-import type { Absence, Appointment, AppointmentType, Attendance, AttendanceEntry, NewAppointment, ResponseStatus } from './model';
+import type { Absence, Appointment, Ride, AppointmentType, Attendance, AttendanceEntry, NewAppointment, ResponseStatus } from './model';
+
+/** server: attendance_ride + attendance_ride_passenger */
+interface StoredRide {
+  id: string;
+  appointmentId: string;
+  driverId: string;
+  seats: number;
+  note: string | null;
+  passengers: string[];
+}
 
 interface StoredResponse {
   status: ResponseStatus;
@@ -28,10 +38,12 @@ export class MockCalendar {
   readonly feeds = new MockTable<Record<string, string>>('ical', () => ({}));
   /** server: attendance_absence */
   readonly absences = new MockTable<Absence[]>('absences', () => []);
+  readonly rides: MockTable<StoredRide[]>;
 
   constructor(private readonly people: MockDirectory) {
     this.appointments = new MockTable('appointments', () => this.seedAppointments());
     this.responses = new MockTable('responses', () => this.seedResponses());
+    this.rides = new MockTable('rides', () => this.seedRides());
     this.links = new MockLinks('calendar-links', () => this.seedLinks());
   }
 
@@ -209,6 +221,89 @@ export class MockCalendar {
     this.absences.save();
   }
 
+  /** server: AttendanceHandlers.listRides / offerRide / cancelRide / joinRide / leaveRide */
+  listRides(member: Member, appointmentId: string): Ride[] {
+    const appointment = this.visible(member, appointmentId);
+    return this.rides.data.filter((r) => r.appointmentId === appointment.id).map((r) => this.rideDto(r));
+  }
+
+  offerRide(member: Member, appointmentId: string, body: { seats?: number; note?: string | null }): Ride {
+    const appointment = this.open(member, appointmentId);
+    const seats = Number(body.seats);
+    if (!Number.isInteger(seats) || seats < 1 || seats > 8) fail(400, 'ride.seats-invalid');
+    if ((body.note?.length ?? 0) > 200) fail(400, 'ride.note-too-long');
+    const all = this.rides.data.filter((r) => r.appointmentId === appointment.id);
+    if (all.some((r) => r.driverId === member.id)) fail(409, 'ride.exists');
+    all.forEach((r) => (r.passengers = r.passengers.filter((p) => p !== member.id)));
+    const ride: StoredRide = { id: crypto.randomUUID(), appointmentId, driverId: member.id, seats, note: body.note?.trim() || null, passengers: [] };
+    this.rides.data.push(ride);
+    this.ridesChanged(appointment);
+    return this.rideDto(ride);
+  }
+
+  cancelRide(member: Member, rideId: string): void {
+    const ride = this.ride(member, rideId);
+    if (ride.driverId !== member.id && !this.people.isManager(member)) fail(403, 'ride.not-driver');
+    this.rides.data.splice(this.rides.data.indexOf(ride), 1);
+    this.ridesChanged(this.visible(member, ride.appointmentId));
+  }
+
+  joinRide(member: Member, rideId: string, body: { memberId?: string | null }): Ride {
+    const ride = this.ride(member, rideId);
+    const appointment = this.open(member, ride.appointmentId);
+    const target = body.memberId ?? member.id;
+    if (target !== member.id && !this.people.wardsOf(member.id).includes(target)) fail(404, 'member.not-found');
+    const all = this.rides.data.filter((r) => r.appointmentId === appointment.id);
+    if (all.some((r) => r.driverId === target)) fail(target === ride.driverId ? 400 : 409, target === ride.driverId ? 'ride.driver-is-passenger' : 'ride.is-driver');
+    if (!ride.passengers.includes(target) && ride.passengers.length >= ride.seats) fail(409, 'ride.full');
+    all.forEach((r) => (r.passengers = r.passengers.filter((p) => p !== target)));
+    ride.passengers.push(target);
+    this.ridesChanged(appointment);
+    return this.rideDto(ride);
+  }
+
+  leaveRide(member: Member, rideId: string, memberId: string): Ride {
+    const ride = this.ride(member, rideId);
+    const allowed = memberId === member.id || ride.driverId === member.id || this.people.isManager(member) || this.people.wardsOf(member.id).includes(memberId);
+    if (!allowed) fail(403, 'ride.not-passenger');
+    ride.passengers = ride.passengers.filter((p) => p !== memberId);
+    this.ridesChanged(this.visible(member, ride.appointmentId));
+    return this.rideDto(ride);
+  }
+
+  private ride(member: Member, rideId: string): StoredRide {
+    const ride = this.rides.data.find((r) => r.id === rideId);
+    if (!ride) return fail(404, 'ride.not-found');
+    this.visible(member, ride.appointmentId);
+    return ride;
+  }
+
+  /** Visible, not cancelled, not started. */
+  private open(member: Member, id: string): Appointment {
+    const appointment = this.visible(member, id);
+    if (appointment.cancelled) fail(409, 'attendance.appointment-cancelled');
+    if (Date.parse(appointment.startsAt) <= Date.now()) fail(409, 'attendance.closed');
+    return appointment;
+  }
+
+  private ridesChanged(appointment: Appointment): void {
+    this.rides.save();
+    mockServer.events.publish({
+      type: 'attendance.rides-changed',
+      data: { appointmentId: appointment.id },
+      audience: this.people.teamAudience(appointment.teamId),
+    });
+  }
+
+  private rideDto(r: StoredRide): Ride {
+    const name = (id: string) => this.people.name(id) ?? 'Mitglied';
+    return {
+      ...r,
+      driverName: name(r.driverId),
+      passengers: r.passengers.map((memberId) => ({ memberId, name: name(memberId) })).sort((a, b) => a.name.localeCompare(b.name)),
+    };
+  }
+
   issueFeed(member: Member): { url: string } {
     const token = crypto.randomUUID().replaceAll('-', '');
     this.feeds.data[member.id] = token;
@@ -329,6 +424,11 @@ export class MockCalendar {
     };
   }
 
+  private seedRides(): StoredRide[] {
+    const match = this.appointments.data.find((a) => a.type === 'MATCH' && Date.parse(a.startsAt) > Date.now() && !a.cancelled);
+    return match ? [{ id: 'ride-1', appointmentId: match.id, driverId: 'trainer', seats: 3, note: 'Abfahrt 1 Stunde vorher bei der Halle', passengers: [] }] : [];
+  }
+
   private seedResponses(): Record<string, Record<string, StoredResponse>> {
     const now = new Date().toISOString();
     const future = this.appointments.data.filter((a) => a.teamId === 't-damen' && Date.parse(a.startsAt) > Date.now() && !a.cancelled);
@@ -365,6 +465,11 @@ mockServer
   .on('GET', '/api/v1/me/absences', (req) => ({ items: calendar.listAbsences(actor(req)) }))
   .on('POST', '/api/v1/me/absences', (req) => calendar.addAbsence(actor(req), req.body ?? {}))
   .on('DELETE', '/api/v1/me/absences/:id', (req) => calendar.deleteAbsence(actor(req), req.params.id))
+  .on('GET', '/api/v1/appointments/:id/rides', (req) => ({ items: calendar.listRides(actor(req), req.params.id) }))
+  .on('POST', '/api/v1/appointments/:id/rides', (req) => calendar.offerRide(actor(req), req.params.id, req.body ?? {}))
+  .on('DELETE', '/api/v1/rides/:id', (req) => calendar.cancelRide(actor(req), req.params.id))
+  .on('PUT', '/api/v1/rides/:id/passengers', (req) => calendar.joinRide(actor(req), req.params.id, req.body ?? {}))
+  .on('DELETE', '/api/v1/rides/:id/passengers/:memberId', (req) => calendar.leaveRide(actor(req), req.params.id, req.params.memberId))
   .on('PUT', '/api/v1/appointments/:id/attendance', (req) => calendar.respond(actor(req), req.params.id, req.body ?? {}))
   .on('POST', '/api/v1/me/ical-token', (req) => calendar.issueFeed(actor(req)))
   .on('DELETE', '/api/v1/me/ical-token', (req) => calendar.revokeFeed(actor(req)));

@@ -3,6 +3,7 @@
 import { liveEvent } from '../../lib/live/LiveUpdates.svelte';
 
 export const APPOINTMENTS_CHANGED = liveEvent<AppointmentsChanged>('calendar.appointments-changed');
+export const RIDES_CHANGED = liveEvent<RidesChanged>('attendance.rides-changed');
 export const RESPONSE_CHANGED = liveEvent<ResponseChanged>('attendance.response-changed');
 
 export interface AppointmentsChanged {
@@ -17,4 +18,8 @@ export interface ResponseChanged {
   appointmentId: string;
   memberId: string;
   status: string;
+}
+
+export interface RidesChanged {
+  appointmentId: string;
 }

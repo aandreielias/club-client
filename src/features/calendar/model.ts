@@ -126,3 +126,18 @@ export interface NewAbsence {
   to: string;
   reason: string | null;
 }
+
+/** A car to an appointment (server: AttendanceApi.RideDto). */
+export interface Ride {
+  id: string;
+  appointmentId: string;
+  driverId: string;
+  driverName: string;
+  seats: number;
+  note: string | null;
+  passengers: { memberId: string; name: string }[];
+}
+
+export interface RideList {
+  items: Ride[];
+}

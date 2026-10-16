@@ -350,6 +350,10 @@ export const settings = {
     descriptionMaxLength: 2000,
     locationMaxLength: 200,
     reasonMaxLength: 300,
+    /** Car pools: shown for these appointment types; server limits seats and note. */
+    rideTypes: ['MATCH', 'TOURNAMENT', 'EVENT'] as const,
+    rideMaxSeats: 8,
+    rideNoteMaxLength: 200,
   },
 
   /** How long returning to a page waits for its list to load before restoring the scroll position. */

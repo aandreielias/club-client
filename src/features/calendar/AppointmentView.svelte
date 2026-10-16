@@ -19,6 +19,8 @@
   import { APPOINTMENTS_CHANGED, RESPONSE_CHANGED } from './events';
   import { typeHue, typeLabel, type Appointment } from './model';
   import ResponseForm from './ResponseForm.svelte';
+  import RidesPanel from './RidesPanel.svelte';
+  import { settings } from '../../settings';
   import { appointmentPolicy as policy, calendarApi } from './services';
 
   /** One appointment: properties, own answer, attendance; edit and cancel for managers. Window and page. */
@@ -135,6 +137,11 @@
             <AttendancePanel {attendance} {detail} />
           {/snippet}
         </AsyncView>
+
+        {#if !appointment.cancelled && (settings.calendar.rideTypes as readonly string[]).includes(appointment.type)}
+          <h2>Fahrgemeinschaft</h2>
+          <RidesPanel appointmentId={appointment.id} open={!policy.isPast(appointment)} />
+        {/if}
 
         {#if policy.canEdit(appointment)}
           <CancelDialog bind:open={cancelOpen} {detail} {appointment} oncancelled={() => view.notify('Termin abgesagt.')} />

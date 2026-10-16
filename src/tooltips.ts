@@ -13,6 +13,8 @@ export interface ButtonTooltip {
 export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   Abbrechen: { text: 'Schließen, ohne zu speichern', command: 'view.back' },
   Abmelden: { text: 'Auf diesem Gerät abmelden' },
+  'Fahrt absagen': { text: 'Die angebotene Fahrt zurückziehen; Mitfahrende werden ausgetragen' },
+  'Fahrt anbieten': { text: 'Mit dem eigenen Auto fahren und freie Plätze anbieten' },
   Abonnieren: { text: 'Kalender in einer Kalender-App abonnieren' },
   Absagen: { text: 'Termin absagen, alle Eingeladenen werden benachrichtigt' },
   'Alle PINs zurücksetzen': { text: 'Die PINs aller Mitglieder zurücksetzen; jede Person legt beim nächsten Anmelden eine neue fest' },
