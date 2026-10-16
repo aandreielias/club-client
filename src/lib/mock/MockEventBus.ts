@@ -1,3 +1,4 @@
+import { defineEvent, EventBusBuilder, type EventBus } from '../bus';
 import type { Role } from '../types';
 
 /** Who receives a pushed event (server: platform.Audience). */
@@ -19,17 +20,23 @@ export interface MockEvent {
 
 export type MockEventListener = (event: MockEvent) => void;
 
-/** Stand-in for the server's EventBus between mock modules and towards live connections. */
+/**
+ * The mock server's event bus, built on the same EventBus as the app (the server uses the Java
+ * original). Event type 'tasks.task-changed' travels on channel 'server/tasks/task-changed'.
+ */
 export class MockEventBus {
-  readonly #listeners = new Set<MockEventListener>();
+  static readonly ROOT = 'server';
+
+  readonly #bus: EventBus = EventBusBuilder.create().withHierarchicalRouting().withMaxHistorySize(0).build();
 
   publish(event: MockEvent): void {
-    for (const listener of [...this.#listeners]) listener(event);
+    this.#bus.publish(defineEvent<MockEvent>(`${MockEventBus.ROOT}/${event.type.replaceAll('.', '/')}`), event);
   }
 
+  /** Every event, in publish order. */
   subscribe(listener: MockEventListener): () => void {
-    this.#listeners.add(listener);
-    return () => this.#listeners.delete(listener);
+    const subscription = this.#bus.subscribeHierarchy(MockEventBus.ROOT, (event) => listener(event as MockEvent));
+    return () => subscription.unsubscribe();
   }
 
   static includes(audience: MockAudience, memberId: string, roles: readonly Role[]): boolean {
