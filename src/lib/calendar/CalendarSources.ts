@@ -29,6 +29,10 @@ export interface CalendarSource {
   id: string;
   label: string;
   load(from: string, to: string): Promise<CalendarEntry[]>;
+  /** Whether the member may move this entry by dragging (omitted: never). */
+  canMove?(entry: CalendarEntry): boolean;
+  /** Saves the new time; `end` keeps the duration (null for points in time). */
+  move?(entry: CalendarEntry, start: string, end: string | null): Promise<void>;
 }
 
 /** Registry of all calendar sources; loads and merges the enabled ones for a time range. */
@@ -43,6 +47,16 @@ export class CalendarSources {
 
   get all(): readonly CalendarSource[] {
     return this.#sources;
+  }
+
+  canMove(entry: CalendarEntry): boolean {
+    return this.#sources.find((s) => s.id === entry.source)?.canMove?.(entry) ?? false;
+  }
+
+  async move(entry: CalendarEntry, start: string, end: string | null): Promise<void> {
+    const source = this.#sources.find((s) => s.id === entry.source);
+    if (!source?.move || !this.canMove(entry)) throw new Error('Dieser Eintrag lässt sich nicht verschieben.');
+    await source.move(entry, start, end);
   }
 
   /** Entries overlapping [from, to) of the enabled sources (all when `enabled` is omitted), sorted by start. */

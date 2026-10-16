@@ -6,6 +6,7 @@
   import { BrowserFile } from '../../lib/files/BrowserFile';
   import { Action } from '../../lib/state/Action.svelte';
   import { CalendarExport } from './CalendarExport';
+  import { CalendarDrag } from './CalendarDrag';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import Button from '../../ui/Button.svelte';
@@ -37,6 +38,7 @@
   });
   const list = new CalendarListModel(() => model.visible, () => session.format, directory, store);
   let subscribing = $state(false);
+  const drag = new CalendarDrag(calendarSources, session.clock, settings.calendar.snapMinutes, bus);
   const exporting = new Action();
 
   /** Every upcoming appointment the member sees, as a file for any calendar app. */
@@ -142,7 +144,7 @@
       <Toolbar start={filters} label="Filtern" />
       <AsyncView resource={model.entries}>
         {#snippet children()}
-          <div class="grid-view">{#if model.view === 'month'}<MonthView {model} />{:else}<WeekView {model} />{/if}</div>
+          <div class="grid-view">{#if model.view === 'month'}<MonthView {model} {drag} />{:else}<WeekView {model} {drag} />{/if}</div>
         {/snippet}
       </AsyncView>
     {/if}

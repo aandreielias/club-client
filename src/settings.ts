@@ -336,6 +336,8 @@ export const settings = {
     /** Length of one page in the list view. */
     agendaDays: 28,
     defaultStartTime: '18:00',
+    /** Week view: dropped appointments snap to this grid. */
+    snapMinutes: 15,
     defaultDurationMinutes: 90,
     /** server: calendar + attendance modules */
     maxRangeDays: 366,

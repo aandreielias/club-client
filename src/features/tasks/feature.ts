@@ -1,3 +1,4 @@
+import { permissions } from '../../lib/container';
 import TasksHome from './TasksHome.svelte';
 import { PRIVILEGED } from '../../lib/types';
 import type { Feature } from '../Feature';
@@ -19,7 +20,7 @@ export const tasksFeature: Feature = {
     task: { component: TaskView, page: (id) => `/tasks/${encodeURIComponent(id)}` },
     'task-new': { component: TaskCreateView, roles: PRIVILEGED },
   },
-  calendar: new TaskCalendarSource(tasksApi),
+  calendar: new TaskCalendarSource(tasksApi, (teamId) => permissions.canManage(teamId)),
   messages: TASK_MESSAGES,
   start: () => dueReminders.start(),
   home: { id: 'tasks', label: 'Meine Aufgaben', component: TasksHome },

@@ -1,3 +1,4 @@
+import { permissions } from '../../lib/container';
 import CalendarHome from './CalendarHome.svelte';
 import { PRIVILEGED } from '../../lib/types';
 import type { Feature } from '../Feature';
@@ -19,7 +20,7 @@ export const calendarFeature: Feature = {
     appointment: { component: AppointmentView, page: (id) => `/calendar/${encodeURIComponent(id)}` },
     'appointment-new': { component: AppointmentCreateView, roles: PRIVILEGED },
   },
-  calendar: new AppointmentCalendarSource(calendarApi),
+  calendar: new AppointmentCalendarSource(calendarApi, (teamId) => permissions.canManage(teamId)),
   messages: CALENDAR_MESSAGES,
   home: { id: 'calendar', label: 'Termine', component: CalendarHome },
   links: [{ server: '/appointments/:id', to: ({ id }) => ({ window: { kind: 'appointment', id } }) }],

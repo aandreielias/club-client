@@ -4,13 +4,15 @@
   import { bus, session } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
   import type { CalendarModel } from './CalendarModel.svelte';
+  import type { CalendarDrag } from './CalendarDrag';
   import { menu } from '../../ui/contextMenu';
   import { tooltip } from '../../ui/tooltip';
   import EntryChip from './EntryChip.svelte';
   import { appointmentPolicy as policy } from './services';
 
   /** Six-week month grid starting Monday; empty space in a day creates an appointment there (managers, coaches). */
-  let { model }: { model: CalendarModel } = $props();
+  let hoverDay = $state<string | null>(null);
+  let { model, drag }: { model: CalendarModel; /** Moving entries by drag and drop (where allowed). */ drag?: CalendarDrag } = $props();
 
   const max = settings.calendar.maxChipsPerDay;
   const weekdays = $derived(model.days.slice(0, 7));
@@ -39,7 +41,11 @@
       {@const entries = model.entriesOn(day)}
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
       <div class="cell" class:outside={!model.inAnchorMonth(day)} class:today={day === model.today} class:creatable={policy.canCreate()}
-        role="group" aria-label={session.format.dayHeading(day)} ondblclick={() => create(day)} {@attach menu(() => dayMenu(day))}>
+        role="group" aria-label={session.format.dayHeading(day)} ondblclick={() => create(day)} {@attach menu(() => dayMenu(day))}
+        class:drop-target={hoverDay === day}
+        ondragover={(e) => drag?.over(e) && (hoverDay = day)}
+        ondragleave={() => hoverDay === day && (hoverDay = null)}
+        ondrop={(e) => ((hoverDay = null), drag?.drop(e, model.entries.value ?? [], (entry) => drag.toDay(entry, day), () => void model.load()))}>
         <div class="day-head">
           <span class="number">{Number(day.slice(8))}</span>
           {#if policy.canCreate()}
@@ -49,7 +55,7 @@
         </div>
         <div class="entries">
           {#each entries.slice(0, max) as entry (entry.key)}
-            <EntryChip {entry} showTime={!entry.allDay} />
+            <EntryChip {entry} showTime={!entry.allDay} {drag} />
           {/each}
           {#if entries.length > max}
             <button class="more" onclick={() => model.goTo(day, 'week')} {@attach tooltip('Alle Einträge dieser Woche anzeigen')}>+{entries.length - max} weitere</button>
@@ -61,6 +67,10 @@
 </div>
 
 <style>
+  .cell.drop-target {
+    background: var(--color-accent-soft);
+    box-shadow: inset 0 0 0 1px var(--color-accent);
+  }
   .month {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);

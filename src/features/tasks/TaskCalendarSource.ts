@@ -7,7 +7,19 @@ export class TaskCalendarSource implements CalendarSource {
   readonly id = 'tasks';
   readonly label = 'Aufgaben';
 
-  constructor(private readonly api: TasksApi) {}
+  constructor(
+    private readonly api: TasksApi,
+    private readonly mayManage: (teamId: string | null) => boolean = () => false,
+  ) {}
+
+  canMove(entry: CalendarEntry): boolean {
+    return !entry.inactive && this.mayManage(entry.teamId);
+  }
+
+  /** Moving a due date. */
+  async move(entry: CalendarEntry, start: string): Promise<void> {
+    await this.api.update(entry.window.id, { dueAt: start });
+  }
 
   async load(from: string, to: string): Promise<CalendarEntry[]> {
     const tasks = await this.api.list({ mine: false, teamId: null, includeDone: true, dueFrom: from, dueTo: to });
