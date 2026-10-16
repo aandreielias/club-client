@@ -24,6 +24,7 @@ import { HomeSections } from './home/HomeSections';
 import { LinkResolver } from './router/LinkResolver';
 import { NavCatalog } from './navigation/NavCatalog';
 import { BackStack } from './navigation/BackStack.svelte';
+import { PendingDeletes } from './state/PendingDeletes.svelte';
 import { ScrollMemory } from './navigation/ScrollMemory';
 import { DocumentTitle } from './navigation/DocumentTitle.svelte';
 import { Router } from './router/Router.svelte';
@@ -135,6 +136,9 @@ export const navCatalog = new NavCatalog();
 export const confirmation = new ConfirmService(bus);
 
 export const toasts = new ToastService(bus, settings.notify.toastMs, settings.notify.errorToastMs);
+
+/** Deletes with undo instead of a confirmation. */
+export const pendingDeletes = new PendingDeletes(bus, settings.notify.undoMs);
 
 export const tooltips = new TooltipService(settings.overlay.tooltipDelayMs, settings.overlay.tooltipSkipDelayMs);
 

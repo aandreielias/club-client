@@ -1,9 +1,18 @@
 import type { EventBus } from '../bus';
 import { defineEvent } from '../bus';
 
+export interface ToastAction {
+  label: string;
+  run: () => void;
+}
+
 export interface ToastRequest {
   text: string;
   tone?: 'info' | 'error';
+  /** A button in the toast (e.g. "Rückgängig"); clicking it also closes the toast. */
+  action?: ToastAction;
+  /** Overrides the default display time. */
+  durationMs?: number;
 }
 
 /** Shows a toast: `bus.publish(TOAST, { text })`. */
@@ -13,6 +22,7 @@ export interface Toast {
   id: number;
   text: string;
   error: boolean;
+  action?: ToastAction;
 }
 
 /** Short, self-dismissing status messages. */
@@ -26,7 +36,9 @@ export class ToastService {
     private readonly durationMs: number,
     private readonly errorDurationMs: number,
   ) {
-    bus.subscribe(TOAST, ({ text, tone }) => (tone === 'error' ? this.error(text) : this.show(text)));
+    bus.subscribe(TOAST, ({ text, tone, action, durationMs }) =>
+      this.push(text, tone === 'error', durationMs ?? (tone === 'error' ? this.errorDurationMs : this.durationMs), action),
+    );
   }
 
   show(text: string): void {
@@ -42,9 +54,9 @@ export class ToastService {
     if (index >= 0) this.items.splice(index, 1);
   }
 
-  private push(text: string, error: boolean, durationMs: number): void {
+  private push(text: string, error: boolean, durationMs: number, action?: ToastAction): void {
     const id = this.#next++;
-    this.items.push({ id, text, error });
+    this.items.push({ id, text, error, action });
     setTimeout(() => this.dismiss(id), durationMs);
   }
 }

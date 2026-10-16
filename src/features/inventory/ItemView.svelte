@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { backStack, bus, session } from '../../lib/container';
+  import { backStack, bus, pendingDeletes, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { Action } from '../../lib/state/Action.svelte';
@@ -46,14 +46,10 @@
     await edit.submit(async (form) => item.set(await inventoryApi.update(id, form.toPatch())), 'Gegenstand gespeichert.');
   }
 
-  async function destroy(name: string) {
-    const request = {
-      title: 'Gegenstand löschen',
-      message: `„${name}“ wird aus dem Inventar gelöscht. Termine und Aufgaben, die ihn benötigen, zeigen ihn weiter als gelöscht an.`,
-      confirmLabel: 'Löschen',
-      danger: true,
-    };
-    if (await view.confirm(request, () => remove.run(() => inventoryApi.delete(id)), 'Gegenstand gelöscht.')) view.leave();
+  /** Termine und Aufgaben, die ihn benötigen, zeigen ihn danach als gelöscht an. */
+  function destroy(name: string) {
+    pendingDeletes.schedule({ id, text: `„${name}“ gelöscht.`, commit: () => inventoryApi.delete(id) });
+    view.leave();
   }
 </script>
 

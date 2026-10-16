@@ -1,8 +1,8 @@
 <script lang="ts">
   import MemberName from '../../ui/MemberName.svelte';
   import { settings } from '../../settings';
-  import { bus, directory, session } from '../../lib/container';
-  import { APP_ERROR, CONFIRM, TOAST } from '../../channels';
+  import { bus, directory, pendingDeletes, session } from '../../lib/container';
+  import { APP_ERROR, TOAST } from '../../channels';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
@@ -46,16 +46,9 @@
 
   const image = $derived(!!file && fileTypes.isImage(file.contentType));
 
-  async function remove(target: StoredFile) {
-    const noun = fileTypes.isImage(target.contentType) ? 'Foto' : 'Datei';
-    const ok = await bus.request(CONFIRM, { title: `${noun} löschen`, message: `„${target.name}“ wird endgültig gelöscht.`, confirmLabel: 'Löschen', danger: true });
-    if (!ok) return;
-    if (await contents.delete(target)) {
-      bus.publish(TOAST, { text: `${noun} gelöscht.` });
-      handle?.close();
-    } else {
-      bus.publish(APP_ERROR, contents.deleteAction.error);
-    }
+  function remove(target: StoredFile) {
+    pendingDeletes.schedule({ id: target.id, text: `„${target.name}“ gelöscht.`, commit: () => filesApi.deleteFile(target.id) });
+    handle?.close();
   }
 
   async function download(target: StoredFile) {

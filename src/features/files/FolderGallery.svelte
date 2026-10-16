@@ -5,6 +5,7 @@
   import ListToolbar from '../../ui/ListToolbar.svelte';
   import type { FolderItem, FolderItemListModel } from './FolderItemListModel.svelte';
   import Thumbnail from './Thumbnail.svelte';
+  import { pendingDeletes } from '../../lib/container';
   import { menu as contextMenu } from '../../ui/contextMenu';
   import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
   import CoverImage from './CoverImage.svelte';
@@ -26,9 +27,9 @@
   <ListToolbar {model} />
   <AsyncView resource={model.data}>
     {#snippet children()}
-      {#if model.rows.length}
+      {#if model.rows.some((item) => !pendingDeletes.isHidden(item.id))}
         <ul class="tiles">
-          {#each model.rows as item (item.id)}
+          {#each model.rows.filter((item) => !pendingDeletes.isHidden(item.id)) as item (item.id)}
             <li>
               <button class="tile" onclick={() => onopen(item)} aria-label={item.kind === 'folder' ? `Ordner ${item.name} öffnen` : `${item.name} öffnen`}
                 {@attach tooltip(item.name)} {@attach menu ? contextMenu(() => menu(item)) : undefined}>

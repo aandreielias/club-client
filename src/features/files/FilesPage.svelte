@@ -1,6 +1,6 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { bus, commands, directory, permissions, preferences, session, store } from '../../lib/container';
+  import { bus, commands, directory, pendingDeletes, permissions, preferences, session, store } from '../../lib/container';
   import { APP_ERROR, CONFIRM, NAVIGATE, TOAST, WINDOW_OPEN } from '../../channels';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
@@ -72,16 +72,18 @@
     }
   }
 
-  async function removeFile(item: FolderItem) {
-    if (item.kind !== 'file' || !contents) return;
-    const ok = await bus.request(CONFIRM, { title: 'Datei löschen', message: `„${item.name}“ wird endgültig gelöscht.`, confirmLabel: 'Löschen', danger: true });
-    if (!ok) return;
-    if (await contents.delete(item.file)) {
-      list.refresh();
-      bus.publish(TOAST, { text: 'Datei gelöscht.' });
-    } else {
-      bus.publish(APP_ERROR, contents.deleteAction.error);
-    }
+  /** Disappears at once; the toast offers "Rückgängig" before the server deletes it. */
+  function removeFile(item: FolderItem) {
+    if (item.kind !== 'file') return;
+    const file = item.file;
+    pendingDeletes.schedule({
+      id: file.id,
+      text: `„${file.name}“ gelöscht.`,
+      commit: async () => {
+        await filesApi.deleteFile(file.id);
+        void list.load();
+      },
+    });
   }
 
   /** Folder: open, edit. File: open, download, edit, delete (where allowed). */

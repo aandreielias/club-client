@@ -273,6 +273,8 @@ export const settings = {
   },
 
   notify: {
+    /** Deleting: time to click "Rückgängig" before the server deletes. */
+    undoMs: 6000,
     toastMs: 3000,
     errorToastMs: 6000,
   },

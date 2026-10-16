@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { backStack, bus, commands, directory, linksApi, permissions, session } from '../../lib/container';
+  import { backStack, bus, commands, directory, linksApi, pendingDeletes, permissions, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { LinksModel } from '../../lib/links/LinksModel.svelte';
@@ -64,9 +64,9 @@
     if (original && (await edit.submit((form) => tasksApi.update(original.id, form.toPatch()), 'Aufgabe gespeichert.'))) void detail.load();
   }
 
-  async function remove(title: string) {
-    const request = { title: 'Aufgabe löschen', message: `„${title}“ wird mit Checkliste und Kommentaren gelöscht.`, confirmLabel: 'Löschen', danger: true };
-    if (await view.confirm(request, () => detail.delete(), 'Aufgabe gelöscht.')) view.leave();
+  function remove(title: string) {
+    pendingDeletes.schedule({ id: detail.id, text: `Aufgabe „${title}“ gelöscht.`, commit: () => tasksApi.delete(detail.id) });
+    view.leave();
   }
 </script>
 

@@ -11,6 +11,10 @@
       in:motion.rise={{ distance: 16 }} out:motion.pop={{ origin: 'bottom' }} animate:flip={{ duration: motion.ms('base') }}>
       <Icon name={toast.error ? 'alert' : 'check'} small />
       <span>{toast.text}</span>
+      {#if toast.action}
+        {@const action = toast.action}
+        <button class="action" onclick={() => (toasts.dismiss(toast.id), action.run())} {@attach tooltip(action.label)}>{action.label}</button>
+      {/if}
       <button class="dismiss" aria-label="Schließen" onclick={() => toasts.dismiss(toast.id)} {@attach tooltip('Meldung schließen')}><Icon name="close" small /></button>
     </div>
   {/each}
@@ -45,6 +49,20 @@
   }
   .error > :global(.icon) {
     color: var(--color-danger);
+  }
+  .action {
+    padding: 2px var(--space-sm);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
+    font: inherit;
+    font-weight: var(--font-weight-bold);
+    cursor: pointer;
+    transition: background var(--motion-fast);
+  }
+  .action:hover {
+    background: color-mix(in srgb, var(--color-accent) 25%, transparent);
   }
   .dismiss {
     display: grid;

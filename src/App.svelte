@@ -6,7 +6,7 @@
   import SetPasswordPage from './features/auth/SetPasswordPage.svelte';
   import { features } from './features';
   import OnboardingPage from './features/onboarding/OnboardingPage.svelte';
-  import { auth, backStack, bus, commands, documentTitle, scrollMemory, directory, errors, keyboard, live, preferences, router, session, windows } from './lib/container';
+  import { auth, backStack, bus, commands, documentTitle, pendingDeletes, scrollMemory, directory, errors, keyboard, live, preferences, router, session, windows } from './lib/container';
   import Button from './ui/Button.svelte';
   import Centered from './ui/Centered.svelte';
   import ConfirmDialog from './ui/ConfirmDialog.svelte';
@@ -53,7 +53,7 @@
   });
 </script>
 
-<svelte:window onscroll={rememberScroll} onbeforeunload={beforeUnload} />
+<svelte:window onscroll={rememberScroll} onbeforeunload={beforeUnload} onpagehide={() => pendingDeletes.flush()} />
 
 {#if app.screen === 'failed'}
   <Centered title="Nicht erreichbar">

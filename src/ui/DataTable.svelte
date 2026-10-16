@@ -1,7 +1,7 @@
 <script lang="ts" generics="T">
   import { tick, type Snippet } from 'svelte';
   import { flip } from 'svelte/animate';
-  import { commands, motion } from '../lib/container';
+  import { commands, motion, pendingDeletes } from '../lib/container';
   import Icon from './Icon.svelte';
   import { useCommands } from '../lib/keyboard/useCommands.svelte';
   import { ListCursors, type ListColumn, type ListModel } from '../lib/list/ListModel.svelte';
@@ -52,6 +52,9 @@
     check?: { checked: (item: T) => boolean; toggle: (item: T) => void; disabled?: (item: T) => boolean; label: (item: T) => string };
   } = $props();
 
+  // Rows being deleted (with undo) disappear right away.
+  const shownRows = $derived(model.rows.filter((item) => !pendingDeletes.isHidden(rowKey(item))));
+
   /** Keyboard cursor (J/K/Enter); -1 = none. Kept per list, so coming back shows the row you were on. */
   // svelte-ignore state_referenced_locally
   let cursor = $state(ListCursors.get(model.definition.id));
@@ -99,7 +102,7 @@
 
   <AsyncView resource={model.data}>
     {#snippet children()}
-      {#if model.rows.length}
+      {#if shownRows.length}
         <table aria-busy={model.data.loading}>
           <thead>
             <tr>
@@ -123,7 +126,7 @@
             </tr>
           </thead>
           <tbody>
-            {#each limit === undefined ? model.rows : model.rows.slice(0, limit) as item, rowIndex (rowKey(item))}
+            {#each limit === undefined ? shownRows : shownRows.slice(0, limit) as item, rowIndex (rowKey(item))}
               <tr class:clickable={!!onopen} class:selected={selected === rowKey(item)} class:cursor={rowIndex === cursor}
                 in:motion.rise|global={{ delay: motion.stagger(rowIndex), distance: 4 }} animate:flip={{ duration: motion.ms('base') }}
                 class:checked={!!check?.checked(item)}
