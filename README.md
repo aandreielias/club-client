@@ -15,20 +15,32 @@ npm run build    # dist/, deployed to GitHub Pages by .github/workflows/deploy.y
 - `mock` (default): the API is answered in the browser (`src/lib/mock`, `src/features/*/mock.ts`), and data is kept in localStorage. The login page lists test accounts. Privileged accounts use PIN `73915`. To reset the data, clear the site data.
 - `http`: real club-server + Supabase login. Needs `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`. `src/lib/auth/SupabaseAuthProvider.ts` is still a stub.
 
+## Event bus
+`src/lib/bus/` is a TypeScript port of the Java EventBus (`../EventBus`): hierarchical channels (`domain/tasks/task-changed`), priorities, `Subscription` handles, request/response with timeouts, dead letters and a debug history (`window.__bus` in dev). One app bus (`bus` in the container) carries everything that is an event or a command:
+
+- Server events: `LiveUpdates` publishes each pushed event on `domain/<module>/<event>`. Features declare typed tokens in `events.ts` (`TASK_CHANGED = liveEvent<TaskChanged>('tasks.task-changed')`) and subscribe with `useBus(bus, TASK_CHANGED, handler)`.
+- UI commands (`src/channels.ts`): `TOAST`, `APP_ERROR` (error toast with the readable text), `CONFIRM` (request, resolves true/false), `WINDOW_OPEN`/`WINDOW_CLOSE`, `NAVIGATE`. The owning service subscribes in its constructor; callers never import the service.
+- The mock server runs its own bus instance (`MockEventBus`), like club-server runs the Java one.
+
+Reactive state is still read directly from services where it is rendered (`session`, `windows.current`); data access stays in the feature API classes.
+
 ## Structure
 - `src/settings.ts`: every website parameter in one place. That covers theme tokens (colours, radius, spacing, fonts, layout), the compact breakpoint, timing, server-mirrored limits and storage keys. `ThemeService` turns the theme into CSS custom properties at startup; stylesheets use only `var(--...)`.
-- `src/lib/container.ts`: composition root. It creates each shared service once (`api`, `auth`, `session`, `router`, `stepUp`, `toasts`, `errors`, `theme`) and wires their dependencies.
+- `src/lib/container.ts`: composition root. It creates the `bus` first, then each shared service once (`api`, `auth`, `session`, `router`, `stepUp`, `toasts`, `errors`, `theme`, `motion`) and wires their dependencies.
 - `src/lib/`: framework-free core classes.
   - `http/`: `ApiClient`, `HttpTransport`, `ProblemError`, plus the `Transport` interface.
   - `auth/`: the `AuthProvider` interface with `DevAuthProvider` and `SupabaseAuthProvider`, and `AuthService`.
   - `router/`, `session/`, `security/` (step-up), `notify/`, `errors/` (`ErrorMessages` registry).
   - `time/`: `ZonedClock` for club time-zone conversion and `Formatter`.
   - `state/`: `Resource` for async reads and `Action` for writes.
+  - `detail/`: `DetailController` (window title, leave, confirmed writes, live watch of the shown record), `EditSession` (edit form + save) and `CreateController` ("new" windows). Every record view builds on these.
+  - `motion/`: `Motion` transition presets (`rise`, `pop`, `slide`, `fade`, stagger, View Transitions) on the timing in `settings.motion`; all collapse to 0 ms with reduced motion.
   - `mock/`: `MockServer`, `MockTable` and the core `MockDirectory`.
 - `src/ui/`: presentational components with no business logic:
   - `DataTable` + `ListToolbar` render every list (search, filters, sort).
   - `WindowHost` renders the single detail window; it can be centered or docked to the side or the bottom, the placement is remembered and the window is in the URL as `?open=kind/id`.
   - `Detail` and `DetailPage` lay out detail views. `Select`, `Button`, `Tag` and `Field` keep all controls consistent.
+  - `Icon` renders the house icon set from `src/icons.ts` (Lucide). Use icons only where they carry meaning: navigation, add/edit/delete, window controls, search, status.
 - `src/lib/list/ListModel.svelte.ts`: the generic list (columns, client and server filters, sort, search, remembered state). Each list is a subclass with its own definition (e.g. `TaskListModel`).
 - `src/lib/window/WindowService.svelte.ts`: opens, closes and docks the detail window. Features register their window kinds in `Feature.windows`.
 - `src/lib/calendar/CalendarSources.ts`: features contribute calendar entries through `Feature.calendar` (appointments, task due dates) without importing each other.
@@ -41,7 +53,7 @@ npm run build    # dist/, deployed to GitHub Pages by .github/workflows/deploy.y
 3. Put page state in view-model classes (`Resource`, `Action`, `$state`/`$derived` fields). Keep pages thin.
 4. `mock.ts` registers fake endpoints with `mockServer.on(...)`. It is loaded automatically in mock mode. After a write, it publishes the server's event with `mockServer.events.publish({ type, data, audience })`. Events without an `audience` stay inside the mock server, for other mock modules.
 5. Lists extend `ListModel` and render with `DataTable`. Details are window contents (`{ id, handle }` props) registered in `Feature.windows`, plus an optional full-page route that wraps the same view in `DetailPage`.
-6. Live updates: in a page, call `onLive(live, '<module>.<event>', handler)` (`lib/live/onLive.svelte.ts`) and reload what the page shows. Optional `Feature` fields: `links` maps server links from notifications to routes, `start` runs while signed in, and a route's `badge` adds a count in the sidebar.
+6. Live updates: declare the event in `events.ts` with `liveEvent<T>('<module>.<event>')`, then call `useBus(bus, EVENT, handler)` in a page and reload what it shows (record views use `DetailController.watch`). Commands go over the bus too: `bus.publish(TOAST, { text })`, `await bus.request(CONFIRM, {...})`. Optional `Feature` fields: `links` maps server links from notifications to routes, `start` runs while signed in, and a route's `badge` adds a count in the sidebar.
 7. Add the feature to `src/features/index.ts`. New tunable values go into `src/settings.ts`.
 
 ## Deploy (GitHub Pages)

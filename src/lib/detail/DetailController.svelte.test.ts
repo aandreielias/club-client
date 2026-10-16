@@ -43,8 +43,9 @@ describe('DetailController', () => {
     expect(errors).toEqual([failure]);
   });
 
-  it('leaves through the window handle', () => {
+  it('leaves through the window handle only once', () => {
     const { view, close } = setup(true);
+    view.leave();
     view.leave();
     expect(close).toHaveBeenCalledOnce();
   });

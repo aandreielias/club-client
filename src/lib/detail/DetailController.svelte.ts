@@ -19,6 +19,9 @@ export interface WatchOptions<T> {
  * with a toast, and reacting to live changes of the shown record. Create during component initialisation.
  */
 export class DetailController {
+  /** Set once the view closes, so the server's echo of our own delete is not reported again. */
+  #left = false;
+
   constructor(
     protected readonly bus: EventBus,
     private readonly handle?: WindowHandle,
@@ -34,6 +37,8 @@ export class DetailController {
   }
 
   leave(): void {
+    if (this.#left) return;
+    this.#left = true;
     if (this.handle) this.handle.close();
     else this.onclosed?.();
   }
@@ -60,7 +65,7 @@ export class DetailController {
   watch<T extends { change: string }>(channel: EventChannel<LiveEvent<T>>, mine: (data: T) => boolean, options: WatchOptions<T>): void {
     $effect(() => {
       const subscription = this.bus.subscribe(channel, ({ data }) => {
-        if (!mine(data) || options.busy()) return;
+        if (this.#left || !mine(data) || options.busy()) return;
         if (data.change === 'DELETED') {
           this.notify(options.deleted);
           this.leave();
