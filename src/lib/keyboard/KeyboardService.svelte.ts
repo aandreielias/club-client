@@ -12,7 +12,7 @@ export interface KeyEventLike extends KeyInput {
 
 /**
  * Turns key presses into commands. Handles sequences (G, then K) with a timeout, stays out of the
- * way while the user types (only Mod/Ctrl/Alt combos and Escape reach commands then), and leaves
+ * way while the user types (only Mod/Ctrl/Alt combos and Escape, also Shift+Escape, reach commands then), and leaves
  * native modal dialogs (PIN, confirmations) alone.
  */
 export class KeyboardService {
@@ -44,7 +44,7 @@ export class KeyboardService {
     if (!this.enabled || event.defaultPrevented || KeyboardService.inModalDialog(event.target)) return false;
     const combo = KeySpec.fromEvent(event, this.isMac);
     if (!combo) return false;
-    if (KeyboardService.isTyping(event.target) && !this.pending.length && !KeySpec.hasCommandModifier(combo) && combo !== 'Escape') return false;
+    if (KeyboardService.isTyping(event.target) && !this.pending.length && !KeySpec.hasCommandModifier(combo) && !/(^|\+)Escape$/.test(combo)) return false;
     // Enter on a focused button or link keeps its native meaning.
     if (combo === 'Enter' && KeyboardService.isInteractive(event.target)) return false;
 

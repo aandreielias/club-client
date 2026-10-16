@@ -6,7 +6,7 @@
   import SetPasswordPage from './features/auth/SetPasswordPage.svelte';
   import { features } from './features';
   import OnboardingPage from './features/onboarding/OnboardingPage.svelte';
-  import { auth, bus, commands, directory, errors, keyboard, live, preferences, router, session, windows } from './lib/container';
+  import { auth, backStack, bus, commands, documentTitle, directory, errors, keyboard, live, preferences, router, session, windows } from './lib/container';
   import Button from './ui/Button.svelte';
   import Centered from './ui/Centered.svelte';
   import ConfirmDialog from './ui/ConfirmDialog.svelte';
@@ -20,7 +20,7 @@
   import Toasts from './ui/Toasts.svelte';
   import TooltipHost from './ui/TooltipHost.svelte';
 
-  const app = new AppController({ auth, session, directory, router, features, live, errors, bus, commands, keyboard, windows, preferences });
+  const app = new AppController({ auth, session, directory, router, features, live, errors, bus, commands, keyboard, windows, preferences, backStack });
   const logout = () => app.logout();
 
   onMount(() => {
@@ -28,6 +28,9 @@
   });
 
   $effect(() => app.syncMember());
+  $effect(() => {
+    document.title = documentTitle.text;
+  });
 
   // Only the screen decides; whatever startSession reads must not restart it.
   $effect(() => {

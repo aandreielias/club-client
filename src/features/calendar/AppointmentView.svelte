@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { bus, commands, directory, linksApi, permissions, session } from '../../lib/container';
+  import { backStack, bus, commands, directory, linksApi, permissions, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { LinksModel } from '../../lib/links/LinksModel.svelte';
@@ -28,7 +28,7 @@
   const detail = new AppointmentDetailModel(calendarApi, id, session.member.id);
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle);
-  const edit = new EditSession<AppointmentForm>(bus);
+  const edit = new EditSession<AppointmentForm>(bus, backStack);
   let cancelOpen = $state(false);
 
   // svelte-ignore state_referenced_locally
@@ -102,7 +102,9 @@
       {/snippet}
 
       {#if edit.form}
-        <AppointmentEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={submit} />
+        <div class="editing" {@attach edit.track}>
+          <AppointmentEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={submit} />
+        </div>
       {:else}
         <dl class="props">
           <dt>Wann</dt>
@@ -141,3 +143,9 @@
     </Detail>
   {/snippet}
 </AsyncView>
+
+<style>
+  .editing {
+    display: contents;
+  }
+</style>

@@ -3,8 +3,9 @@ import { APP_ERROR } from '../errors/ErrorReporter';
 import type { LiveEvent } from '../live/LiveUpdates.svelte';
 import { CONFIRM, type ConfirmRequest } from '../notify/ConfirmService.svelte';
 import { TOAST } from '../notify/ToastService.svelte';
+import type { BackStack } from '../navigation/BackStack.svelte';
 import { Action } from '../state/Action.svelte';
-import type { WindowHandle } from '../window/WindowService.svelte';
+import { WINDOW_OPEN, type WindowHandle } from '../window/WindowService.svelte';
 
 export interface WatchOptions<T> {
   /** Toast shown when the record was deleted elsewhere; the view then closes. */
@@ -43,6 +44,12 @@ export class DetailController {
     else this.onclosed?.();
   }
 
+  /** Opens a related record: inside a window with a way back, on a page in the window. */
+  open(kind: string, id: string): void {
+    if (this.handle) this.handle.open(kind, id);
+    else this.bus.publish(WINDOW_OPEN, { kind, id });
+  }
+
   notify(text: string): void {
     this.bus.publish(TOAST, { text });
   }
@@ -78,12 +85,19 @@ export class DetailController {
   }
 }
 
-/** The edit mode of a record view: the open form, its save action and the submit flow. */
+/** The edit mode of a record view: the open form, its save action and the submit flow. Escape leaves it. */
 export class EditSession<F> {
   form = $state<F | null>(null);
+  /** Something was typed or picked since editing started (see `track`). */
+  dirty = $state(false);
   readonly save = new Action();
 
-  constructor(private readonly bus: EventBus) {}
+  constructor(
+    private readonly bus: EventBus,
+    backStack?: BackStack,
+  ) {
+    backStack?.while(() => this.editing, () => void this.cancel(), () => this.mayDiscard());
+  }
 
   get editing(): boolean {
     return this.form !== null;
@@ -91,18 +105,46 @@ export class EditSession<F> {
 
   edit(form: F): void {
     this.save.reset();
+    this.dirty = false;
     this.form = form;
   }
 
-  cancel(): void {
+  /** Leaves edit mode; asks first when there are unsaved changes. Resolves true when it left. */
+  async cancel(): Promise<boolean> {
+    if (!(await this.mayDiscard())) return false;
     this.form = null;
+    return true;
   }
+
+  /** True without asking when nothing changed. */
+  mayDiscard(): boolean | Promise<boolean> {
+    return !this.dirty || this.bus.request(CONFIRM, EditSession.DISCARD);
+  }
+
+  /** Attach to the element around the editor: any input or change inside marks the session dirty. */
+  readonly track = (node: HTMLElement): (() => void) => {
+    const mark = () => (this.dirty = true);
+    node.addEventListener('input', mark);
+    node.addEventListener('change', mark);
+    return () => {
+      node.removeEventListener('input', mark);
+      node.removeEventListener('change', mark);
+    };
+  };
+
+  static readonly DISCARD: ConfirmRequest = {
+    title: 'Änderungen verwerfen',
+    message: 'Deine Änderungen sind noch nicht gespeichert.',
+    confirmLabel: 'Verwerfen',
+    danger: true,
+  };
 
   /** Runs the write with the open form; on success closes the form and shows `success`. */
   async submit(write: (form: F) => Promise<unknown>, success: string): Promise<boolean> {
     const form = this.form;
     if (!form || !(await this.save.run(() => write(form)))) return false;
     this.form = null;
+    this.dirty = false;
     this.bus.publish(TOAST, { text: success });
     return true;
   }

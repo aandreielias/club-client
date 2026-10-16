@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { bus, commands, directory, linksApi, permissions, session } from '../../lib/container';
+  import { backStack, bus, commands, directory, linksApi, permissions, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { LinksModel } from '../../lib/links/LinksModel.svelte';
@@ -27,7 +27,7 @@
 
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle, onclosed);
-  const edit = new EditSession<TaskForm>(bus);
+  const edit = new EditSession<TaskForm>(bus, backStack);
   // svelte-ignore state_referenced_locally
   const detail = new TaskDetailModel(tasksApi, id);
   // svelte-ignore state_referenced_locally
@@ -83,7 +83,9 @@
       {/snippet}
 
       {#if edit.form}
-        <TaskEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={submit} />
+        <div class="editing" {@attach edit.track}>
+          <TaskEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={submit} />
+        </div>
       {:else}
         {#if policy.canWork(task)}
           <div class="stack">
@@ -130,6 +132,9 @@
 </AsyncView>
 
 <style>
+  .editing {
+    display: contents;
+  }
   .count {
     font-weight: normal;
   }

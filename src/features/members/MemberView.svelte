@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { bus, commands, session } from '../../lib/container';
+  import { backStack, bus, commands, session } from '../../lib/container';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { ROLE_LABELS, type Member, type Role } from '../../lib/types';
@@ -28,6 +28,7 @@
   view.title(() => model.member.value && `${model.member.value.firstName} ${model.member.value.lastName}`);
 
   let editing = $state(false);
+  backStack.while(() => editing, () => (editing = false));
   useCommands(commands, {
     'member.edit': { run: () => (editing = true), when: () => !editing && !!model.member.value && policy.canEditProfile(model.member.value) },
   });

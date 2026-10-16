@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { bus, session } from '../../lib/container';
-  import { WINDOW_OPEN } from '../../channels';
+  import { backStack, bus, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { Action } from '../../lib/state/Action.svelte';
@@ -24,7 +23,7 @@
 
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle, onclosed);
-  const edit = new EditSession<ItemForm>(bus);
+  const edit = new EditSession<ItemForm>(bus, backStack);
   const remove = new Action();
   // svelte-ignore state_referenced_locally
   const item = new Resource(() => inventoryApi.get(id));
@@ -72,7 +71,9 @@
       {/snippet}
 
       {#if edit.form}
-        <ItemEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={submit} />
+        <div class="editing" {@attach edit.track}>
+          <ItemEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={submit} />
+        </div>
       {:else}
         <ErrorNote error={remove.error} />
         <dl class="props">
@@ -92,7 +93,7 @@
               <ul class="uses">
                 {#each list as use (use.kind + use.id)}
                   <li>
-                    <button type="button" onclick={() => bus.publish(WINDOW_OPEN, { kind: use.kind === 'APPOINTMENT' ? 'appointment' : 'task', id: use.id })}
+                    <button type="button" onclick={() => view.open(use.kind === 'APPOINTMENT' ? 'appointment' : 'task', use.id)}
                       {@attach tooltip(use.kind === 'APPOINTMENT' ? 'Termin öffnen' : 'Aufgabe öffnen')}>
                       <span class="title">{use.title}</span>
                       <span class="muted">{use.kind === 'APPOINTMENT' ? 'Termin' : 'Aufgabe'}{use.at ? `, ${session.format.dateTime(use.at)}` : ''}</span>
@@ -112,6 +113,9 @@
 </AsyncView>
 
 <style>
+  .editing {
+    display: contents;
+  }
   .uses li {
     border-bottom: 1px solid var(--color-border);
   }

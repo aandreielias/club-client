@@ -11,7 +11,7 @@ export interface ButtonTooltip {
 }
 
 export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
-  Abbrechen: { text: 'Schließen, ohne zu speichern' },
+  Abbrechen: { text: 'Schließen, ohne zu speichern', command: 'view.back' },
   Abmelden: { text: 'Auf diesem Gerät abmelden' },
   Abonnieren: { text: 'Kalender in einer Kalender-App abonnieren' },
   Absagen: { text: 'Termin absagen, alle Eingeladenen werden benachrichtigt' },
@@ -19,7 +19,7 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Alle als gelesen markieren': { text: 'Alle Benachrichtigungen als gelesen markieren', command: 'notifications.readAll' },
   'Alle zurücksetzen': { text: 'Alle Tastenkürzel auf die Standardbelegung zurücksetzen' },
   'Als Seite öffnen': { text: 'Als eigene Seite öffnen', command: 'window.page' },
-  Anlegen: { text: 'Neuen Eintrag speichern' },
+  Anlegen: { text: 'Neuen Eintrag speichern', command: 'form.submit' },
   Anmelden: { text: 'Mit E-Mail und Passwort anmelden' },
   'Antwort speichern': { text: 'Antwort und Begründung für diesen Termin speichern' },
   Bearbeiten: { text: 'Angaben ändern' },
@@ -62,7 +62,7 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Punkt hinzufügen': { text: 'Checklistenpunkt hinzufügen' },
   'Rollen speichern': { text: 'Geänderte Rollen speichern' },
   Schließen: { text: 'Schließen', command: 'window.close' },
-  Speichern: { text: 'Änderungen speichern' },
+  Speichern: { text: 'Änderungen speichern', command: 'form.submit' },
   Standard: { text: 'Standardbelegung dieses Tastenkürzels wiederherstellen' },
   Standardreihenfolge: { text: 'Ursprüngliche Reihenfolge der Seitenleiste wiederherstellen' },
   'Testdaten zurücksetzen': { text: 'Alle Testdaten auf den Anfangszustand zurücksetzen' },

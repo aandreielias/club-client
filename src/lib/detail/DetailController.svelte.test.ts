@@ -14,7 +14,7 @@ function setup(answer: boolean) {
   bus.subscribe(APP_ERROR, (error) => errors.push(error));
   bus.handleRequest(CONFIRM, () => answer);
   const close = vi.fn();
-  const view = new DetailController(bus, { close, setTitle: vi.fn(), open: vi.fn(), navigate: vi.fn() });
+  const view = new DetailController(bus, { close, setTitle: vi.fn(), open: vi.fn(), replace: vi.fn(), navigate: vi.fn() });
   return { bus, toasts, errors, view, close };
 }
 
@@ -64,5 +64,27 @@ describe('EditSession', () => {
     expect(write).toHaveBeenCalledWith({ name: 'Ball' });
     expect(edit.editing).toBe(false);
     expect(toasts).toEqual(['Gespeichert.']);
+  });
+
+  it('asks before discarding unsaved changes and stays when declined', async () => {
+    const declined = setup(false);
+    const edit = new EditSession<{ name: string }>(declined.bus);
+    edit.edit({ name: 'Ball' });
+    expect(await edit.cancel()).toBe(true); // nothing typed: leaves without asking
+    edit.edit({ name: 'Ball' });
+    const field = new EventTarget() as HTMLElement;
+    const detach = edit.track(field);
+    field.dispatchEvent(new Event('input'));
+    detach();
+    expect(edit.dirty).toBe(true);
+    expect(await edit.cancel()).toBe(false);
+    expect(edit.editing).toBe(true);
+
+    const accepted = setup(true);
+    const other = new EditSession<{ name: string }>(accepted.bus);
+    other.edit({ name: 'Ball' });
+    other.dirty = true;
+    expect(await other.cancel()).toBe(true);
+    expect(other.editing).toBe(false);
   });
 });

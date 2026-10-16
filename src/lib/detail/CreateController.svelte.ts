@@ -20,7 +20,7 @@ export class CreateController {
     let created = '';
     if (await this.save.run(async () => (created = await write()))) {
       this.bus.publish(TOAST, { text: success });
-      this.handle.open(kind, created);
+      this.handle.replace(kind, created);
     }
   }
 }

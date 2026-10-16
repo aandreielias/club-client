@@ -91,4 +91,25 @@ describe('WindowService', () => {
     bus.publish(WINDOW_CLOSE);
     expect(windows.current).toBeNull();
   });
+
+  it('goes back through records opened inside the window, then closes', () => {
+    const { windows, bus } = setup();
+    bus.publish(WINDOW_OPEN, { kind: 'task', id: '1' });
+    const handle = windows.handle();
+    handle.open('task', '2');
+    handle.replace('task', '3'); // e.g. the created record replaces its form: no way back to it
+    expect(windows.trailDepth).toBe(1);
+    windows.back();
+    expect(windows.current).toEqual({ kind: 'task', id: '1' });
+    windows.back();
+    expect(windows.current).toBeNull();
+  });
+
+  it('starts a fresh history when a record is opened from outside', () => {
+    const { windows, bus } = setup();
+    bus.publish(WINDOW_OPEN, { kind: 'task', id: '1' });
+    windows.handle().open('task', '2');
+    bus.publish(WINDOW_OPEN, { kind: 'task', id: '5' });
+    expect(windows.trailDepth).toBe(0);
+  });
 });

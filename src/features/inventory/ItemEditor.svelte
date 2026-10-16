@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { autofocus } from '../../ui/autofocus';
   import { settings } from '../../settings';
   import type { Action } from '../../lib/state/Action.svelte';
   import Button from '../../ui/Button.svelte';
@@ -25,7 +26,7 @@
   }
 </script>
 
-<form class="stack" onsubmit={submit} novalidate>
+<form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
   <div class="grid-2">
     <Field label="Name" error={form.error('name')}>
       <input bind:value={form.name} maxlength={limits.nameMaxLength} required />

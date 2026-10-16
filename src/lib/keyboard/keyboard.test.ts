@@ -69,7 +69,7 @@ describe('Keymap', () => {
   it('has no clashing defaults', () => {
     const keymap = new Keymap(null);
     const ids = ['palette.open', 'settings.open', 'help.shortcuts', 'theme.toggle', 'nav.home', 'nav.calendar', 'nav.tasks', 'nav.files', 'nav.teams',
-      'nav.notifications', 'nav.members', 'nav.account', 'nav.settings', 'nav.back', 'window.close', 'window.center', 'window.side', 'window.bottom',
+      'nav.notifications', 'nav.members', 'nav.account', 'nav.settings', 'nav.back', 'view.back', 'form.submit', 'window.close', 'window.center', 'window.side', 'window.bottom',
       'window.page', 'page.new', 'list.search', 'list.next', 'list.previous', 'list.open', 'list.reset', 'calendar.previous', 'calendar.next',
       'calendar.today', 'calendar.month', 'calendar.week', 'calendar.list', 'task.edit', 'task.done', 'appointment.edit', 'appointment.yes',
       'appointment.maybe', 'appointment.no', 'member.edit', 'notifications.readAll'] as const;
@@ -105,7 +105,7 @@ describe('KeyboardService', () => {
     const next = vi.fn();
     const close = vi.fn();
     const palette = vi.fn();
-    registry.register({ 'list.next': { run: next }, 'window.close': { run: close }, 'palette.open': { run: palette } });
+    registry.register({ 'list.next': { run: next }, 'view.back': { run: close }, 'palette.open': { run: palette } });
     const input = { tagName: 'INPUT', type: 'text', isContentEditable: false, closest: () => null };
     expect(service.handle(key('j', { target: input as unknown as EventTarget }))).toBe(false);
     expect(next).not.toHaveBeenCalled();

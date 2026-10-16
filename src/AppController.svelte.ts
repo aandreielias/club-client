@@ -11,6 +11,7 @@ import type { PreferencesService } from './lib/preferences/PreferencesService.sv
 import type { WindowService } from './lib/window/WindowService.svelte';
 import { SHORTCUTS, type CommandId } from './shortcuts';
 import type { EventBus } from './lib/bus';
+import type { BackStack } from './lib/navigation/BackStack.svelte';
 import { APP_ERROR, NAVIGATE, WINDOW_CLOSE, WINDOW_OPEN } from './channels';
 import { MEMBERSHIP_CHANGED } from './features/teams/events';
 import type { RouteParams, Router } from './lib/router/Router.svelte';
@@ -34,6 +35,7 @@ export interface AppDependencies {
   keyboard: KeyboardService;
   windows: WindowService;
   preferences: PreferencesService;
+  backStack: BackStack;
 }
 
 /** Drives start-up, login/logout transitions, the signed-in session and page resolution for App.svelte. */
@@ -126,7 +128,7 @@ export class AppController {
 
   /** App-wide commands: palette, settings, theme, navigation and window placement. */
   private registerGlobalCommands(): () => void {
-    const { commands, windows, preferences, bus } = this.deps;
+    const { commands, windows, preferences, bus, backStack } = this.deps;
     const windowOpen = () => windows.current !== null;
     const navigation = Object.fromEntries(
       (Object.entries(SHORTCUTS) as [CommandId, (typeof SHORTCUTS)[CommandId]][])
@@ -144,6 +146,9 @@ export class AppController {
       'theme.toggle': { run: () => preferences.toggleScheme(matchMedia('(prefers-color-scheme: dark)').matches) },
       'auth.logout': { run: () => void this.logout() },
       'nav.back': { run: () => history.back() },
+      // Escape: leave the newest inner view (edit mode, panel), else the previous record, else close.
+      'view.back': { run: () => backStack.back() || windows.back(), when: () => backStack.depth > 0 || windowOpen() },
+      'form.submit': { run: () => AppController.focusedForm()?.requestSubmit(), when: () => !!AppController.focusedForm() },
       'window.close': { run: () => bus.publish(WINDOW_CLOSE), when: windowOpen },
       'window.center': { run: () => windows.setDock('center'), when: windowOpen },
       'window.side': { run: () => windows.setDock('side'), when: windowOpen },
@@ -157,6 +162,11 @@ export class AppController {
         when: () => !!windows.current && !!windows.content(windows.current.kind)?.page,
       },
     });
+  }
+
+  /** The form that holds the focus, if any (Mod+Enter saves it). */
+  private static focusedForm(): HTMLFormElement | null {
+    return document.activeElement instanceof HTMLElement ? document.activeElement.closest('form') : null;
   }
 
   async logout(): Promise<void> {

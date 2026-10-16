@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { documentTitle } from '../lib/container';
   import Icon from './Icon.svelte';
 
   /**
@@ -22,6 +23,10 @@
     contextEnd?: Snippet;
     children: Snippet;
   } = $props();
+
+  $effect(() => {
+    documentTitle.page = title;
+  });
 </script>
 
 <article>

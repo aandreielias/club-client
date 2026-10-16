@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { autofocus } from '../../ui/autofocus';
   import { settings } from '../../settings';
   import { bus, session } from '../../lib/container';
   import { CreateController } from '../../lib/detail/CreateController.svelte';
@@ -30,7 +31,7 @@
 
 <Detail title="Mitglied einladen">
   <p class="muted">Die Person bekommt eine E-Mail mit einem Link, über den sie ihr Passwort festlegt.</p>
-  <form class="stack" onsubmit={submit} novalidate>
+  <form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
     <Field label="E-Mail" error={form.error('email')}>
       <input type="email" bind:value={form.email} autocomplete="off" required />
     </Field>

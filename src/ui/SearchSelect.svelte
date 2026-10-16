@@ -99,6 +99,7 @@
     const option = options[index];
     if (!option || option.disabled) return;
     onpick(option.value);
+    input?.dispatchEvent(new Event('change', { bubbles: true }));
     query = '';
     options = options.filter((o) => o.value !== option.value);
     active = Math.min(index, options.length - 1);

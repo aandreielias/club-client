@@ -91,7 +91,10 @@
     const changed = option.value !== value;
     value = option.value;
     hide();
-    if (changed) onchange?.(option.value);
+    if (!changed) return;
+    onchange?.(option.value);
+    // Like a native select: lets surrounding forms notice the edit (unsaved-changes check).
+    trigger?.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   function firstEnabled(from: number, step: 1 | -1): number {

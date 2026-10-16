@@ -21,8 +21,10 @@ export const WINDOW_CLOSE = defineEvent('ui/window/close');
 export interface WindowHandle {
   setTitle(title: string): void;
   close(): void;
-  /** Replaces the content (e.g. after creating a record, show it). */
+  /** Shows another record in the window; Back (Escape) returns to the current one. */
   open(kind: string, id: string): void;
+  /** Replaces the content without a way back (e.g. the new record after its create form). */
+  replace(kind: string, id: string): void;
   /** Leaves the window for a full page. */
   navigate(path: string): void;
 }
@@ -51,6 +53,9 @@ export class WindowService {
   readonly current: WindowTarget | null;
 
   readonly #contents = new Map<string, WindowContent>();
+  /** Records shown before the current one in this window, oldest first (opened from inside the window). */
+  readonly #trail: WindowTarget[] = [];
+  trailDepth = $state(0);
   /** True while the open entry was pushed by this service, so closing can go back instead of piling up history. */
   #pushed = false;
 
@@ -59,9 +64,13 @@ export class WindowService {
     private readonly store: LocalStore,
     defaultDock: Dock,
     bus: EventBus,
+    /** Asked before the window closes (unsaved changes); false keeps it open. */
+    private readonly mayClose: () => boolean | Promise<boolean> = () => true,
   ) {
+    // Opening from outside (lists, calendar, links) starts a fresh window history.
     bus.subscribe(WINDOW_OPEN, ({ kind, id, dock }) => {
       if (dock) this.setDock(dock);
+      this.setTrail([]);
       this.open(kind, id);
     });
     bus.subscribe(WINDOW_CLOSE, () => this.close());
@@ -90,7 +99,23 @@ export class WindowService {
     if (!replace) this.#pushed = true;
   }
 
+  /** One record back within the window; closes it when there is none. */
+  back(): void {
+    const previous = this.#trail.pop();
+    this.trailDepth = this.#trail.length;
+    if (previous) this.open(previous.kind, previous.id);
+    else this.close();
+  }
+
   close(): void {
+    if (!this.current) return;
+    const answer = this.mayClose();
+    if (answer === true) this.closeNow();
+    else if (answer) void answer.then((ok) => ok && this.closeNow());
+  }
+
+  private closeNow(): void {
+    this.setTrail([]);
     if (!this.current) return;
     if (this.#pushed) {
       this.#pushed = false;
@@ -110,7 +135,11 @@ export class WindowService {
     return {
       setTitle: (title) => (this.title = title),
       close: () => this.close(),
-      open: (kind, id) => this.open(kind, id),
+      open: (kind, id) => {
+        if (this.current) this.setTrail([...this.#trail, this.current]);
+        this.open(kind, id);
+      },
+      replace: (kind, id) => this.open(kind, id),
       navigate: (path) => {
         this.#pushed = false;
         this.router.navigate(path);
@@ -121,6 +150,12 @@ export class WindowService {
   /** Called when history moved without this service (Back/Forward): the pushed entry is gone. */
   forgetPush(): void {
     this.#pushed = false;
+    this.setTrail([]);
+  }
+
+  private setTrail(trail: WindowTarget[]): void {
+    this.#trail.splice(0, this.#trail.length, ...trail);
+    this.trailDepth = trail.length;
   }
 
   private parse(raw: string | null): WindowTarget | null {

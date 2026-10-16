@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { autofocus } from '../../ui/autofocus';
   import { settings } from '../../settings';
   import { bus, session } from '../../lib/container';
   import { TOAST } from '../../channels';
@@ -28,7 +29,7 @@
   }
 </script>
 
-<form class="stack" onsubmit={submit} novalidate>
+<form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
   <div class="grid">
     <Field label="Vorname" error={form.error('firstName')}>
       <input bind:value={form.firstName} maxlength={max} required />

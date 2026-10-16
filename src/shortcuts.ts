@@ -43,7 +43,8 @@ export const SHORTCUTS = {
   'nav.back': { label: 'Zurück', group: 'Navigation', context: 'global', keys: 'Alt+ArrowLeft' },
 
   // ---- Fenster ----
-  'window.close': { label: 'Fenster schließen', group: 'Fenster', context: 'window', keys: 'Escape' },
+  'view.back': { label: 'Eine Ansicht zurück (Bearbeiten beenden, vorheriger Eintrag, Fenster schließen)', group: 'Fenster', context: 'global', keys: 'Escape' },
+  'window.close': { label: 'Fenster schließen', group: 'Fenster', context: 'window', keys: 'Shift+Escape' },
   'window.center': { label: 'Fenster in die Mitte', group: 'Fenster', context: 'window', keys: 'w m' },
   'window.side': { label: 'Fenster an die Seite', group: 'Fenster', context: 'window', keys: 'w s' },
   'window.bottom': { label: 'Fenster nach unten', group: 'Fenster', context: 'window', keys: 'w u' },
@@ -51,6 +52,7 @@ export const SHORTCUTS = {
 
   // ---- Seite und Listen ----
   'page.new': { label: 'Neu anlegen', group: 'Seite', context: 'page', keys: 'n' },
+  'form.submit': { label: 'Formular speichern', group: 'Seite', context: 'global', keys: 'Mod+Enter' },
   'list.search': { label: 'In der Liste suchen', group: 'Listen', context: 'list', keys: '/' },
   'list.next': { label: 'Nächste Zeile', group: 'Listen', context: 'list', keys: 'j' },
   'list.previous': { label: 'Vorherige Zeile', group: 'Listen', context: 'list', keys: 'k' },

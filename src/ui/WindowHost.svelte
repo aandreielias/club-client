@@ -1,22 +1,26 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import type { IconName } from '../icons';
-  import { bus, motion, windows } from '../lib/container';
+  import { backStack, bus, documentTitle, motion, windows } from '../lib/container';
   import { WINDOW_CLOSE } from '../channels';
-  import { DOCKS, type Dock } from '../lib/window/WindowService.svelte';
+  import { type Dock } from '../lib/window/WindowService.svelte';
   import Button from './Button.svelte';
+  import ChoiceGroup, { type Choice } from './ChoiceGroup.svelte';
   import { withKeys } from './tooltip';
 
   /**
    * Renders the single detail window. Placement (center, side, bottom) animates between positions;
    * centered it is modal, docked it leaves the page usable next to it.
    */
-  const ICONS: Record<Dock, IconName> = { center: 'dockCenter', side: 'dockSide', bottom: 'dockBottom' };
   const HINTS = {
     center: withKeys('Fenster in die Mitte', 'window.center'),
     side: withKeys('Fenster an die Seite', 'window.side'),
     bottom: withKeys('Fenster nach unten', 'window.bottom'),
   } satisfies Record<Dock, string>;
+  const DOCK_CHOICES: readonly Choice<Dock>[] = [
+    { value: 'center', label: 'Mitte', icon: 'dockCenter', hint: HINTS.center },
+    { value: 'side', label: 'Seite', icon: 'dockSide', hint: HINTS.side },
+    { value: 'bottom', label: 'Unten', icon: 'dockBottom', hint: HINTS.bottom },
+  ];
 
   const target = $derived(windows.current);
   const content = $derived(target ? windows.content(target.kind) : undefined);
@@ -44,6 +48,30 @@
     if (target) root.dataset.window = windows.dock;
     else delete root.dataset.window;
     return () => delete root.dataset.window;
+  });
+
+  $effect(() => {
+    documentTitle.window = target ? windows.title : '';
+  });
+
+  // When the focused control disappears (edit mode ends, a panel closes), keep focus in the window
+  // instead of dropping it to <body>, so keyboard users stay where they were. Chrome fires no
+  // focusout for removed nodes, so check after each change of the open inner views as well.
+  function regainFocus() {
+    requestAnimationFrame(() => {
+      if (element?.isConnected && (document.activeElement === document.body || !document.activeElement)) element.focus({ preventScroll: true });
+    });
+  }
+  $effect(() => {
+    void backStack.depth;
+    regainFocus();
+  });
+  $effect(() => {
+    const node = element;
+    if (!node) return;
+    const lost = (event: FocusEvent) => !event.relatedTarget && regainFocus();
+    node.addEventListener('focusout', lost);
+    return () => node.removeEventListener('focusout', lost);
   });
 
   function keydown(event: KeyboardEvent) {
@@ -92,13 +120,16 @@
     out:enter
   >
     <header>
-      <h2 id="window-title">{windows.title || ' '}</h2>
+      <div class="heading">
+        {#if windows.trailDepth}
+          <Button size="sm" variant="ghost" icon="back" onclick={() => windows.back()} tooltip={withKeys('Zurück zum vorherigen Eintrag', 'view.back')} />
+        {/if}
+        <h2 id="window-title">{windows.title || ' '}</h2>
+      </div>
       <div class="controls">
-        <div class="docks" role="group" aria-label="Fensterposition">
-          {#each DOCKS as dock (dock)}
-            <Button size="sm" variant="ghost" icon={ICONS[dock]} pressed={windows.dock === dock} onclick={() => windows.setDock(dock)}
-              tooltip={HINTS[dock]} />
-          {/each}
+        <div class="docks">
+          <ChoiceGroup name="window-dock" label="Fensterposition" size="sm" iconOnly options={DOCK_CHOICES}
+            bind:value={() => windows.dock, (dock) => dock && windows.setDock(dock)} />
         </div>
         {#if content.page}
           <Button size="sm" variant="ghost" icon="page" onclick={() => handle.navigate(content.page!(target.id))}
@@ -179,6 +210,16 @@
     min-height: 46px;
     padding: var(--space-xs) var(--space-sm) var(--space-xs) var(--space-xl);
     border-bottom: 1px solid var(--color-border);
+  }
+  .heading {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    min-width: 0;
+  }
+  .heading :global(.button) {
+    margin-left: calc(-1 * var(--space-sm));
+    animation: rise var(--motion-base) var(--motion-easing);
   }
   h2 {
     margin: 0;

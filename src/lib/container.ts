@@ -22,6 +22,8 @@ import { ClubPermissions } from './policy/ClubPermissions';
 import { CalendarSources } from './calendar/CalendarSources';
 import { LinkResolver } from './router/LinkResolver';
 import { NavCatalog } from './navigation/NavCatalog';
+import { BackStack } from './navigation/BackStack.svelte';
+import { DocumentTitle } from './navigation/DocumentTitle.svelte';
 import { Router } from './router/Router.svelte';
 import { StepUpService } from './security/StepUpService.svelte';
 import { SessionStore } from './session/SessionStore.svelte';
@@ -99,11 +101,17 @@ export const directory = new TeamDirectory(api, session);
 
 export const permissions = new ClubPermissions(session, directory);
 
+/** Browser tab title, kept by Page, WindowHost and App. */
+export const documentTitle = new DocumentTitle(() => session.club?.name ?? '');
+
+/** Escape steps (edit modes, panels) of whatever is open; see the `view.back` command. */
+export const backStack = new BackStack();
+
 export const router = new Router(bus, (change) => motion.transition(change));
 
 export const links = new LinkResolver();
 
-export const windows = new WindowService(router, store, settings.window.defaultDock, bus);
+export const windows = new WindowService(router, store, settings.window.defaultDock, bus, () => backStack.mayLeave());
 
 export const calendarSources = new CalendarSources();
 

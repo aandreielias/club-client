@@ -1,6 +1,6 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { bus, session } from '../../lib/container';
+  import { backStack, bus, session } from '../../lib/container';
   import { TOAST } from '../../channels';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -12,6 +12,7 @@
   let { task, detail, editable }: { task: Task; detail: TaskDetailModel; editable: boolean } = $props();
 
   let editing = $state(false);
+  backStack.while(() => editing, () => (editing = false));
   let value = $state('');
 
   function start() {

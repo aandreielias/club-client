@@ -1,6 +1,6 @@
 <script lang="ts">
   import { settings } from '../settings';
-  import { bus } from '../lib/container';
+  import { backStack, bus } from '../lib/container';
   import { TOAST } from '../channels';
   import { FILES_CHANGED } from '../features/files/events';
   import { ITEM_CHANGED } from '../features/inventory/events';
@@ -36,6 +36,7 @@
   async function save() {
     if (await model.commit()) bus.publish(TOAST, { text: 'Benötigt und Dateien gespeichert.' });
   }
+  backStack.while(() => model.editing, () => model.cancel());
 </script>
 
 {#if model.editing}

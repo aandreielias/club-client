@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { bus, directory, router, store, windows } from '../../lib/container';
-  import { WINDOW_OPEN } from '../../channels';
+  import { backStack, bus, directory, router, store, windows } from '../../lib/container';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import type { RosterEntry, TeamRole } from '../../lib/types';
@@ -40,6 +39,7 @@
   });
 
   let adding = $state(false);
+  backStack.while(() => adding, () => (adding = false));
 
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle);
@@ -59,7 +59,7 @@
   }
 
   function open(entry: RosterEntry) {
-    if (policy.canOpenProfile(model.teamId, entry)) bus.publish(WINDOW_OPEN, { kind: 'member', id: entry.memberId });
+    if (policy.canOpenProfile(model.teamId, entry)) view.open('member', entry.memberId);
   }
 
   function rowMenu(entry: RosterEntry): MenuEntry[] {
