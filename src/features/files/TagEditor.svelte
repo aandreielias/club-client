@@ -26,7 +26,10 @@
   const list = new PersonListModel(
     async () => {
       await directory.loadRosters(); // team column and filter
-      if (folder.teamId) return directory.candidates(folder.teamId);
+      if (folder.teamIds.length) {
+        const lists = await Promise.all(folder.teamIds.map((id) => directory.candidates(id)));
+        return [...new Map(lists.flat().map((p) => [p.memberId, p] as const)).values()];
+      }
       if (permissions.isManager) return directory.candidates(null);
       const rosters = await Promise.all(session.teams.map((t) => directory.roster(t.id)));
       const unique = new Map(rosters.flatMap((r) => r?.entries ?? []).map((e) => [e.memberId, e] as const));

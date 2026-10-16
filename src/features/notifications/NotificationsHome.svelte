@@ -1,7 +1,7 @@
 <script lang="ts">
   import { settings } from '../../settings';
   import { session, store } from '../../lib/container';
-  import LinkButton from '../../ui/LinkButton.svelte';
+  import SectionHeading from '../../ui/SectionHeading.svelte';
   import { NotificationListModel } from './NotificationListModel.svelte';
   import NotificationTable from './NotificationTable.svelte';
   import { notificationCenter as center } from './services';
@@ -15,26 +15,7 @@
   });
 </script>
 
-<section>
-  <h2 class="heading">
-    Benachrichtigungen
-    {#if center.unread}<span class="muted count">{center.unread} neu</span>{/if}
-    <LinkButton href="#/notifications" tooltip="Alle Benachrichtigungen anzeigen">Alle anzeigen</LinkButton>
-  </h2>
-  <NotificationTable {list} toolbar={false} emptyText="Keine Benachrichtigungen." />
-</section>
-
-<style>
-  .heading {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-  }
-  .heading :global(a:last-child) {
-    margin-left: auto;
-  }
-  .count {
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-medium);
-  }
-</style>
+<SectionHeading title="Benachrichtigungen" href="#/notifications">
+  {#snippet note()}{#if center.unread}{center.unread} neu{/if}{/snippet}
+</SectionHeading>
+<NotificationTable {list} toolbar={false} emptyText="Keine Benachrichtigungen." />

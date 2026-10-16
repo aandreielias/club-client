@@ -13,7 +13,7 @@ import { UploadQueue } from './UploadQueue.svelte';
 const types = new FileTypes(settings.files.imageExtensions, settings.files.documentExtensions);
 
 const folder = (id: string, parentId: string | null, name = id): Folder => ({
-  id, parentId, name, kind: 'DOCUMENTS', scope: 'CLUB', teamId: null, membersCanUpload: true, color: null, coverFileId: null, canUpload: true, canManage: false,
+  id, parentId, name, kind: 'DOCUMENTS', scope: 'CLUB', teamIds: [], membersCanUpload: true, color: null, coverFileId: null, canUpload: true, canManage: false,
 });
 
 describe('FileTypes', () => {
@@ -41,18 +41,18 @@ describe('FolderTree', () => {
 
 describe('FolderForm', () => {
   it('needs a name, and a team for team folders', () => {
-    const form = new FolderForm(null, { scope: 'TEAM', teamId: null });
+    const form = new FolderForm(null, { scope: 'TEAM', teamIds: [] });
     expect(Object.keys(form.errors).sort()).toEqual(['name', 'team']);
     form.name = ' Fotos ';
-    form.teamId = 't1';
-    expect(form.toNew()).toMatchObject({ parentId: null, name: 'Fotos', scope: 'TEAM', teamId: 't1' });
+    form.teamIds = ['t1', 't2'];
+    expect(form.toNew()).toMatchObject({ parentId: null, name: 'Fotos', scope: 'TEAM', teamIds: ['t1', 't2'] });
   });
 
   it('lets subfolders inherit scope and team', () => {
-    const form = new FolderForm({ ...folder('p', null), kind: 'PHOTOS' }, { scope: 'TEAM', teamId: 't1' });
+    const form = new FolderForm({ ...folder('p', null), kind: 'PHOTOS' }, { scope: 'TEAM', teamIds: ['t1'] });
     form.name = 'Turnier';
     expect(form.valid).toBe(true);
-    expect(form.toNew()).toMatchObject({ parentId: 'p', kind: 'PHOTOS', scope: null, teamId: null });
+    expect(form.toNew()).toMatchObject({ parentId: 'p', kind: 'PHOTOS', scope: null, teamIds: [] });
   });
 });
 

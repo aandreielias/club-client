@@ -7,7 +7,7 @@
 
   /** Greeting plus the sections the member chose in Einstellungen > Startseite, each on its own card. */
   const sections = $derived(
-    homeSections.shown(preferences.values.homeOrder, preferences.values.homeHidden, (...roles) => session.hasRole(...roles)),
+    homeSections.shown(preferences.values.homeOrder, preferences.values.homeShown, (...roles) => session.hasRole(...roles)),
   );
 </script>
 

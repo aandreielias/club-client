@@ -55,7 +55,7 @@ Reactive state is still read directly from services where it is rendered (`sessi
 2. Add a service class for the endpoints that takes `ApiClient`, with DTO types in `model.ts`. Instantiate it in `services.ts` from the container.
 3. Put page state in view-model classes (`Resource`, `Action`, `$state`/`$derived` fields). Keep pages thin.
 4. `mock.ts` registers fake endpoints with `mockServer.on(...)`. It is loaded automatically in mock mode. After a write, it publishes the server's event with `mockServer.events.publish({ type, data, audience })`. Events without an `audience` stay inside the mock server, for other mock modules.
-   Start page sections: `Feature.home` (`id`, `label`, `component`); members order and hide them in Einstellungen > Startseite.
+   Start page sections: `Feature.home` (one or several `{ id, label, component, roles?, defaultShown? }`); every sidebar area offers one, members switch them on and order them in Einstellungen > Startseite.
 5. Access: routes and windows take `roles` (windows also `canOpen(id)` for per-record rules); a window the member may not open does not appear, also when opened by URL or notification link. The server decides as well, so restrict both.
 5. Lists extend `ListModel` and render with `DataTable`. Details are window contents (`{ id, handle }` props) registered in `Feature.windows`, plus an optional full-page route that wraps the same view in `DetailPage`.
 6. Live updates: declare the event in `events.ts` with `liveEvent<T>('<module>.<event>')`, then call `useBus(bus, EVENT, handler)` in a page and reload what it shows (record views use `DetailController.watch`). Commands go over the bus too: `bus.publish(TOAST, { text })`, `await bus.request(CONFIRM, {...})`.

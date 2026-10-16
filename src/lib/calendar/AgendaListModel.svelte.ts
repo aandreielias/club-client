@@ -1,16 +1,25 @@
-import type { CalendarEntry, CalendarSources } from '../../lib/calendar/CalendarSources';
-import type { TeamDirectory } from '../../lib/directory/TeamDirectory.svelte';
-import { ListModel } from '../../lib/list/ListModel.svelte';
-import type { LocalStore } from '../../lib/storage/LocalStore';
-import type { Formatter } from '../../lib/time/Formatter';
-import { ZonedClock } from '../../lib/time/ZonedClock';
+import type { CalendarEntry, CalendarSources } from './CalendarSources';
+import type { TeamDirectory } from '../directory/TeamDirectory.svelte';
+import { ListModel } from '../list/ListModel.svelte';
+import type { LocalStore } from '../storage/LocalStore';
+import type { Formatter } from '../time/Formatter';
+import { ZonedClock } from '../time/ZonedClock';
 
-/** Start page: everything of the next days from all calendar sources (appointments, due tasks). */
-export class HomeAgendaModel extends ListModel<CalendarEntry> {
-  constructor(sources: CalendarSources, clock: ZonedClock, days: number, format: () => Formatter, directory: TeamDirectory, store: LocalStore) {
+export interface AgendaOptions {
+  /** Key of the remembered filter and sort state. */
+  id: string;
+  days: number;
+  /** Preselected calendar source (e.g. 'appointments'); none = all. */
+  source?: string;
+}
+
+/** The next days from the calendar sources (appointments, due tasks) as a list; used on the start page. */
+export class AgendaListModel extends ListModel<CalendarEntry> {
+  constructor(sources: CalendarSources, clock: ZonedClock, options: AgendaOptions, format: () => Formatter, directory: TeamDirectory, store: LocalStore | null) {
+    const days = options.days;
     super(
       {
-        id: 'home-agenda',
+        id: options.id,
         load: (server) => {
           const today = clock.today();
           const enabled = server.source ? new Set([server.source]) : undefined;
@@ -30,6 +39,7 @@ export class HomeAgendaModel extends ListModel<CalendarEntry> {
             kind: 'select',
             allLabel: 'Alles',
             options: () => sources.all.map((s) => ({ value: s.id, label: s.label })),
+            initial: options.source,
           },
         ],
       },

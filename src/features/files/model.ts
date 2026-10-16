@@ -17,7 +17,8 @@ export interface Folder {
   name: string;
   kind: FolderKind;
   scope: FolderScope;
-  teamId: string | null;
+  /** TEAM folders: one or more teams; empty otherwise. */
+  teamIds: string[];
   membersCanUpload: boolean;
   color: FolderColor | null;
   /** A photo of this folder shown on its gallery tile. */
@@ -37,15 +38,15 @@ export interface NewFolder {
   name: string;
   kind: FolderKind;
   scope: FolderScope | null;
-  teamId: string | null;
+  teamIds: string[];
   membersCanUpload: boolean;
 }
 
-/** Omitted fields stay unchanged. Scope/team only for top-level folders (the tree follows). */
+/** Omitted fields stay unchanged. Scope/teams only for top-level folders (the tree follows). */
 export interface FolderPatch {
   name?: string;
   scope?: FolderScope;
-  teamId?: string | null;
+  teamIds?: string[];
   color?: FolderColor;
   clearColor?: boolean;
   coverFileId?: string;

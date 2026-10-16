@@ -9,7 +9,7 @@ const DAY_MS = 86_400_000;
 
 /** The task list: server filters (mine, team, done) plus client filters for status and due date. */
 export class TaskListModel extends ListModel<Task> {
-  constructor(api: TasksApi, policy: TaskPolicy, directory: TeamDirectory, store: LocalStore) {
+  constructor(api: TasksApi, policy: TaskPolicy, directory: TeamDirectory, store: LocalStore | null) {
     super(
       {
         id: 'tasks',

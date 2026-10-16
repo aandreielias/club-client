@@ -201,7 +201,11 @@
         aria-selected={option.value === value}
         aria-disabled={option.disabled}
         data-active={index === active}
-        onclick={() => choose(index)}
+        onclick={(e) => {
+          // Inside a <label> (Field) a click would also re-activate the trigger and reopen the list.
+          e.preventDefault();
+          choose(index);
+        }}
         onpointermove={() => !option.disabled && (active = index)}
       >
         <span class="tick" aria-hidden="true"></span>

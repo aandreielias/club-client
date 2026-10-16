@@ -1,3 +1,4 @@
+import FilesHome from './FilesHome.svelte';
 import type { Feature } from '../Feature';
 import FilesPage from './FilesPage.svelte';
 import { FILE_MESSAGES } from './messages';
@@ -12,4 +13,5 @@ export const filesFeature: Feature = {
   // `photo` stays for links that name it; both show any file.
   windows: { file: { component: PhotoView }, photo: { component: PhotoView } },
   messages: FILE_MESSAGES,
+  home: { id: 'files', label: 'Ordner', component: FilesHome },
 };

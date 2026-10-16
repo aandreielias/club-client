@@ -1,5 +1,6 @@
 <script lang="ts">
   import { settings } from '../../settings';
+  import { directory } from '../../lib/container';
   import { Action } from '../../lib/state/Action.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
@@ -8,6 +9,7 @@
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
+  import CheckList from '../../ui/CheckList.svelte';
   import { tooltip } from '../../ui/tooltip';
   import { FolderEditForm } from './FolderEditForm.svelte';
   import { FOLDER_COLORS, FOLDER_SCOPES, scopeLabel, type Folder } from './model';
@@ -24,6 +26,9 @@
   // svelte-ignore state_referenced_locally
   const scopes = FOLDER_SCOPES.filter((s) => filePolicy.rootScopes().includes(s.value) || s.value === folder.scope);
   const teams = filePolicy.rootTeams();
+  // Teams already on the folder stay listed even if the member could not choose them (e.g. admin-made shared folders).
+  // svelte-ignore state_referenced_locally
+  const teamOptions = [...teams.map((t) => ({ value: t.id, label: t.name })), ...folder.teamIds.filter((id) => !teams.some((t) => t.id === id)).map((id) => ({ value: id, label: directory.teamName(id) ?? 'Team' }))];
   // svelte-ignore state_referenced_locally
   const photos = new Resource(async () => (await filesApi.files(folder.id)).filter((f) => fileTypes.isImage(f.contentType)));
   void photos.load();
@@ -51,9 +56,7 @@
         <Select bind:value={form.scope} options={scopes} />
       </Field>
       {#if form.scope === 'TEAM'}
-        <Field label="Team" error={form.error('team')}>
-          <Select bind:value={form.teamId} options={teams.map((t) => ({ value: t.id, label: t.name }))} />
-        </Field>
+        <CheckList legend="Teams" bind:value={form.teamIds} options={teamOptions} error={form.error('team')} />
       {/if}
     {:else}
       <p class="muted hint">Sichtbar für: {scopeLabel(folder.scope)}. Unterordner übernehmen die Sichtbarkeit vom obersten Ordner.</p>

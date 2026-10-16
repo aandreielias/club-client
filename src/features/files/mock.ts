@@ -37,12 +37,13 @@ class Viewer {
 
   canSee(f: StoredFolder): boolean {
     if (f.scope === 'CLUB') return true;
-    if (f.scope === 'TEAM') return this.board || this.teamIds.has(f.teamId ?? '');
+    if (f.scope === 'TEAM') return this.board || f.teamIds.some((t) => this.teamIds.has(t));
     return this.board;
   }
 
   canManage(f: StoredFolder): boolean {
-    return this.board || (f.scope === 'TEAM' && this.coachTeamIds.has(f.teamId ?? ''));
+    // Coaches manage a team folder only when they coach every one of its teams.
+    return this.board || (f.scope === 'TEAM' && f.teamIds.every((t) => this.coachTeamIds.has(t)));
   }
 }
 
@@ -56,6 +57,13 @@ export class MockFiles {
   constructor(private readonly people: MockDirectory) {
     this.folders = new MockTable('folders', () => MockFiles.seedFolders());
     this.files = new MockTable('files', () => MockFiles.seedFiles());
+    // Folders stored before several teams per folder existed carry a single `teamId` (server: migration V16).
+    for (const f of this.folders.data as (StoredFolder & { teamId?: string | null })[]) {
+      if (!Array.isArray(f.teamIds)) {
+        f.teamIds = f.teamId ? [f.teamId] : [];
+        delete f.teamId;
+      }
+    }
   }
 
   listFolders(member: Member): Folder[] {
@@ -72,12 +80,13 @@ export class MockFiles {
     if (body.parentId) {
       const parent = this.visibleFolder(viewer, body.parentId);
       if (this.depth(parent) >= limits.maxFolderDepth) fail(400, 'folder.too-deep');
-      folder = { id: crypto.randomUUID(), parentId: parent.id, name, kind: body.kind, scope: parent.scope, teamId: parent.teamId, membersCanUpload: !!body.membersCanUpload, color: null, coverFileId: null };
+      folder = { id: crypto.randomUUID(), parentId: parent.id, name, kind: body.kind, scope: parent.scope, teamIds: [...parent.teamIds], membersCanUpload: !!body.membersCanUpload, color: null, coverFileId: null };
     } else {
       const scope = body.scope as FolderScope;
       if (!['CLUB', 'TEAM', 'BOARD'].includes(scope)) fail(400, 'folder.kind-or-scope-missing');
-      if ((scope === 'TEAM') !== !!body.teamId) fail(400, 'folder.team-scope-mismatch');
-      folder = { id: crypto.randomUUID(), parentId: null, name, kind: body.kind, scope, teamId: body.teamId ?? null, membersCanUpload: !!body.membersCanUpload, color: null, coverFileId: null };
+      const teamIds: string[] = Array.isArray(body.teamIds) ? [...new Set(body.teamIds.map(String))] : [];
+      if ((scope === 'TEAM') !== teamIds.length > 0) fail(400, 'folder.team-scope-mismatch');
+      folder = { id: crypto.randomUUID(), parentId: null, name, kind: body.kind, scope, teamIds, membersCanUpload: !!body.membersCanUpload, color: null, coverFileId: null };
     }
     this.requireManage(viewer, folder);
     this.folders.data.push(folder);
@@ -93,10 +102,11 @@ export class MockFiles {
     const name = body.name === undefined ? folder.name : String(body.name).trim();
     if (!name || name.length > limits.folderNameMaxLength) fail(400, 'folder.name-invalid');
     const scope: FolderScope = body.scope ?? folder.scope;
-    const teamId: string | null = body.scope ? (body.teamId ?? null) : folder.teamId;
-    const scopeChanged = scope !== folder.scope || teamId !== folder.teamId;
+    const current = [...folder.teamIds].sort();
+    const teamIds: string[] = body.scope ? [...new Set<string>((body.teamIds ?? []).map(String))].sort() : current;
+    const scopeChanged = scope !== folder.scope || teamIds.join() !== current.join();
     if (scopeChanged && folder.parentId) fail(400, 'folder.scope-inherited');
-    if ((scope === 'TEAM') !== !!teamId) fail(400, 'folder.team-scope-mismatch');
+    if ((scope === 'TEAM') !== teamIds.length > 0) fail(400, 'folder.team-scope-mismatch');
     let cover = body.clearCover ? null : (folder.coverFileId ?? null);
     if (body.coverFileId && !body.clearCover) {
       const file = this.files.data.find((f) => f.id === body.coverFileId && f.folderId === folder.id && f.contentType.startsWith('image/'));
@@ -104,11 +114,11 @@ export class MockFiles {
       cover = body.coverFileId;
     }
     const color = body.clearColor ? null : (body.color ?? folder.color ?? null);
-    const changed: StoredFolder = { ...folder, name, scope, teamId, color, coverFileId: cover };
+    const changed: StoredFolder = { ...folder, name, scope, teamIds, color, coverFileId: cover };
     this.requireManage(viewer, changed);
     const before = { ...folder };
     Object.assign(folder, changed);
-    if (scopeChanged) for (const sub of this.descendants(folder.id)) Object.assign(sub, { scope, teamId });
+    if (scopeChanged) for (const sub of this.descendants(folder.id)) Object.assign(sub, { scope, teamIds });
     this.folders.save();
     this.changed(before, null, 'FOLDER_UPDATED');
     if (scopeChanged) this.changed(folder, null, 'FOLDER_UPDATED');
@@ -142,6 +152,12 @@ export class MockFiles {
     this.changed(folder, file.id, 'UPDATED');
     if (target !== folder) this.changed(target, file.id, 'UPDATED');
     return file;
+  }
+
+  /** server: FileHandlers.audience - members of all the folder's teams plus their guardians, admin and board. */
+  private teamsAudience(teamIds: readonly string[]): MockAudience {
+    const audiences = teamIds.map((id) => this.people.teamAudience(id));
+    return { members: [...new Set(audiences.flatMap((a) => a.members ?? []))], roles: ['ADMIN', 'BOARD'] };
   }
 
   private descendants(id: string): StoredFolder[] {
@@ -351,7 +367,7 @@ export class MockFiles {
   /** server: FileHandlers.audience */
   private changed(folder: StoredFolder, fileId: string | null, change: 'UPLOADED' | 'DELETED' | 'TAGGED' | 'UPDATED' | 'FOLDER_UPDATED'): void {
     const audience: MockAudience =
-      folder.scope === 'CLUB' ? { everyone: true } : folder.scope === 'BOARD' ? { roles: ['ADMIN', 'BOARD'] } : this.people.teamAudience(folder.teamId);
+      folder.scope === 'CLUB' ? { everyone: true } : folder.scope === 'BOARD' ? { roles: ['ADMIN', 'BOARD'] } : this.teamsAudience(folder.teamIds);
     mockServer.events.publish({ type: 'files.files-changed', data: { folderId: folder.id, fileId, change }, audience });
   }
 
@@ -496,7 +512,7 @@ export class MockFiles {
   private static seedFolders(): StoredFolder[] {
     const folder = (id: string, name: string, kind: FolderKind, scope: FolderScope, teamId: string | null, membersCanUpload: boolean, parentId: string | null = null,
       style: Pick<StoredFolder, 'color' | 'coverFileId'> = { color: null, coverFileId: null }): StoredFolder =>
-      ({ id, parentId, name, kind, scope, teamId, membersCanUpload, ...style });
+      ({ id, parentId, name, kind, scope, teamIds: teamId ? [teamId] : [], membersCanUpload, ...style });
     return [
       folder('f-docs', 'Vereinsdokumente', 'DOCUMENTS', 'CLUB', null, false),
       folder('f-minutes', 'Protokolle', 'DOCUMENTS', 'CLUB', null, false, 'f-docs'),

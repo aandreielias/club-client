@@ -3,7 +3,7 @@ import { FileEditForm, FolderEditForm } from './FolderEditForm.svelte';
 import type { Folder, StoredFile } from './model';
 
 const folder = (overrides: Partial<Folder> = {}): Folder => ({
-  id: 'f1', parentId: null, name: 'Fotos', kind: 'PHOTOS', scope: 'TEAM', teamId: 't1', membersCanUpload: false,
+  id: 'f1', parentId: null, name: 'Fotos', kind: 'PHOTOS', scope: 'TEAM', teamIds: ['t1'], membersCanUpload: false,
   color: 'BLUE', coverFileId: 'p1', canUpload: true, canManage: true, ...overrides,
 });
 
@@ -15,17 +15,17 @@ describe('FolderEditForm', () => {
     form.color = null;
     form.coverFileId = null;
     form.scope = 'CLUB';
-    expect(form.toPatch()).toEqual({ name: 'Fotos 2026', scope: 'CLUB', teamId: null, clearColor: true, clearCover: true });
+    expect(form.toPatch()).toEqual({ name: 'Fotos 2026', scope: 'CLUB', teamIds: [], clearColor: true, clearCover: true });
   });
 
   it('never changes the visibility of subfolders and requires a team for team folders', () => {
     const sub = new FolderEditForm(folder({ parentId: 'root' }));
     sub.scope = 'BOARD';
     expect(sub.toPatch()).toEqual({});
-    const root = new FolderEditForm(folder({ scope: 'CLUB', teamId: null }));
+    const root = new FolderEditForm(folder({ scope: 'CLUB', teamIds: [] }));
     root.scope = 'TEAM';
     root.submitted = true;
-    expect(root.error('team')).toBe('Team auswählen.');
+    expect(root.error('team')).toBe('Mindestens ein Team auswählen.');
   });
 });
 

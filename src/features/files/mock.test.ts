@@ -62,7 +62,7 @@ describe('mock files', () => {
     stepUp('admin');
     let parent = 'f-minutes';
     for (let depth = 3; depth <= 5; depth++) parent = files.createFolder(member('admin'), { parentId: parent, name: `L${depth}`, kind: 'DOCUMENTS' }).id;
-    expect(files.listFolders(member('admin')).find((f) => f.id === parent)).toMatchObject({ scope: 'CLUB', teamId: null });
+    expect(files.listFolders(member('admin')).find((f) => f.id === parent)).toMatchObject({ scope: 'CLUB', teamIds: [] });
     expect(() => files.createFolder(member('admin'), { parentId: parent, name: 'L6', kind: 'DOCUMENTS' })).toThrow(expect.objectContaining({ code: 'folder.too-deep' }));
   });
 });

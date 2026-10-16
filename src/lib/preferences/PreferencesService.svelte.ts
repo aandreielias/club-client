@@ -19,9 +19,9 @@ export interface Preferences {
   navOrder: string[];
   /** One view for every folder; changing it in any folder changes it everywhere. */
   filesView: FilesViewPreference;
-  /** Start page section ids in the user's order ([] = default) and the ones switched off. */
+  /** Start page section ids in the user's order ([] = default) and sections switched on or off (others: their default). */
   homeOrder: string[];
-  homeHidden: string[];
+  homeShown: Record<string, boolean>;
 }
 
 const STORE_KEY = 'preferences';
@@ -51,7 +51,7 @@ export class PreferencesService {
       navOrder: [],
       filesView: defaults.filesView,
       homeOrder: [],
-      homeHidden: [],
+      homeShown: {},
     };
     this.values = this.sanitize({ ...this.#defaults, ...(store?.get<Partial<Preferences>>(STORE_KEY) ?? {}) });
   }
@@ -99,7 +99,9 @@ export class PreferencesService {
       navOrder: PreferencesService.strings(values.navOrder),
       filesView: values.filesView === 'table' || values.filesView === 'gallery' ? values.filesView : d.filesView,
       homeOrder: PreferencesService.strings(values.homeOrder),
-      homeHidden: PreferencesService.strings(values.homeHidden),
+      homeShown: Object.fromEntries(
+        Object.entries(values.homeShown && typeof values.homeShown === 'object' ? values.homeShown : {}).filter(([, on]) => typeof on === 'boolean'),
+      ),
     };
   }
 

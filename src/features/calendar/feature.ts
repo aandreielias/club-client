@@ -1,3 +1,4 @@
+import CalendarHome from './CalendarHome.svelte';
 import { PRIVILEGED } from '../../lib/types';
 import type { Feature } from '../Feature';
 import { AppointmentCalendarSource } from './AppointmentCalendarSource';
@@ -20,5 +21,6 @@ export const calendarFeature: Feature = {
   },
   calendar: new AppointmentCalendarSource(calendarApi),
   messages: CALENDAR_MESSAGES,
+  home: { id: 'calendar', label: 'Termine', component: CalendarHome },
   links: [{ server: '/appointments/:id', to: ({ id }) => ({ window: { kind: 'appointment', id } }) }],
 };

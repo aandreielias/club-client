@@ -158,7 +158,7 @@
         aria-disabled={option.disabled}
         data-active={index === active}
         onpointerdown={(e) => e.preventDefault()}
-        onclick={() => pick(index)}
+        onclick={(e) => (e.preventDefault(), pick(index))}
         onpointermove={() => (active = index)}
       >
         {option.label}

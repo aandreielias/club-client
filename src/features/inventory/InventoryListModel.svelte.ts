@@ -5,7 +5,7 @@ import type { Item } from './model';
 
 /** The inventory list: search, category filter, sorting by name, category, stock or place. */
 export class InventoryListModel extends ListModel<Item> {
-  constructor(api: InventoryApi, store: LocalStore) {
+  constructor(api: InventoryApi, store: LocalStore | null) {
     super(
       {
         id: 'inventory',

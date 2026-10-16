@@ -1,3 +1,4 @@
+import TeamsHome from './TeamsHome.svelte';
 import type { Feature } from '../Feature';
 import { TEAM_MESSAGES } from './messages';
 import TeamPage from './TeamPage.svelte';
@@ -14,4 +15,5 @@ export const teamsFeature: Feature = {
     team: { component: TeamView, page: (id) => `/teams/${encodeURIComponent(id)}` },
   },
   messages: TEAM_MESSAGES,
+  home: { id: 'teams', label: 'Meine Teams', component: TeamsHome },
 };

@@ -10,7 +10,7 @@ export interface FolderEditErrors {
 export class FolderEditForm {
   name = $state('');
   scope = $state<FolderScope>('CLUB');
-  teamId = $state('');
+  teamIds = $state<string[]>([]);
   color = $state<FolderColor | null>(null);
   coverFileId = $state<string | null>(null);
   submitted = $state(false);
@@ -21,7 +21,7 @@ export class FolderEditForm {
   constructor(readonly folder: Folder) {
     this.name = folder.name;
     this.scope = folder.scope;
-    this.teamId = folder.teamId ?? '';
+    this.teamIds = [...folder.teamIds];
     this.color = folder.color;
     this.coverFileId = folder.coverFileId;
     this.errors = $derived(this.validate());
@@ -41,10 +41,11 @@ export class FolderEditForm {
     const patch: FolderPatch = {};
     const name = this.name.trim();
     if (name !== this.folder.name) patch.name = name;
-    const teamId = this.scope === 'TEAM' ? this.teamId || null : null;
-    if (this.canChangeScope && (this.scope !== this.folder.scope || teamId !== this.folder.teamId)) {
+    const teamIds = this.scope === 'TEAM' ? [...this.teamIds].sort() : [];
+    const sameTeams = teamIds.join() === [...this.folder.teamIds].sort().join();
+    if (this.canChangeScope && (this.scope !== this.folder.scope || !sameTeams)) {
       patch.scope = this.scope;
-      patch.teamId = teamId;
+      patch.teamIds = teamIds;
     }
     if (this.color !== this.folder.color) {
       if (this.color) patch.color = this.color;
@@ -66,7 +67,7 @@ export class FolderEditForm {
     const max = settings.files.folderNameMaxLength;
     const name = this.name.trim();
     if (!name || name.length > max) errors.name = `Name mit 1 bis ${max} Zeichen angeben.`;
-    if (this.canChangeScope && this.scope === 'TEAM' && !this.teamId) errors.team = 'Team auswählen.';
+    if (this.canChangeScope && this.scope === 'TEAM' && !this.teamIds.length) errors.team = 'Mindestens ein Team auswählen.';
     return errors;
   }
 }

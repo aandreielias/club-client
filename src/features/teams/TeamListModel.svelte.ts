@@ -5,7 +5,7 @@ import type { Team } from '../../lib/types';
 
 /** Teams: every team for admin/board, otherwise the member's own. */
 export class TeamListModel extends ListModel<Team> {
-  constructor(load: () => Promise<Team[]>, session: SessionStore, store: LocalStore) {
+  constructor(load: () => Promise<Team[]>, session: SessionStore, store: LocalStore | null) {
     super(
       {
         id: 'teams',

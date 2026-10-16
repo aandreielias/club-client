@@ -1,3 +1,4 @@
+import InventoryHome from './InventoryHome.svelte';
 import { PRIVILEGED } from '../../lib/types';
 import type { Feature } from '../Feature';
 import InventoryPage from './InventoryPage.svelte';
@@ -18,4 +19,5 @@ export const inventoryFeature: Feature = {
     'item-new': { component: ItemCreateView, roles: PRIVILEGED },
   },
   messages: INVENTORY_MESSAGES,
+  home: { id: 'inventory', label: 'Inventar', component: InventoryHome, roles: PRIVILEGED },
 };

@@ -13,5 +13,5 @@ export const notificationsFeature: Feature = {
   ],
   messages: NOTIFICATION_MESSAGES,
   start: () => notificationCenter.start(),
-  home: { id: 'notifications', label: 'Benachrichtigungen', component: NotificationsHome },
+  home: { id: 'notifications', label: 'Benachrichtigungen', component: NotificationsHome, defaultShown: true },
 };

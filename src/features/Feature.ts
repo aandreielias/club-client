@@ -42,8 +42,8 @@ export interface Feature {
   readonly windows?: Readonly<Record<string, WindowContent>>;
   /** Entries this feature contributes to the calendar. */
   readonly calendar?: CalendarSource;
-  /** A section this feature adds to the start page, below the agenda. */
-  readonly home?: HomeSection;
+  /** Sections this feature offers for the start page. */
+  readonly home?: HomeSection | readonly HomeSection[];
   /** Runs while a member is signed in with a complete profile; returns its cleanup. */
   readonly start?: () => (() => void) | void;
 }

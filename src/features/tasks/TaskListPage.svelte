@@ -6,12 +6,10 @@
   import Button from '../../ui/Button.svelte';
   import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
   import { windowMenu } from '../../lib/window/windowMenu';
-  import DataTable from '../../ui/DataTable.svelte';
+  import TaskTable from './TaskTable.svelte';
   import Page from '../../ui/Page.svelte';
-  import Tag from '../../ui/Tag.svelte';
   import { TASK_CHANGED } from './events';
-  import { statusHue, statusLabel, type Task } from './model';
-  import TaskDue from './TaskDue.svelte';
+  import type { Task } from './model';
   import { TaskListModel } from './TaskListModel.svelte';
   import { taskPolicy, tasksApi } from './services';
 
@@ -52,31 +50,5 @@
     {/if}
   {/snippet}
 
-  <DataTable
-    model={list}
-    rowKey={(t) => t.id}
-    onopen={(t) => bus.publish(WINDOW_OPEN, { kind: 'task', id: t.id })}
-    menu={taskMenu}
-    selected={windows.current?.kind === 'task' ? windows.current.id : null}
-    emptyText={list.filters.mine ? 'Dir ist keine offene Aufgabe zugewiesen.' : 'Keine Aufgaben.'}
-  >
-    {#snippet cell(task, column)}
-      {#if column.key === 'title'}
-        <span class:done={task.status === 'DONE'}>{task.title}</span>
-      {:else if column.key === 'status'}
-        <Tag tone={statusHue(task.status)}>{statusLabel(task.status)}</Tag>
-      {:else if column.key === 'due'}
-        <TaskDue {task} />
-      {:else}
-        {list.display(task, column)}
-      {/if}
-    {/snippet}
-  </DataTable>
+  <TaskTable {list} menu={taskMenu} emptyText={list.filters.mine ? 'Dir ist keine offene Aufgabe zugewiesen.' : 'Keine Aufgaben.'} />
 </Page>
-
-<style>
-  .done {
-    color: var(--color-text-muted);
-    text-decoration: line-through;
-  }
-</style>

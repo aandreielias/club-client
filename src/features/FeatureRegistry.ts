@@ -70,7 +70,7 @@ export class FeatureRegistry {
   }
 
   registerHome(sections: HomeSections): void {
-    for (const feature of this.features) if (feature.home) sections.register(feature.home);
+    for (const feature of this.features) for (const section of [feature.home ?? []].flat()) sections.register(section);
   }
 
   /** Starts every feature's session work; the returned function stops all of it. */

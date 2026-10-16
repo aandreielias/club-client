@@ -387,6 +387,10 @@ export const settings = {
     agendaDays: 7,
     /** Newest notifications shown. */
     notificationCount: 5,
+    /** Rows of the other list sections (tasks, inventory, members ...). */
+    listRows: 6,
+    /** Days of the "Termine" section. */
+    calendarDays: 30,
   },
 
   notifications: {

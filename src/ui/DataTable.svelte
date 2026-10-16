@@ -29,6 +29,7 @@
     toolbar = true,
     menu,
     check,
+    limit,
   }: {
     model: ListModel<T>;
     rowKey: (item: T) => string;
@@ -42,6 +43,8 @@
     toolbar?: boolean;
     /** Right-click menu of a row (also Shift+F10 / context-menu key on the keyboard row). */
     menu?: (item: T) => readonly MenuEntry[];
+    /** Shows only the first rows (start page sections); the toolbar and counts still see all. */
+    limit?: number;
     /** Checkbox column (choosing people etc.): checked state, toggle and optional lock per row. */
     check?: { checked: (item: T) => boolean; toggle: (item: T) => void; disabled?: (item: T) => boolean; label: (item: T) => string };
   } = $props();
@@ -115,7 +118,7 @@
             </tr>
           </thead>
           <tbody>
-            {#each model.rows as item, rowIndex (rowKey(item))}
+            {#each limit === undefined ? model.rows : model.rows.slice(0, limit) as item, rowIndex (rowKey(item))}
               <tr class:clickable={!!onopen} class:selected={selected === rowKey(item)} class:cursor={rowIndex === cursor}
                 in:motion.rise|global={{ delay: motion.stagger(rowIndex), distance: 4 }} animate:flip={{ duration: motion.ms('base') }}
                 class:checked={!!check?.checked(item)}

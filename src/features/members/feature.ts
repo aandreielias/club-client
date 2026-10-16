@@ -1,3 +1,4 @@
+import MembersHome from './MembersHome.svelte';
 import { permissions } from '../../lib/container';
 import { MANAGERS, PRIVILEGED } from '../../lib/types';
 import type { Feature } from '../Feature';
@@ -20,4 +21,5 @@ export const membersFeature: Feature = {
     'member-new': { component: MemberInviteView, roles: MANAGERS },
   },
   messages: MEMBER_MESSAGES,
+  home: { id: 'members', label: 'Mitglieder (braucht die PIN)', component: MembersHome, roles: MANAGERS },
 };

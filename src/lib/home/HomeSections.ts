@@ -9,11 +9,14 @@ export interface HomeSection {
   component: Component;
   /** Only members with one of these roles see it. */
   roles?: readonly Role[];
+  /** On the start page until the member switches it off; others start switched off. */
+  defaultShown?: boolean;
 }
 
 /**
  * Start page sections contributed by features (like CalendarSources). The member orders them and
- * switches them off in the settings; by default they follow the feature order.
+ * switches them on or off in the settings; by default they follow the feature order and only
+ * sections marked `defaultShown` are on.
  */
 export class HomeSections {
   readonly #sections: HomeSection[] = [];
@@ -29,8 +32,12 @@ export class HomeSections {
     return NavCatalog.sort(visible.map((s) => ({ ...s, path: s.id })), order);
   }
 
-  /** What the start page shows: ordered, without the switched-off ones. */
-  shown(order: readonly string[], hidden: readonly string[], hasRole: (...roles: readonly Role[]) => boolean): HomeSection[] {
-    return this.ordered(order, hasRole).filter((s) => !hidden.includes(s.id));
+  /** What the start page shows: ordered, switched on by the member or by default. */
+  shown(order: readonly string[], toggles: Readonly<Record<string, boolean>>, hasRole: (...roles: readonly Role[]) => boolean): HomeSection[] {
+    return this.ordered(order, hasRole).filter((s) => HomeSections.isShown(s, toggles));
+  }
+
+  static isShown(section: HomeSection, toggles: Readonly<Record<string, boolean>>): boolean {
+    return toggles[section.id] ?? section.defaultShown ?? false;
   }
 }

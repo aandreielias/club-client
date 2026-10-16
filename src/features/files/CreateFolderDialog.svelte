@@ -4,6 +4,7 @@
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
+  import CheckList from '../../ui/CheckList.svelte';
   import { settings } from '../../settings';
   import { Action } from '../../lib/state/Action.svelte';
   import { FolderForm } from './FolderForm.svelte';
@@ -19,7 +20,8 @@
   const scopes = FOLDER_SCOPES.filter((s) => filePolicy.rootScopes().includes(s.value));
   const teams = filePolicy.rootTeams();
   // svelte-ignore state_referenced_locally
-  const form = new FolderForm(parent, { scope: scopes[0]?.value ?? 'TEAM', teamId: teams[0]?.id ?? null });
+  const form = new FolderForm(parent, { scope: scopes[0]?.value ?? 'TEAM', teamIds: teams.length === 1 ? [teams[0].id] : [] });
+  const teamOptions = teams.map((t) => ({ value: t.id, label: t.name }));
   const action = new Action();
 
   async function submit(event: SubmitEvent) {
@@ -50,9 +52,7 @@
         <Select bind:value={form.scope} options={scopes} />
       </Field>
       {#if form.scope === 'TEAM'}
-        <Field label="Team" error={form.error('team')}>
-          <Select bind:value={form.teamId} options={teams.map((t) => ({ value: t.id, label: t.name }))} />
-        </Field>
+        <CheckList legend="Teams" bind:value={form.teamIds} options={teamOptions} error={form.error('team')} />
       {/if}
     {/if}
     <label class="check">
