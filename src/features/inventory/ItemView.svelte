@@ -1,6 +1,7 @@
 <script lang="ts">
   import { bus, session } from '../../lib/container';
-  import { CONFIRM, TOAST, WINDOW_OPEN } from '../../channels';
+  import { WINDOW_OPEN } from '../../channels';
+  import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { Action } from '../../lib/state/Action.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
@@ -13,7 +14,7 @@
   import { tooltip } from '../../ui/tooltip';
   import { APPOINTMENTS_CHANGED } from '../calendar/events';
   import { TASK_CHANGED } from '../tasks/events';
-  import { ITEM_CHANGED, type ItemChanged } from './events';
+  import { ITEM_CHANGED } from './events';
   import { ItemForm } from './ItemForm.svelte';
   import ItemEditor from './ItemEditor.svelte';
   import { inventoryApi, inventoryPolicy as policy } from './services';
@@ -22,76 +23,56 @@
   let { id, handle, onclosed }: { id: string; handle?: WindowHandle; onclosed?: () => void } = $props();
 
   // svelte-ignore state_referenced_locally
-  const item = new Resource(() => inventoryApi.get(id));
-  const save = new Action();
+  const view = new DetailController(bus, handle, onclosed);
+  const edit = new EditSession<ItemForm>(bus);
   const remove = new Action();
-  let form = $state<ItemForm | null>(null);
+  // svelte-ignore state_referenced_locally
+  const item = new Resource(() => inventoryApi.get(id));
   // svelte-ignore state_referenced_locally
   const uses = new Resource(() => inventoryApi.uses(id));
   void item.load();
   void uses.load();
 
+  view.title(() => item.value?.name);
   // Lists elsewhere change what needs this item.
   useBus(bus, [APPOINTMENTS_CHANGED, TASK_CHANGED], () => void uses.load());
-
-  $effect(() => {
-    const name = item.value?.name;
-    if (name) handle?.setTitle(name);
+  view.watch(ITEM_CHANGED, (data) => data.itemId === id, {
+    deleted: 'Dieser Gegenstand wurde gelöscht.',
+    busy: () => edit.save.busy || remove.busy,
+    changed: () => !edit.editing && void item.load(),
   });
 
-  useBus(bus, ITEM_CHANGED, ({ data }) => {
-    if (data.itemId !== id || save.busy || remove.busy) return;
-    if (data.change === 'DELETED') {
-      bus.publish(TOAST, { text: 'Dieser Gegenstand wurde gelöscht.' });
-      leave();
-    } else if (!form) {
-      void item.load();
-    }
-  });
-
-  function leave() {
-    if (handle) handle.close();
-    else onclosed?.();
-  }
-
-  async function submit(value: ItemForm) {
-    let updated = null;
-    if (await save.run(async () => (updated = await inventoryApi.update(id, value.toPatch())))) {
-      if (updated) item.set(updated);
-      form = null;
-      bus.publish(TOAST, { text: 'Gegenstand gespeichert.' });
-    }
+  async function submit() {
+    // The answer is the saved item, so no reload is needed.
+    await edit.submit(async (form) => item.set(await inventoryApi.update(id, form.toPatch())), 'Gegenstand gespeichert.');
   }
 
   async function destroy(name: string) {
-    const ok = await bus.request(CONFIRM, {
+    const request = {
       title: 'Gegenstand löschen',
       message: `„${name}“ wird aus dem Inventar gelöscht. Termine und Aufgaben, die ihn benötigen, zeigen ihn weiter als gelöscht an.`,
       confirmLabel: 'Löschen',
       danger: true,
-    });
-    if (ok && (await remove.run(() => inventoryApi.delete(id)))) {
-      bus.publish(TOAST, { text: 'Gegenstand gelöscht.' });
-      leave();
-    }
+    };
+    if (await view.confirm(request, () => remove.run(() => inventoryApi.delete(id)), 'Gegenstand gelöscht.')) view.leave();
   }
 </script>
 
 <AsyncView resource={item}>
   {#snippet children(value)}
-    <Detail title={form ? 'Gegenstand bearbeiten' : value.name}>
+    <Detail title={edit.form ? 'Gegenstand bearbeiten' : value.name}>
       {#snippet actions()}
-        {#if !form && policy.canManage()}
-          <Button onclick={() => (form = ItemForm.edit(value))}>Bearbeiten</Button>
+        {#if !edit.form && policy.canManage()}
+          <Button onclick={() => edit.edit(ItemForm.edit(value))}>Bearbeiten</Button>
           <Button variant="danger" busy={remove.busy} onclick={() => destroy(value.name)}>Löschen</Button>
         {/if}
       {/snippet}
       {#snippet meta()}
-        {#if !form && value.category}<Tag tone="gray">{value.category}</Tag>{/if}
+        {#if !edit.form && value.category}<Tag tone="gray">{value.category}</Tag>{/if}
       {/snippet}
 
-      {#if form}
-        <ItemEditor {form} action={save} submitLabel="Speichern" oncancel={() => (form = null)} onsubmit={() => form && submit(form)} />
+      {#if edit.form}
+        <ItemEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={submit} />
       {:else}
         <ErrorNote error={remove.error} />
         <dl class="props">

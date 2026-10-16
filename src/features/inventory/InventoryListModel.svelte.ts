@@ -6,8 +6,6 @@ import type { Item } from './model';
 /** The inventory list: search, category filter, sorting by name, category, stock or place. */
 export class InventoryListModel extends ListModel<Item> {
   constructor(api: InventoryApi, store: LocalStore) {
-    // The category options come from the loaded items, which exist only after super().
-    const self: { list?: InventoryListModel } = {};
     super(
       {
         id: 'inventory',
@@ -26,14 +24,13 @@ export class InventoryListModel extends ListModel<Item> {
             label: 'Kategorie',
             kind: 'select',
             allLabel: 'Alle Kategorien',
-            options: () => InventoryListModel.categories(self.list?.data.value ?? []).map((c) => ({ value: c, label: c })),
+            options: (items) => InventoryListModel.categories(items).map((c) => ({ value: c, label: c })),
             test: (i, value) => i.category === value,
           },
         ],
       },
       store,
     );
-    self.list = this;
   }
 
   /** Distinct categories, sorted. */

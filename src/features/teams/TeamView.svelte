@@ -1,6 +1,7 @@
 <script lang="ts">
   import { bus, directory, router, store, windows } from '../../lib/container';
-  import { APP_ERROR, CONFIRM, TOAST, WINDOW_OPEN } from '../../channels';
+  import { WINDOW_OPEN } from '../../channels';
+  import { DetailController } from '../../lib/detail/DetailController.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import type { RosterEntry, TeamRole } from '../../lib/types';
   import AsyncView from '../../ui/AsyncView.svelte';
@@ -13,7 +14,7 @@
   import Tag from '../../ui/Tag.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AddMemberPanel from './AddMemberPanel.svelte';
-  import { MEMBERSHIP_CHANGED, type MembershipChanged } from './events';
+  import { MEMBERSHIP_CHANGED } from './events';
   import { RosterListModel } from './RosterListModel.svelte';
   import { RosterModel } from './RosterModel.svelte';
   import { teamPolicy as policy, teamsApi } from './services';
@@ -40,24 +41,21 @@
 
   let adding = $state(false);
 
-  $effect(() => {
-    const name = model.roster.value?.team.name;
-    if (name) handle?.setTitle(name);
-  });
+  // svelte-ignore state_referenced_locally
+  const view = new DetailController(bus, handle);
+  view.title(() => model.roster.value?.team.name);
 
   useBus(bus, MEMBERSHIP_CHANGED, ({ data }) => {
     if (data.teamId === model.teamId && !model.busy) void model.load();
   });
 
   async function changeRole(entry: RosterEntry, role: TeamRole) {
-    if (role !== entry.teamRole && !(await model.assign(entry.memberId, role))) bus.publish(APP_ERROR, model.assignAction.error);
+    if (role !== entry.teamRole) await view.attempt(model.assignAction, () => model.assign(entry.memberId, role));
   }
 
   async function remove(entry: RosterEntry) {
-    const ok = await bus.request(CONFIRM, { title: 'Aus dem Team entfernen', message: `${entry.name} wird aus dem Team entfernt.`, confirmLabel: 'Entfernen', danger: true });
-    if (!ok) return;
-    if (await model.remove(entry)) bus.publish(TOAST, { text: 'Aus dem Team entfernt.' });
-    else bus.publish(APP_ERROR, model.removeAction.error);
+    const request = { title: 'Aus dem Team entfernen', message: `${entry.name} wird aus dem Team entfernt.`, confirmLabel: 'Entfernen', danger: true };
+    await view.confirm(request, () => view.attempt(model.removeAction, () => model.remove(entry)), 'Aus dem Team entfernt.');
   }
 
   function open(entry: RosterEntry) {

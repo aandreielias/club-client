@@ -33,7 +33,8 @@ export interface ListFilter<T> {
   label: string;
   /** `select`: one of `options` ('' = all); `toggle`: on ('1') or off (''). */
   kind: 'select' | 'toggle';
-  options?: () => readonly ListOption[];
+  /** Receives the loaded items, so options can be derived from them. */
+  options?: (items: readonly T[]) => readonly ListOption[];
   /** Label of the empty choice of a select filter. */
   allLabel?: string;
   /** Client-side test; omit for server filters (passed to `load` instead). */

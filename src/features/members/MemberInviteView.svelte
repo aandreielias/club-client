@@ -1,8 +1,7 @@
 <script lang="ts">
   import { settings } from '../../settings';
   import { bus, session } from '../../lib/container';
-  import { TOAST } from '../../channels';
-  import { Action } from '../../lib/state/Action.svelte';
+  import { CreateController } from '../../lib/detail/CreateController.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
@@ -17,20 +16,15 @@
 
   const today = session.clock.today();
   const form = new InviteForm(today);
-  const action = new Action();
+  // svelte-ignore state_referenced_locally
+  const create = new CreateController(bus, handle, 'Mitglied einladen');
   const max = settings.members.nameMaxLength;
-
-  $effect(() => handle.setTitle('Mitglied einladen'));
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
     form.submitted = true;
     if (!form.valid) return;
-    let invited = '';
-    if (await action.run(async () => (invited = (await membersApi.invite(form.toInvitation())).id))) {
-      bus.publish(TOAST, { text: 'Einladung verschickt.' });
-      handle.open('member', invited);
-    }
+    await create.submit(async () => (await membersApi.invite(form.toInvitation())).id, 'member', 'Einladung verschickt.');
   }
 </script>
 
@@ -52,9 +46,9 @@
       <input type="date" bind:value={form.birthDate} max={today} min={settings.members.earliestBirthDate} />
     </Field>
     <RoleChecklist bind:value={form.roles} allowed={policy.grantableRoles()} legend="Rollen" />
-    <ErrorNote error={action.error} />
+    <ErrorNote error={create.save.error} />
     <div class="row">
-      <Button type="submit" variant="primary" busy={action.busy}>Einladen</Button>
+      <Button type="submit" variant="primary" busy={create.save.busy}>Einladen</Button>
       <Button variant="ghost" onclick={() => handle.close()}>Abbrechen</Button>
     </div>
   </form>

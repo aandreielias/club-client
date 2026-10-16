@@ -1,10 +1,9 @@
 <script lang="ts">
   import { bus, commands, directory, linksApi, permissions, session } from '../../lib/container';
-  import { TOAST } from '../../channels';
+  import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { LinksModel } from '../../lib/links/LinksModel.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
-  import { Action } from '../../lib/state/Action.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
@@ -17,7 +16,7 @@
   import AttendancePanel from './AttendancePanel.svelte';
   import { CalendarApi } from './CalendarApi';
   import CancelDialog from './CancelDialog.svelte';
-  import { APPOINTMENTS_CHANGED, RESPONSE_CHANGED, type AppointmentsChanged, type ResponseChanged } from './events';
+  import { APPOINTMENTS_CHANGED, RESPONSE_CHANGED } from './events';
   import { typeHue, typeLabel, type Appointment } from './model';
   import ResponseForm from './ResponseForm.svelte';
   import { appointmentPolicy as policy, calendarApi } from './services';
@@ -27,8 +26,9 @@
 
   // svelte-ignore state_referenced_locally
   const detail = new AppointmentDetailModel(calendarApi, id, session.member.id);
-  const save = new Action();
-  let form = $state<AppointmentForm | null>(null);
+  // svelte-ignore state_referenced_locally
+  const view = new DetailController(bus, handle);
+  const edit = new EditSession<AppointmentForm>(bus);
   let cancelOpen = $state(false);
 
   // svelte-ignore state_referenced_locally
@@ -39,28 +39,25 @@
   directory.loadRosters();
   if (permissions.isManager) directory.loadTeams().catch(() => {});
 
-  $effect(() => {
-    const title = detail.appointment.value?.title;
-    if (title) handle?.setTitle(title);
-  });
+  view.title(() => detail.appointment.value?.title);
 
   useBus(bus, APPOINTMENTS_CHANGED, ({ data }) => {
     if (!data.appointmentIds.includes(detail.id)) return;
-    if (!save.busy && !form) void detail.appointment.load();
+    if (!edit.save.busy && !edit.editing) void detail.appointment.load();
     if (!links.editing && !links.save.busy) void links.load();
   });
   useBus(bus, RESPONSE_CHANGED, ({ data }) => {
     if (data.appointmentId === detail.id && !detail.respondAction.busy) void detail.attendance.load();
   });
 
-  const canAnswer = () => !form && !!detail.appointment.value && !!detail.attendance.value && policy.canRespond(detail.appointment.value);
+  const canAnswer = () => !edit.editing && !!detail.appointment.value && !!detail.attendance.value && policy.canRespond(detail.appointment.value);
   async function answer(status: 'YES' | 'MAYBE' | 'NO') {
-    if (await detail.respond(status, detail.ownEntry?.reason ?? '')) bus.publish(TOAST, { text: 'Antwort gespeichert.' });
+    if (await detail.respond(status, detail.ownEntry?.reason ?? '')) view.notify('Antwort gespeichert.');
   }
   useCommands(commands, {
     'appointment.edit': {
-      run: () => detail.appointment.value && (form = AppointmentForm.edit(session.clock, detail.appointment.value)),
-      when: () => !form && !!detail.appointment.value && policy.canEdit(detail.appointment.value),
+      run: () => detail.appointment.value && edit.edit(AppointmentForm.edit(session.clock, detail.appointment.value)),
+      when: () => !edit.editing && !!detail.appointment.value && policy.canEdit(detail.appointment.value),
     },
     'appointment.yes': { run: () => void answer('YES'), when: canAnswer },
     'appointment.maybe': { run: () => void answer('MAYBE'), when: canAnswer },
@@ -81,36 +78,31 @@
     return 'Nur Mitglieder des Teams können antworten.';
   }
 
-  async function submit(value: AppointmentForm) {
-    const original = value.original;
-    if (!original) return;
-    if (await save.run(() => calendarApi.update(original.id, value.toPatch()))) {
-      form = null;
-      bus.publish(TOAST, { text: 'Termin gespeichert.' });
-      void detail.appointment.load();
-    }
+  async function submit() {
+    const original = edit.form?.original;
+    if (original && (await edit.submit((form) => calendarApi.update(original.id, form.toPatch()), 'Termin gespeichert.'))) void detail.appointment.load();
   }
 </script>
 
 <AsyncView resource={detail.appointment}>
   {#snippet children(appointment)}
-    <Detail title={form ? 'Termin bearbeiten' : appointment.title}>
+    <Detail title={edit.form ? 'Termin bearbeiten' : appointment.title}>
       {#snippet actions()}
-        {#if !form && policy.canEdit(appointment)}
-          <Button onclick={() => (form = AppointmentForm.edit(session.clock, appointment))}>Bearbeiten</Button>
+        {#if !edit.form && policy.canEdit(appointment)}
+          <Button onclick={() => edit.edit(AppointmentForm.edit(session.clock, appointment))}>Bearbeiten</Button>
           <Button variant="danger" onclick={() => (cancelOpen = true)}>Absagen</Button>
         {/if}
       {/snippet}
       {#snippet meta()}
-        {#if !form}
+        {#if !edit.form}
           <Tag tone={typeHue(appointment.type)}>{typeLabel(appointment.type)}</Tag>
           {#if appointment.cancelled}<Tag tone="red">Abgesagt</Tag>{/if}
           {#if appointment.seriesId}<Tag tone="gray">Serie</Tag>{/if}
         {/if}
       {/snippet}
 
-      {#if form}
-        <AppointmentEditor {form} action={save} submitLabel="Speichern" oncancel={() => (form = null)} onsubmit={() => form && submit(form)} />
+      {#if edit.form}
+        <AppointmentEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={submit} />
       {:else}
         <dl class="props">
           <dt>Wann</dt>
@@ -143,7 +135,7 @@
         </AsyncView>
 
         {#if policy.canEdit(appointment)}
-          <CancelDialog bind:open={cancelOpen} {detail} {appointment} oncancelled={() => bus.publish(TOAST, { text: 'Termin abgesagt.' })} />
+          <CancelDialog bind:open={cancelOpen} {detail} {appointment} oncancelled={() => view.notify('Termin abgesagt.')} />
         {/if}
       {/if}
     </Detail>

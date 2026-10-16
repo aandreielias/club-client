@@ -1,7 +1,6 @@
 <script lang="ts">
   import { bus, directory, permissions, session } from '../../lib/container';
-  import { TOAST } from '../../channels';
-  import { Action } from '../../lib/state/Action.svelte';
+  import { CreateController } from '../../lib/detail/CreateController.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
@@ -13,8 +12,8 @@
   /** New appointment in the window. `id` carries presets as a query string: `team=<id>&date=<YYYY-MM-DD>`. */
   let { id, handle }: { id: string; handle: WindowHandle } = $props();
 
-  const save = new Action();
-  $effect(() => handle.setTitle('Neuer Termin'));
+  // svelte-ignore state_referenced_locally
+  const create = new CreateController(bus, handle, 'Neuer Termin');
 
   // svelte-ignore state_referenced_locally
   const presets = new URLSearchParams(id === '-' ? '' : id);
@@ -34,19 +33,14 @@
     return policy.canCreateClubWide() ? null : (teams[0]?.id ?? null);
   }
 
-  async function submit(value: AppointmentForm) {
-    let first = '';
-    if (await save.run(async () => (first = (await calendarApi.create(value.toNew()))[0].id))) {
-      bus.publish(TOAST, { text: 'Termin angelegt.' });
-      handle.open('appointment', first);
-    }
-  }
+  // A series answers with every occurrence; the window shows the first.
+  const submit = (value: AppointmentForm) => create.submit(async () => (await calendarApi.create(value.toNew()))[0].id, 'appointment', 'Termin angelegt.');
 </script>
 
 <AsyncView resource={form}>
   {#snippet children(value)}
     <Detail title="Neuer Termin">
-      <AppointmentEditor form={value} action={save} submitLabel="Anlegen" oncancel={() => handle.close()} onsubmit={() => submit(value)} />
+      <AppointmentEditor form={value} action={create.save} submitLabel="Anlegen" oncancel={() => handle.close()} onsubmit={() => submit(value)} />
     </Detail>
   {/snippet}
 </AsyncView>

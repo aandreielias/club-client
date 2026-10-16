@@ -27,7 +27,7 @@
           aria-label={filter.label}
           value={model.filters[filter.key] ?? ''}
           onchange={(value) => model.setFilter(filter.key, value)}
-          options={[{ value: '', label: filter.allLabel ?? filter.label }, ...(filter.options?.() ?? [])]}
+          options={[{ value: '', label: filter.allLabel ?? filter.label }, ...(filter.options?.(model.data.value ?? []) ?? [])]}
         />
       {:else}
         <Button size="sm" pressed={!!model.filters[filter.key]} onclick={() => model.setFilter(filter.key, model.filters[filter.key] ? '' : '1')}
