@@ -5,6 +5,7 @@ import { itemUseSources, MockLinks, type ItemUse } from '../../lib/mock/MockLink
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import type { Member } from '../../lib/types';
+import { ZonedClock } from '../../lib/time/ZonedClock';
 import type { NewTask, Task, TaskComment, TaskPatch, TaskStatus } from './model';
 
 type StoredTask = Omit<Task, 'comments'>;
@@ -117,6 +118,7 @@ export class MockTasks {
       checklist: MockTasks.items(body.checklist ?? []),
       createdAt: now,
       completedAt: null,
+      repeatWeeks: body.repeatWeeks ?? null,
     });
     this.tasks.data.push(task);
     this.tasks.save();
@@ -140,6 +142,7 @@ export class MockTasks {
       dueAt: patch.clearDue ? null : (patch.dueAt ?? current.dueAt),
       assignees: patch.assignees ? [...new Set(patch.assignees)] : current.assignees,
       checklist: patch.checklist ? MockTasks.items(patch.checklist) : current.checklist,
+      repeatWeeks: patch.clearRepeat ? null : (patch.repeatWeeks ?? current.repeatWeeks ?? null),
     });
     Object.assign(current, next);
     this.tasks.save();
@@ -151,6 +154,23 @@ export class MockTasks {
   setStatus(member: Member, id: string, status: unknown): Task {
     if (!STATUSES.includes(status as TaskStatus)) return fail(400, 'request.invalid');
     const task = this.workable(this.viewer(member), id);
+    // server: finishing a repeating task creates the next one, same local time n weeks later.
+    if (status === 'DONE' && task.status !== 'DONE' && task.repeatWeeks && task.dueAt) {
+      const next: StoredTask = {
+        ...task,
+        id: crypto.randomUUID(),
+        appointmentId: null,
+        status: 'OPEN',
+        dueAt: MockTasks.weeksLater(task.dueAt, task.repeatWeeks),
+        checklist: MockTasks.items(task.checklist.map((i) => i.text)),
+        createdAt: new Date().toISOString(),
+        completedAt: null,
+      };
+      this.tasks.data.push(next);
+      task.repeatWeeks = null;
+      this.changed(next, 'CREATED');
+      this.assigned(next, []);
+    }
     task.status = status as TaskStatus;
     task.completedAt = status === 'DONE' ? (task.completedAt ?? new Date().toISOString()) : null;
     this.tasks.save();
@@ -252,7 +272,15 @@ export class MockTasks {
     if (task.checklist.length > limits.maxChecklistItems) fail(400, 'task.checklist-too-long');
     if (task.checklist.some((i) => !i.text.trim() || i.text.length > limits.checklistItemMaxLength)) fail(400, 'task.checklist-item-invalid');
     if (task.dueAt !== null && isNaN(Date.parse(task.dueAt))) fail(400, 'request.invalid');
+    if (task.repeatWeeks != null && (task.repeatWeeks < 1 || task.repeatWeeks > 12)) fail(400, 'task.repeat-invalid');
+    if (task.repeatWeeks != null && task.dueAt === null) fail(400, 'task.repeat-needs-due');
     return { ...task, title: task.title.trim(), description: task.description || null };
+  }
+
+  /** Same local wall time (club zone) n weeks later. */
+  private static weeksLater(dueAt: string, weeks: number): string {
+    const clock = directory.clock;
+    return clock.toInstant(ZonedClock.addMinutes(clock.toLocal(dueAt), weeks * 7 * 24 * 60));
   }
 
   private static items(texts: readonly string[]) {
@@ -280,7 +308,7 @@ export class MockTasks {
   private seedTasks(): StoredTask[] {
     const day = 86_400_000;
     const at = (days: number) => new Date(Date.now() + days * day).toISOString();
-    const base = { appointmentId: null, completedAt: null, createdAt: at(-5) };
+    const base = { appointmentId: null, completedAt: null, createdAt: at(-5), repeatWeeks: null as number | null };
     const items = (...entries: [string, boolean][]) => entries.map(([text, done], i) => ({ id: `ci-${text.length}-${i}`, text, done }));
     return [
       { ...base, id: 't-1', teamId: 't-damen', title: 'Trikots waschen', description: 'Satz für das Heimspiel, bitte bis Freitag zurück in die Halle.',
@@ -288,7 +316,7 @@ export class MockTasks {
       { ...base, id: 't-2', teamId: 't-damen', title: 'Fahrgemeinschaft Auswärtsspiel', description: null, status: 'IN_PROGRESS',
         dueAt: at(6), createdBy: 'trainer', assignees: ['spielerin', 'neu'],
         checklist: items(['Fahrer:innen fragen', true], ['Treffpunkt festlegen', false], ['Liste in die Gruppe schicken', false]) },
-      { ...base, id: 't-3', teamId: 't-u16', title: 'Bälle aufpumpen', description: null, status: 'OPEN', dueAt: at(-1),
+      { ...base, id: 't-3', teamId: 't-u16', title: 'Bälle aufpumpen', description: null, status: 'OPEN', dueAt: at(-1), repeatWeeks: 1,
         createdBy: 'trainer', assignees: ['spieler'], checklist: [] },
       { ...base, id: 't-4', teamId: null, title: 'Kassenbericht vorbereiten', description: 'Für die Mitgliederversammlung.',
         status: 'OPEN', dueAt: at(12), createdBy: 'admin', assignees: ['vorstand'],

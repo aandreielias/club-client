@@ -16,7 +16,7 @@
   import Comments from './Comments.svelte';
   import DueField from './DueField.svelte';
   import { TASK_CHANGED } from './events';
-  import { statusHue, statusLabel, TASK_STATUSES } from './model';
+  import { repeatLabel, statusHue, statusLabel, TASK_STATUSES } from './model';
   import { TaskDetailModel } from './TaskDetailModel.svelte';
   import TaskEditor from './TaskEditor.svelte';
   import { TaskForm } from './TaskForm.svelte';
@@ -105,6 +105,10 @@
         <dl class="props">
           <dt>Fällig</dt>
           <dd><DueField {task} {detail} editable={policy.canManage(task)} /></dd>
+          {#if task.repeatWeeks}
+            <dt>Wiederholt</dt>
+            <dd>{repeatLabel(task.repeatWeeks)}</dd>
+          {/if}
           <dt>Für</dt>
           <dd>{task.teamId ? (directory.teamName(task.teamId) ?? 'Team') : 'Ganzer Verein'}</dd>
           <dt>Erstellt</dt>

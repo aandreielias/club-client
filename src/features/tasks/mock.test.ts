@@ -11,6 +11,7 @@ const ids = (id: string, mine = false, includeDone = false) => tasks.list(member
 const draft = (teamId: string | null, assignees: string[]): NewTask => ({
   teamId,
   appointmentId: null,
+  repeatWeeks: null,
   title: 'Neue Aufgabe',
   description: null,
   dueAt: null,

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { REPEAT_OPTIONS } from './model';
   import { autofocus } from '../../ui/autofocus';
   import { settings } from '../../settings';
   import type { Action } from '../../lib/state/Action.svelte';
@@ -45,6 +46,9 @@
       <input type="datetime-local" bind:value={form.due} />
     </Field>
   </div>
+  <Field label="Wiederholen" hint="Ist die Aufgabe erledigt, entsteht die nächste, fällig entsprechend später." error={form.error('repeat')}>
+    <Select bind:value={form.repeat} options={REPEAT_OPTIONS} />
+  </Field>
 
   <Field label="Beschreibung" error={form.error('description')}>
     <textarea bind:value={form.description} rows="4" maxlength={limits.descriptionMaxLength}></textarea>

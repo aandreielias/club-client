@@ -22,7 +22,7 @@ const existing: Task = {
   ],
   comments: [],
   createdAt: '2026-06-01T10:00:00.000Z',
-  completedAt: null,
+  completedAt: null, repeatWeeks: null,
 };
 
 describe('TaskForm', () => {
@@ -52,7 +52,7 @@ describe('TaskForm', () => {
       description: null,
       dueAt: '2026-01-10T17:00:00.000Z',
       assignees: ['m1'],
-      checklist: ['Pumpe holen'],
+      checklist: ['Pumpe holen'], repeatWeeks: null,
     });
   });
 
@@ -86,5 +86,14 @@ describe('TaskForm', () => {
     const form = TaskForm.edit(clock, existing);
     form.retainAssignees(['m2', 'm3']);
     expect(form.assignees).toEqual(['m2']);
+  });
+
+  it('repeats only with a due date and sends repeat changes', () => {
+    const form = TaskForm.blank(clock, 't1');
+    form.repeat = '2';
+    form.submitted = true;
+    expect(form.error('repeat')).toBe('Wiederholen geht nur mit Fälligkeit.');
+    form.due = '2026-01-10T18:00';
+    expect(form.toNew().repeatWeeks).toBe(2);
   });
 });

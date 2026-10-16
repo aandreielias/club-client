@@ -23,7 +23,7 @@ describe('mock notifications', () => {
     const { received, socket } = await connect('spieler');
     directory.stepUp(member('trainer'), MockDirectory.PIN);
     tasks.create(member('trainer'), {
-      teamId: 't-u16', appointmentId: null, title: 'Netze prüfen', description: null, dueAt: null, assignees: ['spieler'], checklist: [],
+      teamId: 't-u16', appointmentId: null, title: 'Netze prüfen', description: null, dueAt: null, assignees: ['spieler'], checklist: [], repeatWeeks: null,
     });
     expect(notifications.list('spieler', true).items[0]).toMatchObject({ kind: 'TASK_ASSIGNED', title: 'Neue Aufgabe: Netze prüfen', link: expect.stringMatching(/^\/tasks\//) });
     await vi.waitFor(() => expect(received.map((m) => m.type)).toContain('notifications.notification-created'));

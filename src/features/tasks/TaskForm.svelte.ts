@@ -2,7 +2,7 @@ import { settings } from '../../settings';
 import type { ZonedClock, LocalDateTime } from '../../lib/time/ZonedClock';
 import type { NewTask, Task, TaskPatch } from './model';
 
-export type TaskField = 'title' | 'description' | 'dueAt' | 'assignees' | 'checklist';
+export type TaskField = 'title' | 'description' | 'dueAt' | 'assignees' | 'checklist' | 'repeat';
 
 export type TaskFormErrors = Partial<Record<TaskField, string>>;
 
@@ -27,6 +27,8 @@ export class TaskForm {
   description = $state('');
   /** Empty = no due date. */
   due = $state<LocalDateTime>('');
+  /** Weeks between repeats as text ('' = once), for the select. */
+  repeat = $state('');
   assignees = $state<string[]>([]);
   checklist = $state<ChecklistLine[]>([]);
   submitted = $state(false);
@@ -60,6 +62,7 @@ export class TaskForm {
     form.title = task.title;
     form.description = task.description ?? '';
     form.due = task.dueAt ? clock.toLocal(task.dueAt) : '';
+    form.repeat = task.repeatWeeks ? String(task.repeatWeeks) : '';
     form.assignees = [...task.assignees];
     form.checklist = task.checklist.map((item) => form.line(item.text));
     return form;
@@ -109,6 +112,7 @@ export class TaskForm {
       dueAt: this.due ? this.clock.toInstant(this.due) : null,
       assignees: [...this.assignees],
       checklist: this.texts(),
+      repeatWeeks: this.repeat ? Number(this.repeat) : null,
     };
   }
 
@@ -124,6 +128,10 @@ export class TaskForm {
     if (!next.dueAt && original.dueAt) patch.clearDue = true;
     if (!TaskForm.sameSet(next.assignees, original.assignees)) patch.assignees = next.assignees;
     if (this.checklistChanged()) patch.checklist = next.checklist;
+    if (next.repeatWeeks !== original.repeatWeeks) {
+      if (next.repeatWeeks) patch.repeatWeeks = next.repeatWeeks;
+      else patch.clearRepeat = true;
+    }
     return patch;
   }
 
@@ -149,6 +157,7 @@ export class TaskForm {
     if (this.assignees.length === 0 || this.assignees.length > limits.maxAssignees) {
       errors.assignees = `1 bis ${limits.maxAssignees} Personen zuweisen.`;
     }
+    if (this.repeat && !this.due) errors.repeat = 'Wiederholen geht nur mit Fälligkeit.';
     const texts = this.texts();
     if (texts.length > limits.maxChecklistItems) errors.checklist = `Höchstens ${limits.maxChecklistItems} Punkte.`;
     else if (texts.some((t) => t.length > limits.checklistItemMaxLength)) {

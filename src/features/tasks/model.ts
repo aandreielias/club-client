@@ -33,6 +33,8 @@ export interface Task {
   comments: TaskComment[];
   createdAt: string;
   completedAt: string | null;
+  /** Repeats every n weeks: finishing it creates the next one. null = once. */
+  repeatWeeks: number | null;
 }
 
 export interface TaskList {
@@ -47,11 +49,28 @@ export interface NewTask {
   dueAt: string | null;
   assignees: string[];
   checklist: string[];
+  repeatWeeks: number | null;
 }
 
 /** Omitted fields stay unchanged; a given checklist replaces the old one (and resets its ticks). */
 /** Absent fields stay unchanged; `clearDue` removes the due date (never together with `dueAt`). */
-export type TaskPatch = Partial<Pick<NewTask, 'title' | 'description' | 'dueAt' | 'assignees' | 'checklist'>> & { clearDue?: boolean };
+export type TaskPatch = Partial<Pick<NewTask, 'title' | 'description' | 'dueAt' | 'assignees' | 'checklist'>> & {
+  clearDue?: boolean;
+  repeatWeeks?: number;
+  clearRepeat?: boolean;
+};
+
+/** "Wiederholen" choices; '' = once. */
+export const REPEAT_OPTIONS: readonly { value: string; label: string }[] = [
+  { value: '', label: 'Nicht wiederholen' },
+  { value: '1', label: 'Jede Woche' },
+  { value: '2', label: 'Alle 2 Wochen' },
+  { value: '3', label: 'Alle 3 Wochen' },
+  { value: '4', label: 'Alle 4 Wochen' },
+];
+
+export const repeatLabel = (weeks: number | null): string | null =>
+  weeks === null ? null : weeks === 1 ? 'Jede Woche' : `Alle ${weeks} Wochen`;
 
 export interface TaskQuery {
   /** Only tasks assigned to the member or their minors. */
