@@ -1,12 +1,25 @@
+<script lang="ts" module>
+  import type { IconName } from '../icons';
+
+  /** The next step offered on an empty list (e.g. "Neue Aufgabe", "Filter zurücksetzen"). */
+  export interface EmptyAction {
+    label: string;
+    icon?: IconName;
+    run: () => void;
+  }
+</script>
+
 <script lang="ts">
+  import Button from './Button.svelte';
   import Icon from './Icon.svelte';
 
-  let { text }: { text: string } = $props();
+  let { text, action }: { text: string; action?: EmptyAction | null } = $props();
 </script>
 
 <div class="empty enter">
   <span class="glyph"><Icon name="empty" /></span>
   <p>{text}</p>
+  {#if action}<Button icon={action.icon} onclick={action.run} tooltip={action.label}>{action.label}</Button>{/if}
 </div>
 
 <style>

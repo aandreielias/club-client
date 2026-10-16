@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick, untrack } from 'svelte';
-  import { backStack, bus, documentTitle, motion, stepUp, windows } from '../lib/container';
+  import { backStack, bus, documentTitle, motion, recentRecords, stepUp, windows } from '../lib/container';
   import { WINDOW_CLOSE } from '../channels';
   import { type Dock } from '../lib/window/WindowService.svelte';
   import Button from './Button.svelte';
@@ -53,7 +53,9 @@
       void tick().then(() => element?.focus());
     } else {
       windows.forgetPush();
-      opener?.focus?.();
+      // Only if focus is still in the closing window (or nowhere): never pull it out of the palette or a dialog.
+      const active = document.activeElement;
+      if (!active || active === document.body || element?.contains(active)) opener?.focus?.();
       opener = null;
     }
   });
@@ -67,6 +69,12 @@
 
   $effect(() => {
     documentTitle.window = target ? windows.title : '';
+    // Once a record has its title it counts as opened (command palette: "Zuletzt geöffnet").
+    // Create forms and settings are no records.
+    if (target && windows.title && !target.kind.endsWith('-new') && target.kind !== 'settings' && !untrack(() => waitingForPin)) {
+      const record = { kind: target.kind, id: target.id, title: windows.title };
+      untrack(() => recentRecords.remember(record));
+    }
   });
 
   // A new record starts without the previous one's title until it has loaded (also for links opened by URL).

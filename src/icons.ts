@@ -25,6 +25,7 @@ import LogOut from '@lucide/svelte/icons/log-out';
 import Menu from '@lucide/svelte/icons/menu';
 import Package from '@lucide/svelte/icons/package';
 import PanelBottom from '@lucide/svelte/icons/panel-bottom';
+import PanelLeft from '@lucide/svelte/icons/panel-left';
 import PanelRight from '@lucide/svelte/icons/panel-right';
 import Pencil from '@lucide/svelte/icons/pencil';
 import Plus from '@lucide/svelte/icons/plus';
@@ -68,6 +69,7 @@ export const ICONS = {
   dockCenter: AppWindow,
   dockSide: PanelRight,
   dockBottom: PanelBottom,
+  sidebar: PanelLeft,
 } as const;
 
 export type IconName = keyof typeof ICONS;

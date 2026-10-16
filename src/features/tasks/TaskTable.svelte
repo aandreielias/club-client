@@ -3,13 +3,21 @@
   import { WINDOW_OPEN } from '../../channels';
   import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
   import DataTable from '../../ui/DataTable.svelte';
+  import type { EmptyAction } from '../../ui/Empty.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { statusHue, statusLabel, type Task } from './model';
   import TaskDue from './TaskDue.svelte';
   import type { TaskListModel } from './TaskListModel.svelte';
 
   /** Tasks as rows (task list page, start page): status tag, due date, opens in the window. */
-  let { list, menu, emptyText, toolbar = true, limit }: { list: TaskListModel; menu?: (task: Task) => MenuEntry[]; emptyText: string; toolbar?: boolean; limit?: number } = $props();
+  let {
+    list,
+    menu,
+    emptyText,
+    emptyAction,
+    toolbar = true,
+    limit,
+  }: { list: TaskListModel; menu?: (task: Task) => MenuEntry[]; emptyText: string; emptyAction?: EmptyAction | null; toolbar?: boolean; limit?: number } = $props();
 </script>
 
 <DataTable
@@ -21,6 +29,7 @@
   {menu}
   selected={windows.current?.kind === 'task' ? windows.current.id : null}
   {emptyText}
+  {emptyAction}
 >
   {#snippet cell(task, column)}
     {#if column.key === 'title'}

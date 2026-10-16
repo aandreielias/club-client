@@ -127,7 +127,7 @@
   <div class="view" aria-busy={model.entries.loading}>
     {#if model.view === 'list'}
       <DataTable model={list} rowKey={(e) => e.key} onopen={(e) => bus.publish(WINDOW_OPEN, { kind: e.window.kind, id: e.window.id })} menu={(e) => windowMenu(bus, windows, router, e.window.kind, e.window.id)} leading={filters}
-        emptyText="Keine Einträge in diesem Zeitraum.">
+        emptyText="Keine Einträge in diesem Zeitraum." emptyAction={policy.canCreate() ? { label: "Neuer Termin", icon: "add", run: newAppointment } : null}>
         {#snippet cell(entry, column)}
           {#if column.key === 'title'}
             <span class:inactive={entry.inactive}>{entry.title}</span>

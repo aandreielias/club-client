@@ -29,7 +29,7 @@
     {#if teamPolicy.canCreate()}<Button variant="primary" icon="add" onclick={() => (creating = true)}>Neues Team</Button>{/if}
   {/snippet}
 
-  <TeamTable {list} />
+  <TeamTable {list} emptyAction={teamPolicy.canCreate() ? { label: 'Neues Team', icon: 'add', run: () => (creating = true) } : null} />
 </Page>
 
 {#if creating}<CreateTeamDialog oncreated={created} onclose={() => (creating = false)} />{/if}

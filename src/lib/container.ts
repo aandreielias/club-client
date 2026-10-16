@@ -24,6 +24,7 @@ import { HomeSections } from './home/HomeSections';
 import { LinkResolver } from './router/LinkResolver';
 import { NavCatalog } from './navigation/NavCatalog';
 import { BackStack } from './navigation/BackStack.svelte';
+import { ScrollMemory } from './navigation/ScrollMemory';
 import { DocumentTitle } from './navigation/DocumentTitle.svelte';
 import { Router } from './router/Router.svelte';
 import { StepUpService } from './security/StepUpService.svelte';
@@ -36,6 +37,7 @@ import { PreferencesService } from './preferences/PreferencesService.svelte';
 import { ThemeService } from './theme/ThemeService';
 import { Motion } from './motion/Motion.svelte';
 import { WindowService } from './window/WindowService.svelte';
+import { RecentRecords } from './window/RecentRecords.svelte';
 import { LinksApi } from './links/LinksApi';
 import { ContextMenuService } from './overlay/ContextMenuService.svelte';
 import { TooltipService } from './overlay/TooltipService.svelte';
@@ -108,11 +110,17 @@ export const documentTitle = new DocumentTitle(() => session.club?.name ?? '');
 /** Escape steps (edit modes, panels) of whatever is open; see the `view.back` command. */
 export const backStack = new BackStack();
 
-export const router = new Router(bus, (change) => motion.transition(change));
+export const router = new Router(bus, (change) => motion.transition(change), () => backStack.mayLeave());
 
 export const links = new LinkResolver();
 
 export const windows = new WindowService(router, store, settings.window.defaultDock, bus, () => backStack.mayLeave(), (roles) => session.hasRole(...roles));
+
+/** Scroll position per page, restored when coming back. */
+export const scrollMemory = new ScrollMemory(settings.scrollRestoreMs);
+
+/** Records opened in the window, for the command palette. */
+export const recentRecords = new RecentRecords(store, settings.window.recentRecords);
 
 export const calendarSources = new CalendarSources();
 

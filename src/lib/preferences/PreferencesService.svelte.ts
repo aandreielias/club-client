@@ -17,6 +17,8 @@ export interface Preferences {
   calendarView: CalendarViewPreference;
   /** Paths of the main sidebar entries in the user's order; [] = default order. */
   navOrder: string[];
+  /** Sidebar shows icons only. */
+  sidebarCollapsed: boolean;
   /** One view for every folder; changing it in any folder changes it everywhere. */
   filesView: FilesViewPreference;
   /** Start page section ids in the user's order ([] = default) and sections switched on or off (others: their default). */
@@ -49,6 +51,7 @@ export class PreferencesService {
       reduceMotion: false,
       calendarView: defaults.calendarView,
       navOrder: [],
+      sidebarCollapsed: false,
       filesView: defaults.filesView,
       homeOrder: [],
       homeShown: {},
@@ -97,6 +100,7 @@ export class PreferencesService {
       reduceMotion: values.reduceMotion === true,
       calendarView: ['month', 'week', 'list'].includes(values.calendarView) ? values.calendarView : d.calendarView,
       navOrder: PreferencesService.strings(values.navOrder),
+      sidebarCollapsed: values.sidebarCollapsed === true,
       filesView: values.filesView === 'table' || values.filesView === 'gallery' ? values.filesView : d.filesView,
       homeOrder: PreferencesService.strings(values.homeOrder),
       homeShown: Object.fromEntries(

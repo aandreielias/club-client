@@ -50,5 +50,6 @@
     {/if}
   {/snippet}
 
-  <TaskTable {list} menu={taskMenu} emptyText={list.filters.mine ? 'Dir ist keine offene Aufgabe zugewiesen.' : 'Keine Aufgaben.'} />
+  <TaskTable {list} menu={taskMenu} emptyText={list.filters.mine ? 'Dir ist keine offene Aufgabe zugewiesen.' : 'Keine Aufgaben.'}
+    emptyAction={taskPolicy.canCreate() ? { label: 'Neue Aufgabe', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'task-new', id: list.filters.team || '-' }) } : null} />
 </Page>

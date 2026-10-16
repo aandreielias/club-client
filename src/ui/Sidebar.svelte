@@ -2,7 +2,8 @@
   import type { NavItem } from '../features/FeatureRegistry';
   import type { LiveStatus } from '../lib/live/LiveUpdates.svelte';
   import { SHORTCUTS, type CommandId } from '../shortcuts';
-  import { commands, keyboard, keymap } from '../lib/container';
+  import { tick } from 'svelte';
+  import { commands, keyboard, keymap, preferences } from '../lib/container';
   import Icon from './Icon.svelte';
   import { KeySpec } from '../lib/keyboard/KeySpec';
   import GlobalSearch from './GlobalSearch.svelte';
@@ -26,6 +27,14 @@
   } = $props();
 
   let open = $state(false);
+  // Icons only (desktop); the phone layout always shows the full overlay.
+  const collapsed = $derived(preferences.values.sidebarCollapsed);
+
+  /** From the collapsed sidebar: expand it and put the cursor into the search field. */
+  async function keyboardSearch() {
+    await tick();
+    commands.run('search.focus');
+  }
 
   /** Keys of the navigation command that opens a path, for the tooltip. */
   function navKeys(path: string): string {
@@ -60,11 +69,18 @@
 </button>
 {#if open}<button class="scrim" aria-label="Navigation schließen" tabindex="-1" onclick={() => (open = false)} {@attach tooltip('Navigation schließen')}></button>{/if}
 
-<nav id="sidebar" class:open aria-label="Hauptnavigation">
+<nav id="sidebar" class:open class:collapsed aria-label="Hauptnavigation">
   <div class="title">
     <span class="mark" aria-hidden="true">{title.slice(0, 1)}</span>
     <span class="name">{title}</span>
+    <button class="icon-button collapse" onclick={() => preferences.set('sidebarCollapsed', !collapsed)} aria-label={collapsed ? 'Seitenleiste ausklappen' : 'Seitenleiste einklappen'}
+      {@attach tooltip(() => withKeys(collapsed ? 'Seitenleiste ausklappen' : 'Seitenleiste einklappen', 'sidebar.toggle'))}>
+      <Icon name="sidebar" />
+    </button>
   </div>
+  <!-- Collapsed (desktop): a search icon that expands the sidebar; the phone overlay always shows the field. -->
+  <button class="link search-icon" onclick={() => (preferences.set('sidebarCollapsed', false), keyboardSearch())} aria-label="Suchen"
+    {@attach tooltip(() => withKeys('Suchen', 'search.focus'))}><Icon name="search" /></button>
   <div class="search"><GlobalSearch /></div>
   <ul bind:this={list}>
     {#if indicator}
@@ -309,6 +325,62 @@
   }
   .toggle,
   .scrim {
+    display: none;
+  }
+  nav {
+    transition: width var(--motion-window) var(--motion-easing);
+  }
+  .collapse {
+    margin-left: auto;
+  }
+  :global(:root:not([data-layout='compact'])) nav.collapsed {
+    width: var(--layout-sidebar-collapsed-width);
+  }
+  :global(:root:not([data-layout='compact'])) .collapsed .name,
+  :global(:root:not([data-layout='compact'])) .collapsed .label,
+  :global(:root:not([data-layout='compact'])) .collapsed .connection,
+  :global(:root:not([data-layout='compact'])) .collapsed .foot :global(.keys) {
+    display: none;
+  }
+  :global(:root:not([data-layout='compact'])) .collapsed .title {
+    flex-direction: column;
+    padding-inline: 0;
+  }
+  :global(:root:not([data-layout='compact'])) .collapsed .collapse {
+    margin: 0;
+  }
+  :global(:root:not([data-layout='compact'])) .collapsed a,
+  :global(:root:not([data-layout='compact'])) .collapsed .link {
+    justify-content: center;
+    padding: 0;
+  }
+  :global(:root:not([data-layout='compact'])) .collapsed .badge {
+    position: absolute;
+    top: 0;
+    right: 2px;
+    min-width: 16px;
+    line-height: 16px;
+    font-size: 10px;
+  }
+  :global(:root:not([data-layout='compact'])) .collapsed .user {
+    flex-direction: column;
+    padding-inline: 0;
+  }
+  :global(:root:not([data-layout='compact'])) .collapsed .user .profile {
+    justify-content: center;
+  }
+  .search-icon {
+    display: none;
+    margin-bottom: var(--space-md);
+  }
+  :global(:root:not([data-layout='compact'])) .collapsed .search-icon {
+    display: flex;
+  }
+  :global(:root:not([data-layout='compact'])) .collapsed .search {
+    display: none;
+  }
+  :global([data-layout='compact']) .collapse,
+  :global([data-layout='compact']) .search-icon {
     display: none;
   }
   :global([data-layout='compact']) nav {

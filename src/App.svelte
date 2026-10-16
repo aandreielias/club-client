@@ -6,7 +6,7 @@
   import SetPasswordPage from './features/auth/SetPasswordPage.svelte';
   import { features } from './features';
   import OnboardingPage from './features/onboarding/OnboardingPage.svelte';
-  import { auth, backStack, bus, commands, documentTitle, directory, errors, keyboard, live, preferences, router, session, windows } from './lib/container';
+  import { auth, backStack, bus, commands, documentTitle, scrollMemory, directory, errors, keyboard, live, preferences, router, session, windows } from './lib/container';
   import Button from './ui/Button.svelte';
   import Centered from './ui/Centered.svelte';
   import ConfirmDialog from './ui/ConfirmDialog.svelte';
@@ -28,6 +28,21 @@
   });
 
   $effect(() => app.syncMember());
+
+  // Each page keeps its scroll position; coming back (Back, sidebar) returns there.
+  let shownPath = '';
+  $effect(() => {
+    const path = router.path;
+    if (path === shownPath) return;
+    shownPath = path;
+    scrollMemory.restore(path);
+  });
+  const rememberScroll = () => scrollMemory.remember(router.path, window.scrollY);
+
+  /** Typed but unsaved input: the browser asks before the tab closes or reloads. */
+  function beforeUnload(event: BeforeUnloadEvent) {
+    if (backStack.hasUnsaved()) event.preventDefault();
+  }
   $effect(() => {
     document.title = documentTitle.text;
   });
@@ -37,6 +52,8 @@
     if (app.screen === 'shell') return untrack(() => app.startSession());
   });
 </script>
+
+<svelte:window onscroll={rememberScroll} onbeforeunload={beforeUnload} />
 
 {#if app.screen === 'failed'}
   <Centered title="Nicht erreichbar">

@@ -33,7 +33,7 @@
     {#if policy.canInvite()}<Button variant="primary" icon="add" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'member-new', id: '-' })}>Einladen</Button>{/if}
   {/snippet}
 
-  <MemberTable {list} />
+  <MemberTable {list} emptyAction={policy.canInvite() ? { label: 'Einladen', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'member-new', id: '-' }) } : null} />
   {#if list.data.value}<p class="muted small count">{list.activeCount} aktive Mitglieder</p>{/if}
 </Page>
 

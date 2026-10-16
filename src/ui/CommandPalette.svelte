@@ -1,23 +1,37 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { commands, keymap } from '../lib/container';
+  import { bus, commands, keymap, recentRecords, windows } from '../lib/container';
+  import { WINDOW_OPEN } from '../channels';
   import type { AvailableCommand } from '../lib/keyboard/CommandRegistry.svelte';
   import { motion } from '../lib/container';
   import Icon from './Icon.svelte';
   import Kbd from './Kbd.svelte';
 
-  /** Searchable list of every command available right now, with its keys. */
+  /** Searchable list of the recently opened records and every command available right now, with its keys. */
+  interface Entry {
+    key: string;
+    label: string;
+    group: string;
+    command?: AvailableCommand;
+    run: () => void;
+  }
   let query = $state('');
   let active = $state(0);
   let input: HTMLInputElement | undefined = $state();
   let opener: HTMLElement | null = null;
 
-  const matches = $derived.by(() => {
-    if (!commands.paletteOpen) return [] as AvailableCommand[];
+  const matches = $derived.by((): Entry[] => {
+    if (!commands.paletteOpen) return [];
     const needle = query.trim().toLocaleLowerCase();
-    return commands
+    const fits = (text: string) => !needle || text.toLocaleLowerCase().includes(needle);
+    const recent = recentRecords.items
+      .filter((r) => windows.content(r.kind) && fits(r.title))
+      .map((r): Entry => ({ key: `recent:${r.kind}:${r.id}`, label: r.title, group: 'Zuletzt geöffnet', run: () => bus.publish(WINDOW_OPEN, { kind: r.kind, id: r.id }) }));
+    const available = commands
       .available()
-      .filter((c) => c.id !== 'palette.open' && (!needle || `${c.label} ${c.group}`.toLocaleLowerCase().includes(needle)));
+      .filter((c) => c.id !== 'palette.open' && fits(`${c.label} ${c.group}`))
+      .map((c): Entry => ({ key: c.id, label: c.label, group: c.group, command: c, run: c.run }));
+    return [...recent, ...available];
   });
 
   $effect(() => {
@@ -25,7 +39,8 @@
       opener = document.activeElement as HTMLElement | null;
       query = '';
       active = 0;
-      void tick().then(() => input?.focus());
+      // After the current frame: a window that just closed may still hand focus back to its opener.
+      void tick().then(() => requestAnimationFrame(() => input?.focus()));
     }
   });
 
@@ -34,10 +49,10 @@
     opener?.focus?.();
   }
 
-  function run(command: AvailableCommand | undefined) {
-    if (!command) return;
+  function run(entry: Entry | undefined) {
+    if (!entry) return;
     close();
-    command.run();
+    entry.run();
   }
 
   function keydown(event: KeyboardEvent) {
@@ -67,22 +82,22 @@
       bind:this={input}
       bind:value={query}
       onkeydown={keydown}
-      placeholder="Befehl suchen"
+      placeholder="Befehl oder zuletzt geöffneten Eintrag suchen"
       aria-label="Befehl suchen"
       role="combobox"
       aria-expanded="true"
       aria-controls="palette-list"
-      aria-activedescendant={matches[active] ? `cmd-${matches[active].id}` : undefined}
+      aria-activedescendant={matches[active] ? `cmd-${active}` : undefined}
     />
     </label>
     <ul id="palette-list" role="listbox">
-      {#each matches as command, index (command.id)}
+      {#each matches as entry, index (entry.key)}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <li id="cmd-{command.id}" role="option" aria-selected={index === active} class:active={index === active}
-          onclick={() => run(command)} onmousemove={() => (active = index)}>
-          <span class="label">{command.label}</span>
-          <span class="group muted">{command.group}</span>
-          <Kbd keys={keymap.keys(command.id)} />
+        <li id="cmd-{index}" role="option" aria-selected={index === active} class:active={index === active}
+          onclick={() => run(entry)} onmousemove={() => (active = index)}>
+          <span class="label">{entry.label}</span>
+          <span class="group muted">{entry.group}</span>
+          {#if entry.command}<Kbd keys={keymap.keys(entry.command.id)} />{:else}<span></span>{/if}
         </li>
       {:else}
         <li class="empty muted">Kein passender Befehl.</li>

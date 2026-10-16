@@ -4,10 +4,10 @@
   import { commands, motion } from '../lib/container';
   import Icon from './Icon.svelte';
   import { useCommands } from '../lib/keyboard/useCommands.svelte';
-  import type { ListColumn, ListModel } from '../lib/list/ListModel.svelte';
+  import { ListCursors, type ListColumn, type ListModel } from '../lib/list/ListModel.svelte';
   import type { MenuEntry } from '../lib/overlay/ContextMenuService.svelte';
   import AsyncView from './AsyncView.svelte';
-  import Empty from './Empty.svelte';
+  import Empty, { type EmptyAction } from './Empty.svelte';
   import ListToolbar from './ListToolbar.svelte';
   import { tooltip } from './tooltip';
   import { menu as contextMenu, openMenuAt } from './contextMenu';
@@ -30,6 +30,7 @@
     menu,
     check,
     limit,
+    emptyAction,
   }: {
     model: ListModel<T>;
     rowKey: (item: T) => string;
@@ -43,14 +44,18 @@
     toolbar?: boolean;
     /** Right-click menu of a row (also Shift+F10 / context-menu key on the keyboard row). */
     menu?: (item: T) => readonly MenuEntry[];
+    /** Offered when the list itself is empty (filtered-out lists offer "Filter zurücksetzen"). */
+    emptyAction?: EmptyAction | null;
     /** Shows only the first rows (start page sections); the toolbar and counts still see all. */
     limit?: number;
     /** Checkbox column (choosing people etc.): checked state, toggle and optional lock per row. */
     check?: { checked: (item: T) => boolean; toggle: (item: T) => void; disabled?: (item: T) => boolean; label: (item: T) => string };
   } = $props();
 
-  /** Keyboard cursor (J/K/Enter); -1 = none. */
-  let cursor = $state(-1);
+  /** Keyboard cursor (J/K/Enter); -1 = none. Kept per list, so coming back shows the row you were on. */
+  // svelte-ignore state_referenced_locally
+  let cursor = $state(ListCursors.get(model.definition.id));
+  $effect(() => ListCursors.set(model.definition.id, cursor));
   let container: HTMLElement | undefined = $state();
 
   $effect(() => {
@@ -149,7 +154,8 @@
           </tbody>
         </table>
       {:else}
-        <Empty text={model.total ? 'Keine Einträge passen zu Suche und Filtern.' : emptyText} />
+        <Empty text={model.total ? 'Keine Einträge passen zu Suche und Filtern.' : emptyText}
+          action={model.total ? (toolbar && model.activeFilters ? { label: 'Filter zurücksetzen', run: () => model.reset() } : null) : emptyAction} />
       {/if}
     {/snippet}
   </AsyncView>

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tooltip } from '../../ui/tooltip';
   import AsyncView from '../../ui/AsyncView.svelte';
-  import Empty from '../../ui/Empty.svelte';
+  import Empty, { type EmptyAction } from '../../ui/Empty.svelte';
   import ListToolbar from '../../ui/ListToolbar.svelte';
   import type { FolderItem, FolderItemListModel } from './FolderItemListModel.svelte';
   import Thumbnail from './Thumbnail.svelte';
@@ -12,7 +12,13 @@
   import { colorHue } from './model';
 
   /** Gallery view of the same list model as the table: tiles for folders, photos and documents. */
-  let { model, onopen, menu }: { model: FolderItemListModel; onopen: (item: FolderItem) => void; menu?: (item: FolderItem) => readonly MenuEntry[] } =
+  let {
+    model,
+    onopen,
+    menu,
+    emptyText = 'Noch nichts hochgeladen.',
+    emptyAction,
+  }: { model: FolderItemListModel; onopen: (item: FolderItem) => void; menu?: (item: FolderItem) => readonly MenuEntry[]; emptyText?: string; emptyAction?: EmptyAction | null } =
     $props();
 </script>
 
@@ -51,7 +57,8 @@
           {/each}
         </ul>
       {:else}
-        <Empty text={model.total ? 'Keine Einträge passen zu Suche und Filtern.' : 'Noch nichts hochgeladen.'} />
+        <Empty text={model.total ? 'Keine Einträge passen zu Suche und Filtern.' : emptyText}
+          action={model.total ? (model.activeFilters ? { label: 'Filter zurücksetzen', run: () => model.reset() } : null) : emptyAction} />
       {/if}
     {/snippet}
   </AsyncView>

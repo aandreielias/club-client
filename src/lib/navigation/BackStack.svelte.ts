@@ -8,6 +8,8 @@ export interface BackStep {
   back: () => void;
   /** Asked before the whole view goes away (window closes); false keeps it open. */
   leave?: () => boolean | Promise<boolean>;
+  /** Unsaved input right now (the browser warns before the tab closes). */
+  unsaved?: () => boolean;
 }
 
 export class BackStack {
@@ -44,10 +46,14 @@ export class BackStack {
     return true;
   }
 
+  hasUnsaved(): boolean {
+    return this.#steps.some((s) => s.unsaved?.());
+  }
+
   /** While `active()` holds, Escape runs `back` (e.g. leave edit mode). Call during component initialisation. */
-  while(active: () => boolean, back: () => void, leave?: () => boolean | Promise<boolean>): void {
+  while(active: () => boolean, back: () => void, leave?: () => boolean | Promise<boolean>, unsaved?: () => boolean): void {
     $effect(() => {
-      if (active()) return this.push({ back, leave });
+      if (active()) return this.push({ back, leave, unsaved });
     });
   }
 }

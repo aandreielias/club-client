@@ -68,7 +68,7 @@ describe('Keymap', () => {
 
   it('has no clashing defaults', () => {
     const keymap = new Keymap(null);
-    const ids = ['palette.open', 'settings.open', 'help.shortcuts', 'theme.toggle', 'nav.home', 'nav.calendar', 'nav.tasks', 'nav.files', 'nav.teams',
+    const ids = ['palette.open', 'sidebar.toggle', 'settings.open', 'help.shortcuts', 'theme.toggle', 'nav.home', 'nav.calendar', 'nav.tasks', 'nav.files', 'nav.teams',
       'nav.notifications', 'nav.members', 'nav.account', 'nav.settings', 'nav.back', 'view.back', 'form.submit', 'window.close', 'window.center', 'window.side', 'window.bottom',
       'window.page', 'page.new', 'list.search', 'list.next', 'list.previous', 'list.open', 'list.reset', 'calendar.previous', 'calendar.next',
       'calendar.today', 'calendar.month', 'calendar.week', 'calendar.list', 'task.edit', 'task.done', 'appointment.edit', 'appointment.yes',

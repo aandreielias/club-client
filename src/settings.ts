@@ -213,6 +213,7 @@ export const settings = {
     },
     layout: {
       sidebarWidth: '232px',
+      sidebarCollapsedWidth: '56px',
       contentWidth: '1180px',
       /** Comfortable line length for forms and long text. */
       readableWidth: '720px',
@@ -347,7 +348,12 @@ export const settings = {
     reasonMaxLength: 300,
   },
 
+  /** How long returning to a page waits for its list to load before restoring the scroll position. */
+  scrollRestoreMs: 1500,
+
   window: {
+    /** Records offered under "Zuletzt geöffnet" in the command palette. */
+    recentRecords: 8,
     defaultDock: 'center' as 'center' | 'side' | 'bottom',
   },
 

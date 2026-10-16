@@ -19,6 +19,7 @@
   import { FolderTree } from './FolderTree.svelte';
   import type { Folder, StoredFile } from './model';
   import EditFileDialog from './EditFileDialog.svelte';
+  import { LinkClipboard } from '../../lib/window/LinkClipboard';
   import EditFolderDialog from './EditFolderDialog.svelte';
   import Icon from '../../ui/Icon.svelte';
   import { colorHue } from './model';
@@ -90,6 +91,8 @@
       return [
         { label: 'Öffnen', run: () => open(item) },
         ...(target.canManage ? [{ label: 'Bearbeiten', icon: 'edit' as const, run: () => (editingFolder = target) }] : []),
+        { separator: true },
+        { label: 'Link kopieren', icon: 'copy', run: () => void LinkClipboard.copy(bus, `/files/${target.id}`) },
       ];
     }
     const modifiable = !!folder && filePolicy.canModify(item.file, folder);
@@ -102,6 +105,9 @@
       ...(modifiable ? [{ label: 'Löschen', icon: 'delete' as const, danger: true, run: () => void removeFile(item) }] : []),
     ];
   }
+
+  // Empty folder: create a subfolder (uploading has its own panel below).
+  const emptyAction = $derived(canCreate ? { label: folderId ? 'Neuer Unterordner' : 'Neuer Ordner', icon: 'add' as const, run: () => (creating = true) } : null);
 
   let editingFolder = $state<Folder | null>(null);
   let editingFile = $state<StoredFile | null>(null);
@@ -148,6 +154,9 @@
 <Page title={folder?.name ?? 'Dateien'}>
   {#snippet actions()}
     <ChoiceGroup name="files-view" label="Ansicht" options={VIEWS} bind:value={() => shownView, (v) => v && preferences.set('filesView', v)} />
+    {#if folder}
+      <Button icon="copy" onclick={() => LinkClipboard.copy(bus, `/files/${folder.id}`)} tooltip="Link zu diesem Ordner kopieren" />
+    {/if}
     {#if folder?.canManage}
       <Button icon="edit" onclick={() => (editingFolder = folder)} tooltip="Name, Sichtbarkeit, Farbe und Titelbild ändern">Bearbeiten</Button>
       <Button variant="danger" icon="delete" onclick={() => deleteFolder(folder)}>Ordner löschen</Button>
@@ -162,9 +171,9 @@
     <Empty text="Ordner nicht gefunden." />
   {:else}
     {#if shownView === 'gallery'}
-      <FolderGallery model={list} onopen={open} menu={itemMenu} />
+      <FolderGallery model={list} onopen={open} menu={itemMenu} emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'} {emptyAction} />
     {:else}
-      <DataTable model={list} rowKey={(item) => item.id} onopen={open} menu={itemMenu} emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'}>
+      <DataTable model={list} rowKey={(item) => item.id} onopen={open} menu={itemMenu} emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'} {emptyAction}>
         {#snippet cell(item, column)}
           {#if column.key === 'actions'}
             {#if item.kind === 'file' && folder && filePolicy.canModify(item.file, folder)}

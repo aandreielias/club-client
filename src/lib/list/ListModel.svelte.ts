@@ -62,6 +62,19 @@ interface StoredState {
   sort: ListSort;
 }
 
+/** Last keyboard row per list id, for the session (not stored). */
+export class ListCursors {
+  static readonly #rows = new Map<string, number>();
+
+  static get(id: string): number {
+    return ListCursors.#rows.get(id) ?? -1;
+  }
+
+  static set(id: string, row: number): void {
+    ListCursors.#rows.set(id, row);
+  }
+}
+
 /**
  * One list of the app: loading, search, filters and sorting, independent of what it lists.
  * Every list page builds one from a definition and renders it with DataTable.

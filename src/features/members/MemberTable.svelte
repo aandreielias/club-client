@@ -4,18 +4,20 @@
   import { windowMenu } from '../../lib/window/windowMenu';
   import { ROLE_LABELS } from '../../lib/types';
   import DataTable from '../../ui/DataTable.svelte';
+  import type { EmptyAction } from '../../ui/Empty.svelte';
   import Tag from '../../ui/Tag.svelte';
   import type { MemberListModel } from './MemberListModel.svelte';
   import { roleHue } from './roles';
 
   /** Members as rows (members page, start page): roles and status as tags, opens in the window. */
-  let { list, toolbar = true, limit }: { list: MemberListModel; toolbar?: boolean; limit?: number } = $props();
+  let { list, toolbar = true, limit, emptyAction }: { list: MemberListModel; toolbar?: boolean; limit?: number; emptyAction?: EmptyAction | null } = $props();
 </script>
 
 <DataTable
   model={list}
   {toolbar}
   {limit}
+  {emptyAction}
   rowKey={(m) => m.id}
   onopen={(m) => bus.publish(WINDOW_OPEN, { kind: 'member', id: m.id })}
   menu={(m) => windowMenu(bus, windows, router, 'member', m.id)}

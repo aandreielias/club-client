@@ -23,11 +23,15 @@ export class Router {
   query = $state.raw(new URLSearchParams());
 
   #started = false;
+  /** Path the member already agreed to leave for (the second hashchange must not ask again). */
+  #allowed: string | null = null;
 
   constructor(
     bus: EventBus,
     /** Wraps a page change, e.g. in a View Transition; query-only changes skip it. */
     private readonly transition: (change: () => void) => void = (change) => change(),
+    /** Asked before the page changes (unsaved input); false keeps the current page. */
+    private readonly mayLeave: () => boolean | Promise<boolean> = () => true,
   ) {
     bus.subscribe(NAVIGATE, ({ path, replace }) => (replace ? this.replace(path) : this.navigate(path)));
   }
@@ -95,7 +99,22 @@ export class Router {
       this.path = path;
       this.query = new URLSearchParams(query);
     };
-    if (this.#started && path !== this.path) this.transition(apply);
-    else apply();
+    if (!this.#started || path === this.path) return apply();
+    if (this.#allowed === path) {
+      this.#allowed = null;
+      return this.transition(apply);
+    }
+    const answer = this.mayLeave();
+    if (answer === true) return this.transition(apply);
+    // Not yet: put the old address back, then follow the link once the member agrees.
+    const target = location.hash;
+    history.replaceState(null, '', `#${this.withQuery({})}`);
+    if (answer) {
+      void answer.then((ok) => {
+        if (!ok) return;
+        this.#allowed = path;
+        location.hash = target;
+      });
+    }
   }
 }

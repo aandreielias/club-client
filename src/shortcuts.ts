@@ -27,6 +27,7 @@ export const SHORTCUTS = {
   'settings.open': { label: 'Einstellungen öffnen', group: 'Allgemein', context: 'global', keys: 'Mod+,' },
   'help.shortcuts': { label: 'Tastenkürzel anzeigen', group: 'Allgemein', context: 'global', keys: '?' },
   'theme.toggle': { label: 'Hell und dunkel wechseln', group: 'Allgemein', context: 'global', keys: 'Shift+L' },
+  'sidebar.toggle': { label: 'Seitenleiste ein- oder ausklappen', group: 'Allgemein', context: 'global', keys: '[' },
   'auth.logout': { label: 'Abmelden', group: 'Allgemein', context: 'global', keys: '' },
 
   // ---- Navigation ----

@@ -4,8 +4,7 @@ import type { MenuEntry } from '../overlay/ContextMenuService.svelte';
 import type { Router } from '../router/Router.svelte';
 import { WINDOW_OPEN, type Dock, type WindowService } from './WindowService.svelte';
 import { NAVIGATE } from '../router/Router.svelte';
-import { TOAST } from '../notify/ToastService.svelte';
-import { APP_ERROR } from '../errors/ErrorReporter';
+import { LinkClipboard } from './LinkClipboard';
 
 /**
  * The shared context-menu entries for anything that opens in the window (list rows, calendar
@@ -27,13 +26,6 @@ export function windowMenu(bus: EventBus, windows: WindowService, router: Router
     ...DOCK_LABELS.filter(([dock]) => dock !== windows.dock).map(([dock, label, icon]) => ({ label, icon, run: openDocked(dock) })),
     ...(page ? [{ label: 'Als Seite öffnen', icon: 'page' as const, run: () => bus.publish(NAVIGATE, { path: page }) }] : []),
     { separator: true },
-    {
-      label: 'Link kopieren',
-      icon: 'copy',
-      run: () =>
-        void navigator.clipboard
-          ?.writeText(`${location.origin}${location.pathname}#${link}`)
-          .then(() => bus.publish(TOAST, { text: 'Link kopiert.' }), (error) => bus.publish(APP_ERROR, error)),
-    },
+    { label: 'Link kopieren', icon: 'copy', run: () => void LinkClipboard.copy(bus, link) },
   ];
 }

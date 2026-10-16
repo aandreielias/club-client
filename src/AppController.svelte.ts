@@ -145,11 +145,15 @@ export class AppController {
       'palette.open': { run: () => (commands.paletteOpen = !commands.paletteOpen) },
       'settings.open': { run: () => bus.publish(WINDOW_OPEN, { kind: 'settings', id: 'appearance' }), when: () => !!windows.content('settings') },
       'help.shortcuts': { run: () => bus.publish(WINDOW_OPEN, { kind: 'settings', id: 'shortcuts' }), when: () => !!windows.content('settings') },
+      'sidebar.toggle': { run: () => preferences.set('sidebarCollapsed', !preferences.values.sidebarCollapsed) },
       'theme.toggle': { run: () => preferences.toggleScheme(matchMedia('(prefers-color-scheme: dark)').matches) },
       'auth.logout': { run: () => void this.logout() },
       'nav.back': { run: () => history.back() },
       // Escape: leave the newest inner view (edit mode, panel), else the previous record, else close.
-      'view.back': { run: () => backStack.back() || windows.back(), when: () => backStack.depth > 0 || windowOpen() },
+      'view.back': {
+        run: () => (commands.paletteOpen ? (commands.paletteOpen = false) : backStack.back() || windows.back()),
+        when: () => commands.paletteOpen || backStack.depth > 0 || windowOpen(),
+      },
       'form.submit': { run: () => AppController.focusedForm()?.requestSubmit(), when: () => !!AppController.focusedForm() },
       'window.close': { run: () => bus.publish(WINDOW_CLOSE), when: windowOpen },
       'window.center': { run: () => windows.setDock('center'), when: windowOpen },
