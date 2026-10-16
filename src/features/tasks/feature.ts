@@ -2,7 +2,7 @@ import TasksHome from './TasksHome.svelte';
 import { PRIVILEGED } from '../../lib/types';
 import type { Feature } from '../Feature';
 import { TASK_MESSAGES } from './messages';
-import { tasksApi } from './services';
+import { dueReminders, tasksApi } from './services';
 import { TaskCalendarSource } from './TaskCalendarSource';
 import TaskCreateView from './TaskCreateView.svelte';
 import TaskListPage from './TaskListPage.svelte';
@@ -21,6 +21,7 @@ export const tasksFeature: Feature = {
   },
   calendar: new TaskCalendarSource(tasksApi),
   messages: TASK_MESSAGES,
+  start: () => dueReminders.start(),
   home: { id: 'tasks', label: 'Meine Aufgaben', component: TasksHome },
   links: [{ server: '/tasks/:id', to: ({ id }) => ({ window: { kind: 'task', id } }) }],
 };

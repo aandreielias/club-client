@@ -432,6 +432,9 @@ export const settings = {
     defaultDueTime: '18:00',
     /** Open tasks due within this many hours are highlighted (server reminds 24 h before). */
     dueSoonHours: 24,
+    /** In-app reminders of own due tasks: how often to look, and when to sum up instead. */
+    reminderCheckMs: 60 * 60_000,
+    reminderMaxToasts: 3,
     /** server: tasks module */
     titleMaxLength: 150,
     descriptionMaxLength: 4000,
