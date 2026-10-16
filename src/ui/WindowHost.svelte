@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { bus, windows } from '../lib/container';
+  import type { IconName } from '../icons';
+  import { bus, motion, windows } from '../lib/container';
   import { WINDOW_CLOSE } from '../channels';
   import { DOCKS, type Dock } from '../lib/window/WindowService.svelte';
   import Button from './Button.svelte';
@@ -10,7 +11,7 @@
    * Renders the single detail window. Placement (center, side, bottom) animates between positions;
    * centered it is modal, docked it leaves the page usable next to it.
    */
-  const LABELS: Record<Dock, string> = { center: 'Mitte', side: 'Seite', bottom: 'Unten' };
+  const ICONS: Record<Dock, IconName> = { center: 'dockCenter', side: 'dockSide', bottom: 'dockBottom' };
   const HINTS = {
     center: withKeys('Fenster in die Mitte', 'window.center'),
     side: withKeys('Fenster an die Seite', 'window.side'),
@@ -65,12 +66,19 @@
       first.focus();
     }
   }
+
+  /** Centered windows pop, docked ones slide in from their edge (phones: from the right). */
+  function enter(node: Element) {
+    const compact = document.documentElement.dataset.layout === 'compact';
+    if (!compact && windows.dock === 'center') return motion.pop(node, { origin: 'center' });
+    return motion.slide(node, { from: !compact && windows.dock === 'bottom' ? 'bottom' : 'right' });
+  }
 </script>
 
 {#if target && content}
   {#if modal}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="backdrop" onclick={() => bus.publish(WINDOW_CLOSE)}></div>
+    <div class="backdrop" onclick={() => bus.publish(WINDOW_CLOSE)} transition:motion.fade></div>
   {/if}
   <div
     bind:this={element}
@@ -80,21 +88,23 @@
     aria-labelledby="window-title"
     tabindex="-1"
     onkeydown={keydown}
+    in:enter
+    out:enter
   >
     <header>
       <h2 id="window-title">{windows.title || ' '}</h2>
       <div class="controls">
         <div class="docks" role="group" aria-label="Fensterposition">
           {#each DOCKS as dock (dock)}
-            <Button size="sm" variant="ghost" pressed={windows.dock === dock} onclick={() => windows.setDock(dock)}
-              tooltip={HINTS[dock]}>{LABELS[dock]}</Button>
+            <Button size="sm" variant="ghost" icon={ICONS[dock]} pressed={windows.dock === dock} onclick={() => windows.setDock(dock)}
+              tooltip={HINTS[dock]} />
           {/each}
         </div>
         {#if content.page}
-          <Button size="sm" variant="ghost" onclick={() => handle.navigate(content.page!(target.id))}
-            tooltip={withKeys('Als eigene Seite öffnen', 'window.page')}>Als Seite öffnen</Button>
+          <Button size="sm" variant="ghost" icon="page" onclick={() => handle.navigate(content.page!(target.id))}
+            tooltip={withKeys('Als eigene Seite öffnen', 'window.page')} />
         {/if}
-        <Button size="sm" variant="ghost" onclick={() => bus.publish(WINDOW_CLOSE)} tooltip={withKeys('Fenster schließen', 'window.close')}>Schließen</Button>
+        <Button size="sm" variant="ghost" icon="close" onclick={() => bus.publish(WINDOW_CLOSE)} tooltip={withKeys('Fenster schließen', 'window.close')} />
       </div>
     </header>
     <div class="body">
@@ -111,7 +121,6 @@
     inset: 0;
     z-index: 30;
     background: var(--color-backdrop);
-    animation: fade var(--motion-window) var(--motion-easing);
   }
   .window {
     position: fixed;
@@ -119,7 +128,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: var(--color-background);
+    background: var(--color-elevated);
     box-shadow: var(--color-shadow-window);
     outline: none;
     /* All placements set the same four properties, so moving between them animates. */
@@ -129,14 +138,13 @@
       width var(--motion-window) var(--motion-easing),
       height var(--motion-window) var(--motion-easing),
       border-radius var(--motion-window) var(--motion-easing);
-    animation: appear var(--motion-window) var(--motion-easing);
   }
   .center {
     top: calc((100dvh - var(--window-center-height)) / 2);
     left: calc((100vw - var(--window-center-width)) / 2);
     width: var(--window-center-width);
     height: var(--window-center-height);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-xl);
   }
   .side {
     top: 0;
@@ -150,7 +158,7 @@
     left: var(--layout-sidebar-width);
     width: calc(100vw - var(--layout-sidebar-width));
     height: var(--window-bottom-height);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   }
   :global([data-layout='compact']) .window {
     top: 0;
@@ -168,7 +176,7 @@
     justify-content: space-between;
     align-items: center;
     gap: var(--space-md);
-    min-height: 44px;
+    min-height: 46px;
     padding: var(--space-xs) var(--space-sm) var(--space-xs) var(--space-xl);
     border-bottom: 1px solid var(--color-border);
   }
@@ -203,15 +211,8 @@
     padding: var(--space-lg) var(--space-xl) var(--space-xl);
   }
 
-  @keyframes appear {
-    from {
-      opacity: 0;
-      transform: scale(0.98);
-    }
-  }
-  @keyframes fade {
-    from {
-      opacity: 0;
-    }
+  /* Switching records inside the window: the new content rises in. */
+  .body > :global(*) {
+    animation: rise var(--motion-slow) var(--motion-easing) both;
   }
 </style>

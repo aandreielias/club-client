@@ -31,6 +31,7 @@ import { KeyboardService } from './keyboard/KeyboardService.svelte';
 import { Keymap } from './keyboard/Keymap.svelte';
 import { PreferencesService } from './preferences/PreferencesService.svelte';
 import { ThemeService } from './theme/ThemeService';
+import { Motion } from './motion/Motion.svelte';
 import { WindowService } from './window/WindowService.svelte';
 import { LinksApi } from './links/LinksApi';
 import { ContextMenuService } from './overlay/ContextMenuService.svelte';
@@ -60,6 +61,9 @@ export const preferences = new PreferencesService(
   store,
   () => theme.apply(preferences.themeOverrides()),
 );
+
+/** Shared transition presets; respects reduced motion (device and member preference). */
+export const motion = new Motion(settings.motion, () => preferences.values.reduceMotion);
 
 export const commands = new CommandRegistry();
 
@@ -95,7 +99,7 @@ export const directory = new TeamDirectory(api, session);
 
 export const permissions = new ClubPermissions(session, directory);
 
-export const router = new Router(bus);
+export const router = new Router(bus, (change) => motion.transition(change));
 
 export const links = new LinkResolver();
 

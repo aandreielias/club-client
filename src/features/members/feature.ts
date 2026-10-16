@@ -9,7 +9,7 @@ import MembersPage from './MembersPage.svelte';
 export const membersFeature: Feature = {
   id: 'members',
   routes: [
-    { path: '/members', component: MembersPage, nav: 'Mitglieder', roles: MANAGERS },
+    { path: '/members', component: MembersPage, nav: 'Mitglieder', icon: 'members', roles: MANAGERS },
     // Coaches open profiles of their team members (server: requireMaySee).
     { path: '/members/:id', component: MemberPage, roles: PRIVILEGED },
   ],

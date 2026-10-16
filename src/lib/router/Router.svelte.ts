@@ -24,7 +24,11 @@ export class Router {
 
   #started = false;
 
-  constructor(bus: EventBus) {
+  constructor(
+    bus: EventBus,
+    /** Wraps a page change, e.g. in a View Transition; query-only changes skip it. */
+    private readonly transition: (change: () => void) => void = (change) => change(),
+  ) {
     bus.subscribe(NAVIGATE, ({ path, replace }) => (replace ? this.replace(path) : this.navigate(path)));
   }
 
@@ -85,8 +89,13 @@ export class Router {
   }
 
   private read(): void {
-    const [path, query = ''] = location.hash.slice(1).split('?');
-    this.path = path || '/';
-    this.query = new URLSearchParams(query);
+    const [raw, query = ''] = location.hash.slice(1).split('?');
+    const path = raw || '/';
+    const apply = () => {
+      this.path = path;
+      this.query = new URLSearchParams(query);
+    };
+    if (this.#started && path !== this.path) this.transition(apply);
+    else apply();
   }
 }

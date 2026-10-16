@@ -35,6 +35,9 @@ export class ThemeService {
       doc.head.prepend(style);
     }
     style.textContent = this.css(overrides);
+    // Read by styles.css and lib/motion to switch animations off.
+    if (overrides.reduceMotion) doc.documentElement.dataset.motion = 'reduced';
+    else delete doc.documentElement.dataset.motion;
     const scheme = overrides.scheme ?? this.theme.scheme;
     // Native controls (date pickers, scrollbars) follow this before the stylesheet applies.
     doc.querySelector('meta[name="color-scheme"]')?.setAttribute('content', scheme === 'system' ? 'light dark' : scheme);
@@ -65,7 +68,7 @@ export class ThemeService {
   }
 
   private static merge(theme: Settings['theme'], o: ThemeOverrides): Settings['theme'] {
-    const motion = o.reduceMotion ? { ...theme.motion, fast: '0ms', window: '0ms' } : theme.motion;
+    const motion = o.reduceMotion ? { ...theme.motion, fast: '0ms', base: '0ms', slow: '0ms', window: '0ms' } : theme.motion;
     return {
       ...theme,
       scheme: o.scheme ?? theme.scheme,

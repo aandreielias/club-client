@@ -89,7 +89,7 @@
     <Detail title={edit.form ? 'Termin bearbeiten' : appointment.title}>
       {#snippet actions()}
         {#if !edit.form && policy.canEdit(appointment)}
-          <Button onclick={() => edit.edit(AppointmentForm.edit(session.clock, appointment))}>Bearbeiten</Button>
+          <Button icon="edit" onclick={() => edit.edit(AppointmentForm.edit(session.clock, appointment))}>Bearbeiten</Button>
           <Button variant="danger" onclick={() => (cancelOpen = true)}>Absagen</Button>
         {/if}
       {/snippet}

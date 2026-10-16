@@ -28,7 +28,7 @@
 
 <Page title="Teams">
   {#snippet actions()}
-    {#if teamPolicy.canCreate()}<Button variant="primary" onclick={() => (creating = true)}>Neues Team</Button>{/if}
+    {#if teamPolicy.canCreate()}<Button variant="primary" icon="add" onclick={() => (creating = true)}>Neues Team</Button>{/if}
   {/snippet}
 
   <DataTable model={list} rowKey={(t) => t.id} onopen={(t) => bus.publish(WINDOW_OPEN, { kind: 'team', id: t.id })}

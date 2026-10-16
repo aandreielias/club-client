@@ -9,11 +9,21 @@
   <Dialog open title={request.title} onclose={() => confirmation.answer(false)}>
     <div class="stack">
       <p>{request.message}</p>
-      <div class="row">
+      <div class="row end">
+        <Button variant="ghost" onclick={() => confirmation.answer(false)}>Abbrechen</Button>
         <Button variant={request.danger ? 'danger' : 'primary'} onclick={() => confirmation.answer(true)}
           tooltip="{request.confirmLabel}: {request.title}">{request.confirmLabel}</Button>
-        <Button variant="ghost" onclick={() => confirmation.answer(false)}>Abbrechen</Button>
       </div>
     </div>
   </Dialog>
 {/if}
+
+<style>
+  .end {
+    justify-content: flex-end;
+  }
+  p {
+    margin: 0;
+    color: var(--color-text-muted);
+  }
+</style>

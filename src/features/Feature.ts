@@ -5,6 +5,7 @@ import type { LinkRule } from '../lib/router/LinkResolver';
 import type { WindowContent } from '../lib/window/WindowService.svelte';
 import type { RouteParams } from '../lib/router/Router.svelte';
 import type { Role } from '../lib/types';
+import type { IconName } from '../icons';
 
 /** Props every routed page receives. */
 export interface PageProps {
@@ -19,6 +20,8 @@ export interface FeatureRoute {
   component: PageComponent;
   /** Sidebar label; routes without one are reachable by link only. */
   nav?: string;
+  /** Sidebar icon (src/icons.ts). */
+  icon?: IconName;
   /** Only members with one of these roles see and open the route. */
   roles?: readonly Role[];
   /** Shown at the bottom of the sidebar (above "Abmelden") instead of in the reorderable main list. */

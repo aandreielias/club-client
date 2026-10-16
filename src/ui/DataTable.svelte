@@ -1,6 +1,8 @@
 <script lang="ts" generics="T">
   import { tick, type Snippet } from 'svelte';
-  import { commands } from '../lib/container';
+  import { flip } from 'svelte/animate';
+  import { commands, motion } from '../lib/container';
+  import Icon from './Icon.svelte';
   import { useCommands } from '../lib/keyboard/useCommands.svelte';
   import type { ListColumn, ListModel } from '../lib/list/ListModel.svelte';
   import type { MenuEntry } from '../lib/overlay/ContextMenuService.svelte';
@@ -99,6 +101,9 @@
                     <button class="sort" class:active={model.sort.key === column.key} onclick={() => model.toggleSort(column.key)}
                       {@attach tooltip(() => (model.sort.key === column.key ? 'Sortierrichtung umkehren' : `Nach „${column.label}“ sortieren`))}>
                       {column.label}
+                      {#if model.sort.key === column.key}
+                        <span class="direction" class:desc={model.sort.dir === 'desc'}><Icon name="expand" small /></span>
+                      {/if}
                     </button>
                   {/if}
                 </th>
@@ -108,6 +113,7 @@
           <tbody>
             {#each model.rows as item, rowIndex (rowKey(item))}
               <tr class:clickable={!!onopen} class:selected={selected === rowKey(item)} class:cursor={rowIndex === cursor}
+                in:motion.rise|global={{ delay: motion.stagger(rowIndex), distance: 4 }} animate:flip={{ duration: motion.ms('base') }}
                 onclick={() => ((cursor = rowIndex), onopen?.(item))}
                 {@attach menu ? contextMenu(() => ((cursor = rowIndex), menu(item))) : undefined}>
                 {#each model.columns as column, index (column.key)}
@@ -146,6 +152,9 @@
     border-collapse: collapse;
     table-layout: auto;
   }
+  table {
+    transition: opacity var(--motion-base);
+  }
   table[aria-busy='true'] {
     opacity: 0.6;
   }
@@ -160,12 +169,16 @@
     border-bottom: 1px solid var(--color-border);
     color: var(--color-text-muted);
     font-size: var(--font-size-small);
-    font-weight: normal;
+    font-weight: var(--font-weight-medium);
     white-space: nowrap;
   }
   td {
-    height: 36px;
+    height: 38px;
     border-bottom: 1px solid var(--color-border);
+    transition: background var(--motion-fast);
+  }
+  tbody tr:last-child td {
+    border-bottom-color: transparent;
   }
   .end {
     text-align: right;
@@ -189,7 +202,14 @@
   }
   .sort.active {
     color: var(--color-text);
-    font-weight: var(--font-weight-medium);
+  }
+  .direction {
+    display: inline-flex;
+    color: var(--color-text-muted);
+    transition: rotate var(--motion-base) var(--motion-easing);
+  }
+  .direction:not(.desc) {
+    rotate: 180deg;
   }
   tr.clickable {
     cursor: pointer;
@@ -201,10 +221,16 @@
     background: var(--color-selected);
   }
   tr.cursor td {
-    box-shadow: inset 0 1px 0 var(--color-accent), inset 0 -1px 0 var(--color-accent);
+    background: var(--color-hover);
   }
   tr.cursor td:first-child {
-    box-shadow: inset 2px 0 0 var(--color-accent), inset 0 1px 0 var(--color-accent), inset 0 -1px 0 var(--color-accent);
+    box-shadow: inset 2px 0 0 var(--color-accent);
+  }
+  td:first-child {
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+  }
+  td:last-child {
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
   }
   .primary {
     font-weight: var(--font-weight-medium);

@@ -10,7 +10,7 @@ import TaskView from './TaskView.svelte';
 export const tasksFeature: Feature = {
   id: 'tasks',
   routes: [
-    { path: '/tasks', component: TaskListPage, nav: 'Aufgaben' },
+    { path: '/tasks', component: TaskListPage, nav: 'Aufgaben', icon: 'tasks' },
     { path: '/tasks/:id', component: TaskPage },
   ],
   windows: {

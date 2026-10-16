@@ -25,11 +25,12 @@
     display: inline-flex;
     align-items: center;
     height: 20px;
-    padding: 0 6px;
-    border-radius: var(--radius-sm);
+    padding: 0 7px;
+    border-radius: var(--radius-full);
     background: var(--tag-bg);
     color: var(--tag-text);
     font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
     line-height: 1;
     white-space: nowrap;
   }

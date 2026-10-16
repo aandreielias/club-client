@@ -30,6 +30,8 @@ export type ColorScheme = 'light' | 'dark' | 'system';
 export interface Palette {
   background: string;
   surface: string;
+  /** Raised layers: windows, dialogs, menus. */
+  elevated: string;
   hover: string;
   /** Background of selected items (active nav, chosen option). */
   selected: string;
@@ -43,6 +45,8 @@ export interface Palette {
   /** Stronger line, e.g. focused or hovered inputs. */
   borderStrong: string;
   accent: string;
+  /** Translucent accent: focus rings, text selection. */
+  accentSoft: string;
   onAccent: string;
   danger: string;
   success: string;
@@ -50,6 +54,8 @@ export interface Palette {
   backdrop: string;
   shadowWindow: string;
   shadowPopover: string;
+  /** Resting cards and segmented controls. */
+  shadowRaised: string;
   /** Tag colours (Notion-like): background and text per hue. */
   tagGrayBg: string;
   tagGrayText: string;
@@ -69,6 +75,9 @@ export interface Palette {
   tagRedText: string;
 }
 
+/** Durations in ms, shared by CSS tokens and script animations. */
+const motionMs = { fast: 120, base: 200, slow: 320, window: 280 } as const;
+
 export const settings = {
   /** Build-time environment (.env / CI variables). */
   runtime: {
@@ -82,131 +91,164 @@ export const settings = {
     scheme: 'light' as ColorScheme,
     colors: {
       light: {
-        background: '#ffffff',
-        surface: '#f7f7f5',
-        hover: 'rgba(55, 53, 47, 0.06)',
-        selected: 'rgba(55, 53, 47, 0.08)',
-        field: 'rgba(242, 241, 238, 0.6)',
-        text: '#37352f',
-        textMuted: '#787774',
-        textFaint: '#a5a29c',
-        border: 'rgba(55, 53, 47, 0.12)',
-        borderStrong: 'rgba(55, 53, 47, 0.24)',
-        accent: '#2383e2',
+        background: '#fcfcfd',
+        surface: '#f5f5f7',
+        elevated: '#ffffff',
+        hover: 'rgba(24, 26, 36, 0.045)',
+        selected: 'rgba(24, 26, 36, 0.07)',
+        field: '#ffffff',
+        text: '#1b1c21',
+        textMuted: '#6b6e78',
+        textFaint: '#a3a5ad',
+        border: 'rgba(24, 26, 36, 0.08)',
+        borderStrong: 'rgba(24, 26, 36, 0.15)',
+        accent: '#5e6ad2',
+        accentSoft: 'color-mix(in srgb, var(--color-accent) 18%, transparent)',
         onAccent: '#ffffff',
-        danger: '#d44c47',
-        success: '#448361',
-        warning: '#cb912f',
-        backdrop: 'rgba(15, 15, 15, 0.45)',
-        shadowWindow: 'rgba(15, 15, 15, 0.05) 0 0 0 1px, rgba(15, 15, 15, 0.1) 0 5px 10px, rgba(15, 15, 15, 0.2) 0 15px 40px',
-        shadowPopover: 'rgba(15, 15, 15, 0.05) 0 0 0 1px, rgba(15, 15, 15, 0.1) 0 3px 6px, rgba(15, 15, 15, 0.2) 0 9px 24px',
-        tagGrayBg: '#f1f1ef',
-        tagGrayText: '#787774',
-        tagBrownBg: '#f4eeee',
-        tagBrownText: '#9f6b53',
-        tagOrangeBg: '#fbecdd',
-        tagOrangeText: '#d9730d',
-        tagYellowBg: '#fbf3db',
-        tagYellowText: '#a37415',
-        tagGreenBg: '#edf3ec',
-        tagGreenText: '#448361',
-        tagBlueBg: '#e7f3f8',
-        tagBlueText: '#337ea9',
-        tagPurpleBg: '#f4f0f7',
-        tagPurpleText: '#9065b0',
-        tagRedBg: '#fdebec',
-        tagRedText: '#d44c47',
+        danger: '#e5484d',
+        success: '#2f9e6b',
+        warning: '#d9932b',
+        backdrop: 'rgba(12, 13, 18, 0.28)',
+        shadowWindow: '0 0 0 1px rgba(24, 26, 36, 0.06), 0 8px 24px -6px rgba(24, 26, 36, 0.14), 0 24px 64px -12px rgba(24, 26, 36, 0.18)',
+        shadowPopover: '0 0 0 1px rgba(24, 26, 36, 0.07), 0 4px 12px -2px rgba(24, 26, 36, 0.10), 0 12px 32px -8px rgba(24, 26, 36, 0.14)',
+        shadowRaised: '0 1px 2px rgba(24, 26, 36, 0.06), 0 0 0 1px rgba(24, 26, 36, 0.06)',
+        tagGrayBg: 'rgba(107, 110, 120, 0.12)',
+        tagGrayText: '#5f626b',
+        tagBrownBg: 'rgba(150, 102, 72, 0.13)',
+        tagBrownText: '#8a5a3c',
+        tagOrangeBg: 'rgba(230, 125, 34, 0.13)',
+        tagOrangeText: '#b8600f',
+        tagYellowBg: 'rgba(217, 160, 30, 0.15)',
+        tagYellowText: '#94690a',
+        tagGreenBg: 'rgba(47, 158, 107, 0.13)',
+        tagGreenText: '#23794f',
+        tagBlueBg: 'rgba(59, 130, 220, 0.13)',
+        tagBlueText: '#2563b8',
+        tagPurpleBg: 'rgba(124, 92, 214, 0.13)',
+        tagPurpleText: '#6743c4',
+        tagRedBg: 'rgba(229, 72, 77, 0.12)',
+        tagRedText: '#c42f35',
       } satisfies Palette,
       dark: {
-        background: '#191919',
-        surface: '#202020',
-        hover: 'rgba(255, 255, 255, 0.055)',
-        selected: 'rgba(255, 255, 255, 0.08)',
-        field: 'rgba(255, 255, 255, 0.055)',
-        text: '#d4d4d4',
-        textMuted: '#9b9b9b',
-        textFaint: '#6f6f6f',
-        border: 'rgba(255, 255, 255, 0.094)',
-        borderStrong: 'rgba(255, 255, 255, 0.2)',
-        accent: '#2383e2',
+        background: '#0f1013',
+        surface: '#141518',
+        elevated: '#1b1c20',
+        hover: 'rgba(255, 255, 255, 0.045)',
+        selected: 'rgba(255, 255, 255, 0.075)',
+        field: 'rgba(255, 255, 255, 0.03)',
+        text: '#e7e8ea',
+        textMuted: '#9a9ca4',
+        textFaint: '#63656d',
+        border: 'rgba(255, 255, 255, 0.07)',
+        borderStrong: 'rgba(255, 255, 255, 0.14)',
+        accent: '#7c84f0',
+        accentSoft: 'color-mix(in srgb, var(--color-accent) 26%, transparent)',
         onAccent: '#ffffff',
-        danger: '#df5452',
-        success: '#529e72',
-        warning: '#ca9849',
-        backdrop: 'rgba(0, 0, 0, 0.6)',
-        shadowWindow: 'rgba(15, 15, 15, 0.2) 0 0 0 1px, rgba(15, 15, 15, 0.3) 0 5px 10px, rgba(15, 15, 15, 0.4) 0 15px 40px',
-        shadowPopover: 'rgba(15, 15, 15, 0.2) 0 0 0 1px, rgba(15, 15, 15, 0.3) 0 3px 6px, rgba(15, 15, 15, 0.4) 0 9px 24px',
-        tagGrayBg: '#373737',
-        tagGrayText: '#9b9b9b',
-        tagBrownBg: '#4a3228',
-        tagBrownText: '#ba856f',
-        tagOrangeBg: '#5c3b23',
-        tagOrangeText: '#c77d48',
-        tagYellowBg: '#56452f',
-        tagYellowText: '#ca9849',
-        tagGreenBg: '#243d30',
-        tagGreenText: '#529e72',
-        tagBlueBg: '#143a4e',
-        tagBlueText: '#379ad3',
-        tagPurpleBg: '#3c2d49',
-        tagPurpleText: '#9d68d3',
-        tagRedBg: '#522e2a',
-        tagRedText: '#df5452',
+        danger: '#f0676b',
+        success: '#3cb57d',
+        warning: '#e6a845',
+        backdrop: 'rgba(0, 0, 0, 0.5)',
+        shadowWindow: '0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 24px -6px rgba(0, 0, 0, 0.5), 0 24px 64px -12px rgba(0, 0, 0, 0.6)',
+        shadowPopover: '0 0 0 1px rgba(255, 255, 255, 0.07), 0 4px 12px -2px rgba(0, 0, 0, 0.45), 0 12px 32px -8px rgba(0, 0, 0, 0.55)',
+        shadowRaised: '0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+        tagGrayBg: 'rgba(154, 156, 164, 0.16)',
+        tagGrayText: '#b3b5bc',
+        tagBrownBg: 'rgba(186, 133, 111, 0.18)',
+        tagBrownText: '#d2a48f',
+        tagOrangeBg: 'rgba(240, 140, 60, 0.18)',
+        tagOrangeText: '#f0a466',
+        tagYellowBg: 'rgba(230, 180, 70, 0.18)',
+        tagYellowText: '#e8c170',
+        tagGreenBg: 'rgba(60, 181, 125, 0.18)',
+        tagGreenText: '#6fcf9f',
+        tagBlueBg: 'rgba(80, 150, 240, 0.2)',
+        tagBlueText: '#86b6f5',
+        tagPurpleBg: 'rgba(150, 120, 240, 0.2)',
+        tagPurpleText: '#b7a3f7',
+        tagRedBg: 'rgba(240, 103, 107, 0.18)',
+        tagRedText: '#f59497',
       } satisfies Palette,
     },
     font: {
-      family: "ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
-      mono: "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace",
+      family: "'Inter Variable', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+      mono: "ui-monospace, 'SFMono-Regular', 'JetBrains Mono', Menlo, Consolas, monospace",
+      /** OpenType features of Inter (cv01: alternate one, ss03: round quotes). */
+      features: "'cv01', 'ss03'",
       sizeBase: '14px',
       sizeSmall: '12.5px',
-      sizeTitle: '32px',
-      sizeH1: '28px',
-      sizeH2: '18px',
-      sizeH3: '15px',
+      sizeTitle: '24px',
+      sizeH1: '22px',
+      sizeH2: '15px',
+      sizeH3: '13.5px',
       lineHeight: '1.5',
+      tracking: '-0.006em',
       weightMedium: '500',
       weightBold: '600',
     },
     radius: {
-      sm: '3px',
+      sm: '4px',
       md: '6px',
       lg: '10px',
+      xl: '14px',
+      full: '999px',
     },
     space: {
+      xxs: '2px',
       xs: '4px',
       sm: '8px',
       md: '12px',
       lg: '16px',
       xl: '24px',
-      xxl: '48px',
+      xxl: '40px',
     },
     /** Every input, select and button shares these. */
     control: {
-      height: '26px',
-      paddingX: '8px',
+      height: '30px',
+      paddingX: '10px',
+    },
+    icon: {
+      size: '16px',
+      sizeSmall: '14px',
+      stroke: '1.75',
     },
     layout: {
-      sidebarWidth: '240px',
-      contentWidth: '1200px',
+      sidebarWidth: '232px',
+      contentWidth: '1180px',
       /** Comfortable line length for forms and long text. */
       readableWidth: '720px',
       /** Height of one hour in the calendar week view. */
       calendarHour: '44px',
-      narrowWidth: '420px',
+      narrowWidth: '400px',
       fieldWidth: '320px',
     },
     /** Detail window sizes per placement. */
     window: {
-      centerWidth: 'min(960px, calc(100vw - 48px))',
-      centerHeight: 'min(85vh, 900px)',
-      sideWidth: 'min(600px, 48vw)',
+      centerWidth: 'min(920px, calc(100vw - 48px))',
+      centerHeight: 'min(85vh, 880px)',
+      sideWidth: 'min(580px, 46vw)',
       bottomHeight: '50vh',
     },
+    /** CSS side of `settings.motion` (same numbers, as custom properties). */
     motion: {
-      fast: '120ms',
-      window: '260ms',
-      easing: 'cubic-bezier(0.2, 0, 0, 1)',
+      fast: `${motionMs.fast}ms`,
+      base: `${motionMs.base}ms`,
+      slow: `${motionMs.slow}ms`,
+      window: `${motionMs.window}ms`,
+      /** Quick start, long soft landing: everything that enters. */
+      easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+      /** Symmetric, for things that move between two resting places. */
+      easingInOut: 'cubic-bezier(0.65, 0, 0.35, 1)',
     },
+  },
+
+  /** Animation timing for script-driven motion (src/lib/motion); CSS reads theme.motion. */
+  motion: {
+    ...motionMs,
+    /** Delay between rows that fade in one after another, and the last row that still waits. */
+    staggerMs: 22,
+    staggerMax: 12,
+    /** Distance (px) elements travel when they enter. */
+    rise: 6,
   },
 
   /** Event bus (src/lib/bus): request timeout and debug history length. */
@@ -318,21 +360,22 @@ export const settings = {
   /** Choices offered under Einstellungen > Darstellung; the first entry of each is the default. */
   appearance: {
     accents: {
-      blue: { label: 'Blau', color: '#2383e2' },
-      green: { label: 'Grün', color: '#448361' },
-      purple: { label: 'Lila', color: '#9065b0' },
-      orange: { label: 'Orange', color: '#d9730d' },
-      red: { label: 'Rot', color: '#d44c47' },
+      indigo: { label: 'Indigo', color: '#5e6ad2' },
+      blue: { label: 'Blau', color: '#2f7fe0' },
+      green: { label: 'Grün', color: '#2f9e6b' },
+      violet: { label: 'Violett', color: '#8b5cf6' },
+      orange: { label: 'Orange', color: '#e0702a' },
+      red: { label: 'Rot', color: '#e5484d' },
     },
     fontSizes: {
       normal: { label: 'Normal', size: '14px' },
       small: { label: 'Klein', size: '13px' },
-      large: { label: 'Groß', size: '16px' },
+      large: { label: 'Groß', size: '15px' },
     },
     densities: {
-      normal: { label: 'Normal', controlHeight: '26px' },
-      compact: { label: 'Kompakt', controlHeight: '22px' },
-      comfortable: { label: 'Breit', controlHeight: '32px' },
+      normal: { label: 'Normal', controlHeight: '30px' },
+      compact: { label: 'Kompakt', controlHeight: '26px' },
+      comfortable: { label: 'Breit', controlHeight: '36px' },
     },
   },
 

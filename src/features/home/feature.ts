@@ -3,5 +3,5 @@ import HomePage from './HomePage.svelte';
 
 export const homeFeature: Feature = {
   id: 'home',
-  routes: [{ path: '/', component: HomePage, nav: 'Start' }],
+  routes: [{ path: '/', component: HomePage, nav: 'Start', icon: 'home' }],
 };

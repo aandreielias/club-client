@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import Icon from './Icon.svelte';
 
   /**
    * Every page has the same header, top to bottom:
@@ -25,7 +26,7 @@
 
 <article>
   <header>
-    {#if back}<a class="back muted" href="#{back.href}">{back.label}</a>{/if}
+    {#if back}<a class="back muted" href="#{back.href}"><Icon name="back" small />{back.label}</a>{/if}
     <div class="title-row">
       <h1>{title}</h1>
       {#if actions}<div class="actions">{@render actions()}</div>{/if}
@@ -55,6 +56,10 @@
     margin-bottom: var(--space-lg);
   }
   .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: -4px;
     justify-self: start;
     font-size: var(--font-size-small);
     text-decoration: none;
@@ -73,6 +78,7 @@
   h1 {
     margin: 0;
     font-size: var(--font-size-title);
+    letter-spacing: -0.02em;
   }
   .actions,
   .side {

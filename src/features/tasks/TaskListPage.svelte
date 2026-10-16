@@ -48,7 +48,7 @@
 <Page title="Aufgaben">
   {#snippet actions()}
     {#if taskPolicy.canCreate()}
-      <Button variant="primary" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'task-new', id: list.filters.team || '-' })}>Neue Aufgabe</Button>
+      <Button variant="primary" icon="add" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'task-new', id: list.filters.team || '-' })}>Neue Aufgabe</Button>
     {/if}
   {/snippet}
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from './Icon.svelte';
   import { settings } from '../settings';
   import { bus, commands, router } from '../lib/container';
   import { NAVIGATE } from '../channels';
@@ -48,21 +49,37 @@
   }
 </script>
 
-<input
-  bind:this={input}
-  bind:value
-  class="search"
-  type="search"
-  placeholder="Suchen"
-  aria-label="Alles durchsuchen"
-  maxlength={settings.search.maxQueryLength}
-  oninput={typed}
-  onkeydown={keydown}
-  {@attach tooltip(() => withKeys('Termine, Aufgaben, Mitglieder, Teams, Inventar und Dateien durchsuchen', 'search.focus'))}
-/>
+<label class="field">
+  <Icon name="search" small />
+  <input
+    bind:this={input}
+    bind:value
+    class="search"
+    type="search"
+    placeholder="Suchen"
+    aria-label="Alles durchsuchen"
+    maxlength={settings.search.maxQueryLength}
+    oninput={typed}
+    onkeydown={keydown}
+    {@attach tooltip(() => withKeys('Termine, Aufgaben, Mitglieder, Teams, Inventar und Dateien durchsuchen', 'search.focus'))}
+  />
+</label>
 
 <style>
+  .field {
+    position: relative;
+    display: block;
+  }
+  .field :global(.icon) {
+    position: absolute;
+    top: 50%;
+    left: var(--space-sm);
+    translate: 0 -50%;
+    color: var(--color-text-faint);
+    pointer-events: none;
+  }
   .search {
     width: 100%;
+    padding-left: 28px !important;
   }
 </style>

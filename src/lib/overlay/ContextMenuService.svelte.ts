@@ -1,3 +1,4 @@
+import type { IconName } from '../../icons';
 import type { CommandId } from '../../shortcuts';
 
 export interface MenuAction {
@@ -8,6 +9,7 @@ export interface MenuAction {
   danger?: boolean;
   /** Command id from src/shortcuts.ts whose current keys are shown as a hint. */
   command?: CommandId;
+  icon?: IconName;
 }
 
 export interface MenuSeparator {

@@ -1,7 +1,7 @@
 /*
  * Base element styles. Every value comes from the custom properties generated from src/settings.ts
  * (ThemeService). One visual language for all controls: text inputs, selects, textareas, checkboxes
- * and buttons share height, radius, background and focus treatment.
+ * and buttons share height, radius, background, focus ring and motion.
  */
 
 *,
@@ -16,13 +16,17 @@ body {
   background: var(--color-background);
   color: var(--color-text);
   font-family: var(--font-family);
+  font-feature-settings: var(--font-features);
   font-size: var(--font-size-base);
   line-height: var(--font-line-height);
+  letter-spacing: var(--font-tracking);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection {
-  background: var(--color-tag-blue-bg);
+  background: var(--color-accent-soft);
 }
 
 h1,
@@ -31,7 +35,7 @@ h3 {
   margin: 0 0 var(--space-sm);
   line-height: 1.25;
   font-weight: var(--font-weight-bold);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 h1 {
   font-size: var(--font-size-h1);
@@ -57,9 +61,16 @@ a {
   color: inherit;
   text-decoration-color: var(--color-border-strong);
   text-underline-offset: 3px;
+  transition: text-decoration-color var(--motion-fast);
 }
 a:hover {
   text-decoration-color: currentColor;
+}
+
+/* Thin, quiet scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
 }
 
 /* ---- Controls ---- */
@@ -69,6 +80,7 @@ select,
 textarea,
 button {
   font: inherit;
+  letter-spacing: inherit;
   color: inherit;
 }
 
@@ -83,12 +95,14 @@ textarea {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background-color: var(--color-field);
+  box-shadow: var(--color-shadow-raised);
   transition:
     border-color var(--motion-fast),
-    box-shadow var(--motion-fast);
+    box-shadow var(--motion-fast),
+    background-color var(--motion-fast);
 }
 textarea {
-  padding: var(--space-xs) var(--control-padding-x);
+  padding: var(--space-sm) var(--control-padding-x);
   resize: vertical;
 }
 /* Single-line controls are exactly one control row high, like buttons and text next to them. */
@@ -106,9 +120,9 @@ select:focus,
 textarea:focus {
   outline: none;
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px var(--color-tag-blue-bg);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
-/* No browser glyphs in search fields (house rule: no icons); Escape clears them. */
+/* Search fields get the Icon component instead of the browser glyphs; Escape clears them. */
 input[type='search']::-webkit-search-cancel-button,
 input[type='search']::-webkit-search-decoration {
   appearance: none;
@@ -122,10 +136,11 @@ input:disabled,
 select:disabled,
 textarea:disabled {
   color: var(--color-text-faint);
+  background-color: var(--color-hover);
   cursor: not-allowed;
 }
 
-/* Native look removed; the caret is drawn with two gradients (no icon asset). */
+/* Native look removed; a chevron drawn with two gradients keeps native selects in line. */
 select {
   appearance: none;
   padding-right: calc(var(--control-padding-x) + 14px);
@@ -145,7 +160,7 @@ select.inline {
   width: auto;
 }
 
-/* Checkbox and radio drawn in the house style; the checkmark is two CSS borders, no image. */
+/* Checkbox and radio drawn in the house style; the checkmark is two CSS borders that pop in. */
 input[type='checkbox'],
 input[type='radio'] {
   appearance: none;
@@ -157,11 +172,12 @@ input[type='radio'] {
   margin: 0;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
-  background: var(--color-background);
+  background: var(--color-field);
   cursor: pointer;
   transition:
     background var(--motion-fast),
-    border-color var(--motion-fast);
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast);
 }
 input[type='radio'] {
   border-radius: 50%;
@@ -174,7 +190,7 @@ input[type='checkbox']::before {
   border-bottom: 2px solid var(--color-on-accent);
   border-left: 2px solid var(--color-on-accent);
   transform: rotate(-45deg) scale(0);
-  transition: transform var(--motion-fast);
+  transition: transform var(--motion-base) var(--motion-easing);
 }
 input[type='radio']::before {
   content: '';
@@ -183,7 +199,7 @@ input[type='radio']::before {
   border-radius: 50%;
   background: var(--color-on-accent);
   transform: scale(0);
-  transition: transform var(--motion-fast);
+  transition: transform var(--motion-base) var(--motion-easing);
 }
 input[type='checkbox']:checked,
 input[type='radio']:checked {
@@ -195,6 +211,11 @@ input[type='checkbox']:checked::before {
 }
 input[type='radio']:checked::before {
   transform: scale(1);
+}
+input[type='checkbox']:focus-visible,
+input[type='radio']:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
 input[type='checkbox']:hover:not(:checked, :disabled),
 input[type='radio']:hover:not(:checked, :disabled) {
@@ -230,6 +251,7 @@ progress::-webkit-progress-value {
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 /* A checkbox or radio with its text */
@@ -281,7 +303,7 @@ label.check {
   white-space: nowrap;
 }
 
-/* Notion-style property list: muted label column, values aligned */
+/* Property list: muted label column, values aligned */
 .props {
   display: grid;
   grid-template-columns: minmax(8rem, 11rem) 1fr;
@@ -312,6 +334,54 @@ label.check {
   max-width: var(--layout-readable-width);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* Shimmer placeholder while content loads (AsyncView) */
+.skeleton {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--color-hover) 0%, var(--color-selected) 50%, var(--color-hover) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s var(--motion-easing-in-out) infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+/* Content that arrives (pages, sections) rises softly into place. */
+.enter {
+  animation: rise var(--motion-slow) var(--motion-easing) both;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* View Transitions (Router): pages cross-fade with a short rise. */
+::view-transition-old(page) {
+  animation: var(--motion-fast) ease-out both fade-out;
+}
+::view-transition-new(page) {
+  animation: var(--motion-base) var(--motion-easing) both rise;
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Settings > Darstellung > "Weniger Bewegung" sets data-motion on <html>. */
+:root[data-motion='reduced'] *,
+:root[data-motion='reduced'] *::before,
+:root[data-motion='reduced'] *::after {
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

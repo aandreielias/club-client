@@ -94,7 +94,7 @@
     <ChoiceGroup name="calendar-view" label="Ansicht" options={CALENDAR_VIEWS}
       bind:value={() => model.view, (view) => view && model.setView(view)} />
     <Button onclick={() => (subscribing = true)}>Abonnieren</Button>
-    {#if policy.canCreate()}<Button variant="primary" onclick={newAppointment}>Neuer Termin</Button>{/if}
+    {#if policy.canCreate()}<Button variant="primary" icon="add" onclick={newAppointment}>Neuer Termin</Button>{/if}
   {/snippet}
   {#snippet context()}
     <h2 class="period" aria-live="polite">{title}</h2>

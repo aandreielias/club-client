@@ -63,8 +63,8 @@
     <Detail title={edit.form ? 'Gegenstand bearbeiten' : value.name}>
       {#snippet actions()}
         {#if !edit.form && policy.canManage()}
-          <Button onclick={() => edit.edit(ItemForm.edit(value))}>Bearbeiten</Button>
-          <Button variant="danger" busy={remove.busy} onclick={() => destroy(value.name)}>Löschen</Button>
+          <Button icon="edit" onclick={() => edit.edit(ItemForm.edit(value))}>Bearbeiten</Button>
+          <Button variant="danger" icon="delete" busy={remove.busy} onclick={() => destroy(value.name)}>Löschen</Button>
         {/if}
       {/snippet}
       {#snippet meta()}

@@ -21,7 +21,7 @@
 <Page title="Inventar">
   {#snippet actions()}
     {#if policy.canManage()}
-      <Button variant="primary" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'item-new', id: '-' })}>Neuer Gegenstand</Button>
+      <Button variant="primary" icon="add" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'item-new', id: '-' })}>Neuer Gegenstand</Button>
     {/if}
   {/snippet}
 

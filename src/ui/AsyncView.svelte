@@ -15,10 +15,10 @@
   </div>
 {:else if resource.value === undefined}
   <div class="loading" aria-busy="true" aria-label="Laden">
-    <span></span><span></span><span></span>
+    <span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span>
   </div>
 {:else}
-  {@render children(resource.value)}
+  <div class="loaded">{@render children(resource.value)}</div>
 {/if}
 
 <style>
@@ -29,8 +29,13 @@
   }
   .loading span {
     height: 14px;
-    border-radius: var(--radius-sm);
-    background: var(--color-hover);
+  }
+  /* Arrived content fades in; `display: contents` keeps the caller's layout. */
+  .loaded {
+    display: contents;
+  }
+  .loaded > :global(*) {
+    animation: rise var(--motion-slow) var(--motion-easing) both;
   }
   .loading span:nth-child(2) {
     width: 80%;

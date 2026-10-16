@@ -8,7 +8,7 @@ import { INVENTORY_MESSAGES } from './messages';
 export const inventoryFeature: Feature = {
   id: 'inventory',
   routes: [
-    { path: '/inventory', component: InventoryPage, nav: 'Inventar' },
+    { path: '/inventory', component: InventoryPage, nav: 'Inventar', icon: 'inventory' },
     { path: '/inventory/:id', component: ItemPage },
   ],
   windows: {

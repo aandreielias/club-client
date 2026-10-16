@@ -49,15 +49,26 @@
     position: fixed;
     inset: auto;
     margin: 0;
-    padding: 3px var(--space-sm);
+    padding: 4px var(--space-sm);
     border: 0;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     background: var(--color-text);
     color: var(--color-background);
+    box-shadow: var(--color-shadow-popover);
+    font-weight: var(--font-weight-medium);
     font-size: var(--font-size-small);
     line-height: 1.4;
     white-space: pre-line;
     overflow-wrap: anywhere;
     pointer-events: none;
+  }
+  .tooltip:popover-open {
+    animation: tip-in var(--motion-fast) var(--motion-easing);
+  }
+  @keyframes tip-in {
+    from {
+      opacity: 0;
+      transform: translateY(2px);
+    }
   }
 </style>

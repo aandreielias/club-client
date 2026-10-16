@@ -10,7 +10,7 @@ import { calendarApi } from './services';
 export const calendarFeature: Feature = {
   id: 'calendar',
   routes: [
-    { path: '/calendar', component: CalendarPage, nav: 'Kalender' },
+    { path: '/calendar', component: CalendarPage, nav: 'Kalender', icon: 'calendar' },
     { path: '/calendar/:id', component: AppointmentPage },
   ],
   windows: {

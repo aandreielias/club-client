@@ -32,7 +32,7 @@
   }
   h1 {
     margin: 0;
-    font-size: var(--font-size-title);
+    font-size: var(--font-size-h1);
     overflow-wrap: anywhere;
   }
   .actions {
@@ -50,7 +50,11 @@
   }
   .detail :global(h2) {
     margin: var(--space-md) 0 0;
-    padding-bottom: var(--space-xs);
+    padding-bottom: var(--space-sm);
     border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.01em;
   }
 </style>

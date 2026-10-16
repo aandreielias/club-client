@@ -93,7 +93,7 @@
     font-weight: var(--font-weight-medium);
   }
   .day-head.today .number {
-    background: var(--color-danger);
+    background: var(--color-accent);
     color: var(--color-on-accent);
   }
   .lane-label {

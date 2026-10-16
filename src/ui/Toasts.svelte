@@ -1,10 +1,18 @@
 <script lang="ts">
-  import { toasts } from '../lib/container';
+  import { flip } from 'svelte/animate';
+  import { motion, toasts } from '../lib/container';
+  import Icon from './Icon.svelte';
+  import { tooltip } from './tooltip';
 </script>
 
 <div class="toasts" aria-live="polite">
   {#each toasts.items as toast (toast.id)}
-    <div class="toast" class:error={toast.error} role={toast.error ? 'alert' : 'status'}>{toast.text}</div>
+    <div class="toast" class:error={toast.error} role={toast.error ? 'alert' : 'status'}
+      in:motion.rise={{ distance: 16 }} out:motion.pop={{ origin: 'bottom' }} animate:flip={{ duration: motion.ms('base') }}>
+      <Icon name={toast.error ? 'alert' : 'check'} small />
+      <span>{toast.text}</span>
+      <button class="dismiss" aria-label="Schließen" onclick={() => toasts.dismiss(toast.id)} {@attach tooltip('Meldung schließen')}><Icon name="close" small /></button>
+    </div>
   {/each}
 </div>
 
@@ -22,14 +30,38 @@
     translate: -50% 0;
   }
   .toast {
-    padding: var(--space-sm) var(--space-md);
-    border-radius: var(--radius-md);
-    background: var(--color-text);
-    color: var(--color-background);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-height: 38px;
+    padding: 0 var(--space-xs) 0 var(--space-md);
+    border-radius: var(--radius-lg);
+    background: var(--color-elevated);
     box-shadow: var(--color-shadow-popover);
+    font-weight: var(--font-weight-medium);
   }
-  .error {
-    background: var(--color-danger);
-    color: var(--color-on-accent);
+  .toast > :global(.icon) {
+    color: var(--color-success);
+  }
+  .error > :global(.icon) {
+    color: var(--color-danger);
+  }
+  .dismiss {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--color-text-faint);
+    cursor: pointer;
+    transition:
+      background var(--motion-fast),
+      color var(--motion-fast);
+  }
+  .dismiss:hover {
+    background: var(--color-hover);
+    color: var(--color-text);
   }
 </style>

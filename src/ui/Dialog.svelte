@@ -22,15 +22,34 @@
     width: min(var(--layout-narrow-width), calc(100vw - 2 * var(--space-lg)));
     padding: var(--space-xl);
     border: 0;
-    border-radius: var(--radius-lg);
-    background: var(--color-background);
+    border-radius: var(--radius-xl);
+    background: var(--color-elevated);
     color: var(--color-text);
     box-shadow: var(--color-shadow-window);
   }
+  dialog[open] {
+    animation: dialog-in var(--motion-base) var(--motion-easing);
+  }
   dialog::backdrop {
     background: var(--color-backdrop);
+    backdrop-filter: blur(2px);
+  }
+  dialog[open]::backdrop {
+    animation: backdrop-in var(--motion-base) ease-out;
+  }
+  @keyframes dialog-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.97);
+    }
+  }
+  @keyframes backdrop-in {
+    from {
+      opacity: 0;
+    }
   }
   h3 {
     margin-bottom: var(--space-md);
+    font-size: var(--font-size-h2);
   }
 </style>

@@ -5,10 +5,12 @@ import { NavCatalog } from '../lib/navigation/NavCatalog';
 import type { WindowService } from '../lib/window/WindowService.svelte';
 import type { Role } from '../lib/types';
 import type { Feature, FeatureRoute } from './Feature';
+import type { IconName } from '../icons';
 
 export interface NavItem {
   path: string;
   label: string;
+  icon?: IconName;
   /** e.g. unread count; omitted when zero. */
   badge?: number;
   /** Bottom of the sidebar instead of the main list. */
@@ -38,7 +40,7 @@ export class FeatureRegistry {
     const items = allowed.flatMap((r): NavItem[] => {
       if (!r.nav) return [];
       const badge = r.badge?.() ?? 0;
-      return [{ path: r.path, label: r.nav, ...(badge > 0 ? { badge } : {}), ...(r.navFooter ? { footer: true } : {}) }];
+      return [{ path: r.path, label: r.nav, ...(r.icon ? { icon: r.icon } : {}), ...(badge > 0 ? { badge } : {}), ...(r.navFooter ? { footer: true } : {}) }];
     });
     return [...NavCatalog.sort(items.filter((i) => !i.footer), order), ...items.filter((i) => i.footer)];
   }

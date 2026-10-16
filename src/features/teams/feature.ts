@@ -7,7 +7,7 @@ import TeamView from './TeamView.svelte';
 export const teamsFeature: Feature = {
   id: 'teams',
   routes: [
-    { path: '/teams', component: TeamsPage, nav: 'Teams' },
+    { path: '/teams', component: TeamsPage, nav: 'Teams', icon: 'teams' },
     { path: '/teams/:id', component: TeamPage },
   ],
   windows: {

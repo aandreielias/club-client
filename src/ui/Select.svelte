@@ -228,7 +228,8 @@
     background:
       linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%) right calc(var(--control-padding-x) + 4px) center / 4px 4px no-repeat,
       linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%) right var(--control-padding-x) center / 4px 4px no-repeat,
-      var(--color-field);
+      var(--color-elevated);
+    box-shadow: var(--color-shadow-raised);
     color: var(--color-text);
     font-size: var(--font-size-base);
     line-height: 1.3;
@@ -236,7 +237,11 @@
     cursor: pointer;
     transition:
       border-color var(--motion-fast),
-      box-shadow var(--motion-fast);
+      box-shadow var(--motion-fast),
+      transform var(--motion-fast) var(--motion-easing);
+  }
+  .trigger:active:not(:disabled) {
+    transform: scale(0.98);
   }
   .inline .trigger {
     width: auto;
@@ -248,7 +253,7 @@
   .trigger:focus-visible {
     outline: none;
     border-color: var(--color-accent);
-    box-shadow: 0 0 0 2px var(--color-tag-blue-bg);
+    box-shadow: 0 0 0 3px var(--color-accent-soft);
   }
   .trigger:disabled {
     color: var(--color-text-faint);
@@ -271,12 +276,22 @@
     padding: var(--space-xs);
     overflow-y: auto;
     border: 0;
-    border-radius: var(--radius-md);
-    background: var(--color-background);
+    border-radius: var(--radius-lg);
+    background: var(--color-elevated);
     color: var(--color-text);
     box-shadow: var(--color-shadow-popover);
     list-style: none;
     outline: none;
+  }
+  ul:popover-open {
+    animation: pop-in var(--motion-base) var(--motion-easing);
+    transform-origin: top center;
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
   }
   li {
     display: flex;
@@ -284,10 +299,11 @@
     gap: var(--space-sm);
     min-height: var(--control-height);
     padding: 0 var(--space-sm) 0 var(--space-xs);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     font-size: var(--font-size-base);
     white-space: nowrap;
     cursor: pointer;
+    transition: background var(--motion-fast);
   }
   li[data-active='true'] {
     background: var(--color-hover);
@@ -312,6 +328,7 @@
     border-bottom: 2px solid var(--color-accent);
     border-left: 2px solid var(--color-accent);
     transform: rotate(-45deg) scale(0);
+    transition: transform var(--motion-base) var(--motion-easing);
   }
   li[aria-selected='true'] .tick::before {
     transform: rotate(-45deg) scale(1);

@@ -54,7 +54,7 @@
   <div class="shell">
     <Sidebar title={session.club.name} user="{session.member.firstName} {session.member.lastName}" items={app.navigation}
       current={router.path} connection={live.status} onlogout={logout} />
-    <main>
+    <main style:view-transition-name="page">
       {#if app.page}
         {#key router.path}
           <app.page.component params={app.page.params} />

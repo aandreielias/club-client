@@ -4,6 +4,7 @@
   import { contextMenu, keymap } from '../lib/container';
   import { isSeparator, type MenuAction } from '../lib/overlay/ContextMenuService.svelte';
   import { menuPosition } from '../lib/overlay/placement';
+  import Icon from './Icon.svelte';
   import Kbd from './Kbd.svelte';
 
   /**
@@ -117,7 +118,8 @@
         onclick={() => run(entry)}
         onpointermove={() => !entry.disabled && (active = index)}
       >
-        <span>{entry.label}</span>
+        {#if entry.icon}<Icon name={entry.icon} small />{/if}
+        <span class="label">{entry.label}</span>
         {#if entry.command}<Kbd keys={keymap.keys(entry.command)} />{/if}
       </div>
     {/if}
@@ -133,22 +135,42 @@
     margin: 0;
     padding: var(--space-xs);
     border: 0;
-    border-radius: var(--radius-md);
-    background: var(--color-background);
+    border-radius: var(--radius-lg);
+    background: var(--color-elevated);
     color: var(--color-text);
     box-shadow: var(--color-shadow-popover);
     outline: none;
   }
+  .menu:popover-open {
+    animation: pop-in var(--motion-base) var(--motion-easing);
+    transform-origin: top left;
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
   .item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--space-lg);
+    gap: var(--space-sm);
     min-height: var(--control-height);
     padding: 0 var(--space-sm);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     white-space: nowrap;
     cursor: pointer;
+    transition: background var(--motion-fast);
+  }
+  .label {
+    flex: 1;
+    margin-right: var(--space-lg);
+  }
+  .item :global(.icon) {
+    color: var(--color-text-muted);
+  }
+  .item.danger :global(.icon) {
+    color: currentColor;
   }
   .item.active {
     background: var(--color-hover);

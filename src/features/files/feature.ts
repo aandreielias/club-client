@@ -6,7 +6,7 @@ import PhotoView from './PhotoView.svelte';
 export const filesFeature: Feature = {
   id: 'files',
   routes: [
-    { path: '/files', component: FilesPage, nav: 'Dateien' },
+    { path: '/files', component: FilesPage, nav: 'Dateien', icon: 'files' },
     { path: '/files/:id', component: FilesPage },
   ],
   // `photo` stays for links that name it; both show any file.

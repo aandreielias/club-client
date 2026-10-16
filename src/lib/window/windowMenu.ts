@@ -1,4 +1,5 @@
 import type { EventBus } from '../bus';
+import type { IconName } from '../../icons';
 import type { MenuEntry } from '../overlay/ContextMenuService.svelte';
 import type { Router } from '../router/Router.svelte';
 import { WINDOW_OPEN, type Dock, type WindowService } from './WindowService.svelte';
@@ -8,10 +9,10 @@ import { NAVIGATE } from '../router/Router.svelte';
  * The shared context-menu entries for anything that opens in the window (list rows, calendar
  * entries): open in a given placement, as a page, or copy a link to it.
  */
-const DOCK_LABELS: readonly [Dock, string][] = [
-  ['center', 'In der Mitte öffnen'],
-  ['side', 'An der Seite öffnen'],
-  ['bottom', 'Unten öffnen'],
+const DOCK_LABELS: readonly [Dock, string, IconName][] = [
+  ['center', 'In der Mitte öffnen', 'dockCenter'],
+  ['side', 'An der Seite öffnen', 'dockSide'],
+  ['bottom', 'Unten öffnen', 'dockBottom'],
 ];
 
 export function windowMenu(bus: EventBus, windows: WindowService, router: Router, kind: string, id: string): MenuEntry[] {
@@ -19,11 +20,11 @@ export function windowMenu(bus: EventBus, windows: WindowService, router: Router
   const openDocked = (dock: Dock) => () => bus.publish(WINDOW_OPEN, { kind, id, dock });
   const link = page ?? router.withQuery({ open: `${kind}/${encodeURIComponent(id)}` });
   return [
-    { label: 'Öffnen', run: () => bus.publish(WINDOW_OPEN, { kind, id }) },
+    { label: 'Öffnen', icon: 'dockCenter', run: () => bus.publish(WINDOW_OPEN, { kind, id }) },
     // "Öffnen" already uses the current placement; offer the other two.
-    ...DOCK_LABELS.filter(([dock]) => dock !== windows.dock).map(([dock, label]) => ({ label, run: openDocked(dock) })),
-    ...(page ? [{ label: 'Als Seite öffnen', run: () => bus.publish(NAVIGATE, { path: page }) }] : []),
+    ...DOCK_LABELS.filter(([dock]) => dock !== windows.dock).map(([dock, label, icon]) => ({ label, icon, run: openDocked(dock) })),
+    ...(page ? [{ label: 'Als Seite öffnen', icon: 'page' as const, run: () => bus.publish(NAVIGATE, { path: page }) }] : []),
     { separator: true },
-    { label: 'Link kopieren', run: () => void navigator.clipboard?.writeText(`${location.origin}${location.pathname}#${link}`) },
+    { label: 'Link kopieren', icon: 'copy', run: () => void navigator.clipboard?.writeText(`${location.origin}${location.pathname}#${link}`) },
   ];
 }

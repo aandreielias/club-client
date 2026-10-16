@@ -2,6 +2,7 @@
   import type { Snippet } from 'svelte';
   import type { ListModel } from '../lib/list/ListModel.svelte';
   import Button from './Button.svelte';
+  import Icon from './Icon.svelte';
   import Select from './Select.svelte';
   import Toolbar from './Toolbar.svelte';
 
@@ -18,7 +19,10 @@
   {#snippet start()}
     {@render leading?.()}
     {#if model.searchable}
-      <input class="search" type="search" bind:value={model.search} placeholder="Suchen" aria-label="Suchen" />
+      <label class="search">
+        <Icon name="search" small />
+        <input type="search" bind:value={model.search} placeholder="Suchen" aria-label="Suchen" />
+      </label>
     {/if}
     {#each model.filterDefinitions as filter (filter.key)}
       {#if filter.kind === 'select'}
@@ -42,13 +46,10 @@
   {/snippet}
   {#snippet end()}
     {#if sortOptions.length}
-      <span class="muted">Sortieren</span>
       <Select inline aria-label="Sortieren nach" value={model.sort.key} options={sortOptions}
         onchange={(key) => model.setSort({ key, dir: model.sort.dir })} />
-      <Button size="sm" variant="ghost" onclick={() => model.setSort({ key: model.sort.key, dir: model.sort.dir === 'asc' ? 'desc' : 'asc' })}
-        aria-label={model.sort.dir === 'asc' ? 'Aufsteigend, umkehren' : 'Absteigend, umkehren'}>
-        {model.sort.dir === 'asc' ? 'Aufsteigend' : 'Absteigend'}
-      </Button>
+      <Button size="sm" variant="ghost" icon="sort" onclick={() => model.setSort({ key: model.sort.key, dir: model.sort.dir === 'asc' ? 'desc' : 'asc' })}
+        tooltip={model.sort.dir === 'asc' ? 'Aufsteigend, umkehren' : 'Absteigend, umkehren'} />
     {/if}
     {@render actions?.()}
   {/snippet}
@@ -56,7 +57,20 @@
 
 <style>
   .search {
+    position: relative;
+    display: block;
     width: 14rem;
+  }
+  .search :global(.icon) {
+    position: absolute;
+    top: 50%;
+    left: var(--space-sm);
+    translate: 0 -50%;
+    color: var(--color-text-faint);
+    pointer-events: none;
+  }
+  .search input {
+    padding-left: 28px;
   }
   :global([data-layout='compact']) .search {
     width: 100%;

@@ -117,7 +117,7 @@
     font-variant-numeric: tabular-nums;
   }
   .today .number {
-    background: var(--color-danger);
+    background: var(--color-accent);
     color: var(--color-on-accent);
     font-weight: var(--font-weight-bold);
   }

@@ -32,9 +32,9 @@
     height: 20px;
     padding: 0 5px;
     border: 1px solid var(--color-border);
-    border-bottom-width: 2px;
     border-radius: var(--radius-sm);
-    background: var(--color-background);
+    background: var(--color-elevated);
+    box-shadow: 0 1px 0 var(--color-border);
     color: var(--color-text-muted);
     font-family: var(--font-family);
     font-size: 11px;

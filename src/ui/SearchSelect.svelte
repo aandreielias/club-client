@@ -181,11 +181,20 @@
     padding: var(--space-xs);
     overflow-y: auto;
     border: 0;
-    border-radius: var(--radius-md);
-    background: var(--color-background);
+    border-radius: var(--radius-lg);
+    background: var(--color-elevated);
     color: var(--color-text);
     box-shadow: var(--color-shadow-popover);
     list-style: none;
+  }
+  ul:popover-open {
+    animation: pop-in var(--motion-base) var(--motion-easing);
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
   }
   li {
     display: flex;
@@ -193,7 +202,7 @@
     min-height: var(--control-height);
     padding: 0 var(--space-sm);
     overflow: hidden;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     font-size: var(--font-size-base);
     text-overflow: ellipsis;
     white-space: nowrap;

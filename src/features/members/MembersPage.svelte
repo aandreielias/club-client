@@ -34,7 +34,7 @@
 <Page title="Mitglieder">
   {#snippet actions()}
     {#if policy.canResetAll()}<Button variant="danger" onclick={() => (resetting = true)}>Alle PINs zurücksetzen</Button>{/if}
-    {#if policy.canInvite()}<Button variant="primary" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'member-new', id: '-' })}>Einladen</Button>{/if}
+    {#if policy.canInvite()}<Button variant="primary" icon="add" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'member-new', id: '-' })}>Einladen</Button>{/if}
   {/snippet}
 
   <DataTable

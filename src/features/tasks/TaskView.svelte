@@ -74,8 +74,8 @@
     <Detail title={edit.form ? 'Aufgabe bearbeiten' : task.title}>
       {#snippet actions()}
         {#if !edit.form && policy.canManage(task)}
-          <Button onclick={() => edit.edit(TaskForm.edit(session.clock, task))}>Bearbeiten</Button>
-          <Button variant="danger" busy={detail.deleteAction.busy} onclick={() => remove(task.title)}>Löschen</Button>
+          <Button icon="edit" onclick={() => edit.edit(TaskForm.edit(session.clock, task))}>Bearbeiten</Button>
+          <Button variant="danger" icon="delete" busy={detail.deleteAction.busy} onclick={() => remove(task.title)}>Löschen</Button>
         {/if}
       {/snippet}
       {#snippet meta()}

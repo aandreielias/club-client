@@ -2,6 +2,8 @@
   import { tick } from 'svelte';
   import { commands, keymap } from '../lib/container';
   import type { AvailableCommand } from '../lib/keyboard/CommandRegistry.svelte';
+  import { motion } from '../lib/container';
+  import Icon from './Icon.svelte';
   import Kbd from './Kbd.svelte';
 
   /** Searchable list of every command available right now, with its keys. */
@@ -57,8 +59,10 @@
 
 {#if commands.paletteOpen}
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="backdrop" onclick={close}></div>
-  <div class="palette" role="dialog" aria-modal="true" aria-label="Befehlspalette">
+  <div class="backdrop" onclick={close} transition:motion.fade></div>
+  <div class="palette" role="dialog" aria-modal="true" aria-label="Befehlspalette" transition:motion.pop={{ origin: 'top' }}>
+    <label class="query">
+    <Icon name="commands" />
     <input
       bind:this={input}
       bind:value={query}
@@ -70,6 +74,7 @@
       aria-controls="palette-list"
       aria-activedescendant={matches[active] ? `cmd-${matches[active].id}` : undefined}
     />
+    </label>
     <ul id="palette-list" role="listbox">
       {#each matches as command, index (command.id)}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -103,23 +108,29 @@
     width: min(620px, calc(100vw - 32px));
     max-height: 60vh;
     overflow: hidden;
-    border-radius: var(--radius-lg);
-    background: var(--color-background);
+    border-radius: var(--radius-xl);
+    background: var(--color-elevated);
     box-shadow: var(--color-shadow-window);
     translate: -50% 0;
   }
-  input {
-    min-height: 48px;
+  .query {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
     padding: 0 var(--space-lg);
-    border: 0;
     border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-faint);
+  }
+  /* The palette's field is borderless; beat the base control styles (hover/focus selectors are stronger). */
+  .query input {
+    height: 52px;
+    padding: 0;
+    border: 0 !important;
     border-radius: 0;
     background: transparent;
-    font-size: 16px;
-  }
-  input:focus {
-    border-color: var(--color-border);
-    box-shadow: none;
+    box-shadow: none !important;
+    color: var(--color-text);
+    font-size: 15px;
   }
   ul {
     overflow-y: auto;
@@ -134,9 +145,10 @@
     padding: 0 var(--space-md);
     border-radius: var(--radius-md);
     cursor: pointer;
+    transition: background var(--motion-fast);
   }
   li.active {
-    background: var(--color-hover);
+    background: var(--color-selected);
   }
   .label {
     overflow: hidden;
