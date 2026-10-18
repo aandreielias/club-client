@@ -6,6 +6,10 @@ export interface Invitation {
   firstName: string;
   lastName: string;
   birthDate: string | null;
+  phone: string | null;
+  photoConsent: boolean;
+  /** Optional guardian (e.g. a parent) for a minor, linked right away. */
+  guardianId: string | null;
   roles: Role[];
 }
 

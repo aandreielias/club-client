@@ -30,10 +30,10 @@
 <Page title="Mitglieder">
   {#snippet actions()}
     {#if policy.canResetAll()}<Button variant="danger" onclick={() => (resetting = true)}>Alle PINs zurücksetzen</Button>{/if}
-    {#if policy.canInvite()}<Button variant="primary" icon="add" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'member-new', id: '-' })}>Einladen</Button>{/if}
+    {#if policy.canInvite()}<Button variant="primary" icon="add" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'member-new', id: '-' })}>Neues Konto</Button>{/if}
   {/snippet}
 
-  <MemberTable {list} emptyAction={policy.canInvite() ? { label: 'Einladen', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'member-new', id: '-' }) } : null} />
+  <MemberTable {list} emptyAction={policy.canInvite() ? { label: 'Neues Konto', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'member-new', id: '-' }) } : null} />
   {#if list.data.value}<p class="muted small count">{list.activeCount} aktive Mitglieder</p>{/if}
 </Page>
 

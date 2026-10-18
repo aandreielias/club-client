@@ -267,9 +267,11 @@ export class MockDirectory {
       active: true,
       roles,
     };
-    if (body.birthDate) this.applyProfile(member, { birthDate: body.birthDate });
+    this.applyProfile(member, { birthDate: body.birthDate || undefined, phone: body.phone ?? undefined, photoConsent: body.photoConsent });
+    if (body.guardianId != null && !this.members.data.some((m) => m.id === body.guardianId && m.active)) fail(404, 'member.not-found');
     this.members.data.push(member);
     this.members.save();
+    if (body.guardianId != null) this.linkGuardian(viewer, member.id, body.guardianId);
     mockServer.events.publish({ type: 'members.member-invited', data: { memberId: member.id }, audience: { roles: MANAGERS } });
     return member;
   }

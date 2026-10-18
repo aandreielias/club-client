@@ -22,6 +22,10 @@ function birthDateError(value: string, today: string): string | undefined {
   return undefined;
 }
 
+function phoneError(value: string): string | undefined {
+  return value.trim() && !PHONE.test(value.trim()) ? 'Ziffern, Leerzeichen, / und -, optional mit + am Anfang.' : undefined;
+}
+
 /** Shared state handling of the member forms: errors only after the first submit. */
 abstract class MemberFormBase {
   submitted = $state(false);
@@ -40,12 +44,15 @@ abstract class MemberFormBase {
   protected abstract validate(): MemberFormErrors;
 }
 
-/** Invitation of a new member: e-mail, name, optional birth date, roles. */
+/** New account from the membership application: e-mail, name, optional birth date, phone, guardian, roles. */
 export class InviteForm extends MemberFormBase {
   email = $state('');
   firstName = $state('');
   lastName = $state('');
   birthDate = $state('');
+  phone = $state('');
+  photoConsent = $state(false);
+  guardianId = $state('');
   roles = $state<Role[]>(['PLAYER']);
 
   toInvitation(): Invitation {
@@ -54,6 +61,9 @@ export class InviteForm extends MemberFormBase {
       firstName: this.firstName.trim(),
       lastName: this.lastName.trim(),
       birthDate: this.birthDate || null,
+      phone: this.phone.trim() || null,
+      photoConsent: this.photoConsent,
+      guardianId: this.guardianId || null,
       roles: [...this.roles],
     };
   }
@@ -68,6 +78,8 @@ export class InviteForm extends MemberFormBase {
     if (last) errors.lastName = last;
     const birth = birthDateError(this.birthDate, this.today);
     if (birth) errors.birthDate = birth;
+    const phone = phoneError(this.phone);
+    if (phone) errors.phone = phone;
     return errors;
   }
 }
@@ -112,7 +124,8 @@ export class ProfileForm extends MemberFormBase {
     if (last) errors.lastName = last;
     const birth = birthDateError(this.birthDate, this.today);
     if (birth) errors.birthDate = birth;
-    if (this.phone.trim() && !PHONE.test(this.phone.trim())) errors.phone = 'Ziffern, Leerzeichen, / und -, optional mit + am Anfang.';
+    const phone = phoneError(this.phone);
+    if (phone) errors.phone = phone;
     return errors;
   }
 }

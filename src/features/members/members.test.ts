@@ -31,7 +31,13 @@ describe('InviteForm', () => {
     form.birthDate = '2030-01-01';
     expect(Object.keys(form.errors)).toEqual(['birthDate']);
     form.birthDate = '';
-    expect(form.toInvitation()).toEqual({ email: 'joerg@verein.at', firstName: 'Jörg', lastName: 'Muster', birthDate: null, roles: ['PLAYER'] });
+    form.phone = 'abc';
+    expect(Object.keys(form.errors)).toEqual(['phone']);
+    form.phone = ' +43 660 1234567 ';
+    expect(form.toInvitation()).toEqual({
+      email: 'joerg@verein.at', firstName: 'Jörg', lastName: 'Muster', birthDate: null, phone: '+43 660 1234567',
+      photoConsent: false, guardianId: null, roles: ['PLAYER'],
+    });
   });
 });
 

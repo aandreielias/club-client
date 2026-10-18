@@ -20,6 +20,15 @@ describe('mock members admin', () => {
     expect(invited).toMatchObject({ email: 'neu@verein.at', firstName: 'Nina', photoConsent: false, active: true });
   });
 
+  it('takes the whole application form: phone, photo consent and a guardian', () => {
+    const body = { email: 'kind@verein.at', firstName: 'Kim', lastName: 'Kind', roles: ['PLAYER'], phone: '+43 1 234', photoConsent: true };
+    expect(() => directory.invite(member('vorstand'), { ...body, guardianId: 'nobody' })).toThrow(expect.objectContaining({ code: 'member.not-found' }));
+    expect(directory.members.data.some((m) => m.email === 'kind@verein.at')).toBe(false);
+    const kid = directory.invite(member('vorstand'), { ...body, guardianId: 'neu' });
+    expect(kid).toMatchObject({ phone: '+43 1 234', photoConsent: true });
+    expect(directory.wardsOf('neu')).toContain(kid.id);
+  });
+
   it('shows birth dates only to self, admins, guardians and coaches', () => {
     expect(directory.get(member('vorstand'), 'spieler').birthDate).toBeNull();
     expect(directory.get(member('trainer'), 'spieler').birthDate).toBe('2010-01-20');
