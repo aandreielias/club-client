@@ -167,3 +167,7 @@ export const live = new LiveUpdates(openSocket, auth.token, settings.live, bus, 
   bus.publish(TOAST, { text: 'Dein Zugang ist nicht mehr aktiv.', tone: 'error' });
   void auth.signOut();
 });
+
+// Dev only: this module holds the app's singletons (session, router, bus …). A hot update must not create a second
+// set next to the running one (pages would see an empty session and a router at "/"), so it reloads the page instead.
+if (import.meta.hot) import.meta.hot.accept(() => location.reload());
