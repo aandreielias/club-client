@@ -42,7 +42,8 @@ export class TooltipService {
     clearTimeout(this.#timer);
     if (this.current) this.#warmUntil = this.now() + this.skipDelayMs;
     if (this.#owner?.getAttribute('aria-describedby') === TooltipService.ID) this.#owner.removeAttribute('aria-describedby');
-    this.current = null;
+    // Skip the write when nothing shows: hide also runs while Svelte tears down DOM, where a state write throws.
+    if (this.current) this.current = null;
     this.#owner = null;
   }
 

@@ -19,6 +19,8 @@ export function tooltip(text: string | null | undefined | (() => string | null |
     const enter = () => show(false);
     const focus = () => node.matches(':focus-visible') && show(true);
     const leave = () => tooltips.hide(node);
+    // Removing a focused element fires blur during Svelte's teardown, where state writes throw; hide afterwards.
+    const later = () => queueMicrotask(leave);
     const key = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || !tooltips.isOwner(node)) return;
       // The first Escape only dismisses the tooltip, not the window or dialog around it.
@@ -31,13 +33,13 @@ export function tooltip(text: string | null | undefined | (() => string | null |
       ['pointerdown', leave],
       ['input', leave],
       ['focus', focus],
-      ['blur', leave],
+      ['blur', later],
       ['keydown', key as EventListener],
     ];
     events.forEach(([type, listener]) => node.addEventListener(type, listener));
     return () => {
       events.forEach(([type, listener]) => node.removeEventListener(type, listener));
-      tooltips.hide(node);
+      later();
     };
   };
 }

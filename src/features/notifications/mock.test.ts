@@ -3,10 +3,14 @@ import { directory, MockDirectory } from '../../lib/mock/core';
 import { MockSocket } from '../../lib/mock/MockSocket';
 import { mockServer } from '../../lib/mock/MockServer';
 import type { Member } from '../../lib/types';
+import { calendar } from '../calendar/mock';
 import { tasks } from '../tasks/mock';
 import { notifications } from './mock';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
+const cancelledTitles = (id: string) => notifications.list(id, false).items.filter((n) => n.kind === 'APPOINTMENT_CANCELLED').map((n) => n.title);
+const upcoming = (teamId: string | null) =>
+  calendar.appointments.data.find((a) => a.teamId === teamId && !a.cancelled && Date.parse(a.startsAt) > Date.now())!;
 
 /** Opens a mock live connection for a member and collects the pushed messages. */
 async function connect(id: string) {
@@ -52,5 +56,23 @@ describe('mock notifications', () => {
     expect(notifications.list('spielerin', true).items[0]).toMatchObject({ kind: 'SECURITY', link: '/me/security' });
     const prefs = notifications.setPreferences('spielerin', [{ kind: 'SECURITY', push: false, email: false }]);
     expect(prefs.find((p) => p.kind === 'SECURITY')).toEqual({ kind: 'SECURITY', push: false, email: true });
+  });
+
+  it('tells everyone affected when an admin cancels a team appointment, admin and board included, but not the admin', () => {
+    directory.stepUp(member('admin'), MockDirectory.PIN);
+    const target = upcoming('t-u16');
+    calendar.cancel(member('admin'), target.id, false);
+    const title = `Abgesagt: ${target.title}`;
+    for (const id of [...directory.teamMembers('t-u16'), 'eltern', 'vorstand']) expect(cancelledTitles(id), id).toContain(title);
+    expect(cancelledTitles('admin')).not.toContain(title);
+    expect(cancelledTitles('spielerin')).not.toContain(title);
+  });
+
+  it('tells every active member when a club-wide appointment is cancelled', () => {
+    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    const target = upcoming(null);
+    calendar.cancel(member('vorstand'), target.id, false);
+    const title = `Abgesagt: ${target.title}`;
+    for (const id of directory.activeIds().filter((id) => id !== 'vorstand')) expect(cancelledTitles(id), id).toContain(title);
   });
 });

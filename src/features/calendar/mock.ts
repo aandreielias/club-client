@@ -72,7 +72,7 @@ export class MockCalendar {
     const appointment = this.visible(member, id);
     this.requireMayEdit(member, appointment.teamId);
     const links = this.links.set(member, appointment.id, body);
-    this.changed([appointment], 'UPDATED');
+    this.changed(member, [appointment], 'UPDATED');
     MockActivity.record('APPOINTMENT', appointment.id, member, 'UPDATED', { title: appointment.title, teamIds: appointment.teamId ? [appointment.teamId] : [] });
     return links;
   }
@@ -109,7 +109,7 @@ export class MockCalendar {
     }));
     this.appointments.data.push(...created);
     this.appointments.save();
-    this.changed(created, 'CREATED');
+    this.changed(member, created, 'CREATED');
     created.forEach((a) => MockActivity.record('APPOINTMENT', a.id, member, 'CREATED', { title: a.title, teamIds: a.teamId ? [a.teamId] : [] }));
     return created;
   }
@@ -121,7 +121,7 @@ export class MockCalendar {
     const next = MockCalendar.validated({ ...current, ...defined });
     Object.assign(current, next);
     this.appointments.save();
-    this.changed([current], 'UPDATED');
+    this.changed(member, [current], 'UPDATED');
     MockActivity.record('APPOINTMENT', current.id, member, 'UPDATED', { title: current.title, teamIds: current.teamId ? [current.teamId] : [] });
     return current;
   }
@@ -135,7 +135,7 @@ export class MockCalendar {
         : [current];
     targets.forEach((a) => (a.cancelled = true));
     this.appointments.save();
-    this.changed(targets, 'CANCELLED');
+    this.changed(member, targets, 'CANCELLED');
     targets.forEach((a) => MockActivity.record('APPOINTMENT', a.id, member, 'CANCELLED', { title: a.title, teamIds: a.teamId ? [a.teamId] : [] }));
     return targets;
   }
@@ -323,12 +323,12 @@ export class MockCalendar {
   }
 
   /** server: CalendarApi.AppointmentsChanged, pushed to everyone who sees the appointments */
-  private changed(appointments: readonly Appointment[], change: 'CREATED' | 'UPDATED' | 'CANCELLED'): void {
+  private changed(actor: Member, appointments: readonly Appointment[], change: 'CREATED' | 'UPDATED' | 'CANCELLED'): void {
     const [first] = appointments;
     if (!first) return;
     mockServer.events.publish({
       type: 'calendar.appointments-changed',
-      data: { appointmentIds: appointments.map((a) => a.id), teamId: first.teamId, change, title: first.title, firstStartsAt: first.startsAt },
+      data: { appointmentIds: appointments.map((a) => a.id), teamId: first.teamId, change, actorId: actor.id, title: first.title, firstStartsAt: first.startsAt },
       audience: this.people.teamAudience(first.teamId),
     });
   }

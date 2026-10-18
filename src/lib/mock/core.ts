@@ -16,7 +16,7 @@ import {
   type Team,
   type TeamRole,
 } from '../types';
-import type { MockAudience } from './MockEventBus';
+import { MockEventBus, type MockAudience } from './MockEventBus';
 import { MockServer, mockServer, type MockRequest } from './MockServer';
 import { MockTable } from './MockTable';
 
@@ -109,6 +109,13 @@ export class MockDirectory {
 
   activeIds(): string[] {
     return this.members.data.filter((m) => m.active).map((m) => m.id);
+  }
+
+  /** Active members an audience reaches (server: MembersApi.AUDIENCE_IDS). */
+  audienceIds(audience: MockAudience): string[] {
+    return this.members.data
+      .filter((m) => m.active && MockEventBus.includes(audience, m.id, m.roles))
+      .map((m) => m.id);
   }
 
   guardiansOf(memberIds: readonly string[]): string[] {

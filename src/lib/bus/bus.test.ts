@@ -85,6 +85,15 @@ describe('EventBus publish/subscribe', () => {
     expect(bus.unsubscribe(subLate.id)).toBe(false);
   });
 
+  it('unsubscribes through a detached reference (used as a cleanup function)', () => {
+    const bus = EventBusBuilder.create().build();
+    const handler = vi.fn();
+    const stop = bus.subscribe(ORDER, handler).unsubscribe;
+    stop();
+    bus.publish(ORDER, 'x');
+    expect(handler).not.toHaveBeenCalled();
+  });
+
   it('isolates handler errors', () => {
     const onError = vi.fn();
     const bus = EventBusBuilder.create().withExceptionHandler(onError).build();

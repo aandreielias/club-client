@@ -80,8 +80,7 @@ export class MockNotifications {
         break;
       case 'calendar.appointments-changed': {
         if (data.change !== 'CANCELLED') return;
-        const audience = event.audience ?? {};
-        const recipients = audience.everyone ? this.people.activeIds() : [...(audience.members ?? [])];
+        const recipients = this.people.audienceIds(event.audience ?? {}).filter((id) => id !== data.actorId);
         const more = data.appointmentIds.length > 1 ? ` Auch die ${data.appointmentIds.length - 1} folgenden Termine fallen aus.` : '';
         this.notify(recipients, 'APPOINTMENT_CANCELLED', `Abgesagt: ${data.title}`,
           `Der Termin am ${this.#dateTime.format(new Date(data.firstStartsAt))} findet nicht statt.${more}`,

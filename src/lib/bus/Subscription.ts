@@ -40,11 +40,12 @@ export class Subscriber<T = unknown> implements Subscription {
     return this.#active;
   }
 
-  unsubscribe(): void {
+  /** Bound, so it can be handed around as a cleanup (`return sub.unsubscribe`). */
+  readonly unsubscribe = (): void => {
     if (!this.#active) return;
     this.#active = false;
     this.onEnd(this);
-  }
+  };
 
   static compare(a: Subscriber, b: Subscriber): number {
     return b.priority - a.priority || a.sequence - b.sequence;
