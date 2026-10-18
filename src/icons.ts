@@ -34,6 +34,7 @@ import Plus from '@lucide/svelte/icons/plus';
 import Search from '@lucide/svelte/icons/search';
 import Send from '@lucide/svelte/icons/send';
 import Link from '@lucide/svelte/icons/link';
+import MapPin from '@lucide/svelte/icons/map-pin';
 import Settings from '@lucide/svelte/icons/settings';
 import Trash from '@lucide/svelte/icons/trash-2';
 import UserRound from '@lucide/svelte/icons/user-round';
@@ -55,6 +56,7 @@ export const ICONS = {
   search: Search,
   send: Send,
   link: Link,
+  location: MapPin,
   commands: Command,
   logout: LogOut,
   menu: Menu,

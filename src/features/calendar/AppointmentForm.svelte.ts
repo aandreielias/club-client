@@ -1,8 +1,8 @@
 import { settings } from '../../settings';
 import { ZonedClock, type LocalDate, type LocalDateTime } from '../../lib/time/ZonedClock';
-import type { Appointment, AppointmentPatch, AppointmentType, NewAppointment } from './model';
+import { hasCabins, type Appointment, type AppointmentPatch, type AppointmentType, type NewAppointment } from './model';
 
-export type FormField = 'title' | 'team' | 'start' | 'end' | 'description' | 'location' | 'repeatUntil' | 'intervalWeeks';
+export type FormField = 'title' | 'team' | 'start' | 'end' | 'description' | 'location' | 'cabins' | 'repeatUntil' | 'intervalWeeks';
 
 export type FormErrors = Partial<Record<FormField, string>>;
 
@@ -22,6 +22,10 @@ export class AppointmentForm {
   title = $state('');
   description = $state('');
   location = $state('');
+  /** A place of the locations module; '' = free text in `location`. */
+  locationId = $state('');
+  cabinMen = $state('');
+  cabinWomen = $state('');
   start = $state<LocalDateTime>('');
   end = $state<LocalDateTime>('');
   repeat = $state(false);
@@ -58,6 +62,9 @@ export class AppointmentForm {
     form.title = appointment.title;
     form.description = appointment.description ?? '';
     form.location = appointment.location ?? '';
+    form.locationId = appointment.locationId ?? '';
+    form.cabinMen = appointment.cabinMen ?? '';
+    form.cabinWomen = appointment.cabinWomen ?? '';
     form.start = clock.toLocal(appointment.startsAt);
     form.end = clock.toLocal(appointment.endsAt);
     return form;
@@ -74,13 +81,21 @@ export class AppointmentForm {
     return this.submitted ? (this.errors[field] ?? null) : null;
   }
 
+  /** Cabins only for types that have them; switching to a meeting drops them. */
+  get cabinsShown(): boolean {
+    return hasCabins(this.type);
+  }
+
   toNew(): NewAppointment {
     return {
       teamId: this.teamId === CLUB_WIDE ? null : this.teamId,
       type: this.type,
       title: this.title.trim(),
       description: this.description.trim() || null,
-      location: this.location.trim() || null,
+      location: this.locationId ? null : this.location.trim() || null,
+      locationId: this.locationId || null,
+      cabinMen: (this.cabinsShown && this.cabinMen.trim()) || null,
+      cabinWomen: (this.cabinsShown && this.cabinWomen.trim()) || null,
       startsAt: this.clock.toInstant(this.start),
       endsAt: this.clock.toInstant(this.end),
       repeatUntil: this.repeat ? this.repeatUntil : null,
@@ -97,7 +112,15 @@ export class AppointmentForm {
     if (next.type !== original.type) patch.type = next.type;
     if (next.title !== original.title) patch.title = next.title;
     if ((next.description ?? '') !== (original.description ?? '')) patch.description = next.description ?? '';
-    if ((next.location ?? '') !== (original.location ?? '')) patch.location = next.location ?? '';
+    if (next.locationId !== original.locationId) {
+      if (next.locationId) patch.locationId = next.locationId;
+      else {
+        patch.clearLocationId = true;
+        patch.location = next.location ?? '';
+      }
+    } else if (!next.locationId && (next.location ?? '') !== (original.location ?? '')) patch.location = next.location ?? '';
+    if ((next.cabinMen ?? '') !== (original.cabinMen ?? '')) patch.cabinMen = next.cabinMen ?? '';
+    if ((next.cabinWomen ?? '') !== (original.cabinWomen ?? '')) patch.cabinWomen = next.cabinWomen ?? '';
     if (next.startsAt !== original.startsAt) patch.startsAt = next.startsAt;
     if (next.endsAt !== original.endsAt) patch.endsAt = next.endsAt;
     return patch;
@@ -123,6 +146,9 @@ export class AppointmentForm {
       errors.description = `Höchstens ${limits.descriptionMaxLength} Zeichen.`;
     }
     if (this.location.length > limits.locationMaxLength) errors.location = `Höchstens ${limits.locationMaxLength} Zeichen.`;
+    if (this.cabinMen.trim().length > limits.cabinMaxLength || this.cabinWomen.trim().length > limits.cabinMaxLength) {
+      errors.cabins = `Höchstens ${limits.cabinMaxLength} Zeichen.`;
+    }
     if (!this.start) errors.start = 'Beginn angeben.';
     const duration = this.durationMinutes();
     if (!this.end) errors.end = 'Ende angeben.';

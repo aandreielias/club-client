@@ -5,6 +5,7 @@ import { FeatureRegistry } from './FeatureRegistry';
 import { filesFeature } from './files/feature';
 import { homeFeature } from './home/feature';
 import { inventoryFeature } from './inventory/feature';
+import { locationsFeature } from './locations/feature';
 import { membersFeature } from './members/feature';
 import { notificationsFeature } from './notifications/feature';
 import { searchFeature } from './search/feature';
@@ -22,6 +23,7 @@ export const features = new FeatureRegistry([
   tasksFeature,
   filesFeature,
   inventoryFeature,
+  locationsFeature,
   teamsFeature,
   notificationsFeature,
   membersFeature,

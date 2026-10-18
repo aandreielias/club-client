@@ -7,7 +7,8 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import { ZonedClock, type LocalDate } from '../../lib/time/ZonedClock';
 import type { Member } from '../../lib/types';
-import type { Absence, Appointment, Ride, AppointmentType, Attendance, AttendanceEntry, NewAppointment, ResponseStatus } from './model';
+import { hasCabins, type Absence, type Appointment, type AppointmentPatch, type Ride, type AppointmentType, type Attendance, type AttendanceEntry, type NewAppointment, type ResponseStatus } from './model';
+import { locations } from '../locations/mock';
 
 /** server: attendance_ride + attendance_ride_passenger */
 interface StoredRide {
@@ -46,6 +47,7 @@ export class MockCalendar {
     this.responses = new MockTable('responses', () => this.seedResponses());
     this.rides = new MockTable('rides', () => this.seedRides());
     this.links = new MockLinks('calendar-links', () => this.seedLinks());
+    mockServer.events.subscribe((event) => event.type === 'locations.location-changed' && this.onLocationChanged(event.data as never));
   }
 
   /** "Benötigt" list and attachments (server: CalendarHandlers.getLinks / setLinks). */
@@ -96,7 +98,7 @@ export class MockCalendar {
   create(member: Member, body: NewAppointment): Appointment[] {
     if (body.teamId && !this.people.teams.data.some((t) => t.id === body.teamId)) fail(409, 'data.conflict');
     this.requireMayEdit(member, body.teamId ?? null);
-    const first = MockCalendar.validated({ ...body, id: '', seriesId: null, cancelled: false });
+    const first = MockCalendar.validated(this.placed({ ...body, id: '', seriesId: null, cancelled: false }, body.locationId ?? null));
     const starts = this.occurrences(first.startsAt, body.repeatUntil, body.intervalWeeks);
     const seriesId = starts.length > 1 || body.repeatUntil ? crypto.randomUUID() : null;
     const duration = Date.parse(first.endsAt) - Date.parse(first.startsAt);
@@ -114,11 +116,13 @@ export class MockCalendar {
     return created;
   }
 
-  update(member: Member, id: string, patch: Partial<Appointment>): Appointment {
+  update(member: Member, id: string, patch: AppointmentPatch): Appointment {
     const current = this.visible(member, id);
     this.requireMayEdit(member, current.teamId);
-    const defined = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== null && v !== undefined));
-    const next = MockCalendar.validated({ ...current, ...defined });
+    const { clearLocationId, ...rest } = patch;
+    const defined = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== null && v !== undefined));
+    const merged = { ...current, ...defined };
+    const next = MockCalendar.validated(clearLocationId ? { ...merged, locationId: null } : this.placed(merged, patch.locationId ?? null));
     Object.assign(current, next);
     this.appointments.save();
     this.changed(member, [current], 'UPDATED');
@@ -364,17 +368,36 @@ export class MockCalendar {
     return starts;
   }
 
+  /** server: CalendarHandlers.placeName - a linked place puts its name into the location text. */
+  private placed<T extends { location: string | null; locationId: string | null }>(a: T, locationId: string | null): T {
+    if (!locationId) return a;
+    const place = locations.ref(locationId) ?? fail(400, 'appointment.location-unknown');
+    return { ...a, locationId, location: place.name };
+  }
+
+  /** server: CalendarHandlers.onLocationChanged */
+  private onLocationChanged(data: { locationId: string; change: string; name: string }): void {
+    if (data.change === 'CREATED') return;
+    const linked = this.appointments.data.filter((a) => a.locationId === data.locationId);
+    linked.forEach((a) => Object.assign(a, { location: data.name, ...(data.change === 'DELETED' ? { locationId: null } : {}) }));
+    if (linked.length) this.appointments.save();
+  }
+
   /** server: Appointment constructor checks */
   private static validated<T extends Omit<Appointment, 'id' | 'seriesId' | 'cancelled'> & Partial<Appointment>>(a: T): T {
     if (!a.type || !TYPES.includes(a.type)) fail(400, 'appointment.type-missing');
     if (!a.title?.trim() || a.title.length > limits.titleMaxLength) fail(400, 'appointment.title-invalid');
     if ((a.description?.length ?? 0) > limits.descriptionMaxLength) fail(400, 'appointment.description-too-long');
     if ((a.location?.length ?? 0) > limits.locationMaxLength) fail(400, 'appointment.location-too-long');
+    const cabinMen = a.cabinMen?.trim() || null;
+    const cabinWomen = a.cabinWomen?.trim() || null;
+    if ((cabinMen?.length ?? 0) > limits.cabinMaxLength || (cabinWomen?.length ?? 0) > limits.cabinMaxLength) fail(400, 'appointment.cabin-too-long');
+    if ((cabinMen || cabinWomen) && !hasCabins(a.type)) fail(400, 'appointment.cabin-not-allowed');
     const start = Date.parse(a.startsAt);
     const end = Date.parse(a.endsAt);
     if (isNaN(start) || isNaN(end) || end <= start) fail(400, 'appointment.times-invalid');
     if (end - start > limits.maxDurationDays * DAY_MS) fail(400, 'appointment.too-long');
-    return { ...a, title: a.title.trim(), description: a.description || null, location: a.location || null };
+    return { ...a, title: a.title.trim(), description: a.description || null, location: a.location || null, locationId: a.locationId ?? null, cabinMen, cabinWomen };
   }
 
   /** Demo data relative to today: weekly trainings, a match, club-wide events, one cancellation. */
@@ -385,27 +408,28 @@ export class MockCalendar {
     const at = (offsetDays: number, time: string) => clock.toInstant(`${ZonedClock.addDays(weekStart, offsetDays)}T${time}`);
     const items: Appointment[] = [];
     let n = 0;
-    const add = (a: Omit<Appointment, 'id' | 'cancelled'> & { cancelled?: boolean }) =>
-      items.push({ id: `a-${++n}`, cancelled: false, ...a, description: a.description ?? null, location: a.location ?? null });
+    type Seed = Omit<Appointment, 'id' | 'cancelled' | 'locationId' | 'cabinMen' | 'cabinWomen'> & Partial<Appointment>;
+    const add = (a: Seed) =>
+      items.push({ id: `a-${++n}`, cancelled: false, locationId: null, cabinMen: null, cabinWomen: null, ...a, description: a.description ?? null, location: a.location ?? null });
 
     for (let week = -1; week < 6; week++) {
       const base = week * 7;
       for (const [day, series] of [[1, 's-damen-di'], [3, 's-damen-do']] as const) {
         add({ seriesId: series, teamId: 't-damen', type: 'TRAINING', title: 'Training Damen 1', description: null,
-          location: 'Turnhalle Nord', startsAt: at(base + day, '19:00'), endsAt: at(base + day, '21:00') });
+          location: 'Turnhalle Nord', locationId: 'l-nord', cabinWomen: 'Kabine 3', startsAt: at(base + day, '19:00'), endsAt: at(base + day, '21:00') });
       }
       add({ seriesId: 's-u16-mo', teamId: 't-u16', type: 'TRAINING', title: 'Training U16', description: null,
-        location: 'Turnhalle Süd', startsAt: at(base, '17:30'), endsAt: at(base, '19:00'), cancelled: week === 1 });
+        location: 'Turnhalle Süd', locationId: 'l-sued', startsAt: at(base, '17:30'), endsAt: at(base, '19:00'), cancelled: week === 1 });
     }
     add({ seriesId: null, teamId: 't-damen', type: 'MATCH', title: 'Heimspiel gegen VC Musterstadt',
-      description: 'Treffpunkt 60 Minuten vor Spielbeginn in der Halle.', location: 'Turnhalle Nord',
+      description: 'Treffpunkt 60 Minuten vor Spielbeginn in der Halle.', location: 'Turnhalle Nord', locationId: 'l-nord',
       startsAt: at(12, '15:00'), endsAt: at(12, '17:30') });
     add({ seriesId: null, teamId: 't-u16', type: 'TOURNAMENT', title: 'U16 Landesturnier', description: null,
-      location: 'Sportzentrum West', startsAt: at(19, '09:00'), endsAt: at(19, '18:00') });
+      location: 'Sportzentrum West', locationId: 'l-west', startsAt: at(19, '09:00'), endsAt: at(19, '18:00') });
     add({ seriesId: null, teamId: null, type: 'MEETING', title: 'Mitgliederversammlung',
-      description: 'Tagesordnung:\n1. Bericht des Vorstands\n2. Kassenbericht\n3. Allfälliges', location: 'Vereinsheim',
+      description: 'Tagesordnung:\n1. Bericht des Vorstands\n2. Kassenbericht\n3. Allfälliges', location: 'Vereinsheim', locationId: 'l-heim',
       startsAt: at(16, '19:30'), endsAt: at(16, '21:30') });
-    add({ seriesId: null, teamId: null, type: 'EVENT', title: 'Saisonabschluss', description: null, location: 'Vereinsheim',
+    add({ seriesId: null, teamId: null, type: 'EVENT', title: 'Saisonabschluss', description: null, location: 'Vereinsheim', locationId: 'l-heim',
       startsAt: at(26, '18:00'), endsAt: at(26, '23:00') });
     return items;
   }

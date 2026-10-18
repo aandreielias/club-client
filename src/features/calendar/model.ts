@@ -1,3 +1,4 @@
+import { settings } from '../../settings';
 import type { Hue } from '../../lib/types';
 
 // Mirrors of the club-server calendar and attendance DTOs. API times are UTC instants.
@@ -15,7 +16,13 @@ export interface Appointment {
   type: AppointmentType;
   title: string;
   description: string | null;
+  /** Free text, or the name of the linked place. */
   location: string | null;
+  /** A place of the locations module; null for free-text locations. */
+  locationId: string | null;
+  /** Changing cabins (free text), not for meetings. */
+  cabinMen: string | null;
+  cabinWomen: string | null;
   startsAt: string;
   endsAt: string;
   cancelled: boolean;
@@ -31,6 +38,9 @@ export interface NewAppointment {
   title: string;
   description: string | null;
   location: string | null;
+  locationId: string | null;
+  cabinMen: string | null;
+  cabinWomen: string | null;
   startsAt: string;
   endsAt: string;
   /** Club-local date of the last occurrence; null = single appointment. */
@@ -38,8 +48,13 @@ export interface NewAppointment {
   intervalWeeks: number | null;
 }
 
-/** Changes one occurrence; omitted fields stay unchanged. */
-export type AppointmentPatch = Partial<Pick<Appointment, 'type' | 'title' | 'description' | 'location' | 'startsAt' | 'endsAt'>>;
+/** Changes one occurrence; omitted fields stay unchanged, '' clears a text; clearLocationId unlinks the place. */
+export type AppointmentPatch = Partial<
+  Pick<Appointment, 'type' | 'title' | 'description' | 'location' | 'locationId' | 'cabinMen' | 'cabinWomen' | 'startsAt' | 'endsAt'>
+> & { clearLocationId?: boolean };
+
+/** Types with changing cabins (server: Appointment.CABIN_TYPES). */
+export const hasCabins = (type: AppointmentType): boolean => (settings.calendar.cabinTypes as readonly string[]).includes(type);
 
 export interface AttendanceEntry {
   memberId: string;

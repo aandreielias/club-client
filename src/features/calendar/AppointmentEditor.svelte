@@ -9,6 +9,8 @@
   import { CLUB_WIDE, type AppointmentForm } from './AppointmentForm.svelte';
   import { APPOINTMENT_TYPES } from './model';
   import { appointmentPolicy as policy } from './services';
+  import type { Location } from '../locations/model';
+  import { locationsApi } from '../locations/services';
 
   let {
     form,
@@ -22,6 +24,15 @@
   const teamOptions = $derived([
     ...(policy.canCreateClubWide() || form.teamId === CLUB_WIDE ? [{ value: CLUB_WIDE, label: 'Ganzer Verein' }] : []),
     ...policy.plannableTeams().map((t) => ({ value: t.id, label: t.name })),
+  ]);
+
+  /** Places of the club, plus free text for one-off places (a beach court, the opponent's hall). */
+  const OTHER = '';
+  let places = $state<Location[]>([]);
+  locationsApi.list().then((list) => (places = list), () => {});
+  const placeOptions = $derived([
+    ...places.map((l) => ({ value: l.id, label: l.address ? `${l.name} · ${l.address}` : l.name })),
+    { value: OTHER, label: 'Anderer Ort …' },
   ]);
 
   function submit(event: SubmitEvent) {
@@ -51,9 +62,27 @@
     </Field>
   </div>
 
-  <Field label="Ort" error={form.error('location')}>
-    <input bind:value={form.location} maxlength={limits.locationMaxLength} />
-  </Field>
+  <div class="grid-2">
+    <Field label="Ort" hint={places.length ? undefined : 'Orte trägst du unter „Orte“ ein.'}>
+      <Select bind:value={form.locationId} options={placeOptions} />
+    </Field>
+    {#if form.locationId === OTHER}
+      <Field label="Anderer Ort" error={form.error('location')}>
+        <input bind:value={form.location} maxlength={limits.locationMaxLength} placeholder="z. B. Halle des Gegners" />
+      </Field>
+    {/if}
+  </div>
+
+  {#if form.cabinsShown}
+    <div class="grid-2">
+      <Field label="Kabine Herren (optional)" error={form.error('cabins')}>
+        <input bind:value={form.cabinMen} maxlength={limits.cabinMaxLength} placeholder="z. B. Kabine 2" />
+      </Field>
+      <Field label="Kabine Damen (optional)">
+        <input bind:value={form.cabinWomen} maxlength={limits.cabinMaxLength} placeholder="z. B. Kabine 3" />
+      </Field>
+    </div>
+  {/if}
 
   <Field label="Beschreibung" error={form.error('description')}>
     <textarea bind:value={form.description} rows="4" maxlength={limits.descriptionMaxLength}></textarea>

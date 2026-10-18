@@ -14,6 +14,9 @@ const existing: Appointment = {
   title: 'Training',
   description: 'Bälle mitnehmen',
   location: null,
+  locationId: null,
+  cabinMen: null,
+  cabinWomen: null,
   startsAt: '2026-07-01T17:00:00.000Z',
   endsAt: '2026-07-01T18:30:00.000Z',
   cancelled: false,
@@ -69,5 +72,17 @@ describe('AppointmentForm', () => {
     form.title = 'Techniktraining';
     form.description = '';
     expect(form.toPatch()).toEqual({ title: 'Techniktraining', description: '' });
+  });
+
+  it('switches between a place and free text and drops cabins for meetings', () => {
+    const form = AppointmentForm.edit(clock, { ...existing, location: 'Turnhalle Nord', locationId: 'l-nord', cabinMen: 'Kabine 1' });
+    form.locationId = '';
+    form.location = 'Beachplatz';
+    expect(form.toPatch()).toEqual({ clearLocationId: true, location: 'Beachplatz' });
+    form.locationId = 'l-sued';
+    expect(form.toPatch()).toEqual({ locationId: 'l-sued' });
+    form.type = 'MEETING';
+    expect(form.cabinsShown).toBe(false);
+    expect(form.toPatch()).toEqual({ locationId: 'l-sued', type: 'MEETING', cabinMen: '' });
   });
 });

@@ -10,7 +10,12 @@
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import LinksSection from '../../ui/LinksSection.svelte';
+  import LocationMap from '../../ui/LocationMap.svelte';
+  import MapButtons from '../../ui/MapButtons.svelte';
+  import RecordLink from '../../ui/RecordLink.svelte';
   import Tag from '../../ui/Tag.svelte';
+  import type { Location } from '../locations/model';
+  import { locationsApi } from '../locations/services';
   import AppointmentEditor from './AppointmentEditor.svelte';
   import { AppointmentDetailModel } from './AppointmentDetailModel.svelte';
   import { AppointmentForm } from './AppointmentForm.svelte';
@@ -28,6 +33,14 @@
 
   // svelte-ignore state_referenced_locally
   const detail = new AppointmentDetailModel(calendarApi, id, session.member.id);
+
+  /** The linked place, for its address and map pin; free-text locations have none. */
+  let place = $state<Location | null>(null);
+  $effect(() => {
+    const locationId = detail.appointment.value?.locationId;
+    place = null;
+    if (locationId) locationsApi.get(locationId).then((p) => (place = p), () => {});
+  });
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle);
   const edit = new EditSession<AppointmentForm>(bus, backStack);
@@ -108,14 +121,35 @@
           <AppointmentEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={submit} />
         </div>
       {:else}
-        <dl class="props">
-          <dt>Wann</dt>
-          <dd>{when(appointment)}</dd>
-          <dt>Ort</dt>
-          <dd>{appointment.location || '–'}</dd>
-          <dt>Für</dt>
-          <dd>{appointment.teamId ? (directory.teamName(appointment.teamId) ?? 'Team') : 'Ganzer Verein'}</dd>
-        </dl>
+        <!-- Facts left, the small map right (below on phones) when the place has a map pin. -->
+        <div class="top" class:with-map={place?.lat != null}>
+          <dl class="props">
+            <dt>Wann</dt>
+            <dd>{when(appointment)}</dd>
+            <dt>Ort</dt>
+            <dd class="place">
+              {#if appointment.locationId}
+                <RecordLink kind="location" id={appointment.locationId}>{appointment.location}</RecordLink>
+              {:else}
+                {appointment.location || '–'}
+              {/if}
+              {#if place?.address}<span class="muted">{place.address}</span>{/if}
+              {#if appointment.location}
+                <MapButtons place={place ?? { name: appointment.location, address: null, lat: null, lng: null }} />
+              {/if}
+            </dd>
+            {#if appointment.cabinMen || appointment.cabinWomen}
+              <dt>Kabinen</dt>
+              <dd>
+                {[appointment.cabinMen && `Herren: ${appointment.cabinMen}`, appointment.cabinWomen && `Damen: ${appointment.cabinWomen}`]
+                  .filter(Boolean).join(' · ')}
+              </dd>
+            {/if}
+            <dt>Für</dt>
+            <dd>{appointment.teamId ? (directory.teamName(appointment.teamId) ?? 'Team') : 'Ganzer Verein'}</dd>
+          </dl>
+          {#if place && place.lat !== null && place.lng !== null}<LocationMap lat={place.lat} lng={place.lng} name={place.name} />{/if}
+        </div>
         {#if appointment.description}<p class="prose">{appointment.description}</p>{/if}
 
         <LinksSection model={links} editable={policy.canEdit(appointment)} />
@@ -156,5 +190,22 @@
 <style>
   .editing {
     display: contents;
+  }
+  .top {
+    display: grid;
+    gap: var(--space-lg);
+  }
+  .top.with-map {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+  }
+  :global(:root[data-layout='compact']) .top.with-map {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .place {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xxs);
   }
 </style>

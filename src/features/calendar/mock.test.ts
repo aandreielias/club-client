@@ -14,6 +14,9 @@ const draft = (teamId: string | null, extra: Partial<NewAppointment> = {}): NewA
   title: 'Zusatztraining',
   description: null,
   location: null,
+  locationId: null,
+  cabinMen: null,
+  cabinWomen: null,
   startsAt: '2027-01-12T18:00:00.000Z',
   endsAt: '2027-01-12T19:30:00.000Z',
   repeatUntil: null,
@@ -92,5 +95,16 @@ describe('mock calendar', () => {
     expect(() => calendar.cancelRide(member('trainer'), ride.id)).toThrow(expect.objectContaining({ code: 'ride.not-driver' }));
     calendar.cancelRide(member('admin'), ride.id);
     expect(calendar.listRides(member('admin'), created.id)).toHaveLength(1);
+  });
+
+  it('links places, keeps their name as text and checks cabins', () => {
+    stepUp('trainer');
+    const [created] = calendar.create(member('trainer'), draft('t-u16', { locationId: 'l-sued', location: 'egal', cabinMen: ' Kabine 2 ' }));
+    expect(created).toMatchObject({ location: 'Turnhalle Süd', locationId: 'l-sued', cabinMen: 'Kabine 2', cabinWomen: null });
+    expect(() => calendar.create(member('trainer'), draft('t-u16', { type: 'MEETING', cabinMen: 'Kabine 1' })))
+      .toThrow(expect.objectContaining({ code: 'appointment.cabin-not-allowed' }));
+    expect(() => calendar.update(member('trainer'), created.id, { locationId: 'nope' })).toThrow(expect.objectContaining({ code: 'appointment.location-unknown' }));
+    const moved = calendar.update(member('trainer'), created.id, { clearLocationId: true, location: 'Beachplatz', cabinMen: '' });
+    expect(moved).toMatchObject({ locationId: null, location: 'Beachplatz', cabinMen: null });
   });
 });

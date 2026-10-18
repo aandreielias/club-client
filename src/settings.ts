@@ -354,6 +354,9 @@ export const settings = {
     reasonMaxLength: 300,
     /** Car pools: shown for these appointment types; server limits seats and note. */
     rideTypes: ['MATCH', 'TOURNAMENT', 'EVENT'] as const,
+    /** server: Appointment.CABIN_TYPES - changing cabins for men and women, free text. */
+    cabinTypes: ['TRAINING', 'MATCH', 'TOURNAMENT', 'EVENT'] as const,
+    cabinMaxLength: 60,
     rideMaxSeats: 8,
     /** Car seen from above next to each ride (CarSeats); height follows the number of seats. */
     rideGraphic: { width: 52 },
@@ -414,6 +417,17 @@ export const settings = {
   activity: {
     /** Changes loaded per page of the "Logs" page (server: at most 100). */
     pageSize: 50,
+  },
+
+  /** server: locations module (Location) */
+  locations: {
+    nameMaxLength: 100,
+    streetMaxLength: 120,
+    zipMaxLength: 12,
+    cityMaxLength: 80,
+    noteMaxLength: 500,
+    /** Small OpenStreetMap next to a place: half height in degrees around the pin, height on screen. */
+    map: { span: 0.004, height: '15rem' },
   },
 
   notifications: {
