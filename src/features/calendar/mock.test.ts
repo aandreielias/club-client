@@ -107,4 +107,20 @@ describe('mock calendar', () => {
     const moved = calendar.update(member('trainer'), created.id, { clearLocationId: true, location: 'Beachplatz', cabinMen: '' });
     expect(moved).toMatchObject({ locationId: null, location: 'Beachplatz', cabinMen: null });
   });
+
+  it('reminds holders of needed items once, guardians included', async () => {
+    const { notifications } = await import('../notifications/mock');
+    stepUp('trainer');
+    const soon = new Date(Date.now() + 3 * 3_600_000).toISOString();
+    const [match] = calendar.create(member('trainer'), draft('t-u16', { type: 'MATCH', title: 'Auswärtsspiel', startsAt: soon,
+      endsAt: new Date(Date.parse(soon) + 7_200_000).toISOString() }));
+    const { inventory } = await import('../inventory/mock');
+    inventory.setStock(member('trainer'), 'i-cart', [{ locationId: null, holderId: 'spieler', quantity: 2 }, { locationId: 'l-nord', holderId: null, quantity: 1 }]);
+    calendar.links.set(member('trainer'), match.id, { needs: [{ itemId: 'i-cart', quantity: 1 }], fileIds: [] });
+    calendar.remindItemHolders(24 * 3_600_000);
+    calendar.remindItemHolders(24 * 3_600_000);
+    for (const id of ['spieler', 'eltern']) {
+      expect(notifications.list(id, true).items.filter((n) => n.kind === 'ITEM_REMINDER').map((n) => n.title), id).toEqual(['Mitbringen: 1× Ballwagen']);
+    }
+  });
 });

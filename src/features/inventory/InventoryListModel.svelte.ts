@@ -1,7 +1,7 @@
 import { ListModel } from '../../lib/list/ListModel.svelte';
 import type { LocalStore } from '../../lib/storage/LocalStore';
 import type { InventoryApi } from './InventoryApi';
-import type { Item } from './model';
+import { placeName, stockSummary, type Item } from './model';
 
 /** The inventory list: search, category filter, sorting by name, category, stock or place. */
 export class InventoryListModel extends ListModel<Item> {
@@ -11,12 +11,12 @@ export class InventoryListModel extends ListModel<Item> {
         id: 'inventory',
         load: () => api.list(),
         defaultSort: { key: 'name', dir: 'asc' },
-        searchText: (i) => `${i.name} ${i.category ?? ''} ${i.location ?? ''} ${i.description ?? ''}`,
+        searchText: (i) => `${i.name} ${i.category ?? ''} ${i.stock.map(placeName).join(' ')} ${i.description ?? ''}`,
         columns: [
           { key: 'name', label: 'Name', value: (i) => i.name },
           { key: 'category', label: 'Kategorie', value: (i) => i.category, width: '10rem' },
           { key: 'quantity', label: 'Bestand', value: (i) => i.quantity, width: '6rem', align: 'end' },
-          { key: 'location', label: 'Ort', value: (i) => i.location, width: '12rem', hideOnCompact: true },
+          { key: 'where', label: 'Wo', value: (i) => stockSummary(i.stock), width: '14rem', hideOnCompact: true },
         ],
         filters: [
           {

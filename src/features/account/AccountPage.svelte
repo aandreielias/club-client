@@ -14,11 +14,16 @@
   import { membersApi } from '../members/services';
   import ChangeRequestDialog from './ChangeRequestDialog.svelte';
   import { OwnChangeRequests } from './OwnChangeRequests.svelte';
+  import { Resource } from '../../lib/state/Resource.svelte';
+  import { inventoryApi } from '../inventory/services';
 
   const savePhone = new Action();
   const requests = new OwnChangeRequests(membersApi);
   void requests.load();
   let asking = $state<ChangeField | null>(null);
+  /** Club items the member has at home; they get a reminder before appointments that need them. */
+  const held = new Resource(() => inventoryApi.mine());
+  void held.load();
 
   const member = $derived(session.member);
   let phone = $state(session.member.phone ?? '');
@@ -64,6 +69,16 @@
     <dd>{#each session.teams as team (team.id)}<Tag tone="blue">{team.name}</Tag>{:else}–{/each}</dd>
   </dl>
 
+  {#if held.value?.length}
+    <h2>Bei mir</h2>
+    <ul class="held">
+      {#each held.value as item (item.itemId)}
+        <li><span>{item.name}</span><span class="count">{item.quantity}</span></li>
+      {/each}
+    </ul>
+    <p class="muted small">Vor Terminen, die diese Sachen brauchen, bekommst du eine Erinnerung.</p>
+  {/if}
+
   <h2>Telefon</h2>
   <form class="stack narrow" onsubmit={submitPhone}>
     <Field label="Telefonnummer">
@@ -77,6 +92,26 @@
 <ChangeRequestDialog bind:field={asking} {requests} onsent={() => bus.publish(TOAST, { text: 'Anfrage an den Vorstand gesendet.' })} />
 
 <style>
+  .held {
+    display: grid;
+    max-width: var(--layout-readable-width);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .held li {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-xs) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .count {
+    font-variant-numeric: tabular-nums;
+  }
+  .small {
+    font-size: var(--font-size-small);
+  }
   .changeable {
     display: flex;
     flex-wrap: wrap;

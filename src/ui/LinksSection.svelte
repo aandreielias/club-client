@@ -1,13 +1,13 @@
 <script lang="ts">
   import { settings } from '../settings';
-  import { backStack, bus, permissions } from '../lib/container';
+  import { backStack, bus, permissions, session } from '../lib/container';
   import RecordLink from './RecordLink.svelte';
   import { TOAST } from '../channels';
   import { FILES_CHANGED } from '../features/files/events';
   import { ITEM_CHANGED } from '../features/inventory/events';
   import { useBus } from '../lib/bus/useBus.svelte';
   import { LinksModel } from '../lib/links/LinksModel.svelte';
-  import type { FileRef } from '../lib/links/model';
+  import { placeName, type FileRef } from '../lib/links/model';
   import Button from './Button.svelte';
   import ErrorNote from './ErrorNote.svelte';
   import SearchSelect from './SearchSelect.svelte';
@@ -127,6 +127,19 @@
               {#if need.stock !== null}von {need.stock} im Inventar{/if}
             </span>
             <span></span>
+            {#if need.places?.length}
+              <!-- Where the items are: the whole row width, below the entry. -->
+              <span class="places muted">
+                {#each need.places as place, i (i)}
+                  <span class="place">
+                    {#if place.kind === 'LOCATION' && place.id && place.name}<RecordLink kind="location" id={place.id}>{place.name}</RecordLink>
+                    {:else if place.kind === 'PERSON' && place.id === session.member.id}<strong>bei dir</strong>
+                    {:else}{placeName(place)}{/if}
+                    {place.quantity}
+                  </span>
+                {/each}
+              </span>
+            {/if}
           </li>
         {/each}
       </ul>
@@ -199,6 +212,19 @@
   }
   .stock.short {
     color: var(--color-danger);
+  }
+  .places {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-sm);
+    grid-column: 1 / -1;
+    margin-top: calc(-1 * var(--space-xs));
+    padding-bottom: var(--space-xxs);
+    font-size: var(--font-size-small);
+  }
+  .place + .place::before {
+    content: '·';
+    margin-right: var(--space-sm);
   }
   .add {
     max-width: var(--layout-field-width);

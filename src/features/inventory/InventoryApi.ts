@@ -1,5 +1,5 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
-import type { Item, ItemList, ItemPatch, ItemUse, NewItem } from './model';
+import type { Item, ItemList, ItemPatch, ItemUse, NewItem, OwnItem, StockInput } from './model';
 
 /** Typed access to the inventory endpoints of club-server. */
 export class InventoryApi {
@@ -27,6 +27,16 @@ export class InventoryApi {
 
   update(id: string, patch: ItemPatch): Promise<Item> {
     return this.api.patch<Item>(this.path(id), patch);
+  }
+
+  /** Replaces where the items are; the quantity becomes the sum. */
+  setStock(id: string, entries: readonly StockInput[]): Promise<Item> {
+    return this.api.put<Item>(`${this.path(id)}/stock`, { entries });
+  }
+
+  /** What the signed-in member holds; every member may ask. */
+  async mine(): Promise<OwnItem[]> {
+    return (await this.api.get<{ items: OwnItem[] }>(`${InventoryApi.BASE}/mine`)).items;
   }
 
   /** "Benötigt" lists keep the entry, marked as deleted. */

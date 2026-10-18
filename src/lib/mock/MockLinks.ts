@@ -1,6 +1,6 @@
 // Mock of the server's platform.LinkResolver plus the link tables of one module (calendar or tasks).
 import { settings } from '../../settings';
-import type { FileRef, Links, Need } from '../links/model';
+import type { StockPlace, FileRef, Links, Need } from '../links/model';
 import { PRIVILEGED, type Member } from '../types';
 import { MockServer } from './MockServer';
 import { MockTable } from './MockTable';
@@ -31,7 +31,7 @@ interface Rows {
  * over the bus), so link handling needs no feature imports.
  */
 export const linkRefs = {
-  items: (_ids: readonly string[]): Map<string, { name: string; quantity: number }> => new Map(),
+  items: (_ids: readonly string[]): Map<string, { name: string; quantity: number; places: StockPlace[] }> => new Map(),
   files: (_member: Member, _links: readonly FileLink[]): FileRef[] => [],
 };
 
@@ -107,14 +107,15 @@ export class MockLinks {
     return this.table.data[ownerId] ?? { needs: [], files: [] };
   }
 
-  /** server: LinkResolver.resolve - stock is inventory data, privileged viewers only. */
+  /** server: LinkResolver.resolve - stock and whereabouts are inventory data, privileged viewers only (others: what they hold). */
   private static resolve(member: Member, rows: Rows): Links {
     const items = linkRefs.items(rows.needs.map((n) => n.itemId));
+    const privileged = member.roles.some((r) => PRIVILEGED.includes(r));
     const needs = rows.needs.map((n): Need => {
       const ref = items.get(n.itemId);
-      return ref
-        ? { itemId: n.itemId, name: ref.name, quantity: n.quantity, stock: member.roles.some((r) => PRIVILEGED.includes(r)) ? ref.quantity : null, deleted: false }
-        : { itemId: n.itemId, name: n.name, quantity: n.quantity, stock: null, deleted: true };
+      if (!ref) return { itemId: n.itemId, name: n.name, quantity: n.quantity, stock: null, deleted: true, places: [] };
+      const places = privileged ? ref.places : ref.places.filter((p) => p.kind === 'PERSON' && p.id === member.id);
+      return { itemId: n.itemId, name: ref.name, quantity: n.quantity, stock: privileged ? ref.quantity : null, deleted: false, places };
     });
     return { needs, files: rows.files.length ? linkRefs.files(member, rows.files) : [] };
   }

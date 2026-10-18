@@ -479,7 +479,11 @@ export const settings = {
     /** server: inventory module (Item) */
     nameMaxLength: 100,
     categoryMaxLength: 60,
-    locationMaxLength: 100,
+    /** Lines of the "Wo ist es?" editor (server: InventoryHandlers.MAX_STOCK_ENTRIES). */
+    maxStockLines: 50,
+    /** Mock of the server's reminder job: people holding needed items hear about it this long before. */
+    reminderBeforeMs: 24 * 3_600_000,
+    reminderCheckMs: 5 * 60_000,
     descriptionMaxLength: 2000,
     maxQuantity: 100_000,
   },

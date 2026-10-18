@@ -17,13 +17,22 @@ const code = (c: string) => expect.objectContaining({ code: c });
 describe('mock inventory', () => {
   it('lets only privileged members with a step-up change items', () => {
     expect(inventory.list().length).toBeGreaterThan(0);
-    const body = { name: 'Netzantennen', category: 'Ausrüstung', quantity: 4, location: null, description: null };
+    const body = { name: 'Netzantennen', category: 'Ausrüstung', quantity: 4, locationId: 'l-nord', description: null };
     expect(() => inventory.create(member('spielerin'), body)).toThrow(code('access.denied'));
     expect(() => inventory.create(member('trainer'), body)).toThrow(code('auth.step-up-required'));
     stepUp('trainer');
     const item = inventory.create(member('trainer'), body);
-    expect(inventory.update(member('trainer'), item.id, { quantity: 6, category: '' })).toMatchObject({ quantity: 6, category: null });
-    expect(() => inventory.update(member('trainer'), item.id, { quantity: -1 })).toThrow(code('inventory.quantity-invalid'));
+    expect(item.stock).toEqual([{ kind: 'LOCATION', id: 'l-nord', name: 'Turnhalle Nord', quantity: 4 }]);
+    expect(inventory.update(member('trainer'), item.id, { category: '' })).toMatchObject({ quantity: 4, category: null });
+    const split = inventory.setStock(member('trainer'), item.id, [
+      { locationId: 'l-nord', holderId: null, quantity: 3 },
+      { locationId: null, holderId: 'spieler', quantity: 2 },
+      { locationId: null, holderId: 'spieler', quantity: 1 },
+    ]);
+    expect(split).toMatchObject({ quantity: 6, stock: [{ kind: 'LOCATION', quantity: 3 }, { kind: 'PERSON', id: 'spieler', name: 'David Spieler', quantity: 3 }] });
+    expect(inventory.mine(member('spieler')).items).toContainEqual({ itemId: item.id, name: 'Netzantennen', quantity: 3 });
+    expect(() => inventory.setStock(member('trainer'), item.id, [{ locationId: 'l-nord', holderId: 'spieler', quantity: 1 }])).toThrow(code('inventory.stock-invalid'));
+    expect(() => inventory.setStock(member('trainer'), item.id, [{ locationId: null, holderId: null, quantity: 0 }])).toThrow(code('inventory.quantity-invalid'));
     inventory.delete(member('trainer'), item.id);
     expect(() => inventory.get(item.id)).toThrow(code('inventory.not-found'));
   });
@@ -115,14 +124,34 @@ describe('inventory client', () => {
     expect(form.errors.quantity).toBeDefined();
     form.quantity = 3;
     expect(form.valid).toBe(true);
-    expect(form.toPatch()).toEqual({ name: 'Ball', category: '', quantity: 3, location: '', description: '' });
+    expect(form.toPatch()).toEqual({ name: 'Ball', category: '', description: '' });
   });
 
   it('lists distinct categories and flags shortages', () => {
     const items = inventory.list();
     expect(InventoryListModel.categories(items)).toEqual([...new Set(items.map((i) => i.category!))].sort((a, b) => a.localeCompare(b, 'de')));
-    expect(LinksModel.short({ itemId: 'x', name: 'x', quantity: 5, stock: 4, deleted: false })).toBe(true);
-    expect(LinksModel.short({ itemId: 'x', name: 'x', quantity: 5, stock: null, deleted: true })).toBe(false);
+    expect(LinksModel.short({ itemId: 'x', name: 'x', quantity: 5, stock: 4, deleted: false, places: [] })).toBe(true);
+    expect(LinksModel.short({ itemId: 'x', name: 'x', quantity: 5, stock: null, deleted: true, places: [] })).toBe(false);
     expect(LinksModel.quantityError(0)).not.toBeNull();
+  });
+});
+
+describe('StockForm', () => {
+  it('turns lines into stock entries, merging the same place', async () => {
+    const { StockForm } = await import('./StockForm.svelte');
+    const form = new StockForm([
+      { kind: 'LOCATION', id: 'l1', name: 'Halle', quantity: 10 },
+      { kind: 'PERSON', id: 'm1', name: 'Clara', quantity: 4 },
+    ]);
+    form.add('location:l1', 2);
+    form.add('none', 3);
+    expect(form.total).toBe(19);
+    expect(form.toInput()).toEqual([
+      { locationId: 'l1', holderId: null, quantity: 12 },
+      { locationId: null, holderId: 'm1', quantity: 4 },
+      { locationId: null, holderId: null, quantity: 3 },
+    ]);
+    form.lines[0].quantity = 0;
+    expect(form.error).toBe('Jede Zeile braucht eine Anzahl ab 1.');
   });
 });

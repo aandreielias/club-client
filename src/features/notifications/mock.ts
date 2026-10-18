@@ -14,7 +14,7 @@ import { tasks } from '../tasks/mock';
 import { CHANGE_FIELD_LABELS, type ChangeField } from '../members/MembersApi';
 
 const fail = MockServer.fail;
-const KINDS: readonly NotificationKind[] = ['TASK_ASSIGNED', 'TASK_DUE', 'APPOINTMENT_CANCELLED', 'SECURITY', 'CHANGE_DECIDED'];
+const KINDS: readonly NotificationKind[] = ['TASK_ASSIGNED', 'TASK_DUE', 'APPOINTMENT_CANCELLED', 'SECURITY', 'CHANGE_DECIDED', 'MESSAGE', 'ITEM_REMINDER'];
 const MAX_LISTED = 100;
 const limits = settings.notifications.message;
 
@@ -161,6 +161,12 @@ export class MockNotifications {
         this.notify(recipients, 'APPOINTMENT_CANCELLED', `Abgesagt: ${data.title}`,
           `Der Termin am ${this.#dateTime.format(new Date(data.firstStartsAt))} findet nicht statt.${more}`,
           `/appointments/${data.appointmentIds[0]}`);
+        break;
+      }
+      case 'calendar.items-to-bring': {
+        const items = (data.items as { name: string; quantity: number }[]).map((i) => `${i.quantity}× ${i.name}`).join(', ');
+        this.notify(data.recipients, 'ITEM_REMINDER', `Mitbringen: ${items}`,
+          `Zu „${data.title}“ am ${this.#dateTime.format(new Date(data.startsAt))}. Die Sachen sind bei dir.`, `/appointments/${data.appointmentId}`);
         break;
       }
       case 'members.change-decided':

@@ -58,7 +58,7 @@ export class LinksModel {
   addItem(itemId: string, quantity = 1): void {
     const option = this.items.value?.find((o) => o.id === itemId);
     if (!option || this.needs.some((n) => n.itemId === itemId)) return;
-    this.needs.push({ itemId, name: option.name, quantity, stock: option.stock, deleted: false });
+    this.needs.push({ itemId, name: option.name, quantity, stock: option.stock, deleted: false, places: [] });
   }
 
   removeItem(itemId: string): void {

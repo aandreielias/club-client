@@ -9,6 +9,7 @@ import { ZonedClock, type LocalDate } from '../../lib/time/ZonedClock';
 import type { Member } from '../../lib/types';
 import { hasCabins, type Absence, type Appointment, type AppointmentPatch, type Ride, type AppointmentType, type Attendance, type AttendanceEntry, type NewAppointment, type ResponseStatus } from './model';
 import { locations } from '../locations/mock';
+import { inventory } from '../inventory/mock';
 
 /** server: attendance_ride + attendance_ride_passenger */
 interface StoredRide {
@@ -47,11 +48,14 @@ export class MockCalendar {
     this.responses = new MockTable('responses', () => this.seedResponses());
     this.rides = new MockTable('rides', () => this.seedRides());
     this.links = new MockLinks('calendar-links', () => this.seedLinks());
+    this.reminded = new MockTable<string[]>('need-reminders', () => []);
     mockServer.events.subscribe((event) => event.type === 'locations.location-changed' && this.onLocationChanged(event.data as never));
   }
 
   /** "Benötigt" list and attachments (server: CalendarHandlers.getLinks / setLinks). */
   readonly links: MockLinks;
+  /** "appointmentId:itemId:memberId" of sent reminders (server: calendar_need_reminder). */
+  readonly reminded: MockTable<string[]>;
 
   getLinks(member: Member, id: string) {
     return this.links.get(member, this.visible(member, id).id);
@@ -368,6 +372,34 @@ export class MockCalendar {
     return starts;
   }
 
+  /** server: CalendarHandlers.remindItemHolders - holders of needed items, once per appointment, item and person. */
+  remindItemHolders(beforeMs: number): void {
+    const now = Date.now();
+    const due = this.appointments.data.filter((a) => !a.cancelled && Date.parse(a.startsAt) >= now && Date.parse(a.startsAt) < now + beforeMs);
+    for (const appointment of due) {
+      const needs = this.links.table.data[appointment.id]?.needs ?? [];
+      const held = inventory.holdings(needs.map((n) => n.itemId));
+      const bring = new Map<string, { name: string; quantity: number }[]>();
+      for (const need of needs) {
+        for (const [holder, quantity] of Object.entries(held[need.itemId] ?? {})) {
+          const key = `${appointment.id}:${need.itemId}:${holder}`;
+          if (this.reminded.data.includes(key)) continue;
+          this.reminded.data.push(key);
+          const name = inventory.items.data.find((i) => i.id === need.itemId)?.name ?? need.name;
+          bring.set(holder, [...(bring.get(holder) ?? []), { name, quantity: Math.min(quantity, need.quantity) }]);
+        }
+      }
+      for (const [holder, items] of bring) {
+        mockServer.events.publish({
+          type: 'calendar.items-to-bring',
+          data: { memberId: holder, recipients: [holder, ...this.people.guardiansOf([holder])], appointmentId: appointment.id,
+            title: appointment.title, startsAt: appointment.startsAt, items },
+        });
+      }
+    }
+    this.reminded.save();
+  }
+
   /** server: CalendarHandlers.placeName - a linked place puts its name into the location text. */
   private placed<T extends { location: string | null; locationId: string | null }>(a: T, locationId: string | null): T {
     if (!locationId) return a;
@@ -476,6 +508,13 @@ export class MockCalendar {
 }
 
 export const calendar = new MockCalendar(directory);
+
+// server: CalendarModule.remindItemHolders runs every 15 minutes; the browser mock checks on start and then periodically.
+if (typeof window !== 'undefined') {
+  const remind = () => calendar.remindItemHolders(settings.inventory.reminderBeforeMs);
+  setTimeout(remind, 0);
+  setInterval(remind, settings.inventory.reminderCheckMs);
+}
 
 itemUseSources.push((member, itemId) => calendar.itemUses(member, itemId));
 

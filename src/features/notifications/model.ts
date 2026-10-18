@@ -1,6 +1,6 @@
 // Mirrors of the club-server notifications DTOs.
 
-export type NotificationKind = 'TASK_ASSIGNED' | 'TASK_DUE' | 'APPOINTMENT_CANCELLED' | 'SECURITY' | 'CHANGE_DECIDED' | 'MESSAGE';
+export type NotificationKind = 'TASK_ASSIGNED' | 'TASK_DUE' | 'APPOINTMENT_CANCELLED' | 'SECURITY' | 'CHANGE_DECIDED' | 'MESSAGE' | 'ITEM_REMINDER';
 
 /** Records a message can link (server: NotificationsApi.RefKind). */
 export type RefKind = 'TASK' | 'APPOINTMENT' | 'ITEM' | 'FILE' | 'MEMBER';
@@ -74,6 +74,7 @@ export const NOTIFICATION_KINDS: readonly { value: NotificationKind; label: stri
   { value: 'TASK_ASSIGNED', label: 'Neue Aufgaben', hint: 'Wenn dir eine Aufgabe zugewiesen wird.' },
   { value: 'TASK_DUE', label: 'Fällige Aufgaben', hint: 'Etwa einen Tag vor der Fälligkeit.' },
   { value: 'APPOINTMENT_CANCELLED', label: 'Abgesagte Termine', hint: 'Wenn ein Termin für dich ausfällt.' },
+  { value: 'ITEM_REMINDER', label: 'Gegenstände mitbringen', hint: 'Etwa einen Tag vor einem Termin, für den du etwas aus dem Inventar hast.' },
   { value: 'CHANGE_DECIDED', label: 'Kontoänderungen', hint: 'Wenn der Vorstand über deine Änderungsanfrage entschieden hat.' },
   { value: 'MESSAGE', label: 'Nachrichten vom Verein', hint: 'Nachrichten von Vorstand und Trainer:innen an dich oder dein Team.' },
   { value: 'SECURITY', label: 'Sicherheit', hint: 'PIN-Änderungen und Sperren. E-Mails dazu werden immer gesendet.' },

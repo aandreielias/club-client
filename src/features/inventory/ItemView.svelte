@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { backStack, bus, pendingDeletes, session } from '../../lib/container';
+  import { backStack, bus, pendingDeletes, permissions, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { Action } from '../../lib/state/Action.svelte';
@@ -16,6 +16,11 @@
   import { ITEM_CHANGED } from './events';
   import { ItemForm } from './ItemForm.svelte';
   import ItemEditor from './ItemEditor.svelte';
+  import Icon from '../../ui/Icon.svelte';
+  import RecordLink from '../../ui/RecordLink.svelte';
+  import { placeName } from './model';
+  import StockEditor from './StockEditor.svelte';
+  import { StockForm } from './StockForm.svelte';
   import { inventoryApi, inventoryPolicy as policy } from './services';
 
   /** One inventory item; edit and delete for admin, board and coaches. Window and page. */
@@ -24,6 +29,7 @@
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle, onclosed);
   const edit = new EditSession<ItemForm>(bus, backStack);
+  const stockEdit = new EditSession<StockForm>(bus, backStack);
   const remove = new Action();
   // svelte-ignore state_referenced_locally
   const item = new Resource(() => inventoryApi.get(id));
@@ -37,13 +43,17 @@
   useBus(bus, [APPOINTMENTS_CHANGED, TASK_CHANGED], () => void uses.load());
   view.watch(ITEM_CHANGED, (data) => data.itemId === id, {
     deleted: 'Dieser Gegenstand wurde gelöscht.',
-    busy: () => edit.save.busy || remove.busy,
-    changed: () => !edit.editing && void item.load(),
+    busy: () => edit.save.busy || stockEdit.save.busy || remove.busy,
+    changed: () => !edit.editing && !stockEdit.editing && void item.load(),
   });
 
   async function submit() {
     // The answer is the saved item, so no reload is needed.
     await edit.submit(async (form) => item.set(await inventoryApi.update(id, form.toPatch())), 'Gegenstand gespeichert.');
+  }
+
+  async function submitStock() {
+    await stockEdit.submit(async (form) => item.set(await inventoryApi.setStock(id, form.toInput())), 'Bestand gespeichert.');
   }
 
   /** Termine und Aufgaben, die ihn benötigen, zeigen ihn danach als gelöscht an. */
@@ -75,12 +85,40 @@
         <dl class="props">
           <dt>Bestand</dt>
           <dd>{value.quantity}</dd>
-          <dt>Ort</dt>
-          <dd>{value.location ?? '–'}</dd>
           <dt>Geändert</dt>
           <dd>{session.format.dateTime(value.updatedAt)}</dd>
         </dl>
         {#if value.description}<p class="prose">{value.description}</p>{/if}
+
+        <h2 class="heading">
+          Wo ist es?
+          {#if !stockEdit.form && policy.canManage()}
+            <Button size="sm" variant="ghost" onclick={() => stockEdit.edit(new StockForm(value.stock))} tooltip="Auf Orte und Personen verteilen">Bearbeiten</Button>
+          {/if}
+        </h2>
+        {#if stockEdit.form}
+          <div class="editing" {@attach stockEdit.track}>
+            <StockEditor form={stockEdit.form} action={stockEdit.save} oncancel={() => stockEdit.cancel()} onsubmit={submitStock} />
+          </div>
+        {:else if value.stock.length}
+          <ul class="stock">
+            {#each value.stock as place, i (i)}
+              <li>
+                <Icon name={place.kind === 'PERSON' ? 'account' : 'location'} small />
+                {#if place.kind === 'LOCATION' && place.id && place.name}
+                  <RecordLink kind="location" id={place.id}>{place.name}</RecordLink>
+                {:else if place.kind === 'PERSON' && place.id && place.name}
+                  <RecordLink kind="member" id={place.id} allowed={permissions.canSeeMember(place.id)}>{place.name}</RecordLink>
+                {:else}
+                  <span class:muted={place.kind === 'NONE'} class:inactive={place.kind !== 'NONE'}>{placeName(place)}</span>
+                {/if}
+                <span class="count">{place.quantity}</span>
+              </li>
+            {/each}
+          </ul>
+        {:else}
+          <p class="muted none">Kein Bestand.</p>
+        {/if}
 
         <h2>Benötigt für</h2>
         <AsyncView resource={uses}>
@@ -142,6 +180,34 @@
     font-variant-numeric: tabular-nums;
   }
   .short {
+    color: var(--color-danger);
+  }
+  .heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+  .stock {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .stock li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) 4rem;
+    align-items: center;
+    gap: var(--space-sm);
+    min-height: var(--control-height);
+    padding: 2px var(--space-xs);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .count {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .inactive {
     color: var(--color-danger);
   }
   .none {

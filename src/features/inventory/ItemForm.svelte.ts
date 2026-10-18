@@ -1,7 +1,7 @@
 import { settings } from '../../settings';
 import type { Item, ItemPatch, NewItem } from './model';
 
-export type ItemField = 'name' | 'category' | 'quantity' | 'location' | 'description';
+export type ItemField = 'name' | 'category' | 'quantity' | 'description';
 
 export type ItemFormErrors = Partial<Record<ItemField, string>>;
 
@@ -12,7 +12,8 @@ export class ItemForm {
   name = $state('');
   category = $state('');
   quantity = $state(1);
-  location = $state('');
+  /** Where a new item starts: a place id, or '' for "ohne Ort". Existing items change it in the stock. */
+  locationId = $state('');
   description = $state('');
   submitted = $state(false);
 
@@ -33,7 +34,6 @@ export class ItemForm {
     form.name = item.name;
     form.category = item.category ?? '';
     form.quantity = item.quantity;
-    form.location = item.location ?? '';
     form.description = item.description ?? '';
     return form;
   }
@@ -47,15 +47,15 @@ export class ItemForm {
       name: this.name.trim(),
       category: this.category.trim() || null,
       quantity: this.quantity,
-      location: this.location.trim() || null,
+      locationId: this.locationId || null,
       description: this.description.trim() || null,
     };
   }
 
-  /** Every field is sent; empty texts clear them on the server. */
+  /** Every field is sent; empty texts clear them on the server. Quantity and place live in the stock. */
   toPatch(): ItemPatch {
     const value = this.toNew();
-    return { ...value, category: value.category ?? '', location: value.location ?? '', description: value.description ?? '' };
+    return { name: value.name, category: value.category ?? '', description: value.description ?? '' };
   }
 
   private validate(): ItemFormErrors {
@@ -63,9 +63,8 @@ export class ItemForm {
     const name = this.name.trim();
     if (!name || name.length > limits.nameMaxLength) errors.name = `Name mit 1 bis ${limits.nameMaxLength} Zeichen angeben.`;
     if (this.category.trim().length > limits.categoryMaxLength) errors.category = `Höchstens ${limits.categoryMaxLength} Zeichen.`;
-    if (this.location.trim().length > limits.locationMaxLength) errors.location = `Höchstens ${limits.locationMaxLength} Zeichen.`;
     if (this.description.trim().length > limits.descriptionMaxLength) errors.description = `Höchstens ${limits.descriptionMaxLength} Zeichen.`;
-    if (!Number.isInteger(this.quantity) || this.quantity < 0 || this.quantity > limits.maxQuantity) {
+    if (!this.original && (!Number.isInteger(this.quantity) || this.quantity < 0 || this.quantity > limits.maxQuantity)) {
       errors.quantity = `Bestand von 0 bis ${limits.maxQuantity} angeben.`;
     }
     return errors;
