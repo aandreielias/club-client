@@ -23,8 +23,12 @@ export class MemberDetailModel {
     return this.member.load();
   }
 
-  saveProfile(patch: ProfilePatch): Promise<boolean> {
-    return this.write(this.profileAction, () => this.api.update(this.id, patch));
+  /** E-mail first (it may be taken), then the other changes, as one save. */
+  saveProfile(patch: ProfilePatch, email: string | null = null): Promise<boolean> {
+    return this.write(this.profileAction, async () => {
+      const changed = email ? await this.api.changeEmail(this.id, email) : null;
+      return Object.keys(patch).length || !changed ? this.api.update(this.id, patch) : changed;
+    });
   }
 
   setRoles(roles: readonly Role[]): Promise<boolean> {

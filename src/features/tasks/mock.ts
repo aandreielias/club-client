@@ -7,9 +7,12 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import type { Member } from '../../lib/types';
 import { ZonedClock } from '../../lib/time/ZonedClock';
-import type { NewTask, Task, TaskComment, TaskPatch, TaskStatus } from './model';
+import type { NewTask, Task, TaskComment, TaskPatch, TaskSource, TaskStatus } from './model';
+import type { MockEvent } from '../../lib/mock/MockEventBus';
+import { MANAGERS } from '../../lib/types';
+import { CHANGE_FIELD_LABELS, type ChangeField } from '../members/MembersApi';
 
-type StoredTask = Omit<Task, 'comments'>;
+type StoredTask = Omit<Task, 'comments' | 'source'>;
 
 const fail = MockServer.fail;
 const limits = settings.tasks;
@@ -49,9 +52,42 @@ export class MockTasks {
   /** taskId → comments */
   readonly comments: MockTable<Record<string, TaskComment[]>>;
 
+  /** taskId → source (server: tasks_source) */
+  readonly sources = new MockTable<Record<string, TaskSource>>('task-sources', () => ({}));
+
   constructor(private readonly people: MockDirectory) {
     this.tasks = new MockTable('tasks', () => this.seedTasks());
     this.comments = new MockTable('task-comments', () => this.seedComments());
+    mockServer.events.subscribe((event) => this.onEvent(event));
+  }
+
+  /** server: TaskHandlers.onChangeRequested / onChangeDecided */
+  private onEvent(event: MockEvent): void {
+    const data = event.data as Record<string, any>;
+    if (event.type === 'members.change-requested') {
+      const managers = this.people.audienceIds({ roles: MANAGERS }).sort().slice(0, limits.maxAssignees);
+      if (!managers.length) return;
+      const task: StoredTask = {
+        id: crypto.randomUUID(), teamId: null, appointmentId: null,
+        title: `Kontoänderung: ${data.memberName} – ${CHANGE_FIELD_LABELS[data.field as ChangeField]}`.slice(0, limits.titleMaxLength),
+        description: `Neuer Wert: ${data.newValue}`, status: 'OPEN', dueAt: null, createdBy: managers[0], assignees: managers,
+        checklist: [], createdAt: new Date().toISOString(), completedAt: null, repeatWeeks: null,
+      };
+      this.tasks.data.push(task);
+      this.sources.data[task.id] = { kind: 'CHANGE_REQUEST', id: data.requestId };
+      this.tasks.save();
+      this.sources.save();
+      this.changed(task, 'CREATED');
+      this.assigned(task, []);
+    } else if (event.type === 'members.change-decided') {
+      const taskId = Object.entries(this.sources.data).find(([, s]) => s.kind === 'CHANGE_REQUEST' && s.id === data.requestId)?.[0];
+      const task = this.tasks.data.find((t) => t.id === taskId && t.status !== 'DONE');
+      if (!task) return;
+      task.status = 'DONE';
+      task.completedAt = new Date().toISOString();
+      this.tasks.save();
+      this.changed(task, 'STATUS');
+    }
   }
 
   /** "Benötigt" list and attachments (server: TaskHandlers.getLinks / setLinks). */
@@ -95,7 +131,7 @@ export class MockTasks {
     return this.tasks.data
       .filter((t) => viewer.canSee(t) && (!mine || viewer.assigned(t)) && (!teamId || t.teamId === teamId) && (includeDone || t.status !== 'DONE') && inRange(t))
       .sort((a, b) => MockTasks.compareDue(a, b))
-      .map((t) => ({ ...t, comments: [] }));
+      .map((t) => ({ ...t, comments: [], source: null }));
   }
 
   get(member: Member, id: string): Task {
@@ -127,7 +163,7 @@ export class MockTasks {
     this.changed(task, 'CREATED');
     MockActivity.record('TASK', task.id, member, 'CREATED', { title: task.title, teamIds: task.teamId ? [task.teamId] : [] });
     this.assigned(task, []);
-    return { ...task, comments: [] };
+    return { ...task, comments: [], source: null };
   }
 
   /** Null fields stay unchanged; a given checklist replaces the old one. */
@@ -270,7 +306,7 @@ export class MockTasks {
   }
 
   private withComments(task: StoredTask): Task {
-    return { ...task, comments: [...(this.comments.data[task.id] ?? [])] };
+    return { ...task, comments: [...(this.comments.data[task.id] ?? [])], source: this.sources.data[task.id] ?? null };
   }
 
   /** server: Task constructor checks */

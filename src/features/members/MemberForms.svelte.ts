@@ -9,6 +9,7 @@ const limits = settings.members;
 /** server: Member.normalizeEmail — ASCII local part (no SMTPUTF8 at most providers), no ß domains */
 const EMAIL = /^[\x21-\x3f\x41-\x7e]+@[^@\s]+\.[^@\s]+$/;
 const PHONE = /^\+?[0-9 /-]{6,20}$/;
+const EMAIL_ERROR = 'Gültige E-Mail-Adresse angeben (keine Umlaute vor dem @).';
 
 function nameError(value: string): string | undefined {
   const name = value.trim();
@@ -71,7 +72,7 @@ export class InviteForm extends MemberFormBase {
   protected validate(): MemberFormErrors {
     const errors: MemberFormErrors = {};
     const email = this.email.trim();
-    if (!EMAIL.test(email) || email.includes('ß')) errors.email = 'Gültige E-Mail-Adresse angeben (keine Umlaute vor dem @).';
+    if (!EMAIL.test(email) || email.includes('ß')) errors.email = EMAIL_ERROR;
     const first = nameError(this.firstName);
     if (first) errors.firstName = first;
     const last = nameError(this.lastName);
@@ -86,6 +87,7 @@ export class InviteForm extends MemberFormBase {
 
 /** Edits another member's profile; only changed fields are sent. */
 export class ProfileForm extends MemberFormBase {
+  email = $state('');
   firstName = $state('');
   lastName = $state('');
   birthDate = $state('');
@@ -97,11 +99,18 @@ export class ProfileForm extends MemberFormBase {
     today: string,
   ) {
     super(today);
+    this.email = original.email;
     this.firstName = original.firstName;
     this.lastName = original.lastName;
     this.birthDate = original.birthDate ?? '';
     this.phone = original.phone ?? '';
     this.photoConsent = original.photoConsent;
+  }
+
+  /** The new e-mail, or null when unchanged (it has its own endpoint). */
+  changedEmail(): string | null {
+    const email = this.email.trim().toLowerCase();
+    return email && email !== this.original.email ? email : null;
   }
 
   /** A hidden birth date (null from the server) is never sent back, so it cannot be erased by accident. */
@@ -126,6 +135,8 @@ export class ProfileForm extends MemberFormBase {
     if (birth) errors.birthDate = birth;
     const phone = phoneError(this.phone);
     if (phone) errors.phone = phone;
+    const email = this.email.trim();
+    if (!EMAIL.test(email) || email.includes('ß')) errors.email = EMAIL_ERROR;
     return errors;
   }
 }

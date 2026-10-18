@@ -35,6 +35,13 @@ export interface Task {
   completedAt: string | null;
   /** Repeats every n weeks: finishing it creates the next one. null = once. */
   repeatWeeks: number | null;
+  /** The record a system-created task is about, e.g. a member's change request. Only GET /tasks/{id} fills it. */
+  source: TaskSource | null;
+}
+
+export interface TaskSource {
+  kind: 'CHANGE_REQUEST';
+  id: string;
 }
 
 export interface TaskList {

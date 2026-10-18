@@ -23,6 +23,16 @@ export class MemberPolicy {
     return this.isManager;
   }
 
+  /** server: ChangeRequestHandlers.decide (with step-up) */
+  canDecideChanges(): boolean {
+    return this.isManager;
+  }
+
+  /** server: ChangeRequestHandlers.changeEmail */
+  canChangeEmail(member: Member): boolean {
+    return this.isManager && member.active;
+  }
+
   /** Only admins grant ADMIN. */
   grantableRoles(): readonly Role[] {
     return this.isAdmin ? ALL_ROLES : ALL_ROLES.filter((r) => r !== 'ADMIN');

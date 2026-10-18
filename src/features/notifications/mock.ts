@@ -5,9 +5,10 @@ import type { MockEvent } from '../../lib/mock/MockEventBus';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import type { Notification, NotificationKind, Preference } from './model';
+import { CHANGE_FIELD_LABELS, type ChangeField } from '../members/MembersApi';
 
 const fail = MockServer.fail;
-const KINDS: readonly NotificationKind[] = ['TASK_ASSIGNED', 'TASK_DUE', 'APPOINTMENT_CANCELLED', 'SECURITY'];
+const KINDS: readonly NotificationKind[] = ['TASK_ASSIGNED', 'TASK_DUE', 'APPOINTMENT_CANCELLED', 'SECURITY', 'CHANGE_DECIDED'];
 const MAX_LISTED = 100;
 
 const SECURITY_TITLES: Record<string, string> = {
@@ -87,6 +88,10 @@ export class MockNotifications {
           `/appointments/${data.appointmentIds[0]}`);
         break;
       }
+      case 'members.change-decided':
+        this.notify([data.memberId], 'CHANGE_DECIDED', `${data.approved ? 'Änderung übernommen' : 'Änderung abgelehnt'}: ${CHANGE_FIELD_LABELS[data.field as ChangeField]}`,
+          data.approved ? 'Deine Kontodaten wurden geändert.' : 'Melde dich beim Vorstand, wenn du Fragen dazu hast.', '/account');
+        break;
       case 'members.security-changed':
         this.notify([data.memberId], 'SECURITY', SECURITY_TITLES[data.change] ?? 'Sicherheitsänderung',
           `Warst du das nicht? Melde dich sofort beim Vorstand von ${this.people.club.name}.`, '/me/security');

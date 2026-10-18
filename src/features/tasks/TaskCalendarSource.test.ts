@@ -6,7 +6,7 @@ import type { TasksApi } from './TasksApi';
 
 const task = (id: string, dueAt: string | null, status: Task['status'] = 'OPEN'): Task => ({
   id, teamId: null, appointmentId: null, title: id, description: null, status, dueAt, createdBy: 'm', assignees: ['m'], checklist: [],
-  comments: [], createdAt: '2026-01-01T00:00:00Z', completedAt: null, repeatWeeks: null,
+  comments: [], createdAt: '2026-01-01T00:00:00Z', completedAt: null, repeatWeeks: null, source: null,
 });
 
 describe('TaskCalendarSource', () => {

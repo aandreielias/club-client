@@ -10,8 +10,15 @@
   import Field from '../../ui/Field.svelte';
   import Page from '../../ui/Page.svelte';
   import Tag from '../../ui/Tag.svelte';
+  import type { ChangeField } from '../members/MembersApi';
+  import { membersApi } from '../members/services';
+  import ChangeRequestDialog from './ChangeRequestDialog.svelte';
+  import { OwnChangeRequests } from './OwnChangeRequests.svelte';
 
   const savePhone = new Action();
+  const requests = new OwnChangeRequests(membersApi);
+  void requests.load();
+  let asking = $state<ChangeField | null>(null);
 
   const member = $derived(session.member);
   let phone = $state(session.member.phone ?? '');
@@ -22,6 +29,18 @@
   }
 </script>
 
+{#snippet changeable(field: ChangeField, value: string)}
+  {@const pending = requests.pending(field)}
+  <dd class="changeable">
+    <span>{value}</span>
+    {#if pending}
+      <Tag tone="warning">Angefragt: {field === 'BIRTH_DATE' ? session.format.date(pending.newValue) : pending.newValue}</Tag>
+    {:else}
+      <Button size="sm" variant="ghost" onclick={() => (asking = field)}>Änderung anfragen</Button>
+    {/if}
+  </dd>
+{/snippet}
+
 <Page title="Mein Konto">
   {#snippet actions()}
     <Button onclick={() => bus.publish(WINDOW_OPEN, { kind: 'settings', id: 'security' })}>PIN und Passwort</Button>
@@ -29,13 +48,16 @@
     <LinkButton href="#/calendar/absences" tooltip="Urlaub oder Verletzung eintragen">Abwesenheiten</LinkButton>
   {/snippet}
 
+
   <dl class="props">
-    <dt>Name</dt>
-    <dd>{member.firstName} {member.lastName}</dd>
+    <dt>Vorname</dt>
+    {@render changeable('FIRST_NAME', member.firstName)}
+    <dt>Nachname</dt>
+    {@render changeable('LAST_NAME', member.lastName)}
     <dt>E-Mail</dt>
-    <dd>{member.email}</dd>
+    {@render changeable('EMAIL', member.email)}
     <dt>Geburtsdatum</dt>
-    <dd>{member.birthDate ? session.format.date(member.birthDate) : '–'}</dd>
+    {@render changeable('BIRTH_DATE', member.birthDate ? session.format.date(member.birthDate) : '–')}
     <dt>Rollen</dt>
     <dd>{#each member.roles as role (role)}<Tag tone="gray">{ROLE_LABELS[role]}</Tag>{/each}</dd>
     <dt>Teams</dt>
@@ -51,3 +73,14 @@
     <div><Button type="submit" busy={savePhone.busy}>Speichern</Button></div>
   </form>
 </Page>
+
+<ChangeRequestDialog bind:field={asking} {requests} onsent={() => bus.publish(TOAST, { text: 'Anfrage an den Vorstand gesendet.' })} />
+
+<style>
+  .changeable {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs) var(--space-sm);
+  }
+</style>

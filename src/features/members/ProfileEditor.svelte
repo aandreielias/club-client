@@ -9,6 +9,7 @@
   import Field from '../../ui/Field.svelte';
   import type { MemberDetailModel } from './MemberDetailModel.svelte';
   import { ProfileForm } from './MemberForms.svelte';
+  import { memberPolicy as policy } from './services';
 
   let { member, model, ondone }: { member: Member; model: MemberDetailModel; ondone: () => void } = $props();
 
@@ -22,7 +23,8 @@
     form.submitted = true;
     if (!form.valid) return;
     const patch = form.toPatch();
-    if (!Object.keys(patch).length || (await model.saveProfile(patch))) {
+    const email = form.changedEmail();
+    if ((!Object.keys(patch).length && !email) || (await model.saveProfile(patch, email))) {
       bus.publish(TOAST, { text: 'Profil gespeichert.' });
       ondone();
     }
@@ -31,6 +33,11 @@
 
 <form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
   <div class="grid">
+    {#if policy.canChangeEmail(member)}
+      <Field label="E-Mail" hint="Ändert auch die Anmeldung." error={form.error('email')}>
+        <input type="email" bind:value={form.email} autocomplete="off" required />
+      </Field>
+    {/if}
     <Field label="Vorname" error={form.error('firstName')}>
       <input bind:value={form.firstName} maxlength={max} required />
     </Field>

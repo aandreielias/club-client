@@ -13,6 +13,31 @@ export interface Invitation {
   roles: Role[];
 }
 
+/** Account data a member cannot change alone; admin/board decide on a request. */
+export type ChangeField = 'EMAIL' | 'FIRST_NAME' | 'LAST_NAME' | 'BIRTH_DATE';
+export type ChangeStatus = 'OPEN' | 'APPROVED' | 'REJECTED';
+
+export const CHANGE_FIELD_LABELS: Readonly<Record<ChangeField, string>> = {
+  EMAIL: 'E-Mail',
+  FIRST_NAME: 'Vorname',
+  LAST_NAME: 'Nachname',
+  BIRTH_DATE: 'Geburtsdatum',
+};
+
+export interface ChangeRequest {
+  id: string;
+  memberId: string;
+  memberName: string;
+  field: ChangeField;
+  currentValue: string | null;
+  newValue: string;
+  note: string | null;
+  status: ChangeStatus;
+  decidedBy: string | null;
+  createdAt: string;
+  decidedAt: string | null;
+}
+
 export type ProfilePatch = Partial<Pick<Member, 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'photoConsent'>>;
 
 /** Typed access to the member administration endpoints. Every write needs a step-up. */
@@ -48,6 +73,29 @@ export class MembersApi {
 
   linkGuardian(minorId: string, guardianId: string): Promise<Member> {
     return this.api.post<Member>(`${this.path(minorId)}/guardians`, { guardianId });
+  }
+
+  /** Sets the login e-mail directly (admin/board). */
+  changeEmail(id: string, email: string): Promise<Member> {
+    return this.api.put<Member>(`${this.path(id)}/email`, { email });
+  }
+
+  /** The signed-in member asks admin/board to change a field. */
+  requestChange(field: ChangeField, value: string, note: string | null): Promise<ChangeRequest> {
+    return this.api.post<ChangeRequest>('/api/v1/me/change-requests', { field, value, note });
+  }
+
+  async ownChangeRequests(): Promise<ChangeRequest[]> {
+    return (await this.api.get<{ items: ChangeRequest[] }>('/api/v1/me/change-requests')).items;
+  }
+
+  changeRequest(id: string): Promise<ChangeRequest> {
+    return this.api.get<ChangeRequest>(`${MembersApi.BASE}/change-requests/${encodeURIComponent(id)}`);
+  }
+
+  /** Approving applies the change; either way the request's task is finished and the member is told. */
+  decideChange(id: string, approve: boolean): Promise<ChangeRequest> {
+    return this.api.post<ChangeRequest>(`${MembersApi.BASE}/change-requests/${encodeURIComponent(id)}/${approve ? 'approve' : 'reject'}`);
   }
 
   /** The member must set a new PIN (and re-register devices). */

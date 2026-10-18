@@ -13,6 +13,7 @@
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Tag from '../../ui/Tag.svelte';
   import MemberName from '../../ui/MemberName.svelte';
+  import ChangeRequestSection from '../members/ChangeRequestSection.svelte';
   import Checklist from './Checklist.svelte';
   import Comments from './Comments.svelte';
   import DueField from './DueField.svelte';
@@ -122,6 +123,8 @@
           {/if}
         </dl>
         {#if task.description}<p class="prose">{task.description}</p>{/if}
+
+        {#if task.source?.kind === 'CHANGE_REQUEST'}<ChangeRequestSection requestId={task.source.id} />{/if}
 
         <LinksSection model={links} editable={policy.canManage(task)} />
 

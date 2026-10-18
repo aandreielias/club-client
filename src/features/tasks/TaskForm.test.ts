@@ -22,7 +22,7 @@ const existing: Task = {
   ],
   comments: [],
   createdAt: '2026-06-01T10:00:00.000Z',
-  completedAt: null, repeatWeeks: null,
+  completedAt: null, repeatWeeks: null, source: null,
 };
 
 describe('TaskForm', () => {

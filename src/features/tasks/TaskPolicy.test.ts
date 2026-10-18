@@ -8,7 +8,7 @@ import { TaskPolicy } from './TaskPolicy';
 
 const task = (assignees: string[]): Task => ({
   id: 't', teamId: null, appointmentId: null, title: 't', description: null, status: 'OPEN', dueAt: null, createdBy: 'coach', assignees,
-  checklist: [], comments: [], createdAt: '2026-01-01T00:00:00Z', completedAt: null, repeatWeeks: null,
+  checklist: [], comments: [], createdAt: '2026-01-01T00:00:00Z', completedAt: null, repeatWeeks: null, source: null,
 });
 
 describe('TaskPolicy', () => {

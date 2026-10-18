@@ -315,6 +315,8 @@ export const settings = {
     resetAllConfirmation: 'RESET ALL PINS',
     /** Show the search field from this many members on. */
     searchFrom: 8,
+    /** server: ChangeRequest.NOTE_MAX */
+    changeNoteMaxLength: 500,
   },
 
   /** server: teams module (Team) */

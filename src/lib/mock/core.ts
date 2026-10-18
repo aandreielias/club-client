@@ -253,8 +253,7 @@ export class MockDirectory {
     this.requirePrivileged(viewer, MANAGERS);
     const roles = MockDirectory.roles(body.roles);
     if (roles.includes('ADMIN') && !this.hasRole(viewer, ['ADMIN'])) fail(403, 'access.denied');
-    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-    if (!/^[\x21-\x3f\x41-\x7e]+@[^@\s]+\.[^@\s]+$/.test(email) || email.includes('ß')) fail(400, 'member.email-invalid');
+    const email = MockDirectory.email(body.email);
     if (this.members.data.some((m) => m.email === email)) fail(409, 'member.email-taken');
     const member: Member = {
       id: crypto.randomUUID(),
@@ -440,7 +439,36 @@ export class MockDirectory {
     return this.visibleTo(viewer, target);
   }
 
-  private applyProfile(member: Member, patch: Record<string, unknown>): Member {
+  /** server: Member.normalizeEmail */
+  static email(raw: unknown): string {
+    const email = typeof raw === 'string' ? raw.trim().toLowerCase() : '';
+    if (!/^[\x21-\x3f\x41-\x7e]+@[^@\s]+\.[^@\s]+$/.test(email) || email.includes('ß')) fail(400, 'member.email-invalid');
+    return email;
+  }
+
+  /** server: MemberHandlers.changeEmail / ChangeRequestHandlers.moveLogin */
+  changeEmail(viewer: Member, memberId: string, raw: unknown): Member {
+    this.requirePrivileged(viewer, MANAGERS);
+    const target = this.members.data.find((m) => m.id === memberId) ?? fail(404, 'member.not-found');
+    this.moveLogin(target, raw);
+    return this.visibleTo(viewer, target);
+  }
+
+  /** Sets a new e-mail after the same checks as on invitation. */
+  moveLogin(member: Member, raw: unknown): void {
+    const email = MockDirectory.email(raw);
+    if (email === member.email) return;
+    if (this.members.data.some((m) => m.email === email)) fail(409, 'member.email-taken');
+    member.email = email;
+    this.members.save();
+  }
+
+  /** Validates a profile change on a copy; the member stays unchanged. */
+  applyProfileCopy(member: Member, patch: Record<string, unknown>): Member {
+    return this.applyProfile({ ...member }, patch);
+  }
+
+  applyProfile(member: Member, patch: Record<string, unknown>): Member {
     const { firstName, lastName, birthDate, phone, photoConsent } = patch;
     if (birthDate !== undefined) {
       if (typeof birthDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate) || isNaN(Date.parse(birthDate))) {

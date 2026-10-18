@@ -4,5 +4,8 @@ import AccountPage from './AccountPage.svelte';
 export const accountFeature: Feature = {
   id: 'account',
   routes: [{ path: '/account', component: AccountPage }],
-  links: [{ server: '/me/security', to: () => ({ path: '/account' }) }],
+  links: [
+    { server: '/me/security', to: () => ({ path: '/account' }) },
+    { server: '/account', to: () => ({ path: '/account' }) },
+  ],
 };
