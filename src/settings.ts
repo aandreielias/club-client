@@ -355,6 +355,8 @@ export const settings = {
     /** Car pools: shown for these appointment types; server limits seats and note. */
     rideTypes: ['MATCH', 'TOURNAMENT', 'EVENT'] as const,
     rideMaxSeats: 8,
+    /** Car seen from above next to each ride (CarSeats); height follows the number of seats. */
+    rideGraphic: { width: 52 },
     rideNoteMaxLength: 200,
   },
 

@@ -10,6 +10,7 @@
   import Select from '../../ui/Select.svelte';
   import { RIDES_CHANGED } from './events';
   import type { Ride } from './model';
+  import CarSeats from './CarSeats.svelte';
   import { RidesModel } from './RidesModel.svelte';
   import { calendarApi } from './services';
 
@@ -58,33 +59,36 @@
       {#each shown as ride (ride.id)}
         {@const free = RidesModel.free(ride)}
         <li>
-          <div class="head">
-            <strong>{ride.driverName}</strong>
-            <span class="muted">{free ? `${free} von ${ride.seats} frei` : 'voll'}</span>
-            {#if open && (ride.driverId === me || permissions.isManager)}
-              <Button size="sm" variant="ghost" onclick={() => cancel(ride)}>Fahrt absagen</Button>
+          <CarSeats {ride} />
+          <div class="ride">
+            <div class="head">
+              <strong>{ride.driverName}</strong>
+              <span class="muted">{free ? `${free} von ${ride.seats} frei` : 'voll'}</span>
+              {#if open && (ride.driverId === me || permissions.isManager)}
+                <Button size="sm" variant="ghost" onclick={() => cancel(ride)}>Fahrt absagen</Button>
+              {/if}
+            </div>
+            {#if ride.note}<p class="muted note">{ride.note}</p>{/if}
+            {#if ride.passengers.length}
+              <ul class="passengers">
+                {#each ride.passengers as p (p.memberId)}
+                  <li>
+                    {p.name}
+                    {#if open && mayRemove(ride, p.memberId)}
+                      <Button size="sm" variant="ghost" icon="close" tooltip="{p.name} aussteigen lassen" onclick={() => model.leave(ride.id, p.memberId)} />
+                    {/if}
+                  </li>
+                {/each}
+              </ul>
+            {/if}
+            {#if open && free}
+              <div class="row">
+                {#each riders(ride) as id (id)}
+                  <Button size="sm" tooltip="Einen Platz in diesem Auto nehmen" busy={model.action.busy} onclick={() => model.join(ride.id, id === me ? null : id)}>{riderLabel(id)}</Button>
+                {/each}
+              </div>
             {/if}
           </div>
-          {#if ride.note}<p class="muted note">{ride.note}</p>{/if}
-          {#if ride.passengers.length}
-            <ul class="passengers">
-              {#each ride.passengers as p (p.memberId)}
-                <li>
-                  {p.name}
-                  {#if open && mayRemove(ride, p.memberId)}
-                    <Button size="sm" variant="ghost" icon="close" tooltip="{p.name} aussteigen lassen" onclick={() => model.leave(ride.id, p.memberId)} />
-                  {/if}
-                </li>
-              {/each}
-            </ul>
-          {/if}
-          {#if open && free}
-            <div class="row">
-              {#each riders(ride) as id (id)}
-                <Button size="sm" tooltip="Einen Platz in diesem Auto nehmen" busy={model.action.busy} onclick={() => model.join(ride.id, id === me ? null : id)}>{riderLabel(id)}</Button>
-              {/each}
-            </div>
-          {/if}
         </li>
       {/each}
     </ul>
@@ -114,9 +118,16 @@
     margin-bottom: var(--space-md);
   }
   .rides > li {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
     padding: var(--space-sm) var(--space-md);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
+  }
+  .ride {
+    flex: 1;
+    min-width: 0;
   }
   .head {
     display: flex;
