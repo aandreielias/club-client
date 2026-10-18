@@ -32,6 +32,33 @@ export class FilePreviews {
     return new Blob([await response.blob()], { type: contentType });
   }
 
+  /** Whether two versions of this type can be compared line by line (Word, Excel, PowerPoint, text). */
+  comparable(contentType: string): boolean {
+    const kind = this.kind(contentType);
+    return kind === 'docx' || kind === 'xlsx' || kind === 'pptx' || contentType.startsWith('text/');
+  }
+
+  /** A document's text as lines for comparing versions: paragraphs, sheet rows ("A | B | C"), slide lines. */
+  async lines(content: Blob, contentType: string): Promise<string[]> {
+    switch (this.kind(contentType)) {
+      case 'docx':
+        return this.office.paragraphs(content);
+      case 'xlsx':
+        return (await this.office.sheets(content)).flatMap((s) => [`Blatt ${s.name}`, ...s.rows.map((r) => r.join(' | ').trim()).filter(Boolean)]);
+      case 'pptx':
+        return (await this.office.slides(content)).flatMap((s, i) => [`Folie ${i + 1}: ${s.title}`, ...s.lines]);
+      default:
+        return (await content.text()).split(/\r?\n/);
+    }
+  }
+
+  /** One version's content, typed like the file. */
+  async versionContent(fileId: string, versionId: string, contentType: string): Promise<Blob> {
+    const response = await fetch(await this.links.versionUrl(fileId, versionId));
+    if (!response.ok) throw new Error(`Version nicht verfügbar (${response.status}).`);
+    return new Blob([await response.blob()], { type: contentType });
+  }
+
   /** Renders a Word document into `target`; styles stay inside the generated markup. */
   async renderDocx(content: Blob, target: HTMLElement): Promise<void> {
     const { renderAsync } = await import('docx-preview');

@@ -43,8 +43,13 @@ export class Router {
     addEventListener('hashchange', () => this.read());
   }
 
+  /**
+   * Applies the change at once (not only on the later hashchange), so a second change right after it,
+   * e.g. closing the window while opening the split view, builds on the new address instead of overwriting it.
+   */
   navigate(path: string): void {
     location.hash = path;
+    if (this.#started) this.read();
   }
 
   /** Current path with query keys changed (null removes a key); other keys are kept. */

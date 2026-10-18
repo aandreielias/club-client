@@ -441,6 +441,11 @@ export const settings = {
   },
 
   files: {
+    /** server: FileVersion.MAX_LABEL */
+    /** Comparing versions: lines read per version, unchanged lines kept around each change. */
+    compareMaxLines: 2000,
+    compareContextLines: 2,
+    versionLabelMaxLength: 20,
     /** ZIP downloads are packed in the browser; larger folders must be downloaded in parts. */
     zipMaxBytes: 500 * 1024 * 1024,
     /** Excel/PowerPoint previews show at most this much. */

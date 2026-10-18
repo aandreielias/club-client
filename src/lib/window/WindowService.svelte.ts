@@ -21,7 +21,8 @@ export const WINDOW_CLOSE = defineEvent('ui/window/close');
 /** Given to window contents so they can talk to their window. */
 export interface WindowHandle {
   setTitle(title: string): void;
-  close(): void;
+  /** `then` runs once the window is gone from the address (e.g. to open the split view next). */
+  close(then?: () => void): void;
   /** Shows another record in the window; Back (Escape) returns to the current one. */
   open(kind: string, id: string): void;
   /** Replaces the content without a way back (e.g. the new record after its create form). */
@@ -114,21 +115,25 @@ export class WindowService {
     else this.close();
   }
 
-  close(): void {
-    if (!this.current) return;
+  /** `then` runs once the address no longer names the window (closing may go back in history, which is async). */
+  close(then?: () => void): void {
+    if (!this.current) return then?.();
     const answer = this.mayClose();
-    if (answer === true) this.closeNow();
-    else if (answer) void answer.then((ok) => ok && this.closeNow());
+    if (answer === true) this.closeNow(then);
+    else if (answer) void answer.then((ok) => ok && this.closeNow(then));
   }
 
-  private closeNow(): void {
+  private closeNow(then?: () => void): void {
     this.setTrail([]);
-    if (!this.current) return;
+    if (!this.current) return then?.();
     if (this.#pushed) {
       this.#pushed = false;
+      // After the router's own hashchange listener, so `then` sees the address without the window.
+      if (then) addEventListener('hashchange', () => then(), { once: true });
       history.back();
     } else {
       this.router.updateQuery({ [WindowService.PARAM]: null }, true);
+      then?.();
     }
   }
 
@@ -141,7 +146,7 @@ export class WindowService {
   handle(): WindowHandle {
     return {
       setTitle: (title) => (this.title = title),
-      close: () => this.close(),
+      close: (then) => this.close(then),
       open: (kind, id) => {
         if (this.current) this.setTrail([...this.#trail, this.current]);
         this.open(kind, id);

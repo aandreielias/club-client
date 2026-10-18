@@ -26,6 +26,11 @@ export class FileLinks {
     return (await pending).url;
   }
 
+  /** A link to one version of a document (not cached: versions are opened rarely). */
+  async versionUrl(fileId: string, versionId: string): Promise<string> {
+    return (await this.api.versionLink(fileId, versionId)).url;
+  }
+
   forget(fileId: string): void {
     this.#cache.delete(`${fileId}:true`);
     this.#cache.delete(`${fileId}:false`);

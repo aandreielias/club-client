@@ -9,7 +9,7 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import type { FileRef } from '../../lib/links/model';
 import type { Member } from '../../lib/types';
-import type { DownloadLink, Folder, FolderKind, FolderScope, StoredFile } from './model';
+import type { DownloadLink, FileVersion, Folder, FolderKind, FolderScope, StoredFile } from './model';
 
 type StoredFolder = Omit<Folder, 'canUpload' | 'canManage'>;
 
@@ -48,9 +48,30 @@ class Viewer {
   }
 }
 
+type StoredVersion = FileVersion;
+
+/** Text of the seeded Hallenordnung versions (Word content is built on demand). */
+const SAMPLE_VERSIONS: Readonly<Record<string, readonly string[]>> = {
+  'v-10-1': [
+    'Die Halle ist ab 17:00 Uhr für den Verein reserviert.',
+    'Hallenschuhe mit heller Sohle sind Pflicht.',
+    'Bälle werden nach dem Training in den Geräteraum gebracht.',
+    'Der Schlüssel liegt beim Schulwart.',
+  ],
+  'v-10-2': [
+    'Die Halle ist ab 17:30 Uhr für den Verein reserviert.',
+    'Hallenschuhe mit heller Sohle sind Pflicht.',
+    'Bälle werden nach dem Training in den Geräteraum gebracht.',
+    'Getränke nur in verschließbaren Flaschen.',
+    'Der Schlüssel liegt beim Schulwart.',
+  ],
+};
+
 export class MockFiles {
   readonly folders: MockTable<StoredFolder[]>;
   readonly files: MockTable<StoredFile[]>;
+  /** fileId → versions, newest first (server: files_version); bytes in #blobs under the version id. */
+  readonly versions: MockTable<Record<string, StoredVersion[]>>;
   /** fileId → content; lost on reload, links then fall back to a placeholder. */
   readonly #blobs = new Map<string, Blob>();
   readonly #urls = new Map<string, string>();
@@ -58,6 +79,7 @@ export class MockFiles {
   constructor(private readonly people: MockDirectory) {
     this.folders = new MockTable('folders', () => MockFiles.seedFolders());
     this.files = new MockTable('files', () => MockFiles.seedFiles());
+    this.versions = new MockTable('file-versions', () => MockFiles.seedVersions());
     // Folders stored before several teams per folder existed carry a single `teamId` (server: migration V16).
     for (const f of this.folders.data as (StoredFolder & { teamId?: string | null })[]) {
       if (!Array.isArray(f.teamIds)) {
@@ -238,6 +260,7 @@ export class MockFiles {
       uploadedBy: viewer.member.id,
       taggedMemberIds: tags,
       createdAt: new Date().toISOString(),
+      version: null,
     };
     this.#blobs.set(stored.id, new Blob([bytes], { type: stored.contentType }));
     this.files.data.push(stored);
@@ -247,12 +270,75 @@ export class MockFiles {
     return stored;
   }
 
+  /** server: FileHandlers.uploadVersion */
+  async uploadVersion(req: MockRequest): Promise<StoredFile> {
+    const viewer = this.viewer(directory.actor(req));
+    const file = this.visibleFile(viewer, req.params.id);
+    const folder = this.folders.data.find((f) => f.id === file.folderId)!;
+    this.requireModify(viewer, folder, file);
+    if (folder.kind !== 'DOCUMENTS') fail(400, 'file.versions-documents-only');
+    const body = req.body instanceof FormData ? req.body : null;
+    const upload = body?.get('file');
+    const label = String(body?.get('label') ?? '').trim();
+    const date = String(body?.get('date') ?? '');
+    if (!(upload instanceof Blob)) return fail(400, 'request.invalid');
+    if (!label || label.length > limits.versionLabelMaxLength) fail(400, 'file.version-label-invalid');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) fail(400, 'file.version-date-missing');
+    await MockFiles.simulateTransfer(upload.size, req.onProgress);
+    const bytes = new Uint8Array(await upload.arrayBuffer());
+    if (MockFiles.detect(bytes, upload instanceof File ? upload.name : file.name)?.contentType !== file.contentType) fail(400, 'file.version-type-mismatch');
+    if (new TextDecoder().decode(bytes.subarray(0, 512)).includes(EICAR)) fail(400, 'file.infected');
+    const list = (this.versions.data[file.id] ??= []);
+    if (list.some((v) => v.label.toLowerCase() === label.toLowerCase()) || (!list.length && label === '1.0')) fail(409, 'file.version-exists');
+    if (!list.length) {
+      // The first upload becomes version 1.0; its bytes move under their own key.
+      const first: StoredVersion = { id: crypto.randomUUID(), label: '1.0', date: file.createdAt.slice(0, 10), contentType: file.contentType,
+        sizeBytes: file.sizeBytes, uploadedBy: file.uploadedBy, createdAt: file.createdAt, current: false };
+      const blob = this.#blobs.get(file.id);
+      if (blob) this.#blobs.set(first.id, blob);
+      list.push(first);
+    }
+    list.forEach((v) => (v.current = false));
+    const added: StoredVersion = { id: crypto.randomUUID(), label, date, contentType: file.contentType, sizeBytes: upload.size,
+      uploadedBy: viewer.member.id, createdAt: new Date().toISOString(), current: true };
+    list.unshift(added);
+    const blob = new Blob([bytes], { type: file.contentType });
+    this.#blobs.set(added.id, blob);
+    this.#blobs.set(file.id, blob);
+    this.#urls.delete(file.id);
+    Object.assign(file, { sizeBytes: upload.size, version: label });
+    this.files.save();
+    this.versions.save();
+    this.changed(folder, file.id, 'UPDATED');
+    MockActivity.record('FILE', file.id, viewer.member, 'UPDATED', { title: file.name, teamIds: folder.teamIds, parentId: folder.id });
+    return file;
+  }
+
+  listVersions(member: Member, fileId: string): { items: StoredVersion[] } {
+    const file = this.visibleFile(this.viewer(member), fileId);
+    return { items: this.versions.data[file.id] ?? [] };
+  }
+
+  async versionLink(member: Member, fileId: string, versionId: string): Promise<DownloadLink> {
+    const file = this.visibleFile(this.viewer(member), fileId);
+    const version = (this.versions.data[file.id] ?? []).find((v) => v.id === versionId) ?? fail(404, 'file.version-not-found');
+    if (!this.#blobs.has(version.id)) {
+      const text = SAMPLE_VERSIONS[version.id];
+      this.#blobs.set(version.id, text ? await MockFiles.docx(file, text) : MockFiles.placeholder(file));
+    }
+    return { url: URL.createObjectURL(this.#blobs.get(version.id)!), expiresAt: new Date(Date.now() + LINK_LIFETIME_MS).toISOString() };
+  }
+
   link(member: Member, fileId: string, thumbnail: boolean): DownloadLink | Promise<DownloadLink> {
     const file = this.visibleFile(this.viewer(member), fileId);
     if (thumbnail && !file.hasThumbnail) fail(404, 'file.no-thumbnail');
     const answer = () => ({ url: this.objectUrl(file), expiresAt: new Date(Date.now() + LINK_LIFETIME_MS).toISOString() });
     // Seeded Word files get real content (built asynchronously), so the preview has something to show.
     const sample = { [OFFICE.docx]: MockFiles.docx, [OFFICE.xlsx]: MockFiles.xlsx, [OFFICE.pptx]: MockFiles.pptx }[file.contentType];
+    const current = (this.versions.data[file.id] ?? []).find((v) => v.current);
+    if (current && SAMPLE_VERSIONS[current.id] && !this.#blobs.has(file.id)) {
+      return MockFiles.docx(file, SAMPLE_VERSIONS[current.id]).then((blob) => (this.#blobs.set(file.id, blob), answer()));
+    }
     if (sample && !this.#blobs.has(file.id)) {
       return sample(file).then((blob) => (this.#blobs.set(file.id, blob), answer()));
     }
@@ -424,8 +510,8 @@ export class MockFiles {
     return new Blob([body], { type: 'application/pdf' });
   }
 
-  /** A minimal Word document with the file name as heading and one paragraph. */
-  static async docx(file: StoredFile): Promise<Blob> {
+  /** A minimal Word document with the file name as heading and the given paragraphs. */
+  static async docx(file: StoredFile, paragraphs: readonly string[] = ['Beispieldokument im Testmodus ohne Server.']): Promise<Blob> {
     const { default: JSZip } = await import('jszip');
     const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const zip = new JSZip();
@@ -433,7 +519,7 @@ export class MockFiles {
     zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
     const paragraph = (text: string, size: number, bold = false) =>
       `<w:p><w:r><w:rPr>${bold ? '<w:b/>' : ''}<w:sz w:val="${size}"/></w:rPr><w:t>${escape(text)}</w:t></w:r></w:p>`;
-    zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paragraph(file.name.replace(/\.docx$/i, ''), 36, true)}${paragraph('Beispieldokument im Testmodus ohne Server.', 24)}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>`);
+    zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paragraph(file.name.replace(/\.docx$/i, ''), 36, true)}${paragraphs.map((p) => paragraph(p, 24)).join('')}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>`);
     return zip.generateAsync({ type: 'blob', mimeType: file.contentType });
   }
 
@@ -533,7 +619,7 @@ export class MockFiles {
     const file = (id: string, folderId: string, name: string, contentType: string, sizeBytes: number, uploadedBy: string, daysAgo: number,
       image?: { width: number; height: number; tags?: string[] }): StoredFile => ({
       id, folderId, name, contentType, sizeBytes, width: image?.width ?? null, height: image?.height ?? null, hasThumbnail: !!image,
-      uploadedBy, taggedMemberIds: image?.tags ?? [], createdAt: new Date(Date.now() - daysAgo * day).toISOString(),
+      uploadedBy, taggedMemberIds: image?.tags ?? [], createdAt: new Date(Date.now() - daysAgo * day).toISOString(), version: null,
     });
     return [
       file('file-1', 'f-docs', 'Satzung.pdf', 'application/pdf', 182_000, 'admin', 90),
@@ -545,7 +631,16 @@ export class MockFiles {
       file('file-7', 'f-u16', 'Training U16.jpg', 'image/jpeg', 1_800_000, 'trainer', 4, { width: 1200, height: 1600, tags: ['spieler'] }),
       file('file-8', 'f-board', 'Budget 2027.xlsx', OFFICE.xlsx, 31_000, 'admin', 3),
       file('file-9', 'f-docs', 'Saisonplanung 2026-27.pptx', OFFICE.pptx, 88_000, 'vorstand', 6),
+      { ...file('file-10', 'f-docs', 'Hallenordnung.docx', OFFICE.docx, 12_000, 'vorstand', 60), version: '1.1' },
     ];
+  }
+
+  /** The seeded Hallenordnung in two versions, so comparing has something to show. */
+  private static seedVersions(): Record<string, StoredVersion[]> {
+    const at = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString();
+    const v = (id: string, label: string, date: string, daysAgo: number, current: boolean): StoredVersion =>
+      ({ id, label, date, contentType: OFFICE.docx, sizeBytes: 12_000, uploadedBy: 'vorstand', createdAt: at(daysAgo), current });
+    return { 'file-10': [v('v-10-2', '1.1', '2026-09-01', 5, true), v('v-10-1', '1.0', '2025-09-01', 60, false)] };
   }
 }
 
@@ -568,6 +663,9 @@ mockServer
   .on('GET', '/api/v1/folders/:folderId/files', (req) => ({ items: files.listFiles(actor(req), req.params.folderId) }))
   .on('POST', '/api/v1/folders/:folderId/files', (req) => files.upload(req))
   .on('GET', '/api/v1/files', (req) => ({ files: files.search(actor(req), req.query.get('q') ?? '', Number(req.query.get('limit') ?? 20)) }))
+  .on('POST', '/api/v1/files/:id/versions', (req) => files.uploadVersion(req))
+  .on('GET', '/api/v1/files/:id/versions', (req) => files.listVersions(actor(req), req.params.id))
+  .on('GET', '/api/v1/files/:id/versions/:versionId/link', (req) => files.versionLink(actor(req), req.params.id, req.params.versionId))
   .on('GET', '/api/v1/files/:id/link', (req) => files.link(actor(req), req.params.id, req.query.get('thumbnail') === 'true'))
   .on('PUT', '/api/v1/files/:id/tags', (req) => files.tag(actor(req), req.params.id, req.body?.memberIds))
   .on('DELETE', '/api/v1/files/:id', (req) => files.deleteFile(actor(req), req.params.id));

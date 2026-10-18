@@ -71,6 +71,21 @@ export interface StoredFile {
   uploadedBy: string;
   taggedMemberIds: string[];
   createdAt: string;
+  /** Label of the current version; null while there is only the first upload. */
+  version: string | null;
+}
+
+/** One version of a document (server: FilesApi.VersionDto); newest first in lists. */
+export interface FileVersion {
+  id: string;
+  label: string;
+  /** The date the version stands for (ISO date). */
+  date: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedBy: string | null;
+  createdAt: string;
+  current: boolean;
 }
 
 export interface FileList {

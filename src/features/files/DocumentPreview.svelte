@@ -7,13 +7,13 @@
   import SheetPreview from './SheetPreview.svelte';
   import SlidesPreview from './SlidesPreview.svelte';
 
-  /** Preview of a PDF or Word document inside the file window. */
-  let { file }: { file: StoredFile } = $props();
+  /** Preview of a PDF or Word document inside the file window; `load` shows another version's content. */
+  let { file, load }: { file: StoredFile; load?: () => Promise<Blob> } = $props();
 
   // svelte-ignore state_referenced_locally
   const kind = filePreviews.kind(file.contentType);
   // svelte-ignore state_referenced_locally
-  const content = new Resource(() => filePreviews.content(file.id, file.contentType));
+  const content = new Resource(() => (load ? load() : filePreviews.content(file.id, file.contentType)));
   void content.load();
 
   let pdfUrl = $state<string | null>(null);
@@ -69,7 +69,8 @@
 
 <style>
   .preview {
-    overflow: hidden;
+    /* Word pages keep their A4 width; narrow places (version comparison) scroll instead of cutting them off. */
+    overflow: auto;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     background: var(--color-surface);

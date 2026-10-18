@@ -1,6 +1,6 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
 import type { ProgressListener } from '../../lib/http/Transport';
-import type { DownloadLink, FileList, FilePatch, Folder, FolderList, FolderPatch, NewFolder, StoredFile } from './model';
+import type { DownloadLink, FileList, FilePatch, FileVersion, Folder, FolderList, FolderPatch, NewFolder, StoredFile } from './model';
 
 /** Typed access to the files endpoints of club-server. */
 export class FilesApi {
@@ -41,6 +41,23 @@ export class FilesApi {
     return this.api.upload<StoredFile>(`${FilesApi.BASE}/folders/${encodeURIComponent(folderId)}/files`, form, onProgress, {
       tag: tags,
     });
+  }
+
+  /** New version of a document (same type); multipart `file`, `label`, `date`. */
+  uploadVersion(fileId: string, file: File, label: string, date: string, onProgress?: ProgressListener): Promise<StoredFile> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    form.append('label', label);
+    form.append('date', date);
+    return this.api.upload<StoredFile>(`${FilesApi.BASE}/files/${encodeURIComponent(fileId)}/versions`, form, onProgress);
+  }
+
+  async versions(fileId: string): Promise<FileVersion[]> {
+    return (await this.api.get<{ items: FileVersion[] }>(`${FilesApi.BASE}/files/${encodeURIComponent(fileId)}/versions`)).items;
+  }
+
+  versionLink(fileId: string, versionId: string): Promise<DownloadLink> {
+    return this.api.get<DownloadLink>(`${FilesApi.BASE}/files/${encodeURIComponent(fileId)}/versions/${encodeURIComponent(versionId)}/link`);
   }
 
   link(fileId: string, thumbnail: boolean): Promise<DownloadLink> {

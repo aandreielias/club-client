@@ -59,6 +59,16 @@ export class OfficeReader {
     return slides;
   }
 
+  /** Paragraph texts of a Word document, empty ones left out. */
+  async paragraphs(content: Blob): Promise<string[]> {
+    const zip = await OfficeReader.open(content);
+    const doc = await OfficeReader.xml(zip, 'word/document.xml');
+    return OfficeReader.all(doc, 'p')
+      .filter((p) => p.namespaceURI?.includes('wordprocessingml'))
+      .map((p) => OfficeReader.all(p, 't').map((t) => t.textContent ?? '').join('').trim())
+      .filter(Boolean);
+  }
+
   private rows(sheet: Document, shared: string[]): string[][] {
     const rows: string[][] = [];
     for (const row of OfficeReader.all(sheet, 'row')) {

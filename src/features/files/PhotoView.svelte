@@ -18,6 +18,8 @@
   import TagEditor from './TagEditor.svelte';
   import EditFileDialog from './EditFileDialog.svelte';
   import Thumbnail from './Thumbnail.svelte';
+  import NewVersionDialog from './NewVersionDialog.svelte';
+  import VersionsSection from './VersionsSection.svelte';
 
   /** One file in the window, photos with preview and tags; `id` is `<folderId>:<fileId>` (the server has no single-file endpoint). */
   let { id, handle }: { id: string; handle?: WindowHandle } = $props();
@@ -28,6 +30,7 @@
   const tree = new FolderTree(filesApi, settings.files.maxFolderDepth);
   let tagging = $state(false);
   let editing = $state(false);
+  let versioning = $state(false);
 
   const data = new Resource<{ folder: Folder; file: StoredFile }>(async () => {
     await Promise.all([tree.load(), contents.load()]);
@@ -68,6 +71,7 @@
         {#snippet actions()}
           <Button icon="download" onclick={() => download(file)}>Herunterladen</Button>
           {#if filePolicy.canModify(file, folder)}<Button icon="edit" onclick={() => (editing = true)} tooltip="Umbenennen oder verschieben">Bearbeiten</Button>{/if}
+          {#if folder.kind === 'DOCUMENTS' && filePolicy.canModify(file, folder)}<Button icon="upload" onclick={() => (versioning = true)}>Neue Version</Button>{/if}
           {#if image && filePolicy.canTag(file, folder) && !tagging}<Button onclick={() => (tagging = true)}>Personen markieren</Button>{/if}
           {#if filePolicy.canModify(file, folder)}
             <Button variant="danger" busy={contents.deleteAction.busy} onclick={() => remove(file)} tooltip="{image ? 'Foto' : 'Datei'} endgültig löschen">Löschen</Button>
@@ -75,13 +79,19 @@
         {/snippet}
 
         {#if image}<div class="image"><Thumbnail {file} full /></div>{/if}
-        {#if !image && filePreviews.kind(file.contentType)}<DocumentPreview {file} />{/if}
+        {#if !image && filePreviews.kind(file.contentType)}
+          {#key file.version}<DocumentPreview {file} />{/key}
+        {/if}
 
         <dl class="props">
           <dt>Ordner</dt>
           <dd>{folder.name}</dd>
           <dt>Typ</dt>
           <dd>{fileTypes.label(file.contentType)}</dd>
+          {#if file.version}
+            <dt>Version</dt>
+            <dd>{file.version}</dd>
+          {/if}
           <dt>Hochgeladen</dt>
           <dd>{session.format.dateTime(file.createdAt)},&nbsp;<MemberName memberId={file.uploadedBy} /></dd>
           <dt>Größe</dt>
@@ -98,11 +108,22 @@
           <h2>Personen markieren</h2>
           <TagEditor {file} {folder} {contents} ondone={() => (tagging = false)} />
         {/if}
+        {#if folder.kind === 'DOCUMENTS'}<VersionsSection {file} onopencompare={(open) => (handle ? handle.close(open) : open())} />{/if}
         <ActivitySection kind="FILE" id={file.id} describe={(e) => (e.action === 'UPDATED' ? 'umbenannt oder verschoben' : null)} />
       </Detail>
     {/if}
   {/snippet}
 </AsyncView>
+
+{#if versioning && file}
+  <NewVersionDialog {file} onclose={() => (versioning = false)}
+    onsaved={() => {
+      versioning = false;
+      bus.publish(TOAST, { text: 'Neue Version hochgeladen.' });
+      fileLinks.forget(fileId);
+      void contents.load();
+    }} />
+{/if}
 
 {#if editing && file && data.value}
   <EditFileDialog {file} folder={data.value.folder} {tree} onclose={() => (editing = false)}

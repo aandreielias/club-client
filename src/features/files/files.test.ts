@@ -79,7 +79,7 @@ describe('FileLinks', () => {
 describe('UploadQueue', () => {
   const stored = (name: string): StoredFile => ({
     id: name, folderId: 'f', name, contentType: 'application/pdf', sizeBytes: 1, width: null, height: null, hasThumbnail: false,
-    uploadedBy: 'm', taggedMemberIds: [], createdAt: '',
+    uploadedBy: 'm', taggedMemberIds: [], createdAt: '', version: null,
   });
 
   it('checks files before sending and uploads the rest one by one', async () => {
@@ -109,5 +109,17 @@ describe('UploadQueue', () => {
     expect(queue.items[3].error).toBe('Virus');
     queue.clearFinished();
     expect(queue.items).toEqual([]);
+  });
+});
+
+describe('nextVersion', () => {
+  it('counts the last number up', async () => {
+    const { nextVersion } = await import('./VersionLabel');
+    expect(nextVersion(null)).toBe('1.1');
+    expect(nextVersion('1.2')).toBe('1.3');
+    expect(nextVersion('1.9')).toBe('1.10');
+    expect(nextVersion('2')).toBe('3');
+    expect(nextVersion('v1.0-final')).toBe('v1.1-final');
+    expect(nextVersion('Entwurf')).toBe('Entwurf.1');
   });
 });
