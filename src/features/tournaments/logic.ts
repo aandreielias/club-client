@@ -23,11 +23,14 @@ export function roundRobin(teams: readonly string[]): Pairing[] {
   return out;
 }
 
+/** Sets won and ball points of one match. */
 export interface Result {
   home: string | null;
   away: string | null;
-  homeScore: number | null;
-  awayScore: number | null;
+  homeSets: number | null;
+  awaySets: number | null;
+  homePoints: number;
+  awayPoints: number;
 }
 
 export interface Standing {
@@ -37,32 +40,46 @@ export interface Standing {
   won: number;
   drawn: number;
   lost: number;
-  goalsFor: number;
-  goalsAgainst: number;
+  setsWon: number;
+  setsLost: number;
+  ballsWon: number;
+  ballsLost: number;
   points: number;
 }
 
-const played = (r: Result) => r.home !== null && r.away !== null && r.homeScore !== null && r.awayScore !== null;
+const played = (r: Result) => r.home !== null && r.away !== null && r.homeSets !== null && r.awaySets !== null;
 
-/** Group table: points, goal difference, goals scored, the direct match, then the name. */
+/** Sets won by each side and the ball points of a list of sets. */
+export function tally(sets: readonly { home: number; away: number }[]) {
+  return {
+    homeSets: sets.length ? sets.filter((s) => s.home > s.away).length : null,
+    awaySets: sets.length ? sets.filter((s) => s.away > s.home).length : null,
+    homePoints: sets.reduce((sum, s) => sum + s.home, 0),
+    awayPoints: sets.reduce((sum, s) => sum + s.away, 0),
+  };
+}
+
+/** Volleyball group table: points, wins, set difference, ball-point difference, the direct match, then the name. */
 export function standings(teams: ReadonlyMap<string, string>, results: readonly Result[], pointsWin: number, pointsDraw: number): Standing[] {
   const rows = new Map<string, Standing>(
-    [...teams].map(([teamId, name]) => [teamId, { teamId, name, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 }]),
+    [...teams].map(([teamId, name]) => [teamId, { teamId, name, played: 0, won: 0, drawn: 0, lost: 0, setsWon: 0, setsLost: 0, ballsWon: 0, ballsLost: 0, points: 0 }]),
   );
-  const add = (row: Standing, scored: number, conceded: number) => {
+  const add = (row: Standing, won: number, lost: number, balls: number, ballsAgainst: number) => {
     row.played++;
-    if (scored > conceded) row.won++;
-    else if (scored === conceded) row.drawn++;
+    if (won > lost) row.won++;
+    else if (won === lost) row.drawn++;
     else row.lost++;
-    row.goalsFor += scored;
-    row.goalsAgainst += conceded;
+    row.setsWon += won;
+    row.setsLost += lost;
+    row.ballsWon += balls;
+    row.ballsLost += ballsAgainst;
   };
   for (const r of results) {
     const home = r.home && rows.get(r.home);
     const away = r.away && rows.get(r.away);
     if (!played(r) || !home || !away) continue;
-    add(home, r.homeScore!, r.awayScore!);
-    add(away, r.awayScore!, r.homeScore!);
+    add(home, r.homeSets!, r.awaySets!, r.homePoints, r.awayPoints);
+    add(away, r.awaySets!, r.homeSets!, r.awayPoints, r.homePoints);
   }
   const list = [...rows.values()];
   list.forEach((row) => (row.points = row.won * pointsWin + row.drawn * pointsDraw));
@@ -70,16 +87,17 @@ export function standings(teams: ReadonlyMap<string, string>, results: readonly 
     let balance = 0;
     for (const r of results) {
       if (!played(r)) continue;
-      if (r.home === a && r.away === b) balance += r.homeScore! - r.awayScore!;
-      else if (r.home === b && r.away === a) balance += r.awayScore! - r.homeScore!;
+      if (r.home === a && r.away === b) balance += r.homeSets! - r.awaySets!;
+      else if (r.home === b && r.away === a) balance += r.awaySets! - r.homeSets!;
     }
     return -Math.sign(balance);
   };
   return list.sort(
     (a, b) =>
       b.points - a.points ||
-      b.goalsFor - b.goalsAgainst - (a.goalsFor - a.goalsAgainst) ||
-      b.goalsFor - a.goalsFor ||
+      b.won - a.won ||
+      b.setsWon - b.setsLost - (a.setsWon - a.setsLost) ||
+      b.ballsWon - b.ballsLost - (a.ballsWon - a.ballsLost) ||
       headToHead(a.teamId, b.teamId) ||
       a.name.localeCompare(b.name, 'de', { sensitivity: 'base' }),
   );

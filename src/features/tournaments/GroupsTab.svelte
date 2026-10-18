@@ -1,7 +1,9 @@
 <script lang="ts">
   import Empty from '../../ui/Empty.svelte';
   import type { Tournament } from './model';
-  import ScoreEditor from './ScoreEditor.svelte';
+  import Button from '../../ui/Button.svelte';
+  import ResultDialog from './ResultDialog.svelte';
+  import type { TournamentMatch } from './model';
   import type { TournamentModel } from './TournamentModel.svelte';
   import { tournamentPolicy as policy } from './services';
 
@@ -9,6 +11,8 @@
   let { tournament, model }: { tournament: Tournament; model: TournamentModel } = $props();
 
   const editable = $derived(policy.canManage() && tournament.status === 'GROUPS');
+  let editing = $state<TournamentMatch | null>(null);
+  const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 </script>
 
 {#if !tournament.groups.length}
@@ -23,19 +27,18 @@
           <thead>
             <tr>
               <th class="num" title="Platz">Pl</th><th>Team</th><th class="num" title="Spiele">Sp</th><th class="num" title="Siege">S</th>
-              <th class="num" title="Unentschieden">U</th><th class="num" title="Niederlagen">N</th><th class="num">Tore</th>
-              <th class="num" title="Tordifferenz">Diff</th><th class="num" title="Punkte">Pkt</th>
+              <th class="num" title="Unentschieden">U</th><th class="num" title="Niederlagen">N</th><th class="num">Sätze</th>
+              <th class="num" title="Ballpunkte">Bälle</th><th class="num" title="Tabellenpunkte">Pkt</th>
             </tr>
           </thead>
           <tbody>
             {#each group.standings as row, i (row.teamId)}
-              {@const diff = row.goalsFor - row.goalsAgainst}
               <tr class:qualifies={i < tournament.advancePerGroup}>
                 <td class="num">{i + 1}</td>
                 <td class="team">{row.name}</td>
                 <td class="num">{row.played}</td><td class="num">{row.won}</td><td class="num">{row.drawn}</td><td class="num">{row.lost}</td>
-                <td class="num">{row.goalsFor}:{row.goalsAgainst}</td>
-                <td class="num">{diff > 0 ? `+${diff}` : diff}</td>
+                <td class="num" title="Differenz {signed(row.setsWon - row.setsLost)}">{row.setsWon}:{row.setsLost}</td>
+                <td class="num" title="Differenz {signed(row.ballsWon - row.ballsLost)}">{row.ballsWon}:{row.ballsLost}</td>
                 <td class="num points">{row.points}</td>
               </tr>
             {/each}
@@ -45,19 +48,22 @@
           {#each matches as m (m.id)}
             <li>
               <span class="home">{model.teamName(m.homeId)}</span>
-              {#if editable}
-                <ScoreEditor match={m} {model} />
-              {:else}
-                <span class="result" class:open={m.homeScore === null}>{m.homeScore === null ? '–:–' : `${m.homeScore}:${m.awayScore}`}</span>
-              {/if}
+              <span class="result" class:open={m.homeScore === null}>{m.homeScore === null ? '–:–' : `${m.homeScore}:${m.awayScore}`}</span>
               <span class="away">{model.teamName(m.awayId)}</span>
-              {#if m.field}<span class="muted small field">{m.field}</span>{/if}
+              <span class="end">
+                {#if m.field}<span class="muted small">{m.field}</span>{/if}
+                {#if editable}
+                  <Button size="sm" variant="ghost" icon={m.homeScore === null ? 'add' : 'edit'} tooltip="Sätze eintragen" onclick={() => (editing = m)} />
+                {/if}
+              </span>
+              {#if m.sets.length}<span class="sets muted small">{m.sets.map((s) => `${s.home}:${s.away}`).join(' · ')}</span>{/if}
             </li>
           {/each}
         </ul>
       </section>
     {/each}
   </div>
+  {#if editing}<ResultDialog match={editing} {model} onclose={() => (editing = null)} />{/if}
   <p class="muted small legend"><span class="bar" aria-hidden="true"></span> Weiter in die KO-Runde</p>
 {/if}
 
@@ -134,6 +140,19 @@
     font-variant-numeric: tabular-nums;
     font-weight: var(--font-weight-bold);
     text-align: center;
+  }
+  .end {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-xs);
+    min-width: 4rem;
+  }
+  .sets {
+    grid-column: 1 / -1;
+    margin-top: calc(-1 * var(--space-xxs));
+    text-align: center;
+    font-variant-numeric: tabular-nums;
   }
   .result.open {
     color: var(--color-text-faint);

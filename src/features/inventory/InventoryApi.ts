@@ -34,6 +34,11 @@ export class InventoryApi {
     return this.api.put<Item>(`${this.path(id)}/stock`, { entries });
   }
 
+  /** What a member holds (admin, board, coaches, the member and their guardians). */
+  async heldBy(memberId: string): Promise<OwnItem[]> {
+    return (await this.api.get<{ items: OwnItem[] }>(`${InventoryApi.BASE}/held/${encodeURIComponent(memberId)}`)).items;
+  }
+
   /** What the signed-in member holds; every member may ask. */
   async mine(): Promise<OwnItem[]> {
     return (await this.api.get<{ items: OwnItem[] }>(`${InventoryApi.BASE}/mine`)).items;

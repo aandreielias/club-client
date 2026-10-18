@@ -66,6 +66,8 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Neues Turnier': { text: 'Turnier planen: Datum, Gruppen und Punkte', command: 'page.new' },
   Auslosen: { text: 'Teams zufällig auf die Gruppen verteilen und die Gruppenspiele planen' },
   'KO-Runde starten': { text: 'Die Besten jeder Gruppe in den KO-Baum setzen' },
+  'Satz hinzufügen': { text: 'Weiteren Satz eintragen (höchstens fünf)' },
+  'Ergebnis speichern': { text: 'Sätze speichern; die gewonnenen Sätze ergeben das Ergebnis', command: 'form.submit' },
   'Team hinzufügen': { text: 'Weiteres Team eintragen' },
   'Teams speichern': { text: 'Teamliste speichern' },
   'Gastzugang anlegen': { text: 'Zugang für jemanden eines Gastteams; sieht nur dieses Turnier' },

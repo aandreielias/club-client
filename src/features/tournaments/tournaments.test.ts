@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { firstRound, koRounds, roundName, roundRobin, seeds, standings } from './logic';
+import { firstRound, koRounds, roundName, roundRobin, seeds, standings, tally } from './logic';
 
 describe('tournament logic', () => {
   it('pairs everyone once per group', () => {
@@ -11,15 +11,21 @@ describe('tournament logic', () => {
     }
   });
 
-  it('ranks by points, difference, goals and the direct match', () => {
+  it('ranks volleyball tables by points, wins, sets, then ball points', () => {
     const teams = new Map([['a', 'A'], ['b', 'B'], ['c', 'C']]);
-    const table = standings(teams, [
-      { home: 'c', away: 'b', homeScore: 3, awayScore: 0 },
-      { home: 'a', away: 'b', homeScore: 1, awayScore: 1 },
-      { home: 'a', away: 'c', homeScore: null, awayScore: null },
+    const result = (home: string, away: string, sets: { home: number; away: number }[]) => ({ home, away, ...tally(sets) });
+    let table = standings(teams, [
+      result('c', 'b', [{ home: 25, away: 20 }, { home: 25, away: 10 }]),
+      result('a', 'b', [{ home: 25, away: 20 }, { home: 20, away: 25 }]),
+      result('a', 'c', []),
     ], 3, 1);
     expect(table.map((r) => r.name)).toEqual(['C', 'A', 'B']);
-    expect(table[1]).toMatchObject({ played: 1, drawn: 1, points: 1 });
+    expect(table[1]).toMatchObject({ played: 1, drawn: 1, setsWon: 1, setsLost: 1, ballsWon: 45, points: 1 });
+    table = standings(teams, [
+      result('a', 'c', [{ home: 25, away: 20 }, { home: 25, away: 20 }]),
+      result('b', 'c', [{ home: 25, away: 15 }, { home: 25, away: 15 }]),
+    ], 3, 1);
+    expect(table.map((r) => r.name)).toEqual(['B', 'A', 'C']);
   });
 
   it('seeds the knockout tree so a group meets itself late', () => {
@@ -42,17 +48,17 @@ describe('mock tournaments', () => {
     tournaments.setTeams(member('trainer'), t.id, ['A', 'B', 'C', 'D', 'E', 'F'].map((name) => ({ id: null, name, clubTeamId: null })));
     let state = tournaments.draw(member('trainer'), t.id);
     expect(state.groups).toHaveLength(2);
-    state.matches.forEach((m, i) => (state = tournaments.setResult(member('trainer'), t.id, m.id, { homeScore: i + 1, awayScore: 0, startsAt: null, field: null })));
+    state.matches.forEach((m, i) => (state = tournaments.setResult(member('trainer'), t.id, m.id, { sets: Array.from({ length: 2 }, () => ({ home: 25, away: 20 - i })), startsAt: null, field: null })));
     state = tournaments.startKnockout(member('trainer'), t.id);
     const semis = state.matches.filter((m) => m.stage === 'KO' && m.round === 1);
     expect(semis).toHaveLength(2);
-    expect(() => tournaments.setResult(member('trainer'), t.id, semis[0].id, { homeScore: 1, awayScore: 1, startsAt: null, field: null }))
+    expect(() => tournaments.setResult(member('trainer'), t.id, semis[0].id, { sets: [{ home: 25, away: 20 }, { home: 20, away: 25 }], startsAt: null, field: null }))
       .toThrow(expect.objectContaining({ code: 'tournament.ko-draw' }));
-    tournaments.setResult(member('trainer'), t.id, semis[0].id, { homeScore: 3, awayScore: 1, startsAt: null, field: null });
-    state = tournaments.setResult(member('trainer'), t.id, semis[1].id, { homeScore: 0, awayScore: 2, startsAt: null, field: null });
+    tournaments.setResult(member('trainer'), t.id, semis[0].id, { sets: [{ home: 25, away: 20 }, { home: 25, away: 22 }], startsAt: null, field: null });
+    state = tournaments.setResult(member('trainer'), t.id, semis[1].id, { sets: [{ home: 20, away: 25 }, { home: 18, away: 25 }], startsAt: null, field: null });
     const final = state.matches.find((m) => m.stage === 'KO' && m.round === 2)!;
     expect([final.homeId, final.awayId]).toEqual([semis[0].homeId, semis[1].awayId]);
-    state = tournaments.setResult(member('trainer'), t.id, final.id, { homeScore: 25, awayScore: 20, startsAt: null, field: null });
+    state = tournaments.setResult(member('trainer'), t.id, final.id, { sets: [{ home: 25, away: 20 }, { home: 23, away: 25 }, { home: 15, away: 12 }], startsAt: null, field: null });
     expect(state.status).toBe('DONE');
   });
 

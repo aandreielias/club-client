@@ -11,6 +11,7 @@
   import Tag from '../../ui/Tag.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import GuardianLinker from './GuardianLinker.svelte';
+  import HeldItems from './HeldItems.svelte';
   import { MemberDetailModel } from './MemberDetailModel.svelte';
   import ProfileEditor from './ProfileEditor.svelte';
   import RoleChecklist from './RoleChecklist.svelte';
@@ -101,6 +102,7 @@
           <dt>Foto-Einwilligung</dt>
           <dd>{member.photoConsent ? 'Ja' : 'Nein'}</dd>
         </dl>
+        <HeldItems memberId={member.id} />
       {/if}
 
       {#if policy.canSetRoles(member)}

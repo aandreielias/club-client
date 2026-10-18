@@ -12,6 +12,12 @@ export interface TournamentTeam {
   group: string | null;
 }
 
+/** Points of one volleyball set. */
+export interface SetScore {
+  home: number;
+  away: number;
+}
+
 export interface TournamentMatch {
   id: string;
   stage: Stage;
@@ -20,8 +26,11 @@ export interface TournamentMatch {
   slot: number;
   homeId: string | null;
   awayId: string | null;
+  /** Sets won; null while no set is entered. */
   homeScore: number | null;
   awayScore: number | null;
+  /** Points of every set. */
+  sets: SetScore[];
   startsAt: string | null;
   field: string | null;
 }
@@ -33,8 +42,11 @@ export interface StandingRow {
   won: number;
   drawn: number;
   lost: number;
-  goalsFor: number;
-  goalsAgainst: number;
+  setsWon: number;
+  setsLost: number;
+  /** Ball points. */
+  ballsWon: number;
+  ballsLost: number;
   points: number;
 }
 
@@ -97,9 +109,9 @@ export interface TeamInput {
   clubTeamId: string | null;
 }
 
+/** The points of every set; empty removes the result. */
 export interface ResultInput {
-  homeScore: number | null;
-  awayScore: number | null;
+  sets: SetScore[];
   startsAt: string | null;
   field: string | null;
 }

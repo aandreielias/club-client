@@ -266,6 +266,13 @@ mockServer
   .on('GET', '/api/v1/inventory', (req) => (viewer(req), { items: inventory.list() }))
   .on('POST', '/api/v1/inventory', (req) => inventory.create(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/inventory/mine', (req) => inventory.mine(actor(req)))
+  .on('GET', '/api/v1/inventory/held/:memberId', (req) => {
+    // server: InventoryHandlers.heldBy - privileged, the member, their guardians
+    const viewer = actor(req);
+    const id = req.params.memberId;
+    if (viewer.id !== id && !directory.isPrivileged(viewer) && !directory.wardsOf(viewer.id).includes(id)) MockServer.fail(404, 'member.not-found');
+    return inventory.mine({ ...viewer, id });
+  })
   .on('GET', '/api/v1/inventory/:id', (req) => (viewer(req), inventory.get(req.params.id)))
   .on('GET', '/api/v1/inventory/:id/uses', (req) => {
     const member = viewer(req);

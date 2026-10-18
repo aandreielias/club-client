@@ -40,7 +40,9 @@
                     <span class="score">{score ?? ''}</span>
                   </span>
                 {/each}
-                {#if m.field || m.startsAt}<span class="meta">{m.field ?? ''}</span>{/if}
+                {#if m.sets.length || m.field}
+                  <span class="meta">{[m.sets.map((s) => `${s.home}:${s.away}`).join(' · '), m.field].filter(Boolean).join(' – ')}</span>
+                {/if}
               </button>
             </div>
           {/each}

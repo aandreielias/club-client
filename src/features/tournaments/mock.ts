@@ -3,8 +3,8 @@ import { directory, type MockDirectory } from '../../lib/mock/core';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import { guestOnly, MANAGERS, PRIVILEGED, type Member } from '../../lib/types';
-import { firstRound, koRounds, roundRobin, seeds, standings } from './logic';
-import type { Guest, NewTournament, ResultInput, TeamInput, Tournament, TournamentMatch, TournamentSummary, TournamentTeam } from './model';
+import { firstRound, koRounds, roundRobin, seeds, standings, tally } from './logic';
+import type { Guest, NewTournament, ResultInput, SetScore, TeamInput, Tournament, TournamentMatch, TournamentSummary, TournamentTeam } from './model';
 
 const fail = MockServer.fail;
 const GUEST_RETENTION_DAYS = 30;
@@ -21,7 +21,9 @@ export class MockTournaments {
   /** memberId → guest of which tournament */
   readonly guests = new MockTable<Record<string, StoredGuest>>('tournament-guests', () => ({ gast: { tournamentId: 'tm-herbst', teamId: 'tt-uvc' } }));
 
-  constructor(private readonly people: MockDirectory) {}
+  constructor(private readonly people: MockDirectory) {
+    this.upgradeStored();
+  }
 
   list(viewer: Member): { items: TournamentSummary[] } {
     const own = this.ownTournament(viewer);
@@ -106,7 +108,7 @@ export class MockTournaments {
       const members = teams.filter((team) => team.group === label(g)).map((team) => team.id);
       roundRobin(members).forEach((p, slot) =>
         matches.push({ id: crypto.randomUUID(), stage: 'GROUP', group: label(g), round: p.round, slot, homeId: p.home, awayId: p.away,
-          homeScore: null, awayScore: null, startsAt: null, field: null }));
+          homeScore: null, awayScore: null, sets: [], startsAt: null, field: null }));
     }
     this.matches.data[id] = matches;
     t.status = 'GROUPS';
@@ -136,17 +138,21 @@ export class MockTournaments {
     const t = this.find(id);
     const matches = this.matches.data[id] ?? [];
     const m = matches.find((x) => x.id === matchId) ?? fail(404, 'tournament.match-not-found');
-    const home = body.homeScore ?? null;
-    const away = body.awayScore ?? null;
-    if ((home === null) !== (away === null) || (home !== null && (home < 0 || home > 999 || away! < 0 || away! > 999))) fail(400, 'tournament.score-invalid');
-    const scoring = home !== m.homeScore || away !== m.awayScore;
+    const sets = Array.isArray(body.sets) ? body.sets : [];
+    if (sets.length > 5) fail(400, 'tournament.too-many-sets');
+    for (const s of sets) {
+      if (![s.home, s.away].every((p) => Number.isInteger(p) && p >= 0 && p <= 99) || s.home === s.away) fail(400, 'tournament.set-invalid');
+    }
+    const { homeSets: home, awaySets: away } = tally(sets);
+    const scoring = JSON.stringify(sets) !== JSON.stringify(m.sets);
     if (scoring) {
       if (!m.homeId || !m.awayId) fail(409, 'tournament.teams-open');
       if (m.stage === 'GROUP' && t.status !== 'GROUPS') fail(409, 'tournament.groups-closed');
       if (m.stage === 'KO' && home !== null && home === away) fail(400, 'tournament.ko-draw');
       if (m.stage === 'KO' && MockTournaments.next(matches, m)?.homeScore != null) fail(409, 'tournament.result-locked');
     }
-    Object.assign(m, { homeScore: home, awayScore: away, startsAt: body.startsAt ?? m.startsAt, field: body.field?.trim() || null });
+    Object.assign(m, { homeScore: home, awayScore: away, sets: sets.map((s) => ({ home: s.home, away: s.away })), startsAt: body.startsAt ?? m.startsAt,
+      field: body.field?.trim() || null });
     if (m.stage === 'KO' && scoring) MockTournaments.advance(matches, m);
     const rounds = Math.max(0, ...matches.filter((x) => x.stage === 'KO').map((x) => x.round));
     const finalPlayed = matches.some((x) => x.stage === 'KO' && x.round === rounds && MockTournaments.winner(x));
@@ -177,7 +183,7 @@ export class MockTournaments {
       .map((group) => ({
         label: group,
         standings: standings(new Map(teams.filter((team) => team.group === group).map((team) => [team.id, team.name])),
-          matches.filter((m) => m.stage === 'GROUP' && m.group === group).map((m) => ({ home: m.homeId, away: m.awayId, homeScore: m.homeScore, awayScore: m.awayScore })),
+          matches.filter((m) => m.stage === 'GROUP' && m.group === group).map((m) => ({ home: m.homeId, away: m.awayId, ...tally(m.sets) })),
           t.pointsWin, t.pointsDraw),
       }))
       .filter((g) => g.standings.length);
@@ -223,11 +229,32 @@ export class MockTournaments {
     if (m.slot % 2 === 0) next.homeId = MockTournaments.winner(m);
     else next.awayId = MockTournaments.winner(m);
     next.homeScore = null;
+    next.sets = [];
     next.awayScore = null;
   }
 
+  /** Sets and the sets won they give. */
+  private static scores(sets: SetScore[]): Pick<TournamentMatch, 'sets' | 'homeScore' | 'awayScore'> {
+    const { homeSets, awaySets } = tally(sets);
+    return { sets, homeScore: homeSets, awayScore: awaySets };
+  }
+
+  /** Matches a browser stored before sets existed get sets that give the same result. */
+  private upgradeStored(): void {
+    let changed = false;
+    for (const list of Object.values(this.matches.data)) {
+      for (const m of list.filter((x) => !Array.isArray(x.sets))) {
+        m.sets = m.homeScore === null || m.awayScore === null ? []
+          : [...Array.from({ length: m.homeScore }, () => ({ home: 25, away: 20 })), ...Array.from({ length: m.awayScore }, () => ({ home: 20, away: 25 }))];
+        if (m.homeScore === m.awayScore && m.stage === 'KO') m.sets = [];
+        changed = true;
+      }
+    }
+    if (changed) this.matches.save();
+  }
+
   private static ko(round: number, slot: number, homeId: string | null, awayId: string | null): TournamentMatch {
-    return { id: crypto.randomUUID(), stage: 'KO', group: null, round, slot, homeId, awayId, homeScore: null, awayScore: null, startsAt: null, field: null };
+    return { id: crypto.randomUUID(), stage: 'KO', group: null, round, slot, homeId, awayId, homeScore: null, awayScore: null, sets: [], startsAt: null, field: null };
   }
 
   /** server: Tournament constructor checks */
@@ -250,8 +277,8 @@ export class MockTournaments {
       ['tt-tsv', 'TSV Seeblick', null], ['tt-ask', 'ASK Bergdorf', null], ['tt-vcm', 'VC Musterstadt', null],
     ];
     const teams: TournamentTeam[] = names.map(([id, name, clubTeamId], i) => ({ id, name, clubTeamId, group: i % 2 ? 'B' : 'A' }));
-    const match = (id: string, group: string, round: number, slot: number, home: string, away: string, score: [number, number] | null): TournamentMatch =>
-      ({ id, stage: 'GROUP', group, round, slot, homeId: home, awayId: away, homeScore: score?.[0] ?? null, awayScore: score?.[1] ?? null,
+    const match = (id: string, group: string, round: number, slot: number, home: string, away: string, sets: [number, number][]): TournamentMatch =>
+      ({ id, stage: 'GROUP', group, round, slot, homeId: home, awayId: away, ...MockTournaments.scores(sets.map(([h, a]) => ({ home: h, away: a }))),
         startsAt: null, field: group === 'A' ? 'Feld 1' : 'Feld 2' });
     return {
       tournaments: [{ id: 'tm-herbst', name: 'Herbstcup 2026', startsOn: day(21), endsOn: day(21), locationId: 'l-west', appointmentId: null,
@@ -259,12 +286,12 @@ export class MockTournaments {
       teams: { 'tm-herbst': teams },
       matches: {
         'tm-herbst': [
-          match('tg-1', 'A', 1, 0, 'tt-sdg1', 'tt-ask', [2, 0]),
-          match('tg-2', 'A', 2, 1, 'tt-uvc', 'tt-sdg1', [1, 2]),
-          match('tg-3', 'A', 3, 2, 'tt-ask', 'tt-uvc', null),
-          match('tg-4', 'B', 1, 0, 'tt-sdgu', 'tt-vcm', [0, 2]),
-          match('tg-5', 'B', 2, 1, 'tt-tsv', 'tt-sdgu', null),
-          match('tg-6', 'B', 3, 2, 'tt-vcm', 'tt-tsv', null),
+          match('tg-1', 'A', 1, 0, 'tt-sdg1', 'tt-ask', [[25, 18], [25, 21]]),
+          match('tg-2', 'A', 2, 1, 'tt-uvc', 'tt-sdg1', [[25, 23], [19, 25], [12, 15]]),
+          match('tg-3', 'A', 3, 2, 'tt-ask', 'tt-uvc', []),
+          match('tg-4', 'B', 1, 0, 'tt-sdgu', 'tt-vcm', [[22, 25], [20, 25]]),
+          match('tg-5', 'B', 2, 1, 'tt-tsv', 'tt-sdgu', []),
+          match('tg-6', 'B', 3, 2, 'tt-vcm', 'tt-tsv', []),
         ],
       },
     };
