@@ -5,6 +5,7 @@ import type { Router } from '../router/Router.svelte';
 import { WINDOW_OPEN, type Dock, type WindowService } from './WindowService.svelte';
 import { NAVIGATE } from '../router/Router.svelte';
 import { LinkClipboard } from './LinkClipboard';
+import { SPLIT_OPEN } from '../split/SplitView.svelte';
 
 /**
  * The shared context-menu entries for anything that opens in the window (list rows, calendar
@@ -25,6 +26,7 @@ export function windowMenu(bus: EventBus, windows: WindowService, router: Router
     // "Öffnen" already uses the current placement; offer the other two.
     ...DOCK_LABELS.filter(([dock]) => dock !== windows.dock).map(([dock, label, icon]) => ({ label, icon, run: openDocked(dock) })),
     ...(page ? [{ label: 'Als Seite öffnen', icon: 'page' as const, run: () => bus.publish(NAVIGATE, { path: page }) }] : []),
+    ...(page ? [{ label: 'In geteilter Ansicht öffnen', icon: 'split' as const, run: () => bus.publish(SPLIT_OPEN, { path: page }) }] : []),
     { separator: true },
     { label: 'Link kopieren', icon: 'copy', run: () => void LinkClipboard.copy(bus, link) },
   ];

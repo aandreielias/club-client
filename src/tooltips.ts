@@ -59,6 +59,7 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Neu laden': { text: 'Die Seite neu laden' },
   'Neue Aufgabe': { text: 'Neue Aufgabe anlegen', command: 'page.new' },
   'Neuen Link erstellen': { text: 'Neuen Abo-Link erstellen; der bisherige wird ungültig' },
+  Tauschen: { text: 'Die beiden Seiten der geteilten Ansicht tauschen', command: 'split.swap' },
   'Neuer Ort': { text: 'Neue Halle, neuen Platz oder anderen Ort eintragen', command: 'page.new' },
   'Auf der Karte suchen': { text: 'Kartenpunkt aus der Adresse suchen (OpenStreetMap)' },
   'Punkt entfernen': { text: 'Kartenpunkt löschen; die Karte wird dann nicht angezeigt' },

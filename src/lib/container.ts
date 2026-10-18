@@ -41,6 +41,8 @@ import { Motion } from './motion/Motion.svelte';
 import { WindowService } from './window/WindowService.svelte';
 import { RecentRecords } from './window/RecentRecords.svelte';
 import { LinksApi } from './links/LinksApi';
+import { MainPane, SplitPane } from './split/Pane';
+import { SplitView } from './split/SplitView.svelte';
 import { ContextMenuService } from './overlay/ContextMenuService.svelte';
 import { TooltipService } from './overlay/TooltipService.svelte';
 import { LINK_MESSAGES } from './links/messages';
@@ -115,6 +117,11 @@ export const backStack = new BackStack();
 export const router = new Router(bus, (change) => motion.transition(change), () => backStack.mayLeave());
 
 export const links = new LinkResolver();
+
+/** A second page next to the main one (`?split=` in the URL). */
+export const split = new SplitView(router, store, bus, settings.split);
+export const mainPane = new MainPane(router, split);
+export const splitPane = new SplitPane(split);
 
 export const windows = new WindowService(router, store, settings.window.defaultDock, bus, () => backStack.mayLeave(), (roles) => session.hasRole(...roles));
 

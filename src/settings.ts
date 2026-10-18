@@ -419,6 +419,9 @@ export const settings = {
     pageSize: 50,
   },
 
+  /** Split view: share of the width the main page keeps, arrow-key step, page opened first. */
+  split: { minRatio: 0.3, maxRatio: 0.7, step: 0.05, defaultPath: '/calendar' },
+
   /** server: locations module (Location) */
   locations: {
     nameMaxLength: 100,

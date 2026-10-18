@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { usePane } from '../../lib/split/usePane';
   import { untrack } from 'svelte';
   import { settings } from '../../settings';
   import { bus, calendarSources, commands, directory, live, permissions, preferences, router, session, store, windows } from '../../lib/container';
@@ -30,12 +31,14 @@
   import WeekView from './WeekView.svelte';
 
   // Every live event that can touch the calendar (appointments, task due dates) reloads it.
+  // Its own pane of the split view, or the main page.
+  const pane = usePane();
   const RELOAD_ON = [APPOINTMENTS_CHANGED, TASK_CHANGED];
 
   const model = new CalendarModel(calendarSources, session.clock, settings.calendar.agendaDays, store, {
-    view: (router.query.get('view') as CalendarView | null) ?? preferences.values.calendarView,
-    date: router.query.get('date') ?? undefined,
-    teamId: router.query.get('team'),
+    view: (pane.query.get('view') as CalendarView | null) ?? preferences.values.calendarView,
+    date: pane.query.get('date') ?? undefined,
+    teamId: pane.query.get('team'),
   });
   const list = new CalendarListModel(() => model.visible, () => session.format, directory, store);
   let subscribing = $state(false);
@@ -69,7 +72,7 @@
       date: model.anchor === model.today ? null : model.anchor,
       team: model.teamId,
     };
-    untrack(() => router.updateQuery(changes, true));
+    untrack(() => pane.updateQuery(changes, true));
   });
 
   const title = $derived.by(() => {

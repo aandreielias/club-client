@@ -14,7 +14,9 @@ import type { EventBus } from './lib/bus';
 import type { BackStack } from './lib/navigation/BackStack.svelte';
 import { APP_ERROR, NAVIGATE, WINDOW_CLOSE, WINDOW_OPEN } from './channels';
 import { MEMBERSHIP_CHANGED } from './features/teams/events';
-import type { RouteParams, Router } from './lib/router/Router.svelte';
+import { Router, type RouteParams } from './lib/router/Router.svelte';
+import type { Pane } from './lib/split/Pane';
+import type { SplitView } from './lib/split/SplitView.svelte';
 import type { SessionStore } from './lib/session/SessionStore.svelte';
 
 /** Which top-level screen the app shows; derived from auth, profile and route state. */
@@ -36,6 +38,16 @@ export interface AppDependencies {
   windows: WindowService;
   preferences: PreferencesService;
   backStack: BackStack;
+  split: SplitView;
+  splitPane: Pane;
+}
+
+/** A resolved page: what to render and with which route parameters. */
+export interface ResolvedPage {
+  component: Component<PageProps>;
+  params: RouteParams;
+  /** Sidebar label of the route, if it has one (the split pane's header). */
+  label: string | null;
 }
 
 /** Drives start-up, login/logout transitions, the signed-in session and page resolution for App.svelte. */
@@ -45,7 +57,9 @@ export class AppController {
   readonly screen: Screen;
   readonly allowedRoutes: FeatureRoute[];
   readonly navigation: NavItem[];
-  readonly page: { component: Component<PageProps>; params: RouteParams } | null;
+  readonly page: ResolvedPage | null;
+  /** The page of the split view's second pane; null when the split is closed or the path is unknown. */
+  readonly splitPage: ResolvedPage | null;
 
   #loadingMe = false;
 
@@ -54,11 +68,8 @@ export class AppController {
     this.screen = $derived.by(() => this.computeScreen());
     this.allowedRoutes = $derived(features.allowed((...roles) => session.hasRole(...roles)));
     this.navigation = $derived(features.navigation(this.allowedRoutes, deps.preferences.values.navOrder));
-    this.page = $derived.by(() => {
-      const match = router.resolve(this.allowedRoutes);
-      // Pages differ in props; every page accepts PageProps (`params` may be ignored).
-      return match ? { component: match.route.component as Component<PageProps>, params: match.params } : null;
-    });
+    this.page = $derived.by(() => this.resolve(router.path));
+    this.splitPage = $derived.by(() => (deps.split.isOpen ? this.resolve(deps.splitPane.path) : null));
   }
 
   async start(): Promise<void> {
@@ -130,7 +141,7 @@ export class AppController {
 
   /** App-wide commands: palette, settings, theme, navigation and window placement. */
   private registerGlobalCommands(): () => void {
-    const { commands, windows, preferences, bus, backStack } = this.deps;
+    const { commands, windows, preferences, bus, backStack, split } = this.deps;
     const windowOpen = () => windows.current !== null;
     const navigation = Object.fromEntries(
       (Object.entries(SHORTCUTS) as [CommandId, (typeof SHORTCUTS)[CommandId]][])
@@ -146,6 +157,8 @@ export class AppController {
       'settings.open': { run: () => bus.publish(WINDOW_OPEN, { kind: 'settings', id: 'appearance' }), when: () => !!windows.content('settings') },
       'help.shortcuts': { run: () => bus.publish(WINDOW_OPEN, { kind: 'settings', id: 'shortcuts' }), when: () => !!windows.content('settings') },
       'sidebar.toggle': { run: () => preferences.set('sidebarCollapsed', !preferences.values.sidebarCollapsed) },
+      'split.toggle': { run: () => split.toggle() },
+      'split.swap': { run: () => split.swap(), when: () => split.isOpen },
       'theme.toggle': { run: () => preferences.toggleScheme(matchMedia('(prefers-color-scheme: dark)').matches) },
       'auth.logout': { run: () => void this.logout() },
       'nav.back': { run: () => history.back() },
@@ -168,6 +181,15 @@ export class AppController {
         when: () => !!windows.current && !!windows.content(windows.current.kind)?.page,
       },
     });
+  }
+
+  /** First allowed route matching the path; pages differ in props, every page accepts PageProps (`params` may be ignored). */
+  private resolve(path: string): ResolvedPage | null {
+    for (const route of this.allowedRoutes) {
+      const params = Router.match(route.path, path);
+      if (params) return { component: route.component as Component<PageProps>, params, label: route.nav ?? null };
+    }
+    return null;
   }
 
   /** The form that holds the focus, if any (Mod+Enter saves it). */

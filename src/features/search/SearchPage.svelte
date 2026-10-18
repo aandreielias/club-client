@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { usePane } from '../../lib/split/usePane';
   import { settings } from '../../settings';
   import { bus, router, session, store, windows } from '../../lib/container';
-  import { NAVIGATE, WINDOW_OPEN } from '../../channels';
+  import { WINDOW_OPEN } from '../../channels';
   import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
   import { windowMenu } from '../../lib/window/windowMenu';
   import DataTable from '../../ui/DataTable.svelte';
@@ -13,7 +14,8 @@
   import { searchApi } from './services';
 
   /** Results of the sidebar search (`/search?q=`); a result opens in the window, a folder on the files page. */
-  const query = $derived(router.query.get('q')?.trim() ?? '');
+  const pane = usePane();
+  const query = $derived(pane.query.get('q')?.trim() ?? '');
   const list = new SearchListModel(searchApi, () => query, () => session.format, store);
 
   $effect(() => {
@@ -24,7 +26,7 @@
   function open(hit: SearchHit) {
     const target = hitTarget(hit);
     if ('window' in target) bus.publish(WINDOW_OPEN, { kind: target.window.kind, id: target.window.id });
-    else bus.publish(NAVIGATE, { path: target.path });
+    else pane.navigate(target.path);
   }
 
   function hitMenu(hit: SearchHit): MenuEntry[] {

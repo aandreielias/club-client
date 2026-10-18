@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { usePane } from '../../lib/split/usePane';
   import { settings } from '../../settings';
-  import { APP_ERROR, CONFIRM, NAVIGATE, TOAST, WINDOW_OPEN } from '../../channels';
+  import { APP_ERROR, CONFIRM, TOAST, WINDOW_OPEN } from '../../channels';
   import { bus, commands, directory, pendingDeletes, permissions, preferences, session, store } from '../../lib/container';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
@@ -33,6 +34,7 @@
   let { params }: { params: Record<string, string> } = $props();
 
   type View = 'table' | 'gallery';
+  const pane = usePane();
   const VIEWS: readonly { value: View; label: string }[] = [
     { value: 'table', label: 'Tabelle' },
     { value: 'gallery', label: 'Galerie' },
@@ -62,7 +64,7 @@
   useCommands(commands, { 'page.new': { run: () => (creating = true), when: () => canCreate } });
 
   function open(item: FolderItem) {
-    if (item.kind === 'folder') bus.publish(NAVIGATE, { path: `/files/${item.id}` });
+    if (item.kind === 'folder') pane.navigate(`/files/${item.id}`);
     else bus.publish(WINDOW_OPEN, { kind: 'file', id: `${item.file.folderId}:${item.file.id}` });
   }
 
@@ -165,7 +167,7 @@
       await filesApi.deleteFolder(target.id);
       tree.remove(target.id);
       bus.publish(TOAST, { text: 'Ordner gelöscht.' });
-      bus.publish(NAVIGATE, { path: target.parentId ? `/files/${target.parentId}` : '/files' });
+      pane.navigate(target.parentId ? `/files/${target.parentId}` : '/files');
     } catch (error) {
       bus.publish(APP_ERROR, error);
     }

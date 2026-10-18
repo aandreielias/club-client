@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { documentTitle } from '../lib/container';
+  import { currentPane } from '../lib/split/Pane';
   import Icon from './Icon.svelte';
 
   /**
@@ -24,8 +25,10 @@
     children: Snippet;
   } = $props();
 
+  // The browser tab names the main page; the second pane of a split view has its own header.
+  const pane = currentPane();
   $effect(() => {
-    documentTitle.page = title;
+    if (pane?.id !== 'split') documentTitle.page = title;
   });
 </script>
 

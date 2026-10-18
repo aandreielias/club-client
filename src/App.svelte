@@ -6,7 +6,9 @@
   import SetPasswordPage from './features/auth/SetPasswordPage.svelte';
   import { features } from './features';
   import OnboardingPage from './features/onboarding/OnboardingPage.svelte';
-  import { auth, backStack, bus, commands, documentTitle, pendingDeletes, scrollMemory, directory, errors, keyboard, live, preferences, router, session, windows } from './lib/container';
+  import { auth, backStack, bus, commands, documentTitle, pendingDeletes, scrollMemory, directory, errors, keyboard, live, mainPane, preferences, router, session, split, splitPane, windows } from './lib/container';
+  import PaneHost from './ui/PaneHost.svelte';
+  import SplitDivider from './ui/SplitDivider.svelte';
   import Button from './ui/Button.svelte';
   import Centered from './ui/Centered.svelte';
   import ConfirmDialog from './ui/ConfirmDialog.svelte';
@@ -20,7 +22,7 @@
   import Toasts from './ui/Toasts.svelte';
   import TooltipHost from './ui/TooltipHost.svelte';
 
-  const app = new AppController({ auth, session, directory, router, features, live, errors, bus, commands, keyboard, windows, preferences, backStack });
+  const app = new AppController({ auth, session, directory, router, features, live, errors, bus, commands, keyboard, windows, preferences, backStack, split, splitPane });
   const logout = () => app.logout();
 
   onMount(() => {
@@ -75,16 +77,40 @@
     <Sidebar title={session.club.name} user="{session.member.firstName} {session.member.lastName}" items={app.navigation}
       current={router.path} connection={live.status} onlogout={logout} />
     <main style:view-transition-name="page">
-      {#if app.page}
-        {#key router.path}
-          <app.page.component params={app.page.params} />
-        {/key}
+      {#if split.isOpen}
+        <div class="panes" style:--split-ratio={split.ratio}>
+          <div class="main-pane">
+            <PaneHost pane={mainPane}>{@render mainPage()}</PaneHost>
+          </div>
+          <SplitDivider />
+          <div class="split-pane">
+            <PaneHost pane={splitPane} label={app.splitPage?.label}>
+              {#if app.splitPage}
+                {#key splitPane.path}
+                  <app.splitPage.component params={app.splitPage.params} />
+                {/key}
+              {:else}
+                <Empty text="Seite nicht gefunden." />
+              {/if}
+            </PaneHost>
+          </div>
+        </div>
       {:else}
-        <Empty text="Seite nicht gefunden." />
+        <PaneHost pane={mainPane}>{@render mainPage()}</PaneHost>
       {/if}
     </main>
   </div>
 {/if}
+
+{#snippet mainPage()}
+  {#if app.page}
+    {#key router.path}
+      <app.page.component params={app.page.params} />
+    {/key}
+  {:else}
+    <Empty text="Seite nicht gefunden." />
+  {/if}
+{/snippet}
 
 {#if app.screen === 'shell'}
   <WindowHost />
@@ -114,5 +140,25 @@
   }
   :global(:root[data-window='bottom']:not([data-layout='compact'])) main {
     margin-bottom: var(--window-bottom-height);
+  }
+  /* Split view: two scrolling panes side by side; on phones only the main page shows. */
+  .panes {
+    display: flex;
+    height: 100dvh;
+  }
+  .main-pane {
+    flex: 0 0 calc(var(--split-ratio) * 100%);
+    min-width: 0;
+  }
+  .split-pane {
+    flex: 1;
+    min-width: 0;
+  }
+  :global(:root[data-layout='compact']) .panes :global(.divider),
+  :global(:root[data-layout='compact']) .split-pane {
+    display: none;
+  }
+  :global(:root[data-layout='compact']) .main-pane {
+    flex-basis: 100%;
   }
 </style>

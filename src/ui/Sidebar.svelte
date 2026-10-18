@@ -3,7 +3,9 @@
   import type { LiveStatus } from '../lib/live/LiveUpdates.svelte';
   import { SHORTCUTS, type CommandId } from '../shortcuts';
   import { tick } from 'svelte';
-  import { commands, keyboard, keymap, preferences } from '../lib/container';
+  import { bus, commands, keyboard, keymap, preferences } from '../lib/container';
+  import { SPLIT_OPEN } from '../lib/split/SplitView.svelte';
+  import { menu } from './contextMenu';
   import Icon from './Icon.svelte';
   import { KeySpec } from '../lib/keyboard/KeySpec';
   import GlobalSearch from './GlobalSearch.svelte';
@@ -89,7 +91,8 @@
     {#each items.filter((i) => !i.footer) as item (item.path)}
       <li>
         <a href="#{item.path}" class:active={isActive(item.path)} aria-current={isActive(item.path) ? 'page' : undefined}
-          {@attach tooltip(`Zu ${item.label}${navKeys(item.path)}`)} onclick={() => (open = false)}>
+          {@attach tooltip(`Zu ${item.label}${navKeys(item.path)}`)} onclick={() => (open = false)}
+          {@attach menu(() => [{ label: 'In geteilter Ansicht öffnen', icon: 'split', run: () => bus.publish(SPLIT_OPEN, { path: item.path }) }])}>
           {#if item.icon}<Icon name={item.icon} />{/if}
           <span class="label">{item.label}</span>
           {#if item.badge}<span class="badge">{item.badge}<span class="visually-hidden"> neu</span></span>{/if}
