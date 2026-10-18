@@ -45,6 +45,7 @@ export class MockCalendar {
 
   constructor(private readonly people: MockDirectory) {
     this.appointments = new MockTable('appointments', () => this.seedAppointments());
+    this.upgradeStored();
     this.responses = new MockTable('responses', () => this.seedResponses());
     this.rides = new MockTable('rides', () => this.seedRides());
     this.links = new MockLinks('calendar-links', () => this.seedLinks());
@@ -398,6 +399,18 @@ export class MockCalendar {
       }
     }
     this.reminded.save();
+  }
+
+  /**
+   * Appointments a browser stored before places existed (server: migration V26): link the place with the same
+   * name, no cabins yet.
+   */
+  private upgradeStored(): void {
+    const old = this.appointments.data.filter((a) => a.locationId === undefined);
+    if (!old.length) return;
+    const byName = new Map(locations.list().map((l) => [l.name.toLowerCase(), l.id]));
+    old.forEach((a) => Object.assign(a, { locationId: (a.location && byName.get(a.location.toLowerCase())) ?? null, cabinMen: null, cabinWomen: null }));
+    this.appointments.save();
   }
 
   /** server: CalendarHandlers.placeName - a linked place puts its name into the location text. */

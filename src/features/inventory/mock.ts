@@ -6,7 +6,7 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import { PRIVILEGED, type Member } from '../../lib/types';
 import type { Item, ItemPatch, NewItem, OwnItem, StockInput, StockPlace } from './model';
-import { locations } from '../locations/mock';
+import { locations, MockLocations } from '../locations/mock';
 
 const fail = MockServer.fail;
 const limits = settings.inventory;
@@ -21,6 +21,7 @@ export class MockInventory {
   constructor(private readonly people: MockDirectory) {
     this.items = new MockTable('inventory', () => MockInventory.seed());
     this.stock = new MockTable('inventory-stock', () => MockInventory.seedStock());
+    this.upgradeStored();
     mockServer.events.subscribe((event) => event.type === 'locations.location-changed' && this.onLocationChanged(event.data as never));
   }
 
@@ -69,6 +70,30 @@ export class MockInventory {
     this.items.save();
     this.changed(id, 'UPDATED');
     return this.dto(current);
+  }
+
+  /**
+   * Items a browser stored before stock existed (server: migration V27): the free-text place becomes a place
+   * of the locations module, the whole quantity sits there.
+   */
+  private upgradeStored(): void {
+    const old = this.items.data.filter((i) => !this.stock.data[i.id]) as (StoredItem & { location?: string | null })[];
+    if (!old.length) return;
+    for (const item of old) {
+      const name = item.location?.trim();
+      let place = name ? locations.list().find((l) => l.name.toLowerCase() === name.toLowerCase()) : undefined;
+      if (name && !place) {
+        const now = new Date().toISOString();
+        const stored = { id: crypto.randomUUID(), name, street: null, zip: null, city: null, note: null, lat: null, lng: null, createdAt: now, updatedAt: now };
+        locations.locations.data.push(stored);
+        place = MockLocations.dto(stored);
+      }
+      this.stock.data[item.id] = item.quantity ? [{ locationId: place?.id ?? null, holderId: null, quantity: item.quantity }] : [];
+      delete item.location;
+    }
+    locations.locations.save();
+    this.items.save();
+    this.stock.save();
   }
 
   /** server: InventoryHandlers.setStock - the same place twice is merged, the sum becomes the quantity. */

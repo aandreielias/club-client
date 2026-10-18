@@ -59,7 +59,6 @@
       {#each shown as ride (ride.id)}
         {@const free = RidesModel.free(ride)}
         <li>
-          <CarSeats {ride} />
           <div class="ride">
             <div class="head">
               <strong>{ride.driverName}</strong>
@@ -89,6 +88,7 @@
               </div>
             {/if}
           </div>
+          <CarSeats {ride} />
         </li>
       {/each}
     </ul>

@@ -3,52 +3,56 @@ export interface SeatSpot {
   x: number;
   y: number;
   driver: boolean;
-  /** Part of the ride's offered seats; the others are drawn faint (a 5-seater offering 2 still has 5 seats). */
+  /** Part of the ride (driver and offered seats); the others are drawn faint. */
   offered: boolean;
 }
 
 export interface CarShape {
   width: number;
   height: number;
-  /** Driver first, then the passenger seats front to back, left to right; offered seats come first. */
+  /** In filling order: driver, then the outer seats front to back (right before left), then the middle seats. */
   seats: SeatSpot[];
 }
 
 /**
- * Seat plan of a car seen from above: the driver and one passenger in front, rows of three behind. Always at
- * least a five-seater so it reads as a car; more than four offered seats make a longer car (a van).
+ * Seat plan of a car seen from above, driving to the left (front on the left). Rows are columns here; the car's
+ * right side is at the top, the driver sits front left (bottom). Up to 5 places: 2 in front, 3 behind; up to 7
+ * a third row; 8 or more places have 3 in front. Middle seats are taken last.
  */
 export class CarLayout {
-  static readonly SEAT_W = 12;
-  static readonly SEAT_H = 13;
+  static readonly SEAT = 12;
   static readonly GAP = 4;
   static readonly ROW_GAP = 6;
   static readonly SIDE = 6;
-  /** Bonnet and windscreen in front, boot behind. */
+  /** Bonnet and windscreen on the left, boot on the right. */
   static readonly FRONT = 30;
   static readonly BACK = 16;
-  static readonly WIDTH = CarLayout.SIDE * 2 + CarLayout.SEAT_W * 3 + CarLayout.GAP * 2;
-  static readonly MIN_PASSENGERS = 4;
+  static readonly HEIGHT = CarLayout.SIDE * 2 + CarLayout.SEAT * 3 + CarLayout.GAP * 2;
+
+  /** Rows (front to back) and their size for `places` = driver plus offered seats. */
+  static rows(places: number): number[] {
+    if (places <= 5) return [2, 3];
+    if (places <= 7) return [2, 3, 3];
+    return [3, 3, 3];
+  }
 
   static shape(offered: number): CarShape {
-    const { SEAT_W, SEAT_H, GAP, ROW_GAP, SIDE, FRONT, BACK } = CarLayout;
-    const passengers = Math.max(CarLayout.MIN_PASSENGERS, offered);
-    const back = passengers - 1;
-    const rows = 1 + Math.ceil(back / 3);
-    const columnX = (column: number) => SIDE + column * (SEAT_W + GAP);
-    const rowY = (row: number) => FRONT + row * (SEAT_H + ROW_GAP);
-    // Left-hand drive: the driver sits front left, the front passenger front right.
-    const seats: SeatSpot[] = [
-      { x: columnX(0), y: rowY(0), driver: true, offered: false },
-      { x: columnX(2), y: rowY(0), driver: false, offered: offered >= 1 },
-    ];
-    for (let i = 0; i < back; i++) {
-      const row = 1 + Math.floor(i / 3);
-      const inRow = Math.min(3, back - (row - 1) * 3);
-      // A row of one or two keeps to the sides, like real back seats.
-      const column = inRow === 3 ? i % 3 : inRow === 2 ? (i % 3) * 2 : 1;
-      seats.push({ x: columnX(column), y: rowY(row), driver: false, offered: i + 2 <= offered });
-    }
-    return { width: CarLayout.WIDTH, height: rowY(rows) - ROW_GAP + BACK, seats };
+    const { SEAT, GAP, ROW_GAP, SIDE, FRONT, BACK, HEIGHT } = CarLayout;
+    const places = offered + 1;
+    const rows = CarLayout.rows(places);
+    const x = (row: number) => FRONT + row * (SEAT + ROW_GAP);
+    const y = { right: SIDE, middle: SIDE + SEAT + GAP, left: SIDE + 2 * (SEAT + GAP) };
+    // Filling order: driver, the outer seats row by row (right, then left), the middle seats last.
+    const order: { x: number; y: number; driver: boolean }[] = [{ x: x(0), y: y.left, driver: true }];
+    rows.forEach((_, row) => {
+      order.push({ x: x(row), y: y.right, driver: false });
+      if (row > 0) order.push({ x: x(row), y: y.left, driver: false });
+    });
+    rows.forEach((size, row) => size === 3 && order.push({ x: x(row), y: y.middle, driver: false }));
+    return {
+      width: x(rows.length) - ROW_GAP + BACK,
+      height: HEIGHT,
+      seats: order.map((seat, i) => ({ ...seat, offered: i < places })),
+    };
   }
 }

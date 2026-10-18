@@ -359,7 +359,7 @@ export const settings = {
     cabinMaxLength: 60,
     rideMaxSeats: 8,
     /** Car seen from above next to each ride (CarSeats); height follows the number of seats. */
-    rideGraphic: { width: 52 },
+    rideGraphic: { width: 84 },
     rideNoteMaxLength: 200,
   },
 

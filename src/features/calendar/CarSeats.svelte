@@ -5,41 +5,38 @@
   import { RidesModel } from './RidesModel.svelte';
 
   /**
-   * The car seen from above: the driver, taken seats (solid) and free seats (accent outline).
-   * Decorative detail for the "x von y frei" text next to it, which stays the source of truth.
+   * The car seen from above, driving to the left: driver and taken seats solid, free seats in the accent
+   * outline, seats not offered faint. Detail for the "x von y frei" text next to it, which stays the source of truth.
    */
   let { ride }: { ride: Ride } = $props();
 
-  const { SEAT_W, SEAT_H } = CarLayout;
+  const { SEAT } = CarLayout;
   const shape = $derived(CarLayout.shape(ride.seats));
   const w = $derived(shape.width);
   const h = $derived(shape.height);
   const free = $derived(RidesModel.free(ride));
   const label = $derived(free ? `Auto von ${ride.driverName}: ${free} von ${ride.seats} Plätzen frei` : `Auto von ${ride.driverName}: voll`);
-  /** Passengers take the offered seats in order (seat 1 is the front passenger seat). */
+  /** Passengers take the offered seats in filling order (seat 1 is the front passenger seat). */
   const passenger = (seatIndex: number) => ride.passengers[seatIndex - 1] ?? null;
   const size = settings.calendar.rideGraphic;
 </script>
 
-<svg class="car" viewBox="0 0 {w} {h}" width={size.width} height={(size.width * h) / w}
-  role="img" aria-label={label}>
-  <!-- mirrors, body, windscreen and rear window -->
-  <rect class="mirror" x="-3" y="20" width="6" height="5" rx="2.5" />
-  <rect class="mirror" x={w - 3} y="20" width="6" height="5" rx="2.5" />
-  <!-- body: a little narrower at the bonnet, rounder at the front than at the back -->
-  <path class="body" d="M 13 0.5 H {w - 13} Q {w - 2} 0.5 {w - 1.5} 13 L {w - 0.5} {h - 12} Q {w - 0.5} {h - 0.5} {w - 11} {h - 0.5}
-    H 11 Q 0.5 {h - 0.5} 0.5 {h - 12} L 1.5 13 Q 2 0.5 13 0.5 Z" />
-  <rect class="roof" x="3.5" y="22" width={w - 7} height={h - 35} rx="5" />
-  <path class="glass" d="M 7 14 Q {w / 2} 9 {w - 7} 14 L {w - 9} 22 Q {w / 2} 19 9 22 Z" />
-  <path class="glass" d="M 9 {h - 13} Q {w / 2} {h - 15} {w - 9} {h - 13} L {w - 10} {h - 8} Q {w / 2} {h - 6} 10 {h - 8} Z" />
+<svg class="car" viewBox="0 0 {w} {h}" width={size.width} height={(size.width * h) / w} role="img" aria-label={label}>
+  <rect class="mirror" x="20" y="-3" width="5" height="6" rx="2.5" />
+  <rect class="mirror" x="20" y={h - 3} width="5" height="6" rx="2.5" />
+  <!-- body: narrower at the bonnet (left), rounder in front than at the back -->
+  <path class="body" d="M 0.5 13 V {h - 13} Q 0.5 {h - 1.5} 13 {h - 0.5} H {w - 11} Q {w - 0.5} {h - 0.5} {w - 0.5} {h - 11}
+    V 11 Q {w - 0.5} 0.5 {w - 11} 0.5 H 13 Q 0.5 1.5 0.5 13 Z" />
+  <rect class="roof" x="22" y="3.5" width={w - 35} height={h - 7} rx="5" />
+  <path class="glass" d="M 14 7 Q 9 {h / 2} 14 {h - 7} L 22 {h - 9} Q 19 {h / 2} 22 9 Z" />
+  <path class="glass" d="M {w - 13} 9 Q {w - 15} {h / 2} {w - 13} {h - 9} L {w - 8} {h - 10} Q {w - 6} {h / 2} {w - 8} 10 Z" />
 
   {#each shape.seats as seat, i (i)}
-    {@const taken = seat.offered ? passenger(i) : null}
-    <rect class="seat" class:driver={seat.driver} class:taken={taken !== null} class:unoffered={!seat.driver && !seat.offered}
-      x={seat.x} y={seat.y} width={SEAT_W} height={SEAT_H} rx="3.5">
+    {@const taken = seat.offered && !seat.driver ? passenger(i) : null}
+    <rect class="seat" class:driver={seat.driver} class:taken={taken !== null} class:unoffered={!seat.offered}
+      x={seat.x} y={seat.y} width={SEAT} height={SEAT} rx="3.5">
       <title>{seat.driver ? `${ride.driverName} (fährt)` : seat.offered ? (taken?.name ?? 'Frei') : 'Nicht angeboten'}</title>
     </rect>
-    {#if seat.driver}<circle class="wheel" cx={seat.x + SEAT_W / 2} cy={seat.y - 4} r="3.5" />{/if}
   {/each}
 </svg>
 
@@ -79,10 +76,5 @@
   .seat.unoffered {
     fill: transparent;
     stroke: var(--color-border);
-  }
-  .wheel {
-    fill: none;
-    stroke: var(--color-text-muted);
-    stroke-width: 1.2;
   }
 </style>

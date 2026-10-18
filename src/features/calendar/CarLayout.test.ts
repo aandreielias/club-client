@@ -1,29 +1,39 @@
 import { describe, expect, it } from 'vitest';
 import { CarLayout } from './CarLayout';
 
+const { SEAT, GAP, SIDE } = CarLayout;
+const RIGHT = SIDE;
+const MIDDLE = SIDE + SEAT + GAP;
+const LEFT = SIDE + 2 * (SEAT + GAP);
+
 describe('CarLayout', () => {
-  it('draws at least a five-seater: driver front left, offered seats first', () => {
-    const one = CarLayout.shape(1);
-    expect(one.seats).toHaveLength(5);
-    expect(one.seats[0]).toMatchObject({ driver: true, offered: false });
-    expect(one.seats.filter((s) => s.offered)).toHaveLength(1);
-    expect(one.seats[1]).toMatchObject({ offered: true, y: one.seats[0].y });
-    expect(one.seats[1].x).toBeGreaterThan(one.seats[0].x);
-    expect(one.height).toBeGreaterThan(one.width); // reads as a car from above
+  it('drives to the left: wider than tall, driver front left', () => {
+    const car = CarLayout.shape(2);
+    expect(car.width).toBeGreaterThan(car.height);
+    expect(car.seats[0]).toMatchObject({ driver: true, y: LEFT });
+    expect(car.seats[0].x).toBe(Math.min(...car.seats.map((s) => s.x)));
   });
 
-  it('grows into a van for more than four seats, without overlaps', () => {
-    const eight = CarLayout.shape(8);
-    expect(eight.seats).toHaveLength(9);
-    expect(eight.seats.filter((s) => s.offered)).toHaveLength(8);
-    expect(eight.height).toBeGreaterThan(CarLayout.shape(4).height);
-    const spots = eight.seats.map((s) => `${s.x}/${s.y}`);
+  it('fills driver, front passenger, back right, back left, middle last', () => {
+    const offered = (n: number) => CarLayout.shape(n).seats.filter((s) => s.offered);
+    // 3 places: driver, passenger, back right
+    expect(offered(2).map((s) => s.y)).toEqual([LEFT, RIGHT, RIGHT]);
+    // 4 places: back left and right, the middle stays free
+    expect(offered(3).map((s) => s.y)).toEqual([LEFT, RIGHT, RIGHT, LEFT]);
+    expect(CarLayout.shape(3).seats.find((s) => s.y === MIDDLE)?.offered).toBe(false);
+    expect(offered(4).at(-1)!.y).toBe(MIDDLE);
+  });
+
+  it('adds a third row for 6 and 7 places and three front seats from 8', () => {
+    expect(CarLayout.rows(5)).toEqual([2, 3]);
+    expect(CarLayout.rows(7)).toEqual([2, 3, 3]);
+    expect(CarLayout.rows(8)).toEqual([3, 3, 3]);
+    const big = CarLayout.shape(8);
+    expect(big.seats).toHaveLength(9);
+    expect(big.seats.filter((s) => s.x === big.seats[0].x)).toHaveLength(3);
+    // middles last
+    expect(big.seats.slice(-3).every((s) => s.y === MIDDLE)).toBe(true);
+    const spots = big.seats.map((s) => `${s.x}/${s.y}`);
     expect(new Set(spots).size).toBe(spots.length);
-  });
-
-  it('keeps a back row of two at the sides', () => {
-    const [left, right] = CarLayout.shape(6).seats.slice(-2);
-    expect(left.x).toBe(CarLayout.SIDE);
-    expect(right.x).toBe(CarLayout.WIDTH - CarLayout.SIDE - CarLayout.SEAT_W);
   });
 });
