@@ -13,7 +13,7 @@
   import BracketTab from './BracketTab.svelte';
   import { TOURNAMENT_CHANGED } from './events';
   import GroupsTab from './GroupsTab.svelte';
-  import { STATUS_LABELS, STATUS_TONES, type Tournament } from './model';
+  import { FORMAT_LABELS, STATUS_LABELS, STATUS_TONES, type Tournament } from './model';
   import TeamsTab from './TeamsTab.svelte';
   import { TournamentModel } from './TournamentModel.svelte';
   import { tournamentPolicy as policy, tournamentsApi } from './services';
@@ -44,10 +44,16 @@
   });
 
   const days = (t: Tournament) => (t.startsOn === t.endsOn ? session.format.date(t.startsOn) : `${session.format.date(t.startsOn)} – ${session.format.date(t.endsOn)}`);
+  const rules = (t: Tournament) =>
+    t.format === 'SIMPLE' ? 'Sieg 3 Punkte, Unentschieden 1, Niederlage 0'
+    : t.format === 'BEACH' ? 'Zwei Gewinnsätze bis 21 (dritter bis 15); Sieg 2 Punkte, Niederlage 1'
+    : `${t.setsToWin === 3 ? 'Drei' : 'Zwei'} Gewinnsätze bis 25; Sieg ${t.setsToWin}:${t.setsToWin - 1} gibt 2:1 Punkte, sonst 3:0`;
   const upcoming = (t: Tournament) => t.matches.filter((m) => m.homeId && m.awayId && m.homeScore === null).slice(0, 6);
 
   function remove(name: string) {
-    pendingDeletes.schedule({ ids: [id], text: `„${name}“ gelöscht.`, commit: () => tournamentsApi.delete(id) });
+    // The prop is gone once the view closed, before the undo time ends: keep the id itself.
+    const target = id;
+    pendingDeletes.schedule({ ids: [target], text: `„${name}“ gelöscht.`, commit: () => tournamentsApi.delete(target) });
     view.leave();
   }
 </script>
@@ -98,8 +104,10 @@
           {/if}
           <dt>Modus</dt>
           <dd>{t.groupCount} {t.groupCount === 1 ? 'Gruppe' : 'Gruppen'}, je {t.advancePerGroup} weiter in die KO-Runde</dd>
-          <dt>Spiele</dt>
-          <dd>{t.setsToWin === 3 ? 'Drei Gewinnsätze' : 'Zwei Gewinnsätze'}; Sieg {t.setsToWin}:{t.setsToWin - 1} gibt 2:1 Punkte, sonst 3:0</dd>
+          <dt>Spielart</dt>
+          <dd>{FORMAT_LABELS[t.format]}{t.teamSize ? `, Teams zu ${t.teamSize}` : ''}</dd>
+          <dt>Wertung</dt>
+          <dd>{rules(t)}</dd>
           <dt>Teams</dt>
           <dd>{t.teams.length}</dd>
         </dl>

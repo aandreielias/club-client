@@ -2,6 +2,10 @@
 
 export type TournamentStatus = 'DRAFT' | 'GROUPS' | 'KO' | 'DONE';
 export type Stage = 'GROUP' | 'KO';
+/** Indoor volleyball (teams of 6), beach volleyball (2 to 4 per team, sets to 21) or simple (only who won). */
+export type TournamentFormat = 'VOLLEYBALL' | 'BEACH' | 'SIMPLE';
+/** Result of a simple match; a draw only in the groups. */
+export type Outcome = 'HOME' | 'AWAY' | 'DRAW';
 
 export interface TournamentTeam {
   id: string;
@@ -40,6 +44,8 @@ export interface StandingRow {
   name: string;
   played: number;
   won: number;
+  /** Only simple matches end in a draw. */
+  drawn: number;
   lost: number;
   setsWon: number;
   setsLost: number;
@@ -71,8 +77,11 @@ export interface Tournament {
   appointmentId: string | null;
   groupCount: number;
   advancePerGroup: number;
-  /** Sets a team needs to win a match: 2 (best of 3) or 3 (best of 5). */
+  format: TournamentFormat;
+  /** Sets a team needs to win a match: 2 (best of 3) or 3 (best of 5); beach always 2. */
   setsToWin: number;
+  /** Players per team: 6 for volleyball, 2 to 4 for beach, null for simple. */
+  teamSize: number | null;
   status: TournamentStatus;
   teams: TournamentTeam[];
   groups: TournamentGroup[];
@@ -98,7 +107,9 @@ export interface NewTournament {
   appointmentId: string | null;
   groupCount: number;
   advancePerGroup: number;
+  format: TournamentFormat;
   setsToWin: number;
+  teamSize: number | null;
 }
 
 export interface TeamInput {
@@ -110,6 +121,8 @@ export interface TeamInput {
 /** The points of every set; empty removes the result. */
 export interface ResultInput {
   sets: SetScore[];
+  /** Simple tournaments only; no sets and no outcome removes the result. */
+  outcome: Outcome | null;
   startsAt: string | null;
   field: string | null;
 }
@@ -120,6 +133,12 @@ export interface GuestInput {
   firstName: string;
   lastName: string;
 }
+
+export const FORMAT_LABELS: Readonly<Record<TournamentFormat, string>> = {
+  VOLLEYBALL: 'Volleyball',
+  BEACH: 'Beachvolleyball',
+  SIMPLE: 'Einfach',
+};
 
 export const STATUS_LABELS: Readonly<Record<TournamentStatus, string>> = {
   DRAFT: 'In Planung',

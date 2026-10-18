@@ -1,8 +1,8 @@
-import type { NewTournament } from './model';
+import type { NewTournament, TournamentFormat } from './model';
 
 export type TournamentField = 'name' | 'dates' | 'groups';
 
-/** A new tournament: name, days, place, groups and sets to win; validation mirrors the server's Tournament. */
+/** A new tournament: name, days, place, groups, format, sets to win and team size; validation mirrors the server's Tournament. */
 export class TournamentForm {
   name = $state('');
   startsOn = $state('');
@@ -10,7 +10,10 @@ export class TournamentForm {
   locationId = $state('');
   groupCount = $state(2);
   advancePerGroup = $state(2);
+  format = $state<TournamentFormat>('VOLLEYBALL');
   setsToWin = $state(2);
+  /** Beach only; volleyball teams always have 6, simple tournaments none. */
+  beachTeamSize = $state(2);
   submitted = $state(false);
 
   readonly errors: Partial<Record<TournamentField, string>>;
@@ -41,7 +44,9 @@ export class TournamentForm {
       appointmentId: null,
       groupCount: this.groupCount,
       advancePerGroup: this.advancePerGroup,
-      setsToWin: this.setsToWin,
+      format: this.format,
+      setsToWin: this.format === 'VOLLEYBALL' ? this.setsToWin : 2,
+      teamSize: this.format === 'BEACH' ? this.beachTeamSize : this.format === 'VOLLEYBALL' ? 6 : null,
     };
   }
 

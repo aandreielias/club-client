@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { bus, commands, session } from '../../lib/container';
+  import { bus, commands, pendingDeletes, session } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
@@ -36,7 +36,8 @@
   {/snippet}
 
   <AsyncView resource={list}>
-    {#snippet children(items)}
+    {#snippet children(all)}
+      {@const items = all.filter((t) => !pendingDeletes.isHidden(t.id))}
       {#if items.length}
         <ul class="cards">
           {#each items as t (t.id)}

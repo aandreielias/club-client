@@ -40,8 +40,20 @@ describe('tournament logic', () => {
     expect(setsProblem(sets(25, 20, 20, 25, 25, 20), 2)).toEqual({ code: 'tournament.set-invalid', set: 3 });
     expect(setsProblem(sets(25, 20, 25, 20), 3)).toEqual({ code: 'tournament.match-open', set: 2 });
     expect(setsProblem(sets(25, 20, 25, 20, 25, 20), 2)).toEqual({ code: 'tournament.match-over', set: 2 });
-    expect(tablePoints(3, 2)).toEqual([2, 1]);
-    expect(tablePoints(2, 0)).toEqual([3, 0]);
+    expect(tablePoints('VOLLEYBALL', 3, 2)).toEqual([2, 1]);
+    expect(tablePoints('VOLLEYBALL', 2, 0)).toEqual([3, 0]);
+  });
+
+  it('scores beach sets to 21 and simple matches by outcome only', () => {
+    expect(setsProblem([{ home: 21, away: 19 }, { home: 18, away: 21 }, { home: 15, away: 13 }], 2, 'BEACH')).toBeNull();
+    expect(setsProblem([{ home: 25, away: 20 }, { home: 25, away: 20 }], 2, 'BEACH')).toEqual({ code: 'tournament.set-invalid', set: 1 });
+    expect(tablePoints('BEACH', 2, 0)).toEqual([2, 1]);
+    const teams = new Map([['a', 'A'], ['b', 'B'], ['c', 'C']]);
+    const table = standings(teams, [
+      { home: 'a', away: 'b', homeSets: 1, awaySets: 0, homePoints: 0, awayPoints: 0 },
+      { home: 'b', away: 'c', homeSets: 0, awaySets: 0, homePoints: 0, awayPoints: 0 },
+    ], 'SIMPLE');
+    expect(table.map((r) => [r.name, r.points, r.drawn])).toEqual([['A', 3, 0], ['B', 1, 1], ['C', 1, 1]]);
   });
 
   it('seeds the knockout tree so a group meets itself late', () => {
@@ -76,6 +88,28 @@ describe('mock tournaments', () => {
     expect([final.homeId, final.awayId]).toEqual([semis[0].homeId, semis[1].awayId]);
     state = tournaments.setResult(member('trainer'), t.id, final.id, { sets: [{ home: 25, away: 20 }, { home: 23, away: 25 }, { home: 15, away: 12 }], startsAt: null, field: null });
     expect(state.status).toBe('DONE');
+  });
+
+  it('runs a simple tournament with outcomes only', async () => {
+    const { directory, MockDirectory } = await import('../../lib/mock/core');
+    const { tournaments } = await import('./mock');
+    const member = (id: string) => directory.members.data.find((m) => m.id === id)!;
+    directory.stepUp(member('trainer'), MockDirectory.PIN);
+    const t = tournaments.create(member('trainer'), { name: 'Spielefest', startsOn: '2026-12-05', endsOn: '2026-12-05', groupCount: 1, advancePerGroup: 2, format: 'SIMPLE' });
+    expect(t.teamSize).toBeNull();
+    tournaments.setTeams(member('trainer'), t.id, ['A', 'B', 'C'].map((name) => ({ id: null, name, clubTeamId: null })));
+    let state = tournaments.draw(member('trainer'), t.id);
+    const result = (id: string, outcome: 'HOME' | 'AWAY' | 'DRAW' | null, sets: { home: number; away: number }[] = []) =>
+      tournaments.setResult(member('trainer'), t.id, id, { sets, outcome, startsAt: null, field: null });
+    expect(() => result(state.matches[0].id, null, [{ home: 25, away: 20 }])).toThrow(expect.objectContaining({ code: 'tournament.sets-not-noted' }));
+    result(state.matches[0].id, 'DRAW');
+    result(state.matches[1].id, 'HOME');
+    state = result(state.matches[2].id, 'AWAY');
+    expect(state.groups[0].standings.some((r) => r.drawn === 1)).toBe(true);
+    state = tournaments.startKnockout(member('trainer'), t.id);
+    const final = state.matches.find((m) => m.stage === 'KO')!;
+    expect(() => result(final.id, 'DRAW')).toThrow(expect.objectContaining({ code: 'tournament.ko-draw' }));
+    expect(result(final.id, 'HOME').status).toBe('DONE');
   });
 
   it('lets a guest see only their tournament', async () => {

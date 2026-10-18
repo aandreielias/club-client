@@ -43,7 +43,9 @@
   }
 
   function destroy(name: string) {
-    pendingDeletes.schedule({ ids: [id], text: `„${name}“ gelöscht. Termine behalten den Namen.`, commit: () => locationsApi.delete(id) });
+    // The prop is gone once the view closed, before the undo time ends: keep the id itself.
+    const target = id;
+    pendingDeletes.schedule({ ids: [target], text: `„${name}“ gelöscht. Termine behalten den Namen.`, commit: () => locationsApi.delete(target) });
     view.leave();
   }
 </script>

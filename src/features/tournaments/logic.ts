@@ -1,4 +1,5 @@
 // Tournament rules, the same as the server's (tournaments.domain: RoundRobin, Standings, Bracket).
+import type { TournamentFormat } from './model';
 
 export interface Pairing {
   round: number;
@@ -38,6 +39,7 @@ export interface Standing {
   name: string;
   played: number;
   won: number;
+  drawn: number;
   lost: number;
   setsWon: number;
   setsLost: number;
@@ -58,21 +60,22 @@ export function tally(sets: readonly { home: number; away: number }[]) {
   };
 }
 
-/** Points a set is played to (server: Volleyball.target): 15 in the deciding set, else 25. */
-export const setTarget = (index: number, setsToWin: number): number => (index === 2 * setsToWin - 2 ? 15 : 25);
+/** Points a set is played to (server: Scoring.target): 15 in the deciding set, else 25 (beach 21). */
+export const setTarget = (format: TournamentFormat, index: number, setsToWin: number): number =>
+  index === 2 * setsToWin - 2 ? 15 : format === 'BEACH' ? 21 : 25;
 
 export type SetsProblem = { code: 'tournament.set-invalid' | 'tournament.match-over' | 'tournament.match-open'; set: number };
 
 /**
- * Why sets are no finished match by the usual rules (server: Volleyball.requireValid): a set goes to 25, the deciding
+ * Why sets are no finished match by the rules (server: Scoring.requireValid): a set goes to 25 (beach 21), the deciding
  * set to 15, with two points ahead; the match ends when a team has `setsToWin` sets. Null when fine or empty (no result).
  */
-export function setsProblem(sets: readonly { home: number; away: number }[], setsToWin: number): SetsProblem | null {
+export function setsProblem(sets: readonly { home: number; away: number }[], setsToWin: number, format: TournamentFormat = 'VOLLEYBALL'): SetsProblem | null {
   let home = 0;
   let away = 0;
   for (const [i, set] of sets.entries()) {
     if (home === setsToWin || away === setsToWin) return { code: 'tournament.match-over', set: i };
-    const target = setTarget(i, setsToWin);
+    const target = setTarget(format, i, setsToWin);
     const winner = Math.max(set.home, set.away);
     const loser = Math.min(set.home, set.away);
     if (!((winner === target && loser <= target - 2) || (winner > target && winner - loser === 2))) return { code: 'tournament.set-invalid', set: i + 1 };
@@ -82,25 +85,31 @@ export function setsProblem(sets: readonly { home: number; away: number }[], set
   return sets.length && home < setsToWin && away < setsToWin ? { code: 'tournament.match-open', set: sets.length } : null;
 }
 
-/** Table points of winner and loser: 3:0 for a clear win, 2:1 when it went to the deciding set. */
-export const tablePoints = (winnerSets: number, loserSets: number): [number, number] => (loserSets === winnerSets - 1 ? [2, 1] : [3, 0]);
+/** Table points of winner and loser. Volleyball: 3:0 for a clear win, 2:1 after the deciding set; beach 2:1; simple 3:0 (a draw 1 each). */
+export function tablePoints(format: TournamentFormat, winnerSets: number, loserSets: number): [number, number] {
+  if (format === 'BEACH') return [2, 1];
+  return format === 'VOLLEYBALL' && loserSets === winnerSets - 1 ? [2, 1] : [3, 0];
+}
 
 /** Won sets per lost set; Infinity without a lost one. */
 const ratio = (won: number, lost: number) => (lost ? won / lost : won ? Infinity : 0);
 
-/** Volleyball group table: points (3:0, 2:1), wins, set ratio, ball-point ratio, the direct match, then the name. */
-export function standings(teams: ReadonlyMap<string, string>, results: readonly Result[]): Standing[] {
+/** Group table: points (see tablePoints), wins, set ratio, ball-point ratio, the direct match, then the name. */
+export function standings(teams: ReadonlyMap<string, string>, results: readonly Result[], format: TournamentFormat = 'VOLLEYBALL'): Standing[] {
   const rows = new Map<string, Standing>(
-    [...teams].map(([teamId, name]) => [teamId, { teamId, name, played: 0, won: 0, lost: 0, setsWon: 0, setsLost: 0, ballsWon: 0, ballsLost: 0, points: 0 }]),
+    [...teams].map(([teamId, name]) => [teamId, { teamId, name, played: 0, won: 0, drawn: 0, lost: 0, setsWon: 0, setsLost: 0, ballsWon: 0, ballsLost: 0, points: 0 }]),
   );
   const add = (row: Standing, won: number, lost: number, balls: number, ballsAgainst: number) => {
     row.played++;
     if (won > lost) {
       row.won++;
-      row.points += tablePoints(won, lost)[0];
+      row.points += tablePoints(format, won, lost)[0];
     } else if (lost > won) {
       row.lost++;
-      row.points += tablePoints(lost, won)[1];
+      row.points += tablePoints(format, lost, won)[1];
+    } else {
+      row.drawn++;
+      row.points += 1;
     }
     row.setsWon += won;
     row.setsLost += lost;

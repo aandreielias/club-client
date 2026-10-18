@@ -47,7 +47,7 @@ export class MockTournaments {
     const t = MockTournaments.validated({
       id: crypto.randomUUID(), name: body.name ?? '', startsOn: body.startsOn ?? '', endsOn: body.endsOn ?? '', locationId: body.locationId ?? null,
       appointmentId: body.appointmentId ?? null, groupCount: body.groupCount ?? 2, advancePerGroup: body.advancePerGroup ?? 2,
-      setsToWin: body.setsToWin ?? 2, status: 'DRAFT', createdAt: now,
+      format: body.format ?? 'VOLLEYBALL', setsToWin: body.setsToWin ?? 2, teamSize: body.teamSize ?? null, status: 'DRAFT', createdAt: now,
     });
     this.tournaments.data.push(t);
     this.teams.data[t.id] = [];
@@ -59,7 +59,7 @@ export class MockTournaments {
   update(viewer: Member, id: string, patch: Partial<NewTournament>): Tournament {
     this.people.requirePrivileged(viewer, PRIVILEGED);
     const t = this.find(id);
-    const settings = (['groupCount', 'advancePerGroup', 'setsToWin'] as const).some((k) => patch[k] != null);
+    const settings = (['groupCount', 'advancePerGroup', 'format', 'setsToWin', 'teamSize'] as const).some((k) => patch[k] != null);
     if (settings && t.status !== 'DRAFT') fail(409, 'tournament.drawn');
     const defined = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== null && v !== undefined));
     Object.assign(t, MockTournaments.validated({ ...t, ...defined }));
@@ -143,10 +143,14 @@ export class MockTournaments {
     for (const s of sets) {
       if (![s.home, s.away].every((p) => Number.isInteger(p) && p >= 0 && p <= 99) || s.home === s.away) fail(400, 'tournament.set-invalid');
     }
-    const problem = setsProblem(sets, t.setsToWin);
+    const outcome = body.outcome ?? null;
+    if (t.format === 'SIMPLE' && sets.length) fail(400, 'tournament.sets-not-noted');
+    if (t.format !== 'SIMPLE' && outcome) fail(400, 'tournament.sets-needed');
+    const problem = t.format === 'SIMPLE' ? null : setsProblem(sets, t.setsToWin, t.format);
     if (problem) fail(400, problem.code);
-    const { homeSets: home, awaySets: away } = tally(sets);
-    const scoring = JSON.stringify(sets) !== JSON.stringify(m.sets);
+    // A simple match keeps only the outcome: 1:0, 0:1 or 0:0 for a draw.
+    const { homeSets: home, awaySets: away } = outcome ? { homeSets: Number(outcome === 'HOME'), awaySets: Number(outcome === 'AWAY') } : tally(sets);
+    const scoring = JSON.stringify(sets) !== JSON.stringify(m.sets) || home !== m.homeScore || away !== m.awayScore;
     if (scoring) {
       if (!m.homeId || !m.awayId) fail(409, 'tournament.teams-open');
       if (m.stage === 'GROUP' && t.status !== 'GROUPS') fail(409, 'tournament.groups-closed');
@@ -185,7 +189,9 @@ export class MockTournaments {
       .map((group) => ({
         label: group,
         standings: standings(new Map(teams.filter((team) => team.group === group).map((team) => [team.id, team.name])),
-          matches.filter((m) => m.stage === 'GROUP' && m.group === group).map((m) => ({ home: m.homeId, away: m.awayId, ...tally(m.sets) }))),
+          matches.filter((m) => m.stage === 'GROUP' && m.group === group)
+            .map((m) => ({ home: m.homeId, away: m.awayId, ...tally(m.sets), homeSets: m.homeScore, awaySets: m.awayScore })),
+          t.format),
       }))
       .filter((g) => g.standings.length);
   }
@@ -246,12 +252,12 @@ export class MockTournaments {
    */
   private upgradeStored(): void {
     let changed = false;
-    for (const t of this.tournaments.data.filter((x) => !x.setsToWin)) {
-      Object.assign(t, { setsToWin: 2, pointsWin: undefined, pointsDraw: undefined });
+    for (const t of this.tournaments.data.filter((x) => !x.setsToWin || !x.format)) {
+      Object.assign(t, { setsToWin: t.setsToWin ?? 2, format: 'VOLLEYBALL', teamSize: 6, pointsWin: undefined, pointsDraw: undefined });
       changed = true;
     }
-    for (const t of this.tournaments.data) {
-      for (const m of (this.matches.data[t.id] ?? []).filter((x) => !Array.isArray(x.sets) || setsProblem(x.sets, t.setsToWin))) {
+    for (const t of this.tournaments.data.filter((x) => x.format !== 'SIMPLE')) {
+      for (const m of (this.matches.data[t.id] ?? []).filter((x) => !Array.isArray(x.sets) || setsProblem(x.sets, t.setsToWin, t.format))) {
         Object.assign(m, MockTournaments.scores(MockTournaments.setsFor(m.homeScore, m.awayScore, t.setsToWin)));
         changed = true;
       }
@@ -284,8 +290,13 @@ export class MockTournaments {
     if (t.groupCount < 1 || t.groupCount > 8) fail(400, 'tournament.groups-invalid');
     const qualifiers = t.groupCount * t.advancePerGroup;
     if (t.advancePerGroup < 1 || t.advancePerGroup > 4 || qualifiers < 2 || qualifiers > 32) fail(400, 'tournament.advance-invalid');
-    if (t.setsToWin !== 2 && t.setsToWin !== 3) fail(400, 'tournament.sets-invalid');
-    return { ...t, name };
+    // server: Tournament constructor normalizes per format
+    const format = t.format ?? 'VOLLEYBALL';
+    const setsToWin = format === 'VOLLEYBALL' ? t.setsToWin : 2;
+    const teamSize = format === 'VOLLEYBALL' ? 6 : format === 'BEACH' ? (t.teamSize ?? 2) : null;
+    if (setsToWin !== 2 && setsToWin !== 3) fail(400, 'tournament.sets-invalid');
+    if (teamSize !== null && (teamSize < 2 || teamSize > (format === 'BEACH' ? 4 : 6))) fail(400, 'tournament.team-size-invalid');
+    return { ...t, name, format, setsToWin, teamSize };
   }
 
   /** Herbstcup in three weeks: six teams drawn into two groups, some results in. */
@@ -301,7 +312,7 @@ export class MockTournaments {
         startsAt: null, field: group === 'A' ? 'Feld 1' : 'Feld 2' });
     return {
       tournaments: [{ id: 'tm-herbst', name: 'Herbstcup 2026', startsOn: day(21), endsOn: day(21), locationId: 'l-west', appointmentId: null,
-        groupCount: 2, advancePerGroup: 2, setsToWin: 2, status: 'GROUPS', createdAt: new Date().toISOString() } as StoredTournament],
+        groupCount: 2, advancePerGroup: 2, format: 'VOLLEYBALL', setsToWin: 2, teamSize: 6, status: 'GROUPS', createdAt: new Date().toISOString() } as StoredTournament],
       teams: { 'tm-herbst': teams },
       matches: {
         'tm-herbst': [

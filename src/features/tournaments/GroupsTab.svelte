@@ -12,6 +12,8 @@
 
   const editable = $derived(policy.canManage() && tournament.status === 'GROUPS');
   let editing = $state<TournamentMatch | null>(null);
+  /** Simple tournaments note only who won: draws instead of sets and ball points. */
+  const simple = $derived(tournament.format === 'SIMPLE');
   const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 </script>
 
@@ -27,8 +29,8 @@
           <thead>
             <tr>
               <th class="num" title="Platz">Pl</th><th>Team</th><th class="num" title="Spiele">Sp</th><th class="num" title="Siege">S</th>
-              <th class="num" title="Niederlagen">N</th><th class="num">Sätze</th>
-              <th class="num" title="Ballpunkte">Bälle</th><th class="num" title="Tabellenpunkte">Pkt</th>
+              {#if simple}<th class="num" title="Unentschieden">U</th>{/if}<th class="num" title="Niederlagen">N</th>
+              {#if !simple}<th class="num">Sätze</th><th class="num" title="Ballpunkte">Bälle</th>{/if}<th class="num" title="Tabellenpunkte">Pkt</th>
             </tr>
           </thead>
           <tbody>
@@ -36,9 +38,11 @@
               <tr class:qualifies={i < tournament.advancePerGroup}>
                 <td class="num">{i + 1}</td>
                 <td class="team">{row.name}</td>
-                <td class="num">{row.played}</td><td class="num">{row.won}</td><td class="num">{row.lost}</td>
-                <td class="num" title="Differenz {signed(row.setsWon - row.setsLost)}">{row.setsWon}:{row.setsLost}</td>
-                <td class="num" title="Differenz {signed(row.ballsWon - row.ballsLost)}">{row.ballsWon}:{row.ballsLost}</td>
+                <td class="num">{row.played}</td><td class="num">{row.won}</td>{#if simple}<td class="num">{row.drawn}</td>{/if}<td class="num">{row.lost}</td>
+                {#if !simple}
+                  <td class="num" title="Differenz {signed(row.setsWon - row.setsLost)}">{row.setsWon}:{row.setsLost}</td>
+                  <td class="num" title="Differenz {signed(row.ballsWon - row.ballsLost)}">{row.ballsWon}:{row.ballsLost}</td>
+                {/if}
                 <td class="num points">{row.points}</td>
               </tr>
             {/each}
@@ -53,7 +57,7 @@
               <span class="end">
                 {#if m.field}<span class="muted small">{m.field}</span>{/if}
                 {#if editable}
-                  <Button size="sm" variant="ghost" icon={m.homeScore === null ? 'add' : 'edit'} tooltip="Sätze eintragen" onclick={() => (editing = m)} />
+                  <Button size="sm" variant="ghost" icon={m.homeScore === null ? 'add' : 'edit'} tooltip="Ergebnis eintragen" onclick={() => (editing = m)} />
                 {/if}
               </span>
               {#if m.sets.length}<span class="sets muted small">{m.sets.map((s) => `${s.home}:${s.away}`).join(' · ')}</span>{/if}

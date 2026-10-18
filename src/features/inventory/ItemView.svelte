@@ -58,7 +58,9 @@
 
   /** Termine und Aufgaben, die ihn benötigen, zeigen ihn danach als gelöscht an. */
   function destroy(name: string) {
-    pendingDeletes.schedule({ ids: [id], text: `„${name}“ gelöscht.`, commit: () => inventoryApi.delete(id) });
+    // The prop is gone once the view closed, before the undo time ends: keep the id itself.
+    const target = id;
+    pendingDeletes.schedule({ ids: [target], text: `„${name}“ gelöscht.`, commit: () => inventoryApi.delete(target) });
     view.leave();
   }
 </script>
