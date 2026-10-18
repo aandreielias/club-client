@@ -34,6 +34,8 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Darstellung zurücksetzen': { text: 'Farbe, Schriftgröße und Dichte auf den Standard zurücksetzen' },
   'Dateien auswählen': { text: 'Dateien vom Gerät zum Hochladen auswählen' },
   Deaktivieren: { text: 'Mitglied deaktivieren; die Person kann sich danach nicht mehr anmelden' },
+  'Nachricht senden': { text: 'Nachricht an Mitglieder, Teams oder alle schreiben', command: 'page.new' },
+  Senden: { text: 'Nachricht verschicken', command: 'form.submit' },
   'Neues Konto': { text: 'Konto aus einem Aufnahmeantrag anlegen; die Person bekommt eine Einladung per E-Mail' },
   'Konto anlegen': { text: 'Konto speichern und Einladung per E-Mail verschicken', command: 'form.submit' },
   Einstellungen: { text: 'Einstellungen öffnen' },

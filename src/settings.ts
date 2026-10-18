@@ -417,6 +417,8 @@ export const settings = {
   notifications: {
     /** Show a toast when a new notification arrives live. */
     toastOnArrival: true,
+    /** server: MessageHandlers / MessagesController */
+    message: { titleMaxLength: 150, bodyMaxLength: 1000, maxRefs: 10, maxTargets: 200, previewDebounceMs: 250, searchPerKind: 5 },
   },
 
   files: {

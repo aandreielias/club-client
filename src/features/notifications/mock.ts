@@ -4,12 +4,19 @@ import { directory, type MockDirectory } from '../../lib/mock/core';
 import type { MockEvent } from '../../lib/mock/MockEventBus';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
-import type { Notification, NotificationKind, Preference } from './model';
+import type { MessageRef, Notification, NotificationKind, Preference, RefKind } from './model';
+import { PRIVILEGED, type Member } from '../../lib/types';
+import { settings } from '../../settings';
+import { calendar } from '../calendar/mock';
+import { files } from '../files/mock';
+import { inventory } from '../inventory/mock';
+import { tasks } from '../tasks/mock';
 import { CHANGE_FIELD_LABELS, type ChangeField } from '../members/MembersApi';
 
 const fail = MockServer.fail;
 const KINDS: readonly NotificationKind[] = ['TASK_ASSIGNED', 'TASK_DUE', 'APPOINTMENT_CANCELLED', 'SECURITY', 'CHANGE_DECIDED'];
 const MAX_LISTED = 100;
+const limits = settings.notifications.message;
 
 const SECURITY_TITLES: Record<string, string> = {
   PIN_SET: 'Deine PIN wurde eingerichtet',
@@ -71,6 +78,74 @@ export class MockNotifications {
     return this.effective(memberId);
   }
 
+  /** server: MessageHandlers.send; `preview` only counts. */
+  send(viewer: Member, body: Record<string, any>, preview: boolean): { recipients: number } {
+    if (preview) this.people.requireRole(viewer, PRIVILEGED);
+    else this.people.requirePrivileged(viewer, PRIVILEGED);
+    const recipients = this.recipients(viewer, body);
+    if (preview) return { recipients: recipients.length };
+    const title = typeof body.title === 'string' ? body.title.trim() : '';
+    const text = typeof body.body === 'string' ? body.body.trim() : '';
+    if (!title || title.length > limits.titleMaxLength) fail(400, 'message.title-invalid');
+    if (text.length > limits.bodyMaxLength) fail(400, 'message.body-too-long');
+    if (!recipients.length) fail(400, 'message.recipients-missing');
+    const inputs: { kind: RefKind; id: string }[] = Array.isArray(body.refs) ? body.refs : [];
+    if (inputs.length > limits.maxRefs) fail(400, 'message.too-many-refs');
+    const refs = inputs.map((ref) => this.ref(viewer, ref));
+    this.notify(recipients, 'MESSAGE', title, text.replace(/\n{3,}/g, '\n\n'), null, { senderId: viewer.id, senderName: `${viewer.firstName} ${viewer.lastName}`, refs });
+    return { recipients: recipients.length };
+  }
+
+  private recipients(viewer: Member, body: Record<string, any>): string[] {
+    const manager = this.people.isManager(viewer);
+    const teamIds: string[] = body.teamIds ?? [];
+    const memberIds: string[] = body.memberIds ?? [];
+    if (teamIds.length + memberIds.length > limits.maxTargets) fail(400, 'message.too-many-targets');
+    const recipients = new Set<string>();
+    if (body.everyone) {
+      if (!manager) fail(403, 'access.denied');
+      this.people.audienceIds({ everyone: true }).forEach((id) => recipients.add(id));
+    } else {
+      const coached = Object.entries(this.people.teamRoles(viewer.id)).filter(([, role]) => role === 'COACH').map(([team]) => team);
+      for (const teamId of teamIds) {
+        if (!manager && !coached.includes(teamId)) fail(403, 'access.denied');
+        this.people.teamMembers(teamId).forEach((id) => recipients.add(id));
+      }
+      if (!manager && !memberIds.every((id) => coached.some((team) => this.people.teamMembers(team).includes(id)))) fail(403, 'access.denied');
+      if (memberIds.some((id) => !this.people.activeIds().includes(id))) fail(400, 'message.member-unknown');
+      memberIds.forEach((id) => recipients.add(id));
+    }
+    if (body.includeGuardians !== false) this.people.guardiansOf([...recipients]).forEach((id) => recipients.add(id));
+    recipients.delete(viewer.id);
+    return [...recipients];
+  }
+
+  /** The record as the sender sees it (server: MessageHandlers.resolve). */
+  private ref(viewer: Member, ref: { kind: RefKind; id: string }): MessageRef {
+    try {
+      switch (ref.kind) {
+        case 'TASK':
+          return { ...ref, title: tasks.get(viewer, ref.id).title, parentId: null };
+        case 'APPOINTMENT':
+          return { ...ref, title: calendar.visible(viewer, ref.id).title, parentId: null };
+        case 'ITEM':
+          this.people.requireRole(viewer, PRIVILEGED);
+          return { ...ref, title: inventory.get(ref.id).name, parentId: null };
+        case 'MEMBER': {
+          const m = this.people.get(viewer, ref.id);
+          return { ...ref, title: `${m.firstName} ${m.lastName}`, parentId: null };
+        }
+        case 'FILE': {
+          const f = files.refs(viewer, [{ fileId: ref.id, folderId: null, name: null }]).find((r) => !r.deleted);
+          if (f) return { ...ref, title: f.name, parentId: f.folderId };
+        }
+      }
+    } catch {
+      // not visible: refused below
+    }
+    return fail(400, 'message.ref-unknown');
+  }
+
   /** server: NotificationHandlers.on* */
   private onEvent(event: MockEvent): void {
     const data = event.data as Record<string, any>;
@@ -99,10 +174,11 @@ export class MockNotifications {
     }
   }
 
-  private notify(recipients: readonly string[], kind: NotificationKind, title: string, body: string, link: string): void {
+  private notify(recipients: readonly string[], kind: NotificationKind, title: string, body: string, link: string | null,
+    message: Pick<Notification, 'senderId' | 'senderName' | 'refs'> = { senderId: null, senderName: null, refs: [] }): void {
     const unique = [...new Set(recipients)];
     for (const memberId of unique) {
-      const notification: Notification = { id: crypto.randomUUID(), kind, title, body, link, createdAt: new Date().toISOString(), readAt: null };
+      const notification: Notification = { id: crypto.randomUUID(), kind, title, body, link, createdAt: new Date().toISOString(), readAt: null, ...message };
       (this.inbox.data[memberId] ??= []).unshift(notification);
       mockServer.events.publish({
         type: 'notifications.notification-created',
@@ -116,7 +192,7 @@ export class MockNotifications {
   private seed(): Record<string, Notification[]> {
     const at = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
     const entry = (kind: NotificationKind, title: string, body: string, link: string, hoursAgo: number, read: boolean): Notification => ({
-      id: crypto.randomUUID(), kind, title, body, link, createdAt: at(hoursAgo), readAt: read ? at(hoursAgo - 1) : null,
+      id: crypto.randomUUID(), kind, title, body, link, createdAt: at(hoursAgo), readAt: read ? at(hoursAgo - 1) : null, senderId: null, senderName: null, refs: [],
     });
     return {
       spielerin: [
@@ -138,4 +214,6 @@ mockServer
   .on('POST', '/api/v1/me/notifications/read-all', (req) => notifications.markAllRead(me(req)))
   .on('POST', '/api/v1/me/notifications/:id/read', (req) => notifications.markRead(me(req), req.params.id))
   .on('GET', '/api/v1/me/notification-preferences', (req) => ({ items: notifications.effective(me(req)) }))
+  .on('POST', '/api/v1/notifications/messages', (req) => notifications.send(directory.actor(req), req.body ?? {}, false))
+  .on('POST', '/api/v1/notifications/messages/preview', (req) => notifications.send(directory.actor(req), req.body ?? {}, true))
   .on('PUT', '/api/v1/me/notification-preferences', (req) => ({ items: notifications.setPreferences(me(req), req.body?.items) }));

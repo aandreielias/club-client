@@ -6,7 +6,7 @@ import type { NotificationsApi } from './NotificationsApi';
 import type { Notification, NotificationList } from './model';
 
 const entry = (id: string, read: boolean): Notification => ({
-  id, kind: 'TASK_ASSIGNED', title: `T${id}`, body: '', link: null, createdAt: '2026-01-01T00:00:00Z', readAt: read ? '2026-01-01T01:00:00Z' : null,
+  id, kind: 'TASK_ASSIGNED', title: `T${id}`, body: '', link: null, createdAt: '2026-01-01T00:00:00Z', readAt: read ? '2026-01-01T01:00:00Z' : null, senderId: null, senderName: null, refs: [],
 });
 
 function setup(list: NotificationList) {

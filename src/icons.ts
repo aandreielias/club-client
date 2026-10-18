@@ -32,6 +32,8 @@ import PanelRight from '@lucide/svelte/icons/panel-right';
 import Pencil from '@lucide/svelte/icons/pencil';
 import Plus from '@lucide/svelte/icons/plus';
 import Search from '@lucide/svelte/icons/search';
+import Send from '@lucide/svelte/icons/send';
+import Link from '@lucide/svelte/icons/link';
 import Settings from '@lucide/svelte/icons/settings';
 import Trash from '@lucide/svelte/icons/trash-2';
 import UserRound from '@lucide/svelte/icons/user-round';
@@ -51,6 +53,8 @@ export const ICONS = {
   account: UserRound,
   settings: Settings,
   search: Search,
+  send: Send,
+  link: Link,
   commands: Command,
   logout: LogOut,
   menu: Menu,

@@ -2,6 +2,7 @@
   import { bus, links } from '../../lib/container';
   import { NAVIGATE, WINDOW_OPEN } from '../../channels';
   import DataTable from '../../ui/DataTable.svelte';
+  import Icon from '../../ui/Icon.svelte';
   import Tag from '../../ui/Tag.svelte';
   import type { Notification } from './model';
   import type { NotificationListModel } from './NotificationListModel.svelte';
@@ -13,6 +14,7 @@
 
   async function open(notification: Notification) {
     await center.markRead(notification);
+    if (notification.kind === 'MESSAGE') return bus.publish(WINDOW_OPEN, { kind: 'message', id: notification.id });
     const target = links.resolve(notification.link);
     if (!target) return;
     if ('window' in target) bus.publish(WINDOW_OPEN, { kind: target.window.kind, id: target.window.id });
@@ -31,6 +33,7 @@
       {#if !notification.readAt}<Tag tone="blue">Neu</Tag>{/if}
     {:else if column.key === 'body'}
       <span class="muted">{notification.body}</span>
+      {#if notification.refs?.length}<span class="muted refs"><Icon name="link" small /> {notification.refs.length}</span>{/if}
     {:else}
       {list.display(notification, column)}
     {/if}
@@ -40,5 +43,11 @@
 <style>
   .unread {
     font-weight: var(--font-weight-bold);
+  }
+  .refs {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xxs);
+    margin-left: var(--space-sm);
   }
 </style>

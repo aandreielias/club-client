@@ -75,4 +75,21 @@ describe('mock notifications', () => {
     const title = `Abgesagt: ${target.title}`;
     for (const id of directory.activeIds().filter((id) => id !== 'vorstand')) expect(cancelledTitles(id), id).toContain(title);
   });
+
+  it('sends messages: coaches only to their teams, guardians read along, linked records as the sender sees them', () => {
+    directory.stepUp(member('trainer'), MockDirectory.PIN);
+    const appointment = upcoming('t-u16');
+    const body = { title: 'Hallenwechsel', body: 'Samstag Südhalle.\nPünktlich!', teamIds: ['t-u16'], refs: [{ kind: 'APPOINTMENT', id: appointment.id }] };
+    const reach = notifications.send(member('trainer'), body, true).recipients;
+    expect(notifications.send(member('trainer'), body, false).recipients).toBe(reach);
+    for (const id of ['spieler', 'eltern']) {
+      expect(notifications.list(id, true).items[0]).toMatchObject({
+        kind: 'MESSAGE', senderId: 'trainer', body: 'Samstag Südhalle.\nPünktlich!', refs: [{ kind: 'APPOINTMENT', id: appointment.id, title: appointment.title }],
+      });
+    }
+    expect(() => notifications.send(member('trainer'), { title: 'x', everyone: true }, false)).toThrow(expect.objectContaining({ status: 403 }));
+    expect(() => notifications.send(member('trainer'), { ...body, refs: [{ kind: 'TASK', id: 'nope' }] }, false))
+      .toThrow(expect.objectContaining({ code: 'message.ref-unknown' }));
+    expect(() => notifications.send(member('spieler'), body, true)).toThrow(expect.objectContaining({ status: 403 }));
+  });
 });
