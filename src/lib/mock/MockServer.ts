@@ -12,6 +12,8 @@ export interface MockRequest {
   onProgress?: (loaded: number, total: number) => void;
   /** E-mail of the signed-in dev user, null when signed out. */
   email: string | null;
+  method?: HttpMethod;
+  path?: string;
 }
 
 /** May return a promise (e.g. handlers that read uploaded files). */
@@ -40,7 +42,7 @@ export class MockServer {
     for (const route of this.#routes) {
       if (route.method !== method) continue;
       const params = Router.match(route.pattern, url.pathname);
-      if (params) return route.handler({ params, query: url.searchParams, body, email, onProgress });
+      if (params) return route.handler({ params, query: url.searchParams, body, email, onProgress, method, path: url.pathname });
     }
     return MockServer.fail(404, 'not-found');
   }

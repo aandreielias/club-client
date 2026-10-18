@@ -3,7 +3,11 @@
 /** Hues of the tag palette (settings.theme.colors.*.tag*); used for statuses, types and calendar entries. */
 export type Hue = 'gray' | 'brown' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'red';
 
-export type Role = 'ADMIN' | 'BOARD' | 'COACH' | 'PLAYER' | 'PARENT' | 'VOLUNTEER';
+/** GUEST: temporary account of a visiting tournament team; sees only that tournament. */
+export type Role = 'ADMIN' | 'BOARD' | 'COACH' | 'PLAYER' | 'PARENT' | 'VOLUNTEER' | 'GUEST';
+
+/** Only GUEST (server: Actor.guestOnly). */
+export const guestOnly = (roles: readonly Role[]): boolean => roles.length === 1 && roles[0] === 'GUEST';
 
 export type TeamRole = 'COACH' | 'PLAYER';
 
@@ -20,6 +24,7 @@ export const ROLE_LABELS: Readonly<Record<Role, string>> = {
   PLAYER: 'Spieler:in',
   PARENT: 'Elternteil',
   VOLUNTEER: 'Helfer:in',
+  GUEST: 'Gast',
 };
 
 export interface Club {

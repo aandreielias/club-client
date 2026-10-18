@@ -1,5 +1,5 @@
 import { defineEvent, EventBusBuilder, type EventBus } from '../bus';
-import type { Role } from '../types';
+import { guestOnly, type Role } from '../types';
 
 /** Who receives a pushed event (server: platform.Audience). */
 export interface MockAudience {
@@ -39,7 +39,8 @@ export class MockEventBus {
     return () => subscription.unsubscribe();
   }
 
+  /** "Everyone" means the club: tournament guests get only what names them (server: Audience.includes). */
   static includes(audience: MockAudience, memberId: string, roles: readonly Role[]): boolean {
-    return !!audience.everyone || !!audience.members?.includes(memberId) || roles.some((r) => audience.roles?.includes(r));
+    return (!!audience.everyone && !guestOnly(roles)) || !!audience.members?.includes(memberId) || roles.some((r) => audience.roles?.includes(r));
   }
 }

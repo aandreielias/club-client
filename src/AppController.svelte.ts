@@ -18,6 +18,7 @@ import { Router, type RouteParams } from './lib/router/Router.svelte';
 import type { Pane } from './lib/split/Pane';
 import type { SplitView } from './lib/split/SplitView.svelte';
 import type { SessionStore } from './lib/session/SessionStore.svelte';
+import { guestOnly } from './lib/types';
 
 /** Which top-level screen the app shows; derived from auth, profile and route state. */
 export type Screen = 'failed' | 'loading' | 'set-password' | 'forgot-password' | 'login' | 'onboarding' | 'shell';
@@ -66,7 +67,7 @@ export class AppController {
   constructor(private readonly deps: AppDependencies) {
     const { features, session, router } = deps;
     this.screen = $derived.by(() => this.computeScreen());
-    this.allowedRoutes = $derived(features.allowed((...roles) => session.hasRole(...roles)));
+    this.allowedRoutes = $derived(features.allowed((...roles) => session.hasRole(...roles), guestOnly(session.me?.member.roles ?? [])));
     this.navigation = $derived(features.navigation(this.allowedRoutes, deps.preferences.values.navOrder));
     this.page = $derived.by(() => this.resolve(router.path));
     this.splitPage = $derived.by(() => (deps.split.isOpen ? this.resolve(deps.splitPane.path) : null));

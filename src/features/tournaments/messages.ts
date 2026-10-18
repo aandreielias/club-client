@@ -1,0 +1,25 @@
+import type { MessageCatalog } from '../../lib/errors/ErrorMessages';
+
+export const TOURNAMENT_MESSAGES: MessageCatalog = {
+  'tournament.not-found': 'Dieses Turnier gibt es nicht mehr.',
+  'tournament.name-invalid': 'Name mit 1 bis 120 Zeichen angeben.',
+  'tournament.dates-invalid': 'Das Ende darf nicht vor dem Beginn liegen.',
+  'tournament.groups-invalid': '1 bis 8 Gruppen.',
+  'tournament.advance-invalid': '1 bis 4 Teams je Gruppe kommen weiter, insgesamt 2 bis 32.',
+  'tournament.points-invalid': 'Punkte für einen Sieg 1 bis 10, für ein Unentschieden weniger.',
+  'tournament.drawn': 'Nach der Auslosung lassen sich Teams und Gruppen nicht mehr ändern.',
+  'tournament.too-many-teams': 'Höchstens 64 Teams.',
+  'tournament.team-duplicate': 'Jedes Team nur einmal eintragen.',
+  'tournament.team-name-invalid': 'Teamname mit 1 bis 80 Zeichen angeben.',
+  'tournament.too-few-teams': 'Für diese Gruppen braucht es mehr Teams.',
+  'tournament.not-in-groups': 'Die Gruppenphase läuft gerade nicht.',
+  'tournament.groups-open': 'Erst müssen alle Gruppenspiele ein Ergebnis haben.',
+  'tournament.groups-closed': 'Gruppenergebnisse stehen fest, seit die KO-Runde läuft.',
+  'tournament.ko-draw': 'Ein KO-Spiel braucht einen Sieger.',
+  'tournament.result-locked': 'Die nächste Runde hat schon ein Ergebnis.',
+  'tournament.teams-open': 'Beide Teams müssen feststehen.',
+  'tournament.score-invalid': 'Beide Ergebnisse von 0 bis 999 angeben.',
+  'tournament.field-invalid': 'Der Platz hat höchstens 40 Zeichen.',
+  'tournament.match-not-found': 'Dieses Spiel gibt es nicht mehr.',
+  'tournament.team-unknown': 'Dieses Team gehört nicht zum Turnier.',
+};

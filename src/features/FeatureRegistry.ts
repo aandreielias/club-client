@@ -32,8 +32,9 @@ export class FeatureRegistry {
   }
 
   /** Routes the member may open, given a role check. */
-  allowed(hasRole: (...roles: readonly Role[]) => boolean): FeatureRoute[] {
-    return this.routes.filter((r) => !r.roles || hasRole(...r.roles));
+  /** Routes the member may open; tournament guests only those marked `guest`. */
+  allowed(hasRole: (...roles: readonly Role[]) => boolean, guest = false): FeatureRoute[] {
+    return this.routes.filter((r) => (guest ? !!r.guest : !r.roles || hasRole(...r.roles)));
   }
 
   /** Sidebar entries; main entries follow the user's `order` (paths), footer entries come last. */

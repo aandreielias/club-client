@@ -5,6 +5,7 @@ import { ZonedClock } from '../time/ZonedClock';
 import {
   MANAGERS,
   PRIVILEGED,
+  guestOnly,
   type Club,
   type Member,
   type MemberList,
@@ -70,6 +71,8 @@ export class MockDirectory {
     seedMember('spielerin', 'Lena', 'Spielerin', ['PLAYER'], '1998-08-08'),
     seedMember('eltern', 'Eva', 'Eltern', ['PARENT'], '1980-09-14'),
     seedMember('neu', 'Felix', 'Neu', ['PLAYER'], null),
+    // Temporary account of a visiting team (Herbstcup): sees only that tournament.
+    seedMember('gast', 'Gerd', 'Gast', ['GUEST'], null),
   ]);
 
   /** memberId → teamId → role in that team */
@@ -107,8 +110,9 @@ export class MockDirectory {
     return { members: [...members, ...guardians], roles: MANAGERS };
   }
 
+  /** Club members; tournament guests are not part of "everyone". */
   activeIds(): string[] {
-    return this.members.data.filter((m) => m.active).map((m) => m.id);
+    return this.members.data.filter((m) => m.active && !guestOnly(m.roles)).map((m) => m.id);
   }
 
   /** Active members an audience reaches (server: MembersApi.AUDIENCE_IDS). */
@@ -128,6 +132,7 @@ export class MockDirectory {
   actor(request: MockRequest, allowIncompleteProfile = false): Member {
     const member = this.findActive(request.email);
     if (!member) return fail(request.email ? 403 : 401, 'auth.unknown-member');
+    if (guestOnly(member.roles) && !MockDirectory.allowsGuest(request)) fail(403, 'access.denied');
     if (!allowIncompleteProfile) {
       const gap = this.missing(member)[0];
       if (gap === 'birthDate') fail(403, 'profile.birth-date-required');
@@ -212,8 +217,16 @@ export class MockDirectory {
     return m ? `${m.firstName} ${m.lastName}` : null;
   }
 
+  /** server: ActorArgumentResolver.allowsGuest - deny by default. */
+  static allowsGuest(request: MockRequest): boolean {
+    const path = request.path ?? '';
+    return (request.method === 'GET' && (path === '/api/v1/me' || path === '/api/v1/tournaments' || path.startsWith('/api/v1/tournaments/')))
+      || path.startsWith('/api/v1/me/notifications') || path.startsWith('/api/v1/me/notification-preferences');
+  }
+
   missing(member: Member): MissingProfileField[] {
     const gaps: MissingProfileField[] = [];
+    if (guestOnly(member.roles)) return gaps; // guests only read their tournament
     if (!member.birthDate) gaps.push('birthDate');
     if (this.isPrivileged(member) && !this.pinState(member).pin) gaps.push('pin');
     return gaps;
@@ -411,7 +424,7 @@ export class MockDirectory {
   }
 
   private static roles(value: unknown): Role[] {
-    const all: readonly Role[] = ['ADMIN', 'BOARD', 'COACH', 'PLAYER', 'PARENT', 'VOLUNTEER'];
+    const all: readonly Role[] = ['ADMIN', 'BOARD', 'COACH', 'PLAYER', 'PARENT', 'VOLUNTEER', 'GUEST'];
     if (!Array.isArray(value) || value.some((r) => !all.includes(r))) return fail(400, 'request.invalid');
     return [...new Set(value as Role[])];
   }

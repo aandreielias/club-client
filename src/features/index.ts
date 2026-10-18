@@ -12,6 +12,7 @@ import { searchFeature } from './search/feature';
 import { settingsFeature } from './settings/feature';
 import { tasksFeature } from './tasks/feature';
 import { teamsFeature } from './teams/feature';
+import { tournamentsFeature } from './tournaments/feature';
 
 /**
  * Enabled features in sidebar order. A new feature = a folder with feature.ts (routes, messages),
@@ -24,6 +25,7 @@ export const features = new FeatureRegistry([
   filesFeature,
   inventoryFeature,
   locationsFeature,
+  tournamentsFeature,
   teamsFeature,
   notificationsFeature,
   membersFeature,

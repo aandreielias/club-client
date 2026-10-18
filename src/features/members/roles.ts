@@ -7,6 +7,7 @@ const ROLE_HUES: Readonly<Record<Role, Hue>> = {
   PLAYER: 'green',
   PARENT: 'orange',
   VOLUNTEER: 'brown',
+  GUEST: 'gray',
 };
 
 /** Tag colour of a club role. */

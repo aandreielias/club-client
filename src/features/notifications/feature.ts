@@ -11,8 +11,8 @@ import { notificationCenter } from './services';
 export const notificationsFeature: Feature = {
   id: 'notifications',
   routes: [
-    { path: '/notifications', component: NotificationsPage, nav: 'Benachrichtigungen', icon: 'notifications', badge: () => notificationCenter.unread },
-    { path: '/notifications/settings', component: NotificationSettingsPage },
+    { path: '/notifications', component: NotificationsPage, nav: 'Benachrichtigungen', icon: 'notifications', badge: () => notificationCenter.unread, guest: true },
+    { path: '/notifications/settings', component: NotificationSettingsPage, guest: true },
   ],
   windows: {
     message: { component: MessageView },

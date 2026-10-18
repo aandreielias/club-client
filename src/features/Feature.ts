@@ -27,6 +27,8 @@ export interface FeatureRoute {
   roles?: readonly Role[];
   /** Shown at the bottom of the sidebar (above "Abmelden") instead of in the reorderable main list. */
   navFooter?: boolean;
+  /** Also for tournament guests, who otherwise see no route (server: ActorArgumentResolver.allowsGuest). */
+  guest?: boolean;
   /** Count shown next to the sidebar label (e.g. unread items); read reactively. */
   badge?: () => number;
 }

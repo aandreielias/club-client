@@ -1,6 +1,7 @@
 import type { SessionStore } from '../../lib/session/SessionStore.svelte';
 import { MANAGERS, type Member, type Role } from '../../lib/types';
 
+/** GUEST is not granted here: guest accounts come from a tournament's teams. */
 const ALL_ROLES: readonly Role[] = ['ADMIN', 'BOARD', 'COACH', 'PLAYER', 'PARENT', 'VOLUNTEER'];
 
 /** Client-side mirror of MemberHandlers / SecurityHandlers; used only to show or hide actions. */

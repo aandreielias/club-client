@@ -8,6 +8,7 @@
   import OnboardingPage from './features/onboarding/OnboardingPage.svelte';
   import { auth, backStack, bus, commands, documentTitle, pendingDeletes, scrollMemory, directory, errors, keyboard, live, mainPane, preferences, router, session, split, splitPane, windows } from './lib/container';
   import PaneHost from './ui/PaneHost.svelte';
+  import { guestOnly } from './lib/types';
   import SplitDivider from './ui/SplitDivider.svelte';
   import Button from './ui/Button.svelte';
   import Centered from './ui/Centered.svelte';
@@ -47,6 +48,11 @@
   }
   $effect(() => {
     document.title = documentTitle.text;
+  });
+
+  // Tournament guests have no start page: they land on their tournament list (which opens their tournament).
+  $effect(() => {
+    if (app.screen === 'shell' && !app.page && guestOnly(session.member.roles)) untrack(() => router.replace('/tournaments'));
   });
 
   // Only the screen decides; whatever startSession reads must not restart it.

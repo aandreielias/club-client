@@ -39,6 +39,7 @@ export const SHORTCUTS = {
   'nav.files': { label: 'Zu den Dateien', group: 'Navigation', context: 'global', keys: 'g d', path: '/files' },
   'nav.inventory': { label: 'Zum Inventar', group: 'Navigation', context: 'global', keys: 'g i', path: '/inventory' },
   'nav.locations': { label: 'Zu den Orten', group: 'Navigation', context: 'global', keys: 'g o', path: '/locations' },
+  'nav.tournaments': { label: 'Zu den Turnieren', group: 'Navigation', context: 'global', keys: 'g r', path: '/tournaments' },
   'nav.teams': { label: 'Zu den Teams', group: 'Navigation', context: 'global', keys: 'g t', path: '/teams' },
   'nav.notifications': { label: 'Zu den Benachrichtigungen', group: 'Navigation', context: 'global', keys: 'g b', path: '/notifications' },
   'nav.members': { label: 'Zu den Mitgliedern', group: 'Navigation', context: 'global', keys: 'g m', path: '/members' },
