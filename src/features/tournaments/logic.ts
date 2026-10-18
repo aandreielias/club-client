@@ -38,7 +38,6 @@ export interface Standing {
   name: string;
   played: number;
   won: number;
-  drawn: number;
   lost: number;
   setsWon: number;
   setsLost: number;
@@ -59,16 +58,50 @@ export function tally(sets: readonly { home: number; away: number }[]) {
   };
 }
 
-/** Volleyball group table: points, wins, set difference, ball-point difference, the direct match, then the name. */
-export function standings(teams: ReadonlyMap<string, string>, results: readonly Result[], pointsWin: number, pointsDraw: number): Standing[] {
+/** Points a set is played to (server: Volleyball.target): 15 in the deciding set, else 25. */
+export const setTarget = (index: number, setsToWin: number): number => (index === 2 * setsToWin - 2 ? 15 : 25);
+
+export type SetsProblem = { code: 'tournament.set-invalid' | 'tournament.match-over' | 'tournament.match-open'; set: number };
+
+/**
+ * Why sets are no finished match by the usual rules (server: Volleyball.requireValid): a set goes to 25, the deciding
+ * set to 15, with two points ahead; the match ends when a team has `setsToWin` sets. Null when fine or empty (no result).
+ */
+export function setsProblem(sets: readonly { home: number; away: number }[], setsToWin: number): SetsProblem | null {
+  let home = 0;
+  let away = 0;
+  for (const [i, set] of sets.entries()) {
+    if (home === setsToWin || away === setsToWin) return { code: 'tournament.match-over', set: i };
+    const target = setTarget(i, setsToWin);
+    const winner = Math.max(set.home, set.away);
+    const loser = Math.min(set.home, set.away);
+    if (!((winner === target && loser <= target - 2) || (winner > target && winner - loser === 2))) return { code: 'tournament.set-invalid', set: i + 1 };
+    if (set.home > set.away) home++;
+    else away++;
+  }
+  return sets.length && home < setsToWin && away < setsToWin ? { code: 'tournament.match-open', set: sets.length } : null;
+}
+
+/** Table points of winner and loser: 3:0 for a clear win, 2:1 when it went to the deciding set. */
+export const tablePoints = (winnerSets: number, loserSets: number): [number, number] => (loserSets === winnerSets - 1 ? [2, 1] : [3, 0]);
+
+/** Won sets per lost set; Infinity without a lost one. */
+const ratio = (won: number, lost: number) => (lost ? won / lost : won ? Infinity : 0);
+
+/** Volleyball group table: points (3:0, 2:1), wins, set ratio, ball-point ratio, the direct match, then the name. */
+export function standings(teams: ReadonlyMap<string, string>, results: readonly Result[]): Standing[] {
   const rows = new Map<string, Standing>(
-    [...teams].map(([teamId, name]) => [teamId, { teamId, name, played: 0, won: 0, drawn: 0, lost: 0, setsWon: 0, setsLost: 0, ballsWon: 0, ballsLost: 0, points: 0 }]),
+    [...teams].map(([teamId, name]) => [teamId, { teamId, name, played: 0, won: 0, lost: 0, setsWon: 0, setsLost: 0, ballsWon: 0, ballsLost: 0, points: 0 }]),
   );
   const add = (row: Standing, won: number, lost: number, balls: number, ballsAgainst: number) => {
     row.played++;
-    if (won > lost) row.won++;
-    else if (won === lost) row.drawn++;
-    else row.lost++;
+    if (won > lost) {
+      row.won++;
+      row.points += tablePoints(won, lost)[0];
+    } else if (lost > won) {
+      row.lost++;
+      row.points += tablePoints(lost, won)[1];
+    }
     row.setsWon += won;
     row.setsLost += lost;
     row.ballsWon += balls;
@@ -82,7 +115,6 @@ export function standings(teams: ReadonlyMap<string, string>, results: readonly 
     add(away, r.awaySets!, r.homeSets!, r.awayPoints, r.homePoints);
   }
   const list = [...rows.values()];
-  list.forEach((row) => (row.points = row.won * pointsWin + row.drawn * pointsDraw));
   const headToHead = (a: string, b: string) => {
     let balance = 0;
     for (const r of results) {
@@ -92,12 +124,13 @@ export function standings(teams: ReadonlyMap<string, string>, results: readonly 
     }
     return -Math.sign(balance);
   };
+  const compare = (x: number, y: number) => (x === y ? 0 : x > y ? 1 : -1); // Infinity - Infinity would be NaN
   return list.sort(
     (a, b) =>
       b.points - a.points ||
       b.won - a.won ||
-      b.setsWon - b.setsLost - (a.setsWon - a.setsLost) ||
-      b.ballsWon - b.ballsLost - (a.ballsWon - a.ballsLost) ||
+      compare(ratio(b.setsWon, b.setsLost), ratio(a.setsWon, a.setsLost)) ||
+      compare(ratio(b.ballsWon, b.ballsLost), ratio(a.ballsWon, a.ballsLost)) ||
       headToHead(a.teamId, b.teamId) ||
       a.name.localeCompare(b.name, 'de', { sensitivity: 'base' }),
   );

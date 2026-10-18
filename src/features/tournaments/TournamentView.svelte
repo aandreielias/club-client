@@ -98,8 +98,8 @@
           {/if}
           <dt>Modus</dt>
           <dd>{t.groupCount} {t.groupCount === 1 ? 'Gruppe' : 'Gruppen'}, je {t.advancePerGroup} weiter in die KO-Runde</dd>
-          <dt>Punkte</dt>
-          <dd>Sieg {t.pointsWin}, Unentschieden {t.pointsDraw}</dd>
+          <dt>Spiele</dt>
+          <dd>{t.setsToWin === 3 ? 'Drei Gewinnsätze' : 'Zwei Gewinnsätze'}; Sieg {t.setsToWin}:{t.setsToWin - 1} gibt 2:1 Punkte, sonst 3:0</dd>
           <dt>Teams</dt>
           <dd>{t.teams.length}</dd>
         </dl>

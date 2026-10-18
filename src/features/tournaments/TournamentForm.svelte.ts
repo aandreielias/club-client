@@ -1,8 +1,8 @@
 import type { NewTournament } from './model';
 
-export type TournamentField = 'name' | 'dates' | 'groups' | 'points';
+export type TournamentField = 'name' | 'dates' | 'groups';
 
-/** A new tournament: name, days, place, groups and points; validation mirrors the server's Tournament. */
+/** A new tournament: name, days, place, groups and sets to win; validation mirrors the server's Tournament. */
 export class TournamentForm {
   name = $state('');
   startsOn = $state('');
@@ -10,8 +10,7 @@ export class TournamentForm {
   locationId = $state('');
   groupCount = $state(2);
   advancePerGroup = $state(2);
-  pointsWin = $state(3);
-  pointsDraw = $state(1);
+  setsToWin = $state(2);
   submitted = $state(false);
 
   readonly errors: Partial<Record<TournamentField, string>>;
@@ -42,8 +41,7 @@ export class TournamentForm {
       appointmentId: null,
       groupCount: this.groupCount,
       advancePerGroup: this.advancePerGroup,
-      pointsWin: this.pointsWin,
-      pointsDraw: this.pointsDraw,
+      setsToWin: this.setsToWin,
     };
   }
 
@@ -53,9 +51,6 @@ export class TournamentForm {
     if (!name || name.length > 120) errors.name = 'Name mit 1 bis 120 Zeichen angeben.';
     if (!this.startsOn || !this.endsOn || this.endsOn < this.startsOn) errors.dates = 'Das Ende darf nicht vor dem Beginn liegen.';
     if (this.qualifiers < 2 || this.qualifiers > 32) errors.groups = 'Insgesamt 2 bis 32 Teams in der KO-Runde.';
-    if (this.pointsWin < 1 || this.pointsWin > 10 || this.pointsDraw < 0 || this.pointsDraw >= this.pointsWin) {
-      errors.points = 'Sieg 1 bis 10 Punkte, Unentschieden weniger.';
-    }
     return errors;
   }
 }

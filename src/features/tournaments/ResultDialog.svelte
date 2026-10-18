@@ -4,16 +4,20 @@
   import Dialog from '../../ui/Dialog.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
-  import { tally } from './logic';
+  import { setsProblem, setTarget, tally } from './logic';
   import type { TournamentMatch } from './model';
   import type { TournamentModel } from './TournamentModel.svelte';
 
-  /** Volleyball result: the points of every set (up to five), plus kick-off and field. No sets = no result. */
+  /** Volleyball result by the usual rules: the points of every set, plus kick-off and field. No sets = no result. */
   let { match, model, onclose }: { match: TournamentMatch; model: TournamentModel; onclose: () => void } = $props();
 
-  const MAX_SETS = 5;
   // svelte-ignore state_referenced_locally
-  let sets = $state<{ home: number | null; away: number | null }[]>(match.sets.length ? match.sets.map((s) => ({ ...s })) : [{ home: null, away: null }, { home: null, away: null }]);
+  const setsToWin = model.tournament.value?.setsToWin ?? 2;
+  const maxSets = 2 * setsToWin - 1;
+  // svelte-ignore state_referenced_locally
+  let sets = $state<{ home: number | null; away: number | null }[]>(
+    match.sets.length ? match.sets.map((s) => ({ ...s })) : Array.from({ length: setsToWin }, () => ({ home: null, away: null })),
+  );
   // svelte-ignore state_referenced_locally
   let start = $state(match.startsAt ? session.clock.toLocal(match.startsAt) : '');
   // svelte-ignore state_referenced_locally
@@ -23,14 +27,20 @@
   /** Sets with both numbers; half-filled rows are an error, empty rows are ignored. */
   const filled = $derived(sets.filter((s) => point(s.home) !== null && point(s.away) !== null) as { home: number; away: number }[]);
   const half = $derived(sets.some((s) => (point(s.home) === null) !== (point(s.away) === null)));
-  const level = $derived(filled.some((s) => s.home === s.away));
   const won = $derived(tally(filled));
-  const knockoutDraw = $derived(match.stage === 'KO' && filled.length > 0 && won.homeSets === won.awaySets);
-  const error = $derived(half ? 'Bei jedem Satz beide Punkte eintragen.' : level ? 'Ein Satz endet nie unentschieden.' : knockoutDraw ? 'Ein KO-Spiel braucht einen Sieger.' : null);
+  const problem = $derived(setsProblem(filled, setsToWin));
+  /** Open matches are no mistake yet: they only block saving. */
+  const open = $derived(problem?.code === 'tournament.match-open');
+  const error = $derived(
+    half ? 'Bei jedem Satz beide Punkte eintragen.'
+    : problem?.code === 'tournament.set-invalid' ? `Satz ${problem.set} geht bis ${setTarget(problem.set - 1, setsToWin)}, mit 2 Punkten Vorsprung.`
+    : problem?.code === 'tournament.match-over' ? `Nach Satz ${problem.set} hat ein Team schon ${setsToWin} Sätze.`
+    : null,
+  );
 
   async function save(event: SubmitEvent) {
     event.preventDefault();
-    if (error) return;
+    if (error || open) return;
     const result = { sets: filled, startsAt: start ? session.clock.toInstant(start) : null, field: field.trim() || null };
     if (await model.setResult(match.id, result)) onclose();
   }
@@ -53,17 +63,19 @@
       {/each}
     </div>
     <div class="row between">
-      {#if sets.length < MAX_SETS}<Button size="sm" icon="add" onclick={() => (sets = [...sets, { home: null, away: null }])}>Satz hinzufügen</Button>{:else}<span></span>{/if}
+      {#if sets.length < maxSets}<Button size="sm" icon="add" onclick={() => (sets = [...sets, { home: null, away: null }])}>Satz hinzufügen</Button>{:else}<span></span>{/if}
       <span class="muted">Sätze <strong class="won">{won.homeSets ?? 0}:{won.awaySets ?? 0}</strong></span>
     </div>
-    {#if error}<p class="error" role="alert">{error}</p>{/if}
+    {#if error}<p class="error" role="alert">{error}</p>
+    {:else if open}<p class="muted note">Ein Team braucht {setsToWin} Gewinnsätze.</p>
+    {:else}<p class="muted note">Sätze bis 25, Entscheidungssatz bis 15, immer 2 Punkte Vorsprung.</p>{/if}
     <div class="grid-2">
       <Field label="Anpfiff (optional)"><input type="datetime-local" bind:value={start} /></Field>
       <Field label="Feld (optional)"><input bind:value={field} maxlength="40" placeholder="z. B. Feld 1" /></Field>
     </div>
     <ErrorNote error={model.action.error} />
     <div class="row">
-      <Button type="submit" variant="primary" busy={model.action.busy} disabled={!!error}>Ergebnis speichern</Button>
+      <Button type="submit" variant="primary" busy={model.action.busy} disabled={!!error || open}>Ergebnis speichern</Button>
       <Button variant="ghost" onclick={onclose}>Abbrechen</Button>
     </div>
   </form>
@@ -97,6 +109,10 @@
   }
   .won {
     font-variant-numeric: tabular-nums;
+  }
+  .note {
+    margin: 0;
+    font-size: var(--font-size-small);
   }
   .error {
     margin: 0;

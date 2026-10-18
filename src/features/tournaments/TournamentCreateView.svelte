@@ -47,10 +47,10 @@
       <Field label="Weiter je Gruppe" hint="{form.qualifiers} Teams in der KO-Runde.">
         <Select bind:value={() => String(form.advancePerGroup), (v) => (form.advancePerGroup = Number(v))} options={numbers(1, 4)} />
       </Field>
-      <Field label="Punkte für einen Sieg" error={form.error('points')}>
-        <input type="number" bind:value={form.pointsWin} min="1" max="10" />
+      <Field label="Spiele" hint="Sätze bis 25, Entscheidungssatz bis 15. Tabelle: 3:0 Punkte für einen klaren Sieg, 2:1 nach dem Entscheidungssatz.">
+        <Select bind:value={() => String(form.setsToWin), (v) => (form.setsToWin = Number(v))}
+          options={[{ value: '2', label: 'Zwei Gewinnsätze (Best of 3)' }, { value: '3', label: 'Drei Gewinnsätze (Best of 5)' }]} />
       </Field>
-      <Field label="Punkte für ein Unentschieden"><input type="number" bind:value={form.pointsDraw} min="0" max="9" /></Field>
     </div>
     <ErrorNote error={create.save.error} />
     <div class="row">

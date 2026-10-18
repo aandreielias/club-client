@@ -3,7 +3,7 @@ import { directory, type MockDirectory } from '../../lib/mock/core';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import { guestOnly, MANAGERS, PRIVILEGED, type Member } from '../../lib/types';
-import { firstRound, koRounds, roundRobin, seeds, standings, tally } from './logic';
+import { firstRound, koRounds, roundRobin, seeds, setsProblem, standings, tally } from './logic';
 import type { Guest, NewTournament, ResultInput, SetScore, TeamInput, Tournament, TournamentMatch, TournamentSummary, TournamentTeam } from './model';
 
 const fail = MockServer.fail;
@@ -47,7 +47,7 @@ export class MockTournaments {
     const t = MockTournaments.validated({
       id: crypto.randomUUID(), name: body.name ?? '', startsOn: body.startsOn ?? '', endsOn: body.endsOn ?? '', locationId: body.locationId ?? null,
       appointmentId: body.appointmentId ?? null, groupCount: body.groupCount ?? 2, advancePerGroup: body.advancePerGroup ?? 2,
-      pointsWin: body.pointsWin ?? 3, pointsDraw: body.pointsDraw ?? 1, status: 'DRAFT', createdAt: now,
+      setsToWin: body.setsToWin ?? 2, status: 'DRAFT', createdAt: now,
     });
     this.tournaments.data.push(t);
     this.teams.data[t.id] = [];
@@ -59,7 +59,7 @@ export class MockTournaments {
   update(viewer: Member, id: string, patch: Partial<NewTournament>): Tournament {
     this.people.requirePrivileged(viewer, PRIVILEGED);
     const t = this.find(id);
-    const settings = (['groupCount', 'advancePerGroup', 'pointsWin', 'pointsDraw'] as const).some((k) => patch[k] != null);
+    const settings = (['groupCount', 'advancePerGroup', 'setsToWin'] as const).some((k) => patch[k] != null);
     if (settings && t.status !== 'DRAFT') fail(409, 'tournament.drawn');
     const defined = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== null && v !== undefined));
     Object.assign(t, MockTournaments.validated({ ...t, ...defined }));
@@ -143,6 +143,8 @@ export class MockTournaments {
     for (const s of sets) {
       if (![s.home, s.away].every((p) => Number.isInteger(p) && p >= 0 && p <= 99) || s.home === s.away) fail(400, 'tournament.set-invalid');
     }
+    const problem = setsProblem(sets, t.setsToWin);
+    if (problem) fail(400, problem.code);
     const { homeSets: home, awaySets: away } = tally(sets);
     const scoring = JSON.stringify(sets) !== JSON.stringify(m.sets);
     if (scoring) {
@@ -183,8 +185,7 @@ export class MockTournaments {
       .map((group) => ({
         label: group,
         standings: standings(new Map(teams.filter((team) => team.group === group).map((team) => [team.id, team.name])),
-          matches.filter((m) => m.stage === 'GROUP' && m.group === group).map((m) => ({ home: m.homeId, away: m.awayId, ...tally(m.sets) })),
-          t.pointsWin, t.pointsDraw),
+          matches.filter((m) => m.stage === 'GROUP' && m.group === group).map((m) => ({ home: m.homeId, away: m.awayId, ...tally(m.sets) }))),
       }))
       .filter((g) => g.standings.length);
   }
@@ -239,18 +240,36 @@ export class MockTournaments {
     return { sets, homeScore: homeSets, awayScore: awaySets };
   }
 
-  /** Matches a browser stored before sets existed get sets that give the same result. */
+  /**
+   * Data a browser stored under older rules: tournaments get best of 3, and matches without valid sets get sets that
+   * give the same result by the rules (or lose a result no volleyball match can have).
+   */
   private upgradeStored(): void {
     let changed = false;
-    for (const list of Object.values(this.matches.data)) {
-      for (const m of list.filter((x) => !Array.isArray(x.sets))) {
-        m.sets = m.homeScore === null || m.awayScore === null ? []
-          : [...Array.from({ length: m.homeScore }, () => ({ home: 25, away: 20 })), ...Array.from({ length: m.awayScore }, () => ({ home: 20, away: 25 }))];
-        if (m.homeScore === m.awayScore && m.stage === 'KO') m.sets = [];
+    for (const t of this.tournaments.data.filter((x) => !x.setsToWin)) {
+      Object.assign(t, { setsToWin: 2, pointsWin: undefined, pointsDraw: undefined });
+      changed = true;
+    }
+    for (const t of this.tournaments.data) {
+      for (const m of (this.matches.data[t.id] ?? []).filter((x) => !Array.isArray(x.sets) || setsProblem(x.sets, t.setsToWin))) {
+        Object.assign(m, MockTournaments.scores(MockTournaments.setsFor(m.homeScore, m.awayScore, t.setsToWin)));
         changed = true;
       }
     }
-    if (changed) this.matches.save();
+    if (changed) {
+      this.tournaments.save();
+      this.matches.save();
+    }
+  }
+
+  /** Sets by the rules for a score in sets: the loser's first, so the winner takes the last; none for an impossible score. */
+  private static setsFor(home: number | null, away: number | null, setsToWin: number): SetScore[] {
+    if (home === null || away === null || Math.max(home, away) !== setsToWin || Math.min(home, away) >= setsToWin) return [];
+    return Array.from({ length: home + away }, (_, i) => {
+      const homeTakes = i < Math.min(home, away) ? home < away : home > away;
+      const [win, lose] = i === 2 * setsToWin - 2 ? [15, 10] : [25, 20];
+      return homeTakes ? { home: win, away: lose } : { home: lose, away: win };
+    });
   }
 
   private static ko(round: number, slot: number, homeId: string | null, awayId: string | null): TournamentMatch {
@@ -265,7 +284,7 @@ export class MockTournaments {
     if (t.groupCount < 1 || t.groupCount > 8) fail(400, 'tournament.groups-invalid');
     const qualifiers = t.groupCount * t.advancePerGroup;
     if (t.advancePerGroup < 1 || t.advancePerGroup > 4 || qualifiers < 2 || qualifiers > 32) fail(400, 'tournament.advance-invalid');
-    if (t.pointsWin < 1 || t.pointsWin > 10 || t.pointsDraw < 0 || t.pointsDraw >= t.pointsWin) fail(400, 'tournament.points-invalid');
+    if (t.setsToWin !== 2 && t.setsToWin !== 3) fail(400, 'tournament.sets-invalid');
     return { ...t, name };
   }
 
@@ -282,7 +301,7 @@ export class MockTournaments {
         startsAt: null, field: group === 'A' ? 'Feld 1' : 'Feld 2' });
     return {
       tournaments: [{ id: 'tm-herbst', name: 'Herbstcup 2026', startsOn: day(21), endsOn: day(21), locationId: 'l-west', appointmentId: null,
-        groupCount: 2, advancePerGroup: 2, pointsWin: 3, pointsDraw: 1, status: 'GROUPS', createdAt: new Date().toISOString() } as StoredTournament],
+        groupCount: 2, advancePerGroup: 2, setsToWin: 2, status: 'GROUPS', createdAt: new Date().toISOString() } as StoredTournament],
       teams: { 'tm-herbst': teams },
       matches: {
         'tm-herbst': [

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { firstRound, koRounds, roundName, roundRobin, seeds, standings, tally } from './logic';
+import { firstRound, koRounds, roundName, roundRobin, seeds, setsProblem, standings, tablePoints, tally } from './logic';
 
 describe('tournament logic', () => {
   it('pairs everyone once per group', () => {
@@ -11,21 +11,37 @@ describe('tournament logic', () => {
     }
   });
 
-  it('ranks volleyball tables by points, wins, sets, then ball points', () => {
+  it('gives 3:0 or 2:1 table points and ranks by points, wins, set ratio, then ball-point ratio', () => {
     const teams = new Map([['a', 'A'], ['b', 'B'], ['c', 'C']]);
     const result = (home: string, away: string, sets: { home: number; away: number }[]) => ({ home, away, ...tally(sets) });
     let table = standings(teams, [
       result('c', 'b', [{ home: 25, away: 20 }, { home: 25, away: 10 }]),
-      result('a', 'b', [{ home: 25, away: 20 }, { home: 20, away: 25 }]),
+      result('a', 'b', [{ home: 25, away: 20 }, { home: 20, away: 25 }, { home: 15, away: 13 }]),
       result('a', 'c', []),
-    ], 3, 1);
+    ]);
     expect(table.map((r) => r.name)).toEqual(['C', 'A', 'B']);
-    expect(table[1]).toMatchObject({ played: 1, drawn: 1, setsWon: 1, setsLost: 1, ballsWon: 45, points: 1 });
+    expect(table.map((r) => r.points)).toEqual([3, 2, 1]);
+    expect(table[1]).toMatchObject({ played: 1, won: 1, setsWon: 2, setsLost: 1, ballsWon: 60 });
     table = standings(teams, [
       result('a', 'c', [{ home: 25, away: 20 }, { home: 25, away: 20 }]),
       result('b', 'c', [{ home: 25, away: 15 }, { home: 25, away: 15 }]),
-    ], 3, 1);
+    ]);
     expect(table.map((r) => r.name)).toEqual(['B', 'A', 'C']);
+  });
+
+  it('checks sets by the usual volleyball rules', () => {
+    const sets = (...points: number[]) => Array.from({ length: points.length / 2 }, (_, i) => ({ home: points[2 * i], away: points[2 * i + 1] }));
+    expect(setsProblem([], 3)).toBeNull();
+    expect(setsProblem(sets(25, 23, 30, 28, 25, 10), 3)).toBeNull();
+    expect(setsProblem(sets(20, 25, 25, 18, 25, 0, 23, 25, 16, 14), 3)).toBeNull();
+    expect(setsProblem(sets(25, 20, 18, 25, 15, 13), 2)).toBeNull();
+    expect(setsProblem(sets(25, 24, 25, 0, 25, 0), 3)).toEqual({ code: 'tournament.set-invalid', set: 1 });
+    expect(setsProblem(sets(25, 20, 30, 27), 2)).toEqual({ code: 'tournament.set-invalid', set: 2 });
+    expect(setsProblem(sets(25, 20, 20, 25, 25, 20), 2)).toEqual({ code: 'tournament.set-invalid', set: 3 });
+    expect(setsProblem(sets(25, 20, 25, 20), 3)).toEqual({ code: 'tournament.match-open', set: 2 });
+    expect(setsProblem(sets(25, 20, 25, 20, 25, 20), 2)).toEqual({ code: 'tournament.match-over', set: 2 });
+    expect(tablePoints(3, 2)).toEqual([2, 1]);
+    expect(tablePoints(2, 0)).toEqual([3, 0]);
   });
 
   it('seeds the knockout tree so a group meets itself late', () => {
@@ -53,7 +69,7 @@ describe('mock tournaments', () => {
     const semis = state.matches.filter((m) => m.stage === 'KO' && m.round === 1);
     expect(semis).toHaveLength(2);
     expect(() => tournaments.setResult(member('trainer'), t.id, semis[0].id, { sets: [{ home: 25, away: 20 }, { home: 20, away: 25 }], startsAt: null, field: null }))
-      .toThrow(expect.objectContaining({ code: 'tournament.ko-draw' }));
+      .toThrow(expect.objectContaining({ code: 'tournament.match-open' }));
     tournaments.setResult(member('trainer'), t.id, semis[0].id, { sets: [{ home: 25, away: 20 }, { home: 25, away: 22 }], startsAt: null, field: null });
     state = tournaments.setResult(member('trainer'), t.id, semis[1].id, { sets: [{ home: 20, away: 25 }, { home: 18, away: 25 }], startsAt: null, field: null });
     const final = state.matches.find((m) => m.stage === 'KO' && m.round === 2)!;

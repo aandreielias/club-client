@@ -40,7 +40,6 @@ export interface StandingRow {
   name: string;
   played: number;
   won: number;
-  drawn: number;
   lost: number;
   setsWon: number;
   setsLost: number;
@@ -72,8 +71,8 @@ export interface Tournament {
   appointmentId: string | null;
   groupCount: number;
   advancePerGroup: number;
-  pointsWin: number;
-  pointsDraw: number;
+  /** Sets a team needs to win a match: 2 (best of 3) or 3 (best of 5). */
+  setsToWin: number;
   status: TournamentStatus;
   teams: TournamentTeam[];
   groups: TournamentGroup[];
@@ -99,8 +98,7 @@ export interface NewTournament {
   appointmentId: string | null;
   groupCount: number;
   advancePerGroup: number;
-  pointsWin: number;
-  pointsDraw: number;
+  setsToWin: number;
 }
 
 export interface TeamInput {

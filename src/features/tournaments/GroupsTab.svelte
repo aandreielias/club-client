@@ -27,7 +27,7 @@
           <thead>
             <tr>
               <th class="num" title="Platz">Pl</th><th>Team</th><th class="num" title="Spiele">Sp</th><th class="num" title="Siege">S</th>
-              <th class="num" title="Unentschieden">U</th><th class="num" title="Niederlagen">N</th><th class="num">Sätze</th>
+              <th class="num" title="Niederlagen">N</th><th class="num">Sätze</th>
               <th class="num" title="Ballpunkte">Bälle</th><th class="num" title="Tabellenpunkte">Pkt</th>
             </tr>
           </thead>
@@ -36,7 +36,7 @@
               <tr class:qualifies={i < tournament.advancePerGroup}>
                 <td class="num">{i + 1}</td>
                 <td class="team">{row.name}</td>
-                <td class="num">{row.played}</td><td class="num">{row.won}</td><td class="num">{row.drawn}</td><td class="num">{row.lost}</td>
+                <td class="num">{row.played}</td><td class="num">{row.won}</td><td class="num">{row.lost}</td>
                 <td class="num" title="Differenz {signed(row.setsWon - row.setsLost)}">{row.setsWon}:{row.setsLost}</td>
                 <td class="num" title="Differenz {signed(row.ballsWon - row.ballsLost)}">{row.ballsWon}:{row.ballsLost}</td>
                 <td class="num points">{row.points}</td>
