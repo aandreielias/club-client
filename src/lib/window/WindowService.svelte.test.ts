@@ -113,3 +113,24 @@ describe('WindowService', () => {
     expect(windows.trailDepth).toBe(0);
   });
 });
+
+describe('WindowService docked size', () => {
+  const limits = { minSidePx: 320, minBottomPx: 200, pageMinWidthPx: 360, pageMinHeightPx: 160 };
+
+  it('keeps the size within the window minimum and what the page needs', () => {
+    const viewport = { width: 1200, height: 800 };
+    expect(WindowService.clampSize('side', 100, viewport, limits)).toBe(320);
+    expect(WindowService.clampSize('side', 1000, viewport, limits)).toBe(840);
+    expect(WindowService.clampSize('bottom', 500, viewport, limits)).toBe(500);
+    expect(WindowService.clampSize('bottom', 790, viewport, limits)).toBe(640);
+  });
+
+  it('remembers the dragged size per dock and resets to the default', () => {
+    const { windows, saved } = setup();
+    windows.setSize('side', 480.4);
+    expect(windows.size).toEqual({ side: 480, bottom: null });
+    expect(saved.get('window-size')).toEqual({ side: 480, bottom: null });
+    windows.setSize('side', null);
+    expect(windows.size.side).toBeNull();
+  });
+});

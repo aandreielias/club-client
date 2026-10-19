@@ -368,6 +368,8 @@ export const settings = {
     /** Records offered under "Zuletzt geöffnet" in the command palette. */
     recentRecords: 8,
     defaultDock: 'center' as 'center' | 'side' | 'bottom',
+    /** Dragging the inner edge of a docked window: its smallest size, what the page keeps, arrow-key step. */
+    resize: { minSidePx: 320, minBottomPx: 200, pageMinWidthPx: 360, pageMinHeightPx: 160, stepPx: 24 },
   },
 
   /** Key handling; the shortcuts themselves are in src/shortcuts.ts. */

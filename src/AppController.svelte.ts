@@ -16,6 +16,7 @@ import { APP_ERROR, NAVIGATE, WINDOW_CLOSE, WINDOW_OPEN } from './channels';
 import { MEMBERSHIP_CHANGED } from './features/teams/events';
 import { Router, type RouteParams } from './lib/router/Router.svelte';
 import type { Pane } from './lib/split/Pane';
+import type { PageNavigator } from './lib/navigation/PageNavigator';
 import type { SplitView } from './lib/split/SplitView.svelte';
 import type { SessionStore } from './lib/session/SessionStore.svelte';
 import { guestOnly } from './lib/types';
@@ -41,6 +42,7 @@ export interface AppDependencies {
   backStack: BackStack;
   split: SplitView;
   splitPane: Pane;
+  pageNavigator: PageNavigator;
 }
 
 /** A resolved page: what to render and with which route parameters. */
@@ -149,7 +151,7 @@ export class AppController {
         .filter(([, definition]) => 'path' in definition)
         .map(([id, definition]) => {
           const path = (definition as { path: string }).path;
-          return [id, { run: () => bus.publish(NAVIGATE, { path }), when: () => this.allowedRoutes.some((r) => r.path === path) }];
+          return [id, { run: () => this.deps.pageNavigator.go(path), when: () => this.allowedRoutes.some((r) => r.path === path) }];
         }),
     );
     return commands.register({

@@ -4,7 +4,7 @@
   import { SHORTCUTS, type CommandId } from '../shortcuts';
   import { tick } from 'svelte';
   import { MediaQuery } from 'svelte/reactivity';
-  import { bus, commands, keyboard, keymap, motion, preferences } from '../lib/container';
+  import { bus, commands, keyboard, keymap, motion, pageNavigator, preferences } from '../lib/container';
   import { settings } from '../settings';
   import { SPLIT_OPEN } from '../lib/split/SplitView.svelte';
   import { menu } from './contextMenu';
@@ -52,6 +52,15 @@
   /** A nav item is active on its own path and on its sub-paths ('/calendar/42' → '/calendar'). */
   function isActive(path: string): boolean {
     return path === '/' ? current === '/' : current === path || current.startsWith(`${path}/`);
+  }
+
+  /** A plain left click switches the page in the pane last used and keeps a docked window; other clicks (new tab) stay native. */
+  function go(event: MouseEvent, path: string) {
+    open = false;
+    flyout = null;
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    pageNavigator.go(path);
   }
 
   /** A group row is active while one of its tabs is. */
@@ -110,7 +119,7 @@
 
 {#snippet tab(item: NavItem)}
   <a href="#{item.path}" class:active={isActive(item.path)} aria-current={isActive(item.path) ? 'page' : undefined}
-    {@attach tooltip(`Zu ${item.label}${navKeys(item.path)}`)} onclick={() => ((open = false), (flyout = null))}
+    {@attach tooltip(`Zu ${item.label}${navKeys(item.path)}`)} onclick={(e) => go(e, item.path)}
     {@attach menu(() => [{ label: 'In geteilter Ansicht öffnen', icon: 'split', run: () => bus.publish(SPLIT_OPEN, { path: item.path }) }])}>
     {#if item.icon}<Icon name={item.icon} />{/if}
     <span class="label">{item.label}</span>
@@ -147,7 +156,7 @@
       {#if item.children}
         <li class="group" onpointerenter={() => openFlyout(item.key)} onpointerleave={() => closeFlyout()} onfocusout={leaveFlyout}>
           <a href="#{item.path}" data-group={item.key} class:active={isRowActive(item)} aria-haspopup="true" aria-expanded={flyout === item.key}
-            onclick={() => ((open = false), (flyout = null))} onkeydown={(e) => groupKeys(e, item)}>
+            onclick={(e) => go(e, item.path)} onkeydown={(e) => groupKeys(e, item)}>
             {#if item.icon}<Icon name={item.icon} />{/if}
             <span class="label">{item.label}</span>
             {#if item.badge}<span class="badge">{item.badge}<span class="visually-hidden"> neu</span></span>{/if}
@@ -181,14 +190,14 @@
     </button>
     {#each items.filter((i) => i.footer) as item (item.path)}
       <a href="#{item.path}" class:active={isActive(item.path)} aria-current={isActive(item.path) ? 'page' : undefined}
-        {@attach tooltip(`Zu ${item.label}${navKeys(item.path)}`)} onclick={() => (open = false)}>
+        {@attach tooltip(`Zu ${item.label}${navKeys(item.path)}`)} onclick={(e) => go(e, item.path)}>
         {#if item.icon}<Icon name={item.icon} />{/if}
         <span class="label">{item.label}</span>
       </a>
     {/each}
     <div class="user">
       <a class="profile" href="#/account" class:active={isActive('/account')} aria-current={isActive('/account') ? 'page' : undefined}
-        {@attach tooltip(`Mein Konto${navKeys('/account')}`)} onclick={() => (open = false)}>
+        {@attach tooltip(`Mein Konto${navKeys('/account')}`)} onclick={(e) => go(e, '/account')}>
         <span class="avatar" aria-hidden="true">{user.split(' ').map((w) => w[0]).join('').slice(0, 2)}</span>
         <span class="label">{user}</span>
       </a>

@@ -14,6 +14,18 @@ export interface WindowTarget {
   id: string;
 }
 
+export interface DockSizes {
+  side: number | null;
+  bottom: number | null;
+}
+
+export interface ResizeLimits {
+  minSidePx: number;
+  minBottomPx: number;
+  pageMinWidthPx: number;
+  pageMinHeightPx: number;
+}
+
 /** Opens a record in the window, optionally moving the window to `dock` first. */
 export const WINDOW_OPEN = defineEvent<WindowTarget & { dock?: Dock }>('ui/window/open');
 export const WINDOW_CLOSE = defineEvent('ui/window/close');
@@ -53,8 +65,11 @@ export interface WindowContent {
 export class WindowService {
   static readonly PARAM = 'open';
   private static readonly DOCK_KEY = 'window-dock';
+  private static readonly SIZE_KEY = 'window-size';
 
   dock = $state<Dock>('center');
+  /** Docked width (side) and height (bottom) in px, dragged at the inner edge; null keeps the theme's default. */
+  size = $state<DockSizes>({ side: null, bottom: null });
   title = $state('');
   readonly current: WindowTarget | null;
 
@@ -84,6 +99,8 @@ export class WindowService {
     bus.subscribe(WINDOW_CLOSE, () => this.close());
     const stored = store.get<Dock>(WindowService.DOCK_KEY);
     this.dock = stored && DOCKS.includes(stored) ? stored : defaultDock;
+    const sizes = store.get<Partial<DockSizes>>(WindowService.SIZE_KEY);
+    this.size = { side: WindowService.px(sizes?.side), bottom: WindowService.px(sizes?.bottom) };
     this.current = $derived(this.parse(this.router.query.get(WindowService.PARAM)));
   }
 
@@ -142,6 +159,21 @@ export class WindowService {
     this.store.set(WindowService.DOCK_KEY, dock);
   }
 
+  setSize(dock: Exclude<Dock, 'center'>, px: number | null): void {
+    this.size = { ...this.size, [dock]: px === null ? null : Math.round(px) };
+    this.store.set(WindowService.SIZE_KEY, this.size);
+  }
+
+  /** A docked size within its limits for this viewport (the page next to it stays usable). */
+  static clampSize(dock: Exclude<Dock, 'center'>, px: number, viewport: { width: number; height: number }, limits: ResizeLimits): number {
+    const [min, max] = dock === 'side' ? [limits.minSidePx, viewport.width - limits.pageMinWidthPx] : [limits.minBottomPx, viewport.height - limits.pageMinHeightPx];
+    return Math.max(min, Math.min(px, max));
+  }
+
+  private static px(value: unknown): number | null {
+    return typeof value === 'number' && value > 0 ? value : null;
+  }
+
   /** Handle for the content currently shown. */
   handle(): WindowHandle {
     return {
@@ -157,6 +189,11 @@ export class WindowService {
         this.router.navigate(path);
       },
     };
+  }
+
+  /** The window stays open on another page: closing it must not go back in history to the old page. */
+  keepAcrossNavigation(): void {
+    this.#pushed = false;
   }
 
   /** Called when history moved without this service (Back/Forward): the pushed entry is gone. */

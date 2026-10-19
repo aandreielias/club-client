@@ -23,6 +23,8 @@ export class Router {
   query = $state.raw(new URLSearchParams());
 
   #started = false;
+  /** Path shown or being shown: set before the View Transition applies it (async), so the hashchange after navigate() starts no second one. */
+  #showing = '/';
   /** Path the member already agreed to leave for (the second hashchange must not ask again). */
   #allowed: string | null = null;
 
@@ -101,16 +103,21 @@ export class Router {
     const [raw, query = ''] = location.hash.slice(1).split('?');
     const path = raw || '/';
     const apply = () => {
+      this.#showing = path;
       this.path = path;
       this.query = new URLSearchParams(query);
     };
-    if (!this.#started || path === this.path) return apply();
+    const change = () => {
+      this.#showing = path;
+      this.transition(apply);
+    };
+    if (!this.#started || path === this.#showing) return apply();
     if (this.#allowed === path) {
       this.#allowed = null;
-      return this.transition(apply);
+      return change();
     }
     const answer = this.mayLeave();
-    if (answer === true) return this.transition(apply);
+    if (answer === true) return change();
     // Not yet: put the old address back, then follow the link once the member agrees.
     const target = location.hash;
     history.replaceState(null, '', `#${this.withQuery({})}`);

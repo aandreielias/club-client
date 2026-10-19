@@ -2,11 +2,13 @@
   import { tick, untrack } from 'svelte';
   import { backStack, bus, documentTitle, motion, recentRecords, stepUp, windows } from '../lib/container';
   import { WINDOW_CLOSE } from '../channels';
-  import { type Dock } from '../lib/window/WindowService.svelte';
+  import { WindowService, type Dock } from '../lib/window/WindowService.svelte';
+  import { innerHeight, innerWidth } from 'svelte/reactivity/window';
+  import { settings } from '../settings';
   import Button from './Button.svelte';
   import { provideWindowHandle } from './windowContext';
   import ChoiceGroup, { type Choice } from './ChoiceGroup.svelte';
-  import { withKeys } from './tooltip';
+  import { tooltip, withKeys } from './tooltip';
 
   /**
    * Renders the single detail window. Placement (center, side, bottom) animates between positions;
@@ -66,6 +68,52 @@
     else delete root.dataset.window;
     return () => delete root.dataset.window;
   });
+
+  // A dragged size overrides the theme's docked width/height; the page margins (App.svelte) follow.
+  const viewport = $derived({ width: innerWidth.current ?? 0, height: innerHeight.current ?? 0 });
+  $effect(() => {
+    const style = document.documentElement.style;
+    for (const [dock, property] of [['side', '--window-side-width'], ['bottom', '--window-bottom-height']] as const) {
+      const px = windows.size[dock];
+      if (px === null) style.removeProperty(property);
+      else style.setProperty(property, `${WindowService.clampSize(dock, px, viewport, settings.window.resize)}px`);
+    }
+  });
+
+  /** Dragging the inner edge (left at the side, top at the bottom); the page follows without animating. */
+  function startResize(event: PointerEvent) {
+    const dock = windows.dock;
+    if (dock === 'center') return;
+    const grip = event.currentTarget as HTMLElement;
+    event.preventDefault();
+    grip.setPointerCapture(event.pointerId);
+    const root = document.documentElement;
+    root.dataset.windowResizing = '';
+    const move = (e: PointerEvent) => {
+      const px = dock === 'side' ? window.innerWidth - e.clientX : window.innerHeight - e.clientY;
+      windows.setSize(dock, WindowService.clampSize(dock, px, viewport, settings.window.resize));
+    };
+    const end = () => {
+      delete root.dataset.windowResizing;
+      grip.removeEventListener('pointermove', move);
+      grip.removeEventListener('pointerup', end);
+      grip.removeEventListener('pointercancel', end);
+    };
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', end);
+    grip.addEventListener('pointercancel', end);
+  }
+
+  function resizeKey(event: KeyboardEvent) {
+    const dock = windows.dock;
+    if (dock === 'center' || !element) return;
+    const grow = dock === 'side' ? { ArrowLeft: 1, ArrowRight: -1 }[event.key] : { ArrowUp: 1, ArrowDown: -1 }[event.key];
+    if (!grow) return;
+    event.preventDefault();
+    const box = element.getBoundingClientRect();
+    const px = (dock === 'side' ? box.width : box.height) + grow * settings.window.resize.stepPx;
+    windows.setSize(dock, WindowService.clampSize(dock, px, viewport, settings.window.resize));
+  }
 
   $effect(() => {
     documentTitle.window = target ? windows.title : '';
@@ -157,6 +205,15 @@
     in:enter
     out:enter
   >
+    {#if !modal}
+      <!-- ARIA window splitter: a focusable separator with a value is interactive. -->
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+      <div class="resize" role="separator" tabindex="0" aria-orientation={windows.dock === 'side' ? 'vertical' : 'horizontal'}
+        aria-label={windows.dock === 'side' ? 'Breite des Fensters ändern' : 'Höhe des Fensters ändern'}
+        aria-valuenow={windows.size[windows.dock === 'side' ? 'side' : 'bottom'] ?? undefined}
+        onpointerdown={startResize} onkeydown={resizeKey} ondblclick={() => windows.setSize(windows.dock === 'side' ? 'side' : 'bottom', null)}
+        {@attach tooltip('Ziehen zum Ändern der Größe, Doppelklick: Standardgröße')}></div>
+    {/if}
     <header>
       <div class="heading">
         {#if windows.trailDepth}
@@ -243,8 +300,34 @@
     height: 100dvh;
     border-radius: 0;
   }
-  :global([data-layout='compact']) .docks {
+  :global([data-layout='compact']) .docks,
+  :global([data-layout='compact']) .resize {
     display: none;
+  }
+  .resize {
+    position: absolute;
+    z-index: 1;
+    touch-action: none;
+  }
+  .side .resize {
+    inset: 0 auto 0 0;
+    width: 6px;
+    cursor: col-resize;
+  }
+  .bottom .resize {
+    inset: 0 0 auto;
+    height: 6px;
+    cursor: row-resize;
+  }
+  .resize:hover,
+  .resize:focus-visible {
+    background: var(--color-accent-soft);
+    outline: none;
+  }
+  /* While dragging, size follows the pointer at once. */
+  :global(:root[data-window-resizing]) .window,
+  :global(:root[data-window-resizing] main) {
+    transition: none;
   }
 
   header {
