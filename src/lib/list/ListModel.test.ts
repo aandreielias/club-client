@@ -81,3 +81,35 @@ describe('ListModel', () => {
     expect(second.sort).toEqual({ key: 'size', dir: 'asc' });
   });
 });
+
+describe('ListModel multi filters', () => {
+  const tagged = [
+    { id: 'p1', people: ['anna', 'ben'] },
+    { id: 'p2', people: ['anna'] },
+    { id: 'p3', people: [] as string[] },
+  ];
+  const people = (store: LocalStore) =>
+    new ListModel(
+      {
+        id: 'photos',
+        load: async () => tagged,
+        defaultSort: { key: 'id', dir: 'asc' },
+        columns: [{ key: 'id', label: 'Id', value: (p) => p.id }],
+        filters: [{ key: 'people', label: 'Personen', kind: 'multi', transient: true, test: (p, v) => v.split(',').every((id) => p.people.includes(id)) }],
+      },
+      store,
+    );
+
+  it('keeps rows showing all chosen people and does not remember them', async () => {
+    const store = memoryStore();
+    const list = people(store);
+    await list.load();
+    list.setFilter('people', 'anna');
+    expect(list.rows.map((p) => p.id)).toEqual(['p1', 'p2']);
+    list.setFilter('people', 'anna,ben');
+    expect(list.rows.map((p) => p.id)).toEqual(['p1']);
+    const again = people(store);
+    await again.load();
+    expect(again.rows).toHaveLength(3);
+  });
+});

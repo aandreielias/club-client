@@ -34,6 +34,22 @@
           onchange={(value) => model.setFilter(filter.key, value)}
           options={[{ value: '', label: filter.allLabel ?? filter.label }, ...(filter.options?.(model.data.value ?? []) ?? [])]}
         />
+      {:else if filter.kind === 'multi'}
+        {@const chosen = (model.filters[filter.key] ?? '').split(',').filter(Boolean)}
+        {@const options = filter.options?.(model.data.value ?? []) ?? []}
+        {#each chosen as value (value)}
+          <Button size="sm" pressed icon="close" onclick={() => model.setFilter(filter.key, chosen.filter((v) => v !== value).join(','))}
+            tooltip="Filter entfernen">{options.find((o) => o.value === value)?.label ?? value}</Button>
+        {/each}
+        {#if options.some((o) => !chosen.includes(o.value))}
+          <Select
+            inline
+            aria-label={filter.label}
+            value=""
+            onchange={(value) => value && model.setFilter(filter.key, [...chosen, value].join(','))}
+            options={[{ value: '', label: filter.allLabel ?? filter.label }, ...options.filter((o) => !chosen.includes(o.value))]}
+          />
+        {/if}
       {:else}
         <Button size="sm" pressed={!!model.filters[filter.key]} onclick={() => model.setFilter(filter.key, model.filters[filter.key] ? '' : '1')}
           tooltip="Filter „{filter.label}“ {model.filters[filter.key] ? 'ausschalten' : 'einschalten'}">

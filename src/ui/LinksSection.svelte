@@ -133,27 +133,29 @@
     {#if links.needs.length}
       <ul class="entries">
         {#each links.needs as need (need.itemId)}
-          <li class:deleted={need.deleted}>
+          <li class="need" class:deleted={need.deleted}>
             <span class="name">{need.name}</span>
             {#if need.deleted}<Tag tone="danger">Gelöscht</Tag>{:else}<span></span>{/if}
-            <span class="quantity-text">{need.quantity}</span>
-            <span class="stock" class:short={LinksModel.short(need)}>
-              {#if need.stock !== null}von {need.stock} im Inventar{/if}
-            </span>
-            <span></span>
-            {#if need.places?.length}
-              <!-- Where the items are: the whole row width, below the entry. -->
-              <span class="places muted">
-                {#each need.places as place, i (i)}
-                  <span class="place">
-                    {#if place.kind === 'LOCATION' && place.id && place.name}<RecordLink kind="location" id={place.id}>{place.name}</RecordLink>
-                    {:else if place.kind === 'PERSON' && place.id === session.member.id}<strong>bei dir</strong>
-                    {:else}{placeName(place)}{/if}
-                    {place.quantity}
-                  </span>
-                {/each}
+            <!-- Amount, then where the items are, right-aligned below it. -->
+            <span class="amount">
+              <span>
+                <span class="quantity-text">{need.quantity}</span>
+                {#if need.stock !== null}<span class="stock" class:short={LinksModel.short(need)}>von {need.stock} im Inventar</span>{/if}
               </span>
-            {/if}
+              {#if need.places?.length}
+                <span class="places muted">
+                  {#each need.places as place, i (i)}
+                    <span class="place">
+                      {#if place.kind === 'LOCATION' && place.id && place.name}<RecordLink kind="location" id={place.id}>{place.name}</RecordLink>
+                      {:else if place.kind === 'PERSON' && place.id === session.member.id}<strong>bei dir</strong>
+                      {:else if place.kind === 'PERSON' && place.id && place.name}<RecordLink kind="member" id={place.id} allowed={permissions.canSeeMember(place.id)} hint="Profil öffnen">{place.name}</RecordLink>
+                      {:else}{placeName(place)}{/if}
+                      {place.quantity}
+                    </span>
+                  {/each}
+                </span>
+              {/if}
+            </span>
           </li>
         {/each}
       </ul>
@@ -227,13 +229,25 @@
   .stock.short {
     color: var(--color-danger);
   }
+  li.need {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: start;
+    padding: var(--space-xxs) 0;
+  }
+  li.need .name {
+    align-self: center;
+  }
+  .amount {
+    display: grid;
+    justify-items: end;
+    gap: 2px;
+    text-align: right;
+  }
   .places {
     display: flex;
     flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 0 var(--space-sm);
-    grid-column: 1 / -1;
-    margin-top: calc(-1 * var(--space-xs));
-    padding-bottom: var(--space-xxs);
     font-size: var(--font-size-small);
   }
   .place + .place::before {

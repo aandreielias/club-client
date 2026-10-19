@@ -77,6 +77,19 @@ export class FolderItemListModel extends ListModel<FolderItem> {
             test: (item, value) =>
               value === 'folder' ? item.kind === 'folder' : item.kind === 'file' && types.isImage(item.file.contentType) === (value === 'image'),
           },
+          {
+            // Photos showing all chosen people; offered are the people tagged in this folder.
+            key: 'people',
+            label: 'Personen',
+            kind: 'multi',
+            allLabel: 'Person filtern',
+            transient: true,
+            options: (items) =>
+              [...new Set(items.flatMap((item) => (item.kind === 'file' ? item.file.taggedMemberIds : [])))]
+                .map((id) => ({ value: id, label: directory.nameOf(id) }))
+                .sort((a, b) => a.label.localeCompare(b.label, 'de')),
+            test: (item, value) => item.kind === 'file' && value.split(',').every((id) => item.file.taggedMemberIds.includes(id)),
+          },
         ],
       },
       store,

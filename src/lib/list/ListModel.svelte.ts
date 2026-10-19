@@ -31,8 +31,8 @@ export interface ListOption {
 export interface ListFilter<T> {
   key: string;
   label: string;
-  /** `select`: one of `options` ('' = all); `toggle`: on ('1') or off (''). */
-  kind: 'select' | 'toggle';
+  /** `select`: one of `options` ('' = all); `toggle`: on ('1') or off (''); `multi`: several of `options`, comma-separated ('' = none). */
+  kind: 'select' | 'toggle' | 'multi';
   /** Receives the loaded items, so options can be derived from them. */
   options?: (items: readonly T[]) => readonly ListOption[];
   /** Label of the empty choice of a select filter. */
@@ -41,6 +41,8 @@ export interface ListFilter<T> {
   test?: (item: T, value: string) => boolean;
   /** Initial value. */
   initial?: string;
+  /** Not remembered, e.g. people of the open folder that mean nothing in the next one. */
+  transient?: boolean;
   /** Run the test also while the filter is off (e.g. "show inactive" hides inactive items when off). */
   always?: boolean;
 }
@@ -197,7 +199,7 @@ export class ListModel<T> {
   }
 
   private knownFilters(values: Record<string, string>): Record<string, string> {
-    return Object.fromEntries(Object.entries(values).filter(([key]) => this.filterDefinitions.some((f) => f.key === key)));
+    return Object.fromEntries(Object.entries(values).filter(([key]) => this.filterDefinitions.some((f) => f.key === key && !f.transient)));
   }
 
   private get storeKey(): string {
@@ -205,6 +207,6 @@ export class ListModel<T> {
   }
 
   private persist(): void {
-    this.store?.set(this.storeKey, { filters: this.filters, sort: this.sort } satisfies StoredState);
+    this.store?.set(this.storeKey, { filters: this.knownFilters(this.filters), sort: this.sort } satisfies StoredState);
   }
 }

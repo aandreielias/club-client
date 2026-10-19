@@ -47,7 +47,8 @@
   const list = new FolderItemListModel(tree, contents, folderId, fileTypes, () => session.format, directory, store);
   void list.load();
   directory.loadRosters();
-  if (permissions.isManager) directory.loadTeams().catch(() => {});
+  // Managers: every team's roster, so tagged people (photo filter, "Von") have names without asking for the PIN.
+  if (permissions.isManager) directory.loadTeams().then(() => directory.loadRosters(directory.teams.map((t) => t.id))).catch(() => {});
 
   useBus(bus, FILES_CHANGED, ({ data }) => {
     // Folder changes (name, colour, cover, visibility) also show in the parent's listing.

@@ -42,6 +42,7 @@ Reactive state is still read directly from services where it is rendered (`sessi
   - `Detail` and `DetailPage` lay out detail views. `Select`, `Button`, `Tag` and `Field` keep all controls consistent.
   - `RecordLink` / `MemberName` make names of records clickable (open in the window, with a way back inside one); without permission they stay plain text or the generic placeholder.
   - `SortableList` reorders entries by drag and drop or keyboard (sidebar order, start page sections).
+  - Drag to link: `RecordLink`, `DataTable` rows (`record` prop), calendar chips and file tiles carry a record (`src/lib/records/RecordDrag.ts`); `recordDrop` makes an element take dropped records (new message, Benötigt/Dateien, photo tags, task assignees).
   - `PeoplePicker` chooses people (photo tags, task assignees) in the standard list with checkboxes (`DataTable` `check`, `PersonListModel`).
   - `Icon` renders the house icon set from `src/icons.ts` (Lucide). Use icons only where they carry meaning: navigation, add/edit/delete, window controls, search, status.
 - `src/lib/list/ListModel.svelte.ts`: the generic list (columns, client and server filters, sort, search, remembered state). Each list is a subclass with its own definition (e.g. `TaskListModel`).
@@ -51,7 +52,7 @@ Reactive state is still read directly from services where it is rendered (`sessi
 - `src/AppController.svelte.ts`: start-up, screen selection (login, onboarding, shell) and page resolution.
 
 ## Adding a feature
-1. `src/features/<name>/feature.ts` exports a `Feature` with `routes` and optional `messages`. A route with `nav` appears in the sidebar; `roles` restricts it. List specific paths before parameter paths.
+1. `src/features/<name>/feature.ts` exports a `Feature` with `routes` and optional `messages`. A route with `nav` appears in the sidebar; `roles` restricts it. List specific paths before parameter paths. Sidebar groups (flyouts such as Events, Verein, Ablage) and the default order live in `navLayout` in `src/features/index.ts`.
 2. Add a service class for the endpoints that takes `ApiClient`, with DTO types in `model.ts`. Instantiate it in `services.ts` from the container.
 3. Put page state in view-model classes (`Resource`, `Action`, `$state`/`$derived` fields). Keep pages thin.
 4. `mock.ts` registers fake endpoints with `mockServer.on(...)`. It is loaded automatically in mock mode. After a write, it publishes the server's event with `mockServer.events.publish({ type, data, audience })`. Events without an `audience` stay inside the mock server, for other mock modules.
