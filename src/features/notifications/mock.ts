@@ -22,8 +22,8 @@ const limits = settings.notifications.message;
 
 const SECURITY_TITLES: Record<string, string> = {
   CLUB_PIN_CHANGED: 'Der Vereins-PIN wurde geändert',
-  PIN_LOCKED: 'Der Vereins-PIN wurde für dich nach 5 Fehlversuchen gesperrt',
-  RESET_BY_ADMIN: 'Ein Admin hat deine PIN-Sperre aufgehoben und deine Geräte entfernt',
+  PIN_LOCKED: 'Deine PIN-Eingabe wurde nach 5 Fehlversuchen gesperrt',
+  RESET_BY_ADMIN: 'Deine PIN-Sperre und Geräte wurden von einem Admin zurückgesetzt',
   DEVICE_ADDED: 'Neues Gerät für Face ID / Fingerabdruck hinzugefügt',
 };
 

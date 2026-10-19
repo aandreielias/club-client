@@ -501,7 +501,7 @@ export class MockDirectory {
   private verifyPin(member: Member, pin: unknown): void {
     const state = this.pinState(member);
     const max = settings.security.maxPinAttempts;
-    if (!this.clubPin.data.pin) fail(400, 'auth.club-pin-not-set');
+    if (!this.clubPin.data.pin) fail(409, 'auth.club-pin-not-set');
     if (state.attempts >= max) fail(403, 'auth.pin-locked');
     if (pin !== this.clubPin.data.pin) {
       state.attempts++;
