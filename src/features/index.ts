@@ -2,6 +2,7 @@ import { accountFeature } from './account/feature';
 import { activityFeature } from './activity/feature';
 import { calendarFeature } from './calendar/feature';
 import { FeatureRegistry } from './FeatureRegistry';
+import { NavLayout } from '../lib/navigation/NavLayout';
 import { filesFeature } from './files/feature';
 import { homeFeature } from './home/feature';
 import { inventoryFeature } from './inventory/feature';
@@ -14,8 +15,18 @@ import { tasksFeature } from './tasks/feature';
 import { teamsFeature } from './teams/feature';
 import { tournamentsFeature } from './tournaments/feature';
 
+/** Sidebar groups (flyouts) and the default order of the top-level rows; members reorder rows, not group contents. */
+const navLayout = new NavLayout(
+  [
+    { id: 'events', label: 'Events', icon: 'eventGroup', paths: ['/events', '/tournaments'] },
+    { id: 'verein', label: 'Verein', icon: 'club', paths: ['/teams', '/members', '/locations'] },
+    { id: 'ablage', label: 'Ablage', icon: 'archive', paths: ['/files', '/inventory'] },
+  ],
+  ['/', '/notifications', '/tasks', '/calendar', 'group:events', 'group:verein', 'group:ablage', '/activity'],
+);
+
 /**
- * Enabled features in sidebar order. A new feature = a folder with feature.ts (routes, messages),
+ * Enabled features (feature order: home sections, calendar sources). A new feature = a folder with feature.ts (routes, messages),
  * its services/models/pages, optionally mock.ts (picked up automatically) + one entry here.
  */
 export const features = new FeatureRegistry([
@@ -33,4 +44,4 @@ export const features = new FeatureRegistry([
   accountFeature,
   settingsFeature,
   searchFeature,
-]);
+], navLayout);

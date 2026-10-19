@@ -1,4 +1,5 @@
 import type { Role } from '../types';
+import { NavLayout } from './NavLayout';
 
 export interface NavEntry {
   path: string;
@@ -12,14 +13,18 @@ export interface NavEntry {
  */
 export class NavCatalog {
   #entries: NavEntry[] = [];
+  #layout = new NavLayout();
 
-  set(entries: readonly NavEntry[]): void {
+  set(entries: readonly NavEntry[], layout: NavLayout = new NavLayout()): void {
     this.#entries = [...entries];
+    this.#layout = layout;
   }
 
-  /** Entries the member may see, in the given order (paths not in `order` keep their default place at the end). */
-  ordered(order: readonly string[], hasRole: (...roles: readonly Role[]) => boolean): NavEntry[] {
-    return NavCatalog.sort(this.#entries.filter((e) => !e.roles || hasRole(...e.roles)), order);
+  /** Top-level rows (groups and tabs) the member may see, in the given order of row keys. */
+  ordered(order: readonly string[], hasRole: (...roles: readonly Role[]) => boolean): { key: string; label: string }[] {
+    return this.#layout
+      .arrange(this.#entries.filter((e) => !e.roles || hasRole(...e.roles)), order)
+      .map((row) => ({ key: row.key, label: row.group?.label ?? row.entries[0].label }));
   }
 
   static sort<T extends { path: string }>(items: readonly T[], order: readonly string[]): T[] {

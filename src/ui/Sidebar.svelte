@@ -3,7 +3,9 @@
   import type { LiveStatus } from '../lib/live/LiveUpdates.svelte';
   import { SHORTCUTS, type CommandId } from '../shortcuts';
   import { tick } from 'svelte';
-  import { bus, commands, keyboard, keymap, preferences } from '../lib/container';
+  import { MediaQuery } from 'svelte/reactivity';
+  import { bus, commands, keyboard, keymap, motion, preferences } from '../lib/container';
+  import { settings } from '../settings';
   import { SPLIT_OPEN } from '../lib/split/SplitView.svelte';
   import { menu } from './contextMenu';
   import Icon from './Icon.svelte';
@@ -52,16 +54,67 @@
     return path === '/' ? current === '/' : current === path || current.startsWith(`${path}/`);
   }
 
+  /** A group row is active while one of its tabs is. */
+  const isRowActive = (item: NavItem) => (item.children ? item.children.some((c) => isActive(c.path)) : isActive(item.path));
+
+  // Same breakpoint as ThemeService's data-layout="compact".
+  const compact = new MediaQuery(`max-width: ${settings.compactBelowPx - 0.02}px`);
+
+  // Group flyout: opens on hover/focus, closes shortly after the pointer leaves (so it can move into it).
+  let flyout = $state<string | null>(null);
+  let closing: ReturnType<typeof setTimeout> | undefined;
+  function openFlyout(key: string) {
+    clearTimeout(closing);
+    flyout = key;
+  }
+  function closeFlyout(delay: number = settings.overlay.flyoutCloseDelayMs) {
+    clearTimeout(closing);
+    closing = setTimeout(() => (flyout = null), delay);
+  }
+  function groupKeys(event: KeyboardEvent, item: NavItem) {
+    if (event.key === 'ArrowRight' || event.key === ' ') {
+      event.preventDefault();
+      openFlyout(item.key);
+      tick().then(() => document.querySelector<HTMLElement>(`[data-flyout="${item.key}"] a`)?.focus());
+    }
+  }
+  function flyoutKeys(event: KeyboardEvent, item: NavItem) {
+    const links = [...(event.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('a')];
+    const index = links.indexOf(document.activeElement as HTMLElement);
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      links[(index + (event.key === 'ArrowDown' ? 1 : links.length - 1)) % links.length]?.focus();
+    } else if (event.key === 'Escape' || event.key === 'ArrowLeft') {
+      event.preventDefault();
+      event.stopPropagation();
+      flyout = null;
+      document.querySelector<HTMLElement>(`[data-group="${item.key}"]`)?.focus();
+    }
+  }
+  function leaveFlyout(event: FocusEvent) {
+    if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node)) closeFlyout(0);
+  }
+
   // The active highlight glides between entries (CSS transition on its position).
   let list: HTMLElement | undefined = $state();
   let indicator = $state<{ y: number; height: number } | null>(null);
   $effect(() => {
     void current;
     void items.length;
-    const active = list?.querySelector<HTMLElement>('a.active');
+    const active = list?.querySelector<HTMLElement>(':scope > li > a.active');
     indicator = active ? { y: active.offsetTop, height: active.offsetHeight } : null;
   });
 </script>
+
+{#snippet tab(item: NavItem)}
+  <a href="#{item.path}" class:active={isActive(item.path)} aria-current={isActive(item.path) ? 'page' : undefined}
+    {@attach tooltip(`Zu ${item.label}${navKeys(item.path)}`)} onclick={() => ((open = false), (flyout = null))}
+    {@attach menu(() => [{ label: 'In geteilter Ansicht öffnen', icon: 'split', run: () => bus.publish(SPLIT_OPEN, { path: item.path }) }])}>
+    {#if item.icon}<Icon name={item.icon} />{/if}
+    <span class="label">{item.label}</span>
+    {#if item.badge}<span class="badge">{item.badge}<span class="visually-hidden"> neu</span></span>{/if}
+  </a>
+{/snippet}
 
 <button class="toggle" aria-expanded={open} aria-controls="sidebar" onclick={() => (open = !open)}
   {@attach tooltip(() => (open ? 'Navigation schließen' : 'Navigation öffnen'))}>
@@ -88,16 +141,30 @@
     {#if indicator}
       <li class="indicator" aria-hidden="true" style:transform="translateY({indicator.y}px)" style:height="{indicator.height}px"></li>
     {/if}
-    {#each items.filter((i) => !i.footer) as item (item.path)}
-      <li>
-        <a href="#{item.path}" class:active={isActive(item.path)} aria-current={isActive(item.path) ? 'page' : undefined}
-          {@attach tooltip(`Zu ${item.label}${navKeys(item.path)}`)} onclick={() => (open = false)}
-          {@attach menu(() => [{ label: 'In geteilter Ansicht öffnen', icon: 'split', run: () => bus.publish(SPLIT_OPEN, { path: item.path }) }])}>
-          {#if item.icon}<Icon name={item.icon} />{/if}
-          <span class="label">{item.label}</span>
-          {#if item.badge}<span class="badge">{item.badge}<span class="visually-hidden"> neu</span></span>{/if}
-        </a>
-      </li>
+    {#each items.filter((i) => !i.footer) as item (item.key)}
+      {#if item.children}
+        <li class="group" onpointerenter={() => openFlyout(item.key)} onpointerleave={() => closeFlyout()} onfocusout={leaveFlyout}>
+          <a href="#{item.path}" data-group={item.key} class:active={isRowActive(item)} aria-haspopup="true" aria-expanded={flyout === item.key}
+            onclick={() => ((open = false), (flyout = null))} onkeydown={(e) => groupKeys(e, item)}>
+            {#if item.icon}<Icon name={item.icon} />{/if}
+            <span class="label">{item.label}</span>
+            {#if item.badge}<span class="badge">{item.badge}<span class="visually-hidden"> neu</span></span>{/if}
+            <span class="chevron"><Icon name="next" small /></span>
+          </a>
+          <!-- Desktop: flyout to the right while hovered or focused. Compact (no hover): the tabs stay listed below the group. -->
+          {#if flyout === item.key || compact.current}
+            <!-- svelte-ignore a11y_no_noninteractive_element_interactions (arrow keys between the links inside, which bubble here) -->
+            <ul class="flyout" data-flyout={item.key} aria-label={item.label} onkeydown={(e) => flyoutKeys(e, item)} transition:motion.pop={{ origin: 'left' }}>
+              <li class="flyout-title" aria-hidden="true">{item.label}</li>
+              {#each item.children as child, i (child.path)}
+                <li in:motion.rise={{ delay: motion.stagger(i), distance: 3 }}>{@render tab(child)}</li>
+              {/each}
+            </ul>
+          {/if}
+        </li>
+      {:else}
+        <li>{@render tab(item)}</li>
+      {/if}
     {/each}
   </ul>
   <div class="foot">
@@ -134,6 +201,7 @@
   nav {
     position: sticky;
     top: 0;
+    z-index: 3; /* above the page, so group flyouts are not covered */
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -371,6 +439,59 @@
   }
   :global(:root:not([data-layout='compact'])) .collapsed .user .profile {
     justify-content: center;
+  }
+  .group {
+    position: relative;
+  }
+  .chevron {
+    display: grid;
+    opacity: 0.5;
+    transition: transform var(--motion-fast) var(--motion-easing);
+  }
+  .group:hover .chevron,
+  a[aria-expanded='true'] .chevron {
+    transform: translateX(2px);
+    opacity: 0.9;
+  }
+  .flyout {
+    position: absolute;
+    top: calc(-1 * var(--space-xs));
+    left: calc(100% + var(--space-sm));
+    z-index: 1;
+    display: grid;
+    gap: 1px;
+    min-width: 11rem;
+    padding: var(--space-xs);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-elevated);
+    box-shadow: var(--color-shadow-raised);
+  }
+  /* Bridges the gap to the group row, so the pointer can cross it without closing the flyout. */
+  .flyout::before {
+    content: '';
+    position: absolute;
+    inset: 0 100% 0 calc(-1 * var(--space-sm) - 1px);
+  }
+  .flyout-title {
+    padding: var(--space-xxs) var(--space-sm) var(--space-xs);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+  }
+  .flyout a.active {
+    background: var(--color-selected);
+  }
+  :global([data-layout='compact']) .flyout {
+    position: static;
+    padding: 0 0 0 var(--space-lg);
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+  :global([data-layout='compact']) .flyout-title,
+  :global([data-layout='compact']) .chevron {
+    display: none;
   }
   .search-icon {
     display: none;

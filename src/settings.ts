@@ -515,6 +515,8 @@ export const settings = {
     tooltipMaxWidthPx: 320,
     /** Gap between anchor (or pointer) and tooltip/menu, and to the viewport edge. */
     offsetPx: 6,
+    /** A sidebar group's flyout stays this long after the pointer leaves, so it can move into it. */
+    flyoutCloseDelayMs: 180,
   },
 
   /** "Benötigt" lists and attached files of appointments and tasks (server: platform.LinkResolver). */

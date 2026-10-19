@@ -3,10 +3,12 @@
  * Lucide import, so the set stays small, consistent and swappable. Only add icons that carry meaning.
  */
 import AppWindow from '@lucide/svelte/icons/app-window';
+import Archive from '@lucide/svelte/icons/archive';
 import ArrowUpDown from '@lucide/svelte/icons/arrow-up-down';
 import Bell from '@lucide/svelte/icons/bell';
 import BookUser from '@lucide/svelte/icons/book-user';
 import Calendar from '@lucide/svelte/icons/calendar';
+import CalendarDays from '@lucide/svelte/icons/calendar-days';
 import Check from '@lucide/svelte/icons/check';
 import History from '@lucide/svelte/icons/history';
 import ChevronDown from '@lucide/svelte/icons/chevron-down';
@@ -33,10 +35,12 @@ import Pencil from '@lucide/svelte/icons/pencil';
 import Plus from '@lucide/svelte/icons/plus';
 import Search from '@lucide/svelte/icons/search';
 import Send from '@lucide/svelte/icons/send';
+import Landmark from '@lucide/svelte/icons/landmark';
 import Link from '@lucide/svelte/icons/link';
 import MapPin from '@lucide/svelte/icons/map-pin';
 import Columns2 from '@lucide/svelte/icons/columns-2';
 import Upload from '@lucide/svelte/icons/upload';
+import Ticket from '@lucide/svelte/icons/ticket';
 import Trophy from '@lucide/svelte/icons/trophy';
 import Settings from '@lucide/svelte/icons/settings';
 import Trash from '@lucide/svelte/icons/trash-2';
@@ -47,6 +51,10 @@ import X from '@lucide/svelte/icons/x';
 export const ICONS = {
   home: House,
   calendar: Calendar,
+  events: CalendarDays,
+  eventGroup: Ticket,
+  club: Landmark,
+  archive: Archive,
   tasks: ListChecks,
   files: Folder,
   move: FolderInput,
