@@ -429,8 +429,15 @@ export const settings = {
     zipMaxLength: 12,
     cityMaxLength: 80,
     noteMaxLength: 500,
-    /** Small OpenStreetMap next to a place: half height in degrees around the pin, height on screen. */
-    map: { span: 0.004, height: '15rem' },
+    /**
+     * Small map next to a place: OpenStreetMap data from OpenFreeMap (free, no key), drawn by MapLibre in
+     * an Apple-Maps-like look (lib/maps/MapLook.ts). Zoom level and height on screen.
+     */
+    map: {
+      style: 'https://tiles.openfreemap.org/styles/liberty',
+      zoom: 15.5,
+      height: '15rem',
+    },
   },
 
   notifications: {

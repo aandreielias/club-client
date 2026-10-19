@@ -12,10 +12,4 @@ describe('MapLinks', () => {
     expect(MapLinks.apple(pinned)).toContain('&ll=48.2,16.37');
     expect(MapLinks.google({ ...hall, address: null })).toContain('query=Halle%20Nord');
   });
-
-  it('frames the pin in the embed', () => {
-    expect(MapLinks.embed(48.2, 16.37, 0.01)).toBe(
-      'https://www.openstreetmap.org/export/embed.html?bbox=16.35400,48.19000,16.38600,48.21000&layer=mapnik&marker=48.2,16.37',
-    );
-  });
 });

@@ -6,7 +6,7 @@ export interface MapPlace {
   lng: number | null;
 }
 
-/** Links to Google Maps and Apple Maps and the OpenStreetMap embed for the small map. */
+/** Links to Google Maps and Apple Maps. */
 export class MapLinks {
   /** What to search for: "Name, Address", or just the name. */
   static query(place: MapPlace): string {
@@ -23,9 +23,4 @@ export class MapLinks {
     return `https://maps.apple.com/?q=${encodeURIComponent(MapLinks.query(place))}${at}`;
   }
 
-  /** OpenStreetMap embed around the pin; `span` is the half width in degrees. */
-  static embed(lat: number, lng: number, span: number): string {
-    const bbox = [lng - span * 1.6, lat - span, lng + span * 1.6, lat + span].map((n) => n.toFixed(5)).join(',');
-    return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`;
-  }
 }

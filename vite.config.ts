@@ -6,5 +6,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 export default defineConfig({
   base: './',
   plugins: [svelte()],
+  // MapLibre's worker is a module (src/ui/LocationMap.svelte loads it by URL).
+  worker: { format: 'es' },
   test: { include: ['src/**/*.test.ts'] },
 });
