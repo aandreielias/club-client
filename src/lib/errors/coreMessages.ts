@@ -17,7 +17,6 @@ export const UNKNOWN_MESSAGE = 'Unbekannter Fehler.';
 export const CORE_MESSAGES: MessageCatalog = {
   network: 'Server nicht erreichbar. Bitte Verbindung prüfen.',
   timeout: 'Der Server antwortet nicht rechtzeitig. Bitte erneut versuchen.',
-  'access-denied': 'Dafür fehlt die Berechtigung.',
   'access.denied': 'Dafür fehlt die Berechtigung.',
   'data.conflict': 'Die Daten wurden inzwischen geändert oder hängen von anderen ab.',
   'request.invalid': 'Die Eingaben sind ungültig.',
