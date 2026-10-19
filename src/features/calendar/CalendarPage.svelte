@@ -2,7 +2,7 @@
   import { usePane } from '../../lib/split/usePane';
   import { untrack } from 'svelte';
   import { settings } from '../../settings';
-  import { bus, calendarSources, commands, directory, live, permissions, preferences, router, session, store, windows } from '../../lib/container';
+  import { bus, calendarSources, commands, directory, permissions, preferences, session, store } from '../../lib/container';
   import { APP_ERROR, TOAST, WINDOW_OPEN } from '../../channels';
   import { BrowserFile } from '../../lib/files/BrowserFile';
   import { Action } from '../../lib/state/Action.svelte';
@@ -13,15 +13,11 @@
   import Button from '../../ui/Button.svelte';
   import LinkButton from '../../ui/LinkButton.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
-  import DataTable from '../../ui/DataTable.svelte';
-  import { windowMenu } from '../../lib/window/windowMenu';
 
   import Page from '../../ui/Page.svelte';
   import Select from '../../ui/Select.svelte';
-  import Tag from '../../ui/Tag.svelte';
   import Toolbar from '../../ui/Toolbar.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
-  import { CalendarListModel } from './CalendarListModel.svelte';
   import { CALENDAR_VIEWS, CalendarModel, type CalendarView } from './CalendarModel.svelte';
   import { TASK_CHANGED } from '../tasks/events';
   import { APPOINTMENTS_CHANGED } from './events';
@@ -35,12 +31,11 @@
   const pane = usePane();
   const RELOAD_ON = [APPOINTMENTS_CHANGED, TASK_CHANGED];
 
-  const model = new CalendarModel(calendarSources, session.clock, settings.calendar.agendaDays, store, {
+  const model = new CalendarModel(calendarSources, session.clock, store, {
     view: (pane.query.get('view') as CalendarView | null) ?? preferences.values.calendarView,
     date: pane.query.get('date') ?? undefined,
     teamId: pane.query.get('team'),
   });
-  const list = new CalendarListModel(() => model.visible, () => session.format, directory, store);
   let subscribing = $state(false);
   const drag = new CalendarDrag(calendarSources, session.clock, settings.calendar.snapMinutes, bus);
   const exporting = new Action();
@@ -62,8 +57,6 @@
   directory.loadRosters();
   if (permissions.isManager) directory.loadTeams().catch(() => {});
   useBus(bus, RELOAD_ON, () => void model.load());
-
-  $effect(() => list.set(model.visible));
 
   // View, date and team live in the URL (other keys such as the open window stay).
   $effect(() => {
@@ -91,7 +84,6 @@
     'calendar.today': { run: () => void model.goToday() },
     'calendar.month': { run: () => void model.setView('month') },
     'calendar.week': { run: () => void model.setView('week') },
-    'calendar.list': { run: () => void model.setView('list') },
   });
 
   function newAppointment() {
@@ -132,27 +124,12 @@
 
 
   <div class="view" aria-busy={model.entries.loading}>
-    {#if model.view === 'list'}
-      <DataTable model={list} rowKey={(e) => e.key} onopen={(e) => bus.publish(WINDOW_OPEN, { kind: e.window.kind, id: e.window.id })} menu={(e) => windowMenu(bus, windows, router, e.window.kind, e.window.id)} leading={filters}
-        emptyText="Keine Einträge in diesem Zeitraum." emptyAction={policy.canCreate() ? { label: "Neuer Termin", icon: "add", run: newAppointment } : null}>
-        {#snippet cell(entry, column)}
-          {#if column.key === 'title'}
-            <span class:inactive={entry.inactive}>{entry.title}</span>
-          {:else if column.key === 'label'}
-            <Tag tone={entry.hue}>{entry.label}</Tag>
-          {:else}
-            {list.display(entry, column)}
-          {/if}
-        {/snippet}
-      </DataTable>
-    {:else}
-      <Toolbar start={filters} label="Filtern" />
-      <AsyncView resource={model.entries}>
-        {#snippet children()}
-          <div class="grid-view">{#if model.view === 'month'}<MonthView {model} {drag} />{:else}<WeekView {model} {drag} />{/if}</div>
-        {/snippet}
-      </AsyncView>
-    {/if}
+    <Toolbar start={filters} label="Filtern" />
+    <AsyncView resource={model.entries}>
+      {#snippet children()}
+        <div class="grid-view">{#if model.view === 'month'}<MonthView {model} {drag} />{:else}<WeekView {model} {drag} />{/if}</div>
+      {/snippet}
+    </AsyncView>
   </div>
 </Page>
 
@@ -172,9 +149,5 @@
   }
   .grid-view {
     margin-top: var(--space-sm);
-  }
-  .inactive {
-    color: var(--color-text-muted);
-    text-decoration: line-through;
   }
 </style>

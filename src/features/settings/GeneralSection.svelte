@@ -9,7 +9,6 @@
   const VIEWS = [
     { value: 'month', label: 'Monat' },
     { value: 'week', label: 'Woche' },
-    { value: 'list', label: 'Liste' },
   ] as const;
 
   const mockMode = settings.runtime.apiMode === 'mock';

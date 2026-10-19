@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CalendarSources, type CalendarEntry } from '../../lib/calendar/CalendarSources';
 import { ZonedClock } from '../../lib/time/ZonedClock';
 import { CalendarModel } from './CalendarModel.svelte';
+import { EventListModel } from './EventListModel.svelte';
 
 const vienna = new ZonedClock('Europe/Vienna');
 
@@ -11,21 +12,19 @@ const entry = (key: string, start: string, end: string | null, extra: Partial<Ca
 
 describe('CalendarModel ranges', () => {
   it('builds a Monday-first six-week month grid', () => {
-    const range = CalendarModel.rangeOf('month', '2026-10-15', 28);
+    const range = CalendarModel.rangeOf('month', '2026-10-15');
     expect(range).toEqual({ from: '2026-09-28', to: '2026-11-09' });
     expect(CalendarModel.daysOf(range)).toHaveLength(42);
   });
 
-  it('builds weeks and list windows', () => {
-    expect(CalendarModel.rangeOf('week', '2026-10-18', 28)).toEqual({ from: '2026-10-12', to: '2026-10-19' }); // Sunday → Monday before
-    expect(CalendarModel.rangeOf('list', '2026-10-15', 28)).toEqual({ from: '2026-10-15', to: '2026-11-12' });
+  it('builds weeks', () => {
+    expect(CalendarModel.rangeOf('week', '2026-10-18')).toEqual({ from: '2026-10-12', to: '2026-10-19' }); // Sunday → Monday before
   });
 
-  it('steps by month, week and list page', () => {
-    expect(CalendarModel.step('month', '2026-01-31', 1, 28)).toBe('2026-02-01');
-    expect(CalendarModel.step('month', '2026-01-15', -1, 28)).toBe('2025-12-01');
-    expect(CalendarModel.step('week', '2026-10-15', -1, 28)).toBe('2026-10-08');
-    expect(CalendarModel.step('list', '2026-10-15', 1, 28)).toBe('2026-11-12');
+  it('steps by month and week', () => {
+    expect(CalendarModel.step('month', '2026-01-31', 1)).toBe('2026-02-01');
+    expect(CalendarModel.step('month', '2026-01-15', -1)).toBe('2025-12-01');
+    expect(CalendarModel.step('week', '2026-10-15', -1)).toBe('2026-10-08');
   });
 });
 
@@ -60,7 +59,7 @@ describe('CalendarModel data', () => {
         entry('club', vienna.toInstant('2026-10-16T19:00'), vienna.toInstant('2026-10-16T20:00')),
       ] })
       .register({ id: 'tasks', label: 'Aufgaben', load: async () => [entry('due', vienna.toInstant('2026-10-17T18:00'), null, { allDay: true })] });
-    const model = new CalendarModel(sources, vienna, 28, null, { view: 'month', date: '2026-10-15' });
+    const model = new CalendarModel(sources, vienna, null, { view: 'month', date: '2026-10-15' });
     await model.load();
     expect(model.entriesOn('2026-10-17').map((e) => e.key)).toEqual(['camp', 'due']);
     expect(model.entriesOn('2026-10-18').map((e) => e.key)).toEqual(['camp']);
@@ -69,5 +68,20 @@ describe('CalendarModel data', () => {
     await model.toggleSource('tasks');
     model.setTeam(null);
     expect(model.entriesOn('2026-10-17').map((e) => e.key)).toEqual(['camp']);
+  });
+});
+
+describe('CalendarModel views', () => {
+  it('opens an old list link or preference as month view', () => {
+    const sources = new CalendarSources();
+    const model = new CalendarModel(sources, new ZonedClock('Europe/Vienna'), null, { view: 'list' as never, date: '2026-10-15' });
+    expect(model.view).toBe('month');
+  });
+});
+
+describe('EventListModel', () => {
+  it('loads the coming year, or the past one', () => {
+    expect(EventListModel.range('2026-10-19', false)).toEqual({ from: '2026-10-19', to: '2027-10-19' });
+    expect(EventListModel.range('2026-10-19', true)).toEqual({ from: '2025-10-19', to: '2026-10-19' });
   });
 });

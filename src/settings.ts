@@ -329,14 +329,12 @@ export const settings = {
   },
 
   calendar: {
-    defaultView: 'month' as 'month' | 'week' | 'list',
+    defaultView: 'month' as 'month' | 'week',
     /** Hours shown in the week view (end exclusive). */
     weekStartHour: 7,
     weekEndHour: 23,
     /** Entries shown per day cell in the month view before "+n weitere". */
     maxChipsPerDay: 3,
-    /** Length of one page in the list view. */
-    agendaDays: 28,
     defaultStartTime: '18:00',
     /** Week view: dropped appointments snap to this grid. */
     snapMinutes: 15,

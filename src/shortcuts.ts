@@ -71,7 +71,6 @@ export const SHORTCUTS = {
   'calendar.today': { label: 'Heute', group: 'Kalender', context: 'calendar', keys: 't' },
   'calendar.month': { label: 'Monatsansicht', group: 'Kalender', context: 'calendar', keys: 'v m' },
   'calendar.week': { label: 'Wochenansicht', group: 'Kalender', context: 'calendar', keys: 'v w' },
-  'calendar.list': { label: 'Listenansicht', group: 'Kalender', context: 'calendar', keys: 'v l' },
 
   // ---- Details im Fenster ----
   'task.edit': { label: 'Aufgabe bearbeiten', group: 'Aufgabe', context: 'task', keys: 'e' },

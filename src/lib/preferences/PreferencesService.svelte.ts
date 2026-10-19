@@ -4,7 +4,7 @@ import type { ThemeOverrides } from '../theme/ThemeService';
 
 type Appearance = Settings['appearance'];
 
-export type CalendarViewPreference = 'month' | 'week' | 'list';
+export type CalendarViewPreference = 'month' | 'week';
 
 export type FilesViewPreference = 'gallery' | 'table';
 
@@ -98,7 +98,7 @@ export class PreferencesService {
       fontSize: values.fontSize in this.appearance.fontSizes ? values.fontSize : d.fontSize,
       density: values.density in this.appearance.densities ? values.density : d.density,
       reduceMotion: values.reduceMotion === true,
-      calendarView: ['month', 'week', 'list'].includes(values.calendarView) ? values.calendarView : d.calendarView,
+      calendarView: ['month', 'week'].includes(values.calendarView) ? values.calendarView : d.calendarView,
       navOrder: PreferencesService.strings(values.navOrder),
       sidebarCollapsed: values.sidebarCollapsed === true,
       filesView: values.filesView === 'table' || values.filesView === 'gallery' ? values.filesView : d.filesView,

@@ -3,12 +3,11 @@ import { Resource } from '../../lib/state/Resource.svelte';
 import type { LocalStore } from '../../lib/storage/LocalStore';
 import { ZonedClock, type LocalDate } from '../../lib/time/ZonedClock';
 
-export type CalendarView = 'month' | 'week' | 'list';
+export type CalendarView = 'month' | 'week';
 
 export const CALENDAR_VIEWS: readonly { value: CalendarView; label: string }[] = [
   { value: 'month', label: 'Monat' },
   { value: 'week', label: 'Woche' },
-  { value: 'list', label: 'Liste' },
 ];
 
 export interface CalendarPosition {
@@ -37,7 +36,7 @@ const MONTH_GRID_DAYS = 42;
 const HIDDEN_KEY = 'calendar.hidden-sources';
 
 /**
- * The calendar page: one view (month, week or list) around an anchor date, entries of all
+ * The calendar page: one view (month or week) around an anchor date, entries of all
  * registered sources for the visible range, filtered by source and team. Days are club-local.
  */
 export class CalendarModel {
@@ -55,15 +54,14 @@ export class CalendarModel {
   constructor(
     private readonly sources: CalendarSources,
     private readonly clock: ZonedClock,
-    private readonly agendaDays: number,
     private readonly store: LocalStore | null,
     initial: Partial<CalendarPosition> = {},
   ) {
-    this.view = initial.view && ['month', 'week', 'list'].includes(initial.view) ? initial.view : 'month';
+    this.view = initial.view && ['month', 'week'].includes(initial.view) ? initial.view : 'month';
     this.anchor = initial.date && /^\d{4}-\d{2}-\d{2}$/.test(initial.date) ? initial.date : clock.today();
     this.teamId = initial.teamId ?? null;
     this.hidden = store?.get<string[]>(HIDDEN_KEY) ?? [];
-    this.range = $derived(CalendarModel.rangeOf(this.view, this.anchor, this.agendaDays));
+    this.range = $derived(CalendarModel.rangeOf(this.view, this.anchor));
     this.days = $derived(CalendarModel.daysOf(this.range));
     this.entries = new Resource(() =>
       this.sources.load(this.clock.startOfDay(this.range.from), this.clock.startOfDay(this.range.to), this.enabledSources()),
@@ -97,11 +95,11 @@ export class CalendarModel {
   }
 
   next(): Promise<void> {
-    return this.goTo(CalendarModel.step(this.view, this.anchor, 1, this.agendaDays));
+    return this.goTo(CalendarModel.step(this.view, this.anchor, 1));
   }
 
   previous(): Promise<void> {
-    return this.goTo(CalendarModel.step(this.view, this.anchor, -1, this.agendaDays));
+    return this.goTo(CalendarModel.step(this.view, this.anchor, -1));
   }
 
   goToday(): Promise<void> {
@@ -139,8 +137,7 @@ export class CalendarModel {
 
   // ---- pure helpers (unit-tested) ----
 
-  static rangeOf(view: CalendarView, anchor: LocalDate, agendaDays: number): DayRange {
-    if (view === 'list') return { from: anchor, to: ZonedClock.addDays(anchor, agendaDays) };
+  static rangeOf(view: CalendarView, anchor: LocalDate): DayRange {
     if (view === 'week') {
       const from = CalendarModel.mondayOf(anchor);
       return { from, to: ZonedClock.addDays(from, 7) };
@@ -161,9 +158,8 @@ export class CalendarModel {
   }
 
   /** One page forward (+1) or back (-1). */
-  static step(view: CalendarView, anchor: LocalDate, direction: 1 | -1, agendaDays: number): LocalDate {
+  static step(view: CalendarView, anchor: LocalDate, direction: 1 | -1): LocalDate {
     if (view === 'week') return ZonedClock.addDays(anchor, 7 * direction);
-    if (view === 'list') return ZonedClock.addDays(anchor, agendaDays * direction);
     const [year, month] = anchor.split('-').map(Number);
     const target = new Date(Date.UTC(year, month - 1 + direction, 1));
     return target.toISOString().slice(0, 10);

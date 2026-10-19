@@ -102,7 +102,9 @@
     void current;
     void items.length;
     const active = list?.querySelector<HTMLElement>(':scope > li > a.active');
-    indicator = active ? { y: active.offsetTop, height: active.offsetHeight } : null;
+    // Measured on the <li>: a group row is positioned (for its flyout), so the link's offsetTop would be 0.
+    const row = active?.parentElement;
+    indicator = active && row ? { y: row.offsetTop, height: active.offsetHeight } : null;
   });
 </script>
 
