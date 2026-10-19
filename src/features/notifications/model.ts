@@ -86,7 +86,7 @@ export const NOTIFICATION_KINDS: readonly { value: NotificationKind; label: stri
   { value: 'ITEM_REMINDER', label: 'Gegenstände mitbringen', hint: 'Etwa einen Tag vor einem Termin, für den du etwas aus dem Inventar hast.' },
   { value: 'CHANGE_DECIDED', label: 'Kontoänderungen', hint: 'Wenn der Vorstand über deine Änderungsanfrage entschieden hat.' },
   { value: 'MESSAGE', label: 'Nachrichten vom Verein', hint: 'Nachrichten von Vorstand und Trainer:innen an dich oder dein Team.' },
-  { value: 'SECURITY', label: 'Sicherheit', hint: 'PIN-Änderungen und Sperren. E-Mails dazu werden immer gesendet.' },
+  { value: 'SECURITY', label: 'Sicherheit', hint: 'Vereins-PIN, Sperren und neue Geräte. E-Mails dazu werden immer gesendet.' },
 ];
 
 /** Security e-mails cannot be switched off (server rule). */

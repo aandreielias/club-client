@@ -56,14 +56,14 @@ describe('mock members admin', () => {
     expect(directory.findActive('neu@example.at')).toBeNull();
   });
 
-  it('links guardians and resets PINs', () => {
+  it('links guardians and resets security', () => {
     stepUp('admin');
     expect(() => directory.linkGuardian(member('admin'), 'spieler', 'spieler')).toThrow(expect.objectContaining({ code: 'member.guardian-is-self' }));
     directory.linkGuardian(member('admin'), 'spielerin', 'eltern');
     expect(directory.wardsOf('eltern')).toEqual(['spieler', 'spielerin']);
+    stepUp('trainer');
     directory.resetSecurity(member('admin'), 'trainer');
-    expect(directory.securityStatus(member('trainer'))).toMatchObject({ pinSet: false });
-    expect(() => directory.resetAllSecurity(member('admin'), 'reset all pins')).toThrow(expect.objectContaining({ code: 'request.confirmation-missing' }));
+    expect(directory.securityStatus(member('trainer'))).toMatchObject({ clubPinSet: true, pinLocked: false, stepUpUntil: null });
   });
 });
 
@@ -76,7 +76,7 @@ describe('mock teams admin', () => {
     const roster = directory.setTeamMember(member('vorstand'), team.id, 'trainer', 'COACH');
     expect(roster.entries).toEqual([expect.objectContaining({ memberId: 'trainer', teamRole: 'COACH' })]);
 
-    directory.setPin(member('trainer'), MockDirectory.PIN, undefined); // reset by the previous test; setting it grants a step-up
+    stepUp('trainer'); // ended by the reset in the previous test
     expect(() => directory.setTeamMember(member('trainer'), 't-u16', 'spielerin', 'PLAYER')).toThrow(expect.objectContaining({ code: 'access.denied' }));
     expect(() => directory.setTeamMember(member('spielerin'), 't-u16', 'neu', 'PLAYER')).toThrow(expect.objectContaining({ code: 'team.not-found' }));
     directory.removeTeamMember(member('trainer'), 't-u16', 'spieler');

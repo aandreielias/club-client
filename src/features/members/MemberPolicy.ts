@@ -56,11 +56,7 @@ export class MemberPolicy {
     return this.isManager && member.active;
   }
 
-  canResetPin(): boolean {
-    return this.isAdmin;
-  }
-
-  canResetAll(): boolean {
+  canResetSecurity(): boolean {
     return this.isAdmin;
   }
 }

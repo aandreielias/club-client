@@ -98,14 +98,9 @@ export class MembersApi {
     return this.api.post<ChangeRequest>(`${MembersApi.BASE}/change-requests/${encodeURIComponent(id)}/${approve ? 'approve' : 'reject'}`);
   }
 
-  /** The member must set a new PIN (and re-register devices). */
+  /** Unlocks the club PIN for the member and removes their device keys and step-ups. */
   resetSecurity(id: string): Promise<void> {
     return this.api.post(`${this.path(id)}/security/reset`);
-  }
-
-  /** Everyone must set a new PIN; the server requires the exact confirmation text. */
-  async resetAllSecurity(confirm: string): Promise<number> {
-    return (await this.api.post<{ pinsReset: number }>(`${MembersApi.BASE}/security/reset-all`, { confirm })).pinsReset;
   }
 
   private path(id: string): string {

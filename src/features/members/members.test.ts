@@ -79,7 +79,7 @@ describe('MemberPolicy', () => {
     expect(board.canDeactivate(member('x', ['ADMIN']))).toBe(false);
     expect(admin.canDeactivate(member('x', ['ADMIN']))).toBe(true);
     expect(admin.canDeactivate(member('me', ['ADMIN']))).toBe(false);
-    expect(board.canResetPin()).toBe(false);
+    expect(board.canResetSecurity()).toBe(false);
     expect(policyFor(['COACH']).canInvite()).toBe(false);
   });
 });

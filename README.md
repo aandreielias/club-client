@@ -12,7 +12,7 @@ npm run build    # dist/, deployed to GitHub Pages by .github/workflows/deploy.y
 
 ## Modes
 `VITE_API_MODE` (see `.env.example`):
-- `mock` (default): the API is answered in the browser (`src/lib/mock`, `src/features/*/mock.ts`), and data is kept in localStorage. The login page lists test accounts. Privileged accounts use PIN `73915`. To reset the data, clear the site data.
+- `mock` (default): the API is answered in the browser (`src/lib/mock`, `src/features/*/mock.ts`), and data is kept in localStorage. The login page lists test accounts. Privileged accounts confirm with the club PIN `73915`. To reset the data, clear the site data.
 - `http`: real club-server + Supabase login. Needs `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`. `src/lib/auth/SupabaseAuthProvider.ts` is still a stub.
 
 ## Event bus

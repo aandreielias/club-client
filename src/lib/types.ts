@@ -72,7 +72,7 @@ export interface Roster {
   entries: RosterEntry[];
 }
 
-export type MissingProfileField = 'birthDate' | 'pin';
+export type MissingProfileField = 'birthDate';
 
 export interface Me {
   member: Member;
@@ -92,8 +92,9 @@ export interface Device {
 }
 
 export interface SecurityStatus {
-  pinRequired: boolean;
-  pinSet: boolean;
+  clubPinSet: boolean;
+  clubPinChangedAt: string | null;
+  /** Too many wrong club-PIN tries by this member; an admin must unlock. */
   pinLocked: boolean;
   stepUpUntil: string | null;
   devices: Device[];

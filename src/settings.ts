@@ -311,8 +311,6 @@ export const settings = {
   members: {
     nameMaxLength: 100,
     earliestBirthDate: '1900-01-01',
-    /** Exact text the server requires to reset every PIN at once. */
-    resetAllConfirmation: 'RESET ALL PINS',
     /** Show the search field from this many members on. */
     searchFrom: 8,
     /** server: ChangeRequest.NOTE_MAX */

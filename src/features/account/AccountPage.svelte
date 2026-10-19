@@ -48,7 +48,7 @@
 
 <Page title="Mein Konto">
   {#snippet actions()}
-    <Button onclick={() => bus.publish(WINDOW_OPEN, { kind: 'settings', id: 'security' })}>PIN und Passwort</Button>
+    <Button onclick={() => bus.publish(WINDOW_OPEN, { kind: 'settings', id: 'security' })}>Passwort und Sicherheit</Button>
     <Button onclick={() => bus.publish(WINDOW_OPEN, { kind: 'settings', id: 'appearance' })}>Einstellungen</Button>
     <LinkButton href="#/calendar/absences" tooltip="Urlaub oder Verletzung eintragen">Abwesenheiten</LinkButton>
   {/snippet}

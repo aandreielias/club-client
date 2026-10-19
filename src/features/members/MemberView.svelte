@@ -56,15 +56,14 @@
     }
   }
 
-  async function resetPin(member: Member) {
+  async function resetSecurity(member: Member) {
     const request = {
-      title: 'PIN zurücksetzen',
-      message: `${member.firstName} ${member.lastName} muss danach eine neue PIN festlegen. Face-ID-Geräte werden entfernt.`,
-      confirmLabel: 'Zurücksetzen',
+      title: 'Sperre aufheben und Geräte entfernen',
+      message: `${member.firstName} ${member.lastName} kann den Vereins-PIN wieder eingeben. Face-ID-Geräte und laufende Bestätigungen werden entfernt.`,
+      confirmLabel: 'Aufheben und entfernen',
       danger: true,
     };
-    if (!(await view.confirm(request, () => view.attempt(model.resetAction, () => model.resetPin()), 'PIN zurückgesetzt.'))) return;
-    if (policy.isSelf(member)) await session.loadMe(); // own PIN gone: onboarding asks for a new one
+    await view.confirm(request, () => view.attempt(model.resetAction, () => model.resetSecurity()), 'Sperre aufgehoben, Geräte entfernt.');
   }
 
   async function deactivate(member: Member) {
@@ -120,11 +119,11 @@
         <GuardianLinker {member} {model} />
       {/if}
 
-      {#if policy.canResetPin() || policy.canDeactivate(member)}
+      {#if policy.canResetSecurity() || policy.canDeactivate(member)}
         <h2>Zugang</h2>
         <div class="row">
-          {#if policy.canResetPin() && member.active}
-            <Button busy={model.resetAction.busy} onclick={() => resetPin(member)}>PIN zurücksetzen</Button>
+          {#if policy.canResetSecurity() && member.active}
+            <Button busy={model.resetAction.busy} onclick={() => resetSecurity(member)}>Sperre aufheben und Geräte entfernen</Button>
           {/if}
           {#if policy.canDeactivate(member)}
             <Button variant="danger" busy={model.deactivateAction.busy} onclick={() => deactivate(member)}>Deaktivieren</Button>

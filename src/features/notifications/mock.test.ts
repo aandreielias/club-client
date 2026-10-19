@@ -51,10 +51,19 @@ describe('mock notifications', () => {
     expect(await closed).toBe(4403);
   });
 
-  it('reports security changes and keeps security e-mails on', () => {
-    directory.setPin(member('spielerin'), 'k7m2q', undefined);
-    expect(notifications.list('spielerin', true).items[0]).toMatchObject({ kind: 'SECURITY', link: '/me/security' });
-    const prefs = notifications.setPreferences('spielerin', [{ kind: 'SECURITY', push: false, email: false }]);
+  it('tells the other privileged members when the club PIN changes and keeps security e-mails on', () => {
+    directory.stepUp(member('admin'), MockDirectory.PIN);
+    directory.setClubPin(member('admin'), 'k7m2q');
+    directory.setClubPin(member('admin'), MockDirectory.PIN);
+    const changed = (id: string) => notifications.list(id, true).items.filter((n) => n.title === 'Der Vereins-PIN wurde geändert');
+    for (const id of ['vorstand', 'trainer']) {
+      expect(changed(id)[0], id).toMatchObject({
+        kind: 'SECURITY', link: '/me/security', body: 'Frag beim Vorstand nach dem neuen PIN. Wusstest du nichts davon? Melde dich beim Vorstand.',
+      });
+    }
+    expect(changed('admin')).toEqual([]);
+    expect(changed('spielerin')).toEqual([]);
+    const prefs = notifications.setPreferences('vorstand', [{ kind: 'SECURITY', push: false, email: false }]);
     expect(prefs.find((p) => p.kind === 'SECURITY')).toEqual({ kind: 'SECURITY', push: false, email: true });
   });
 

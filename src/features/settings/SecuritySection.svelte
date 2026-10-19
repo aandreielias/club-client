@@ -10,15 +10,18 @@
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import Tag from '../../ui/Tag.svelte';
+  import { MANAGERS } from '../../lib/types';
 
   const pinLength = settings.security.pinLength;
   const policy = new PasswordPolicy(settings.auth.passwordMinLength);
   const security = new Resource(() => session.security());
   void security.load();
 
+  const canSetClubPin = session.hasRole(...MANAGERS);
   const pinAction = new Action();
-  let currentPin = $state('');
   let newPin = $state('');
+  let repeatPin = $state('');
+  let pinMismatch = $state(false);
 
   const passwordAction = new Action();
   let currentPassword = $state('');
@@ -32,11 +35,13 @@
     return null;
   });
 
-  async function changePin(event: SubmitEvent) {
+  async function changeClubPin(event: SubmitEvent) {
     event.preventDefault();
-    if (await pinAction.run(() => session.setPin(newPin, currentPin))) {
-      currentPin = newPin = '';
-      bus.publish(TOAST, { text: 'PIN gespeichert.' });
+    pinMismatch = newPin !== repeatPin;
+    if (pinMismatch) return;
+    if (await pinAction.run(() => session.setClubPin(newPin))) {
+      newPin = repeatPin = '';
+      bus.publish(TOAST, { text: 'Vereins-PIN gespeichert.' });
       void security.load();
     }
   }
@@ -58,36 +63,47 @@
 </script>
 
 <div class="stack section">
-  <h3>Bestätigung mit PIN</h3>
+  <h3>Vereins-PIN</h3>
   <AsyncView resource={security}>
     {#snippet children(status)}
       <div class="stack">
-        {#if session.isPrivileged}
+        {#if !status.clubPinSet}
+          {#if canSetClubPin}
+            <p>Es gibt noch keinen Vereins-PIN. Lege ihn fest und gib ihn persönlich an Admin, Vorstand und Trainer:innen weiter.</p>
+          {:else if session.isPrivileged}
+            <p class="muted">Noch kein Vereins-PIN – frag den Vorstand.</p>
+          {/if}
+        {:else if session.isPrivileged}
           <div class="row">
             {#if status.stepUpUntil}
               <Tag tone="green">Bestätigt bis {session.format.time(status.stepUpUntil)}</Tag>
             {:else}
-              <span class="muted">Änderungen mit erweiterten Rechten brauchen eine Bestätigung per PIN.</span>
+              <span class="muted">Änderungen mit erweiterten Rechten brauchen eine Bestätigung mit dem Vereins-PIN.</span>
               <Button size="sm" onclick={confirmNow}>Jetzt bestätigen</Button>
             {/if}
           </div>
         {/if}
-        {#if status.pinLocked}<p class="danger" role="alert">PIN gesperrt. Ein Admin muss sie zurücksetzen.</p>{/if}
+        {#if status.pinLocked}<p class="danger" role="alert">Der Vereins-PIN ist für dich gesperrt. Ein Admin muss die Sperre aufheben.</p>{/if}
 
-        <form class="stack readable" onsubmit={changePin}>
-          <div class="grid-2">
-            {#if status.pinSet}
-              <Field label="Aktuelle PIN">
-                <input type="password" bind:value={currentPin} maxlength={pinLength} autocomplete="off" required />
-              </Field>
+        {#if canSetClubPin}
+          <form class="stack readable" onsubmit={changeClubPin}>
+            {#if status.clubPinChangedAt}
+              <p class="muted">Zuletzt geändert am {session.format.dateTime(status.clubPinChangedAt)}.</p>
             {/if}
-            <Field label={status.pinSet ? 'Neue PIN' : 'PIN festlegen'} hint="{pinLength} Buchstaben oder Ziffern">
-              <input type="password" bind:value={newPin} minlength={pinLength} maxlength={pinLength} autocomplete="off" required />
-            </Field>
-          </div>
-          <ErrorNote error={pinAction.error} />
-          <div><Button type="submit" busy={pinAction.busy}>{status.pinSet ? 'PIN ändern' : 'PIN speichern'}</Button></div>
-        </form>
+            <div class="grid-2">
+              <Field label="Neuer Vereins-PIN" hint="{pinLength} Buchstaben oder Ziffern">
+                <input type="password" bind:value={newPin} minlength={pinLength} maxlength={pinLength} autocomplete="off" required />
+              </Field>
+              <Field label="Neuen Vereins-PIN wiederholen" error={pinMismatch ? 'Die PINs stimmen nicht überein.' : null}>
+                <input type="password" bind:value={repeatPin} minlength={pinLength} maxlength={pinLength} autocomplete="off" required />
+              </Field>
+            </div>
+            <ErrorNote error={pinAction.error} />
+            <div>
+              <Button type="submit" busy={pinAction.busy}>{status.clubPinSet ? 'Vereins-PIN ändern' : 'Vereins-PIN festlegen'}</Button>
+            </div>
+          </form>
+        {/if}
       </div>
     {/snippet}
   </AsyncView>
@@ -116,8 +132,10 @@
   h3 {
     margin: var(--space-sm) 0 0;
   }
-  .danger {
+  p {
     margin: 0;
+  }
+  .danger {
     color: var(--color-danger);
   }
 </style>

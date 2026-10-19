@@ -39,7 +39,7 @@ export class MemberDetailModel {
     return this.write(this.guardianAction, () => this.api.linkGuardian(this.id, guardianId));
   }
 
-  resetPin(): Promise<boolean> {
+  resetSecurity(): Promise<boolean> {
     return this.resetAction.run(() => this.api.resetSecurity(this.id));
   }
 

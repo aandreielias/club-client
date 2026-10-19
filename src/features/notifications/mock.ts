@@ -21,10 +21,9 @@ const MAX_LISTED = 100;
 const limits = settings.notifications.message;
 
 const SECURITY_TITLES: Record<string, string> = {
-  PIN_SET: 'Deine PIN wurde eingerichtet',
-  PIN_CHANGED: 'Deine PIN wurde geändert',
-  PIN_LOCKED: 'Deine PIN wurde nach 5 Fehlversuchen gesperrt',
-  RESET_BY_ADMIN: 'Deine PIN wurde von einem Admin zurückgesetzt',
+  CLUB_PIN_CHANGED: 'Der Vereins-PIN wurde geändert',
+  PIN_LOCKED: 'Der Vereins-PIN wurde für dich nach 5 Fehlversuchen gesperrt',
+  RESET_BY_ADMIN: 'Ein Admin hat deine PIN-Sperre aufgehoben und deine Geräte entfernt',
   DEVICE_ADDED: 'Neues Gerät für Face ID / Fingerabdruck hinzugefügt',
 };
 
@@ -187,7 +186,10 @@ export class MockNotifications {
         break;
       case 'members.security-changed':
         this.notify([data.memberId], 'SECURITY', SECURITY_TITLES[data.change] ?? 'Sicherheitsänderung',
-          `Warst du das nicht? Melde dich sofort beim Vorstand von ${this.people.club.name}.`, '/me/security');
+          data.change === 'CLUB_PIN_CHANGED'
+            ? 'Frag beim Vorstand nach dem neuen PIN. Wusstest du nichts davon? Melde dich beim Vorstand.'
+            : `Warst du das nicht? Melde dich sofort beim Vorstand von ${this.people.club.name}.`,
+          '/me/security');
         break;
     }
   }
@@ -218,7 +220,7 @@ export class MockNotifications {
         entry('TASK_ASSIGNED', 'Neue Aufgabe: Fahrgemeinschaft Auswärtsspiel', 'Fällig in einer Woche.', '/tasks/t-2', 120, true),
       ],
       spieler: [entry('TASK_ASSIGNED', 'Neue Aufgabe: Bälle aufpumpen', 'Fällig gestern.', '/tasks/t-3', 48, false)],
-      trainer: [entry('SECURITY', 'Deine PIN wurde eingerichtet', `Warst du das nicht? Melde dich sofort beim Vorstand von ${this.people.club.name}.`, '/me/security', 200, true)],
+      trainer: [entry('SECURITY', 'Der Vereins-PIN wurde geändert', 'Frag beim Vorstand nach dem neuen PIN. Wusstest du nichts davon? Melde dich beim Vorstand.', '/me/security', 200, true)],
     };
   }
 }

@@ -21,5 +21,5 @@ export const membersFeature: Feature = {
     'member-new': { component: MemberInviteView, roles: MANAGERS },
   },
   messages: MEMBER_MESSAGES,
-  home: { id: 'members', label: 'Mitglieder (braucht die PIN)', component: MembersHome, roles: MANAGERS },
+  home: { id: 'members', label: 'Mitglieder (braucht den Vereins-PIN)', component: MembersHome, roles: MANAGERS },
 };

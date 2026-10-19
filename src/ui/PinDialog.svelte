@@ -23,10 +23,10 @@
   }
 </script>
 
-<Dialog open={stepUp.open} title="Mit PIN bestätigen" onclose={() => stepUp.open && cancel()}>
+<Dialog open={stepUp.open} title="Mit Vereins-PIN bestätigen" onclose={() => stepUp.open && cancel()}>
   <form class="stack" onsubmit={submit}>
     <p class="muted">Diese Änderung braucht eine Bestätigung. Sie gilt danach {settings.security.stepUpMinutes} Minuten.</p>
-    <Field label="PIN">
+    <Field label="Vereins-PIN">
       <!-- svelte-ignore a11y_autofocus -->
       <input type="password" bind:value={pin} minlength={length} maxlength={length} autocomplete="off" autofocus required />
     </Field>

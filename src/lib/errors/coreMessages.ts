@@ -13,7 +13,7 @@ export const STATUS_MESSAGES: Readonly<Record<number, string>> = {
 
 export const UNKNOWN_MESSAGE = 'Unbekannter Fehler.';
 
-/** Codes shared by every feature (gateway, login, profile, PIN). */
+/** Codes shared by every feature (gateway, login, profile, club PIN). */
 export const CORE_MESSAGES: MessageCatalog = {
   network: 'Server nicht erreichbar. Bitte Verbindung prüfen.',
   timeout: 'Der Server antwortet nicht rechtzeitig. Bitte erneut versuchen.',
@@ -25,13 +25,12 @@ export const CORE_MESSAGES: MessageCatalog = {
   'idempotency.in-progress': 'Die Anfrage wird noch verarbeitet.',
   'auth.unknown-member': 'Zu diesem Login gibt es kein aktives Mitglied.',
   'auth.session-missing': 'Sitzung abgelaufen. Bitte neu anmelden.',
-  'auth.pin-format': 'Die PIN muss genau 5 Buchstaben oder Ziffern haben.',
-  'auth.pin-too-simple': 'Diese PIN ist zu leicht zu erraten.',
-  'auth.pin-wrong': 'Falsche PIN.',
-  'auth.pin-locked': 'PIN gesperrt. Ein Admin muss sie zurücksetzen.',
-  'auth.pin-not-set': 'Es ist noch keine PIN gesetzt.',
+  'auth.pin-format': 'Der Vereins-PIN muss genau 5 Buchstaben oder Ziffern haben.',
+  'auth.pin-too-simple': 'Dieser PIN ist zu leicht zu erraten.',
+  'auth.pin-wrong': 'Falscher Vereins-PIN.',
+  'auth.pin-locked': 'Der Vereins-PIN ist für dich gesperrt. Ein Admin muss die Sperre aufheben.',
+  'auth.club-pin-not-set': 'Es gibt noch keinen Vereins-PIN. Admin oder Vorstand legen ihn in den Einstellungen fest.',
   'profile.birth-date-required': 'Bitte zuerst das Geburtsdatum eintragen.',
-  'profile.pin-required': 'Bitte zuerst eine PIN festlegen.',
   'member.not-found': 'Mitglied nicht gefunden.',
   'team.not-found': 'Team nicht gefunden.',
   'member.birth-date-in-future': 'Das Geburtsdatum liegt in der Zukunft.',

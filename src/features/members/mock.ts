@@ -7,7 +7,6 @@ import { settings } from '../../settings';
 import type { ChangeField, ChangeRequest } from './MembersApi';
 
 mockServer
-  .on('POST', '/api/v1/members/security/reset-all', (req) => directory.resetAllSecurity(directory.actor(req), req.body?.confirm))
   .on('POST', '/api/v1/members', (req) => directory.invite(directory.actor(req), req.body ?? {}))
   .on('GET', '/api/v1/members/:id', (req) => directory.get(directory.actor(req), req.params.id))
   .on('PUT', '/api/v1/members/:id/roles', (req) => directory.setRoles(directory.actor(req), req.params.id, req.body?.roles))

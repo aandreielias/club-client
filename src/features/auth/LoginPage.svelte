@@ -61,7 +61,7 @@
           </li>
         {/each}
       </ul>
-      <p class="muted">PIN der Konten mit Admin-, Vorstand- oder Trainer-Rolle: <span class="mono">{dev.pin}</span></p>
+      <p class="muted">Vereins-PIN für Admin, Vorstand und Trainer:innen: <span class="mono">{dev.pin}</span></p>
     </section>
   {/if}
 </Centered>

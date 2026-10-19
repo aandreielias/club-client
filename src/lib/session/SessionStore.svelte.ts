@@ -1,7 +1,7 @@
 import type { ApiClient } from '../http/ApiClient';
 import { Formatter } from '../time/Formatter';
 import { ZonedClock } from '../time/ZonedClock';
-import { PRIVILEGED, type Club, type Me, type Member, type Role, type SecurityStatus, type StepUp, type Team } from '../types';
+import { PRIVILEGED, type Club, type Me, type Member, type Role, type SecurityStatus, type Team } from '../types';
 
 export type ProfilePatch = Partial<Pick<Member, 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'photoConsent'>>;
 
@@ -81,9 +81,9 @@ export class SessionStore {
     await this.loadMe();
   }
 
-  async setPin(newPin: string, currentPin?: string): Promise<void> {
-    await this.api.put<StepUp>('/api/v1/me/pin', { currentPin: currentPin || null, newPin });
-    await this.loadMe();
+  /** Admin/board; once a club PIN exists the server asks for a step-up first. */
+  setClubPin(pin: string): Promise<void> {
+    return this.api.put('/api/v1/club/pin', { pin });
   }
 
   security(): Promise<SecurityStatus> {
