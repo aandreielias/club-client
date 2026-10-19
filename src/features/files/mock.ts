@@ -276,7 +276,7 @@ export class MockFiles {
     const file = this.visibleFile(viewer, req.params.id);
     const folder = this.folders.data.find((f) => f.id === file.folderId)!;
     this.requireModify(viewer, folder, file);
-    if (folder.kind !== 'DOCUMENTS') fail(400, 'file.versions-documents-only');
+    if (folder.kind !== 'DOCUMENTS' || file.contentType.startsWith('image/')) fail(400, 'file.versions-documents-only');
     const body = req.body instanceof FormData ? req.body : null;
     const upload = body?.get('file');
     const label = String(body?.get('label') ?? '').trim();

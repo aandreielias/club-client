@@ -25,6 +25,7 @@ const SECURITY_TITLES: Record<string, string> = {
   PIN_LOCKED: 'Deine PIN-Eingabe wurde nach 5 Fehlversuchen gesperrt',
   RESET_BY_ADMIN: 'Deine PIN-Sperre und Geräte wurden von einem Admin zurückgesetzt',
   DEVICE_ADDED: 'Neues Gerät für Face ID / Fingerabdruck hinzugefügt',
+  DEVICE_REMOVED: 'Gerät für Face ID / Fingerabdruck entfernt',
 };
 
 export class MockNotifications {

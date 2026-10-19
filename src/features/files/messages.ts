@@ -13,6 +13,8 @@ export const FILE_MESSAGES: MessageCatalog = {
   'file.not-found': 'Datei nicht gefunden.',
   'file.type-not-allowed': 'Dieser Dateityp ist hier nicht erlaubt.',
   'file.infected': 'Die Datei enthält Schadsoftware und wurde abgelehnt.',
+  'file.uploads-busy': 'Gerade laufen viele Uploads. Bitte gleich nochmal versuchen.',
+  'file.tag-not-in-team': 'Markiert werden können nur Mitglieder der Teams dieses Ordners.',
   'file.scan-unavailable': 'Die Virenprüfung ist gerade nicht verfügbar. Bitte später erneut versuchen.',
   'file.busy': 'Der Server verarbeitet gerade viele Bilder. Bitte gleich erneut versuchen.',
   'file.image-too-large': 'Das Bild ist zu groß (höchstens 40 Megapixel).',
