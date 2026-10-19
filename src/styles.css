@@ -294,6 +294,13 @@ label.check {
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   gap: var(--space-md);
 }
+/* An element that takes the record being dragged over it (ui/recordDrop.ts). */
+[data-record-drop] {
+  outline: 2px dashed var(--color-accent);
+  outline-offset: 2px;
+  background-color: var(--color-accent-soft);
+  transition: background-color var(--motion-fast);
+}
 .visually-hidden {
   position: absolute;
   width: 1px;

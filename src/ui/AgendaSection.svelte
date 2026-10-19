@@ -17,7 +17,7 @@
 </script>
 
 <SectionHeading {title} {href} />
-<DataTable model={agenda} toolbar={false} {limit} rowKey={(e) => e.key} onopen={(e) => bus.publish(WINDOW_OPEN, { kind: e.window.kind, id: e.window.id })}
+<DataTable model={agenda} toolbar={false} {limit} rowKey={(e) => e.key} record={(e) => ({ ...e.window, title: e.title })} onopen={(e) => bus.publish(WINDOW_OPEN, { kind: e.window.kind, id: e.window.id })}
   menu={(e) => windowMenu(bus, windows, router, e.window.kind, e.window.id)} emptyText="In dieser Zeit steht nichts an.">
   {#snippet cell(entry, column)}
     {#if column.key === 'label'}

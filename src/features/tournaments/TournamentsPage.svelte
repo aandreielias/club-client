@@ -1,6 +1,7 @@
 <script lang="ts">
   import { bus, commands, pendingDeletes, session } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
+  import { RecordDrag } from '../../lib/records/RecordDrag';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { usePane } from '../../lib/split/usePane';
@@ -42,7 +43,7 @@
         <ul class="cards">
           {#each items as t (t.id)}
             <li>
-              <a href="#/tournaments/{t.id}">
+              <a href="#/tournaments/{t.id}" ondragstart={(e) => RecordDrag.set(e, { kind: 'tournament', id: t.id, title: t.name })}>
                 <span class="icon"><Icon name="trophy" /></span>
                 <span class="name">{t.name}</span>
                 <span class="muted">{days(t.startsOn, t.endsOn)} · {t.teams} Teams</span>

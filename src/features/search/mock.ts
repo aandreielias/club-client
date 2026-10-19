@@ -45,12 +45,14 @@ mockServer.on('GET', '/api/v1/search', async (req) => {
   const to = new Date(now + 240 * DAY).toISOString();
   const board = directory.isManager(directory.actor(req));
 
-  const [appointments, tasks, teams, items, folders, files] = await Promise.all([
+  const [appointments, tasks, teams, items, places, cups, folders, files] = await Promise.all([
     list(req, `/api/v1/appointments?from=${from}&to=${to}`),
     list(req, '/api/v1/tasks?includeDone=true'),
     list(req, `/api/v1/teams?mine=${!board}`),
     // server: SearchController - item hits only for admin, board and coaches.
     directory.isPrivileged(directory.actor(req)) ? list(req, '/api/v1/inventory') : Promise.resolve([]),
+    list(req, '/api/v1/locations'),
+    list(req, '/api/v1/tournaments'),
     list(req, '/api/v1/folders'),
     list(req, `/api/v1/files?q=${encodeURIComponent(query)}&limit=${limit}`),
   ]);
@@ -69,6 +71,8 @@ mockServer.on('GET', '/api/v1/search', async (req) => {
       ...members(req, needle, limit),
       ...teams.filter((t) => contains(needle, t.name, t.season)).slice(0, limit).map((t) => hit('TEAM', t.id, t.name, t.season)),
       ...items.filter((i) => contains(needle, i.name, i.category, i.location, i.description)).slice(0, limit).map((i) => hit('ITEM', i.id, i.name, i.category)),
+      ...places.filter((l) => contains(needle, l.name, l.address)).slice(0, limit).map((l) => hit('LOCATION', l.id, l.name, l.address)),
+      ...cups.filter((t) => contains(needle, t.name)).slice(0, limit).map((t) => hit('TOURNAMENT', t.id, t.name)),
       ...folders.filter((f) => contains(needle, f.name)).slice(0, limit).map((f) => hit('FOLDER', f.id, f.name, null, null, f.parentId)),
       ...files.map((f) => hit('FILE', f.id, f.name, f.folderName, null, f.folderId)),
     ],

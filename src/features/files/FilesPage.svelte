@@ -27,7 +27,7 @@
   import { FolderTree } from './FolderTree.svelte';
   import { colorHue, type Folder, type StoredFile } from './model';
   import MoveFilesDialog from './MoveFilesDialog.svelte';
-  import { fileDownloads, fileLinks, fileMover, filePolicy, filesApi, fileTypes, folderZip } from './services';
+  import { fileDownloads, fileLinks, fileMover, filePolicy, filesApi, fileTypes, folderZip, photoTagDrops } from './services';
   import UploadPanel from './UploadPanel.svelte';
 
   /** '/files' (root folders) or '/files/:id' (one folder). */
@@ -62,6 +62,19 @@
   const shownView = $derived<View>(preferences.values.filesView);
   let creating = $state(false);
   useCommands(commands, { 'page.new': { run: () => (creating = true), when: () => canCreate } });
+
+  /** Files can be dragged onto anything that links records (a message, Benötigt). */
+  const record = (item: FolderItem) => (item.kind === 'file' ? { kind: 'file', id: `${item.file.folderId}:${item.file.id}`, title: item.name } : null);
+
+  /** A member dropped onto a photo tile opens the photo with them in its tag editor. */
+  const tagDrop = {
+    accepts: (item: FolderItem) => item.kind === 'file' && !!folder && filePolicy.canTag(item.file, folder),
+    drop: (item: FolderItem, memberId: string) => {
+      if (item.kind !== 'file') return;
+      photoTagDrops.set(item.file.id, memberId);
+      open(item);
+    },
+  };
 
   function open(item: FolderItem) {
     if (item.kind === 'folder') pane.navigate(`/files/${item.id}`);
@@ -206,10 +219,11 @@
       </div>
     {/if}
     {#if shownView === 'gallery'}
-      <FolderGallery model={list} onopen={open} menu={itemMenu} emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'} {emptyAction} {drag}
+      <FolderGallery model={list} onopen={open} menu={itemMenu} emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'} {emptyAction} {drag} {record} {tagDrop}
         selected={(item) => fileActions.selected.has(item.id)} onselect={(item) => fileActions.toggle(item.id)} />
     {:else}
-      <DataTable model={list} rowKey={(item) => item.id} onopen={open} menu={itemMenu} emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'} {emptyAction} {drag}
+      <DataTable model={list} rowKey={(item) => item.id} onopen={open}
+        {record} menu={itemMenu} emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'} {emptyAction} {drag}
         check={contents ? { checked: (item) => fileActions.selected.has(item.id), toggle: (item) => fileActions.toggle(item.id), hidden: (item) => item.kind === 'folder', label: (item) => `${item.name} auswählen` } : undefined}>
         {#snippet cell(item, column)}
           {#if column.key === 'actions'}

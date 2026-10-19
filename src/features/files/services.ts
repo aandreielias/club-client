@@ -21,3 +21,5 @@ export const filePreviews = new FilePreviews(fileLinks, new OfficeReader(setting
 export const fileMover = new FileMover(filesApi, fileTypes, bus);
 export const folderZip = new FolderZip(filesApi, fileLinks, settings.files.zipMaxBytes);
 export const tagCandidates = new TagCandidates(directory, permissions, session);
+/** A member dropped onto a gallery tile, by file id: the photo window opens its tag editor with them (PhotoView). */
+export const photoTagDrops = new Map<string, string>();

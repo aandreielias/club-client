@@ -28,6 +28,7 @@
   <DataTable
     model={list}
     rowKey={(i) => i.id}
+    record={(i) => ({ kind: 'item', id: i.id, title: i.name })}
     onopen={(i) => bus.publish(WINDOW_OPEN, { kind: 'item', id: i.id })}
     menu={(i) => windowMenu(bus, windows, router, 'item', i.id)}
     selected={windows.current?.kind === 'item' ? windows.current.id : null}

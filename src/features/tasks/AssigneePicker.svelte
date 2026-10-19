@@ -1,6 +1,8 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { directory, store } from '../../lib/container';
+  import { bus, directory, store } from '../../lib/container';
+  import { TOAST } from '../../channels';
+  import { recordDrop } from '../../ui/recordDrop';
   import { PersonListModel } from '../../lib/directory/PersonListModel.svelte';
   import PeoplePicker from '../../ui/PeoplePicker.svelte';
   import type { TaskForm } from './TaskForm.svelte';
@@ -27,9 +29,15 @@
     form.teamOrNull; // reload when the team changes
     untrack(() => list.load().then(() => form.retainAssignees((list.data.value ?? []).map((c) => c.memberId))));
   });
+
+  /** A member dragged in (a name, a list row): assigned when they may be. */
+  function drop(memberId: string) {
+    if (!(list.data.value ?? []).some((c) => c.memberId === memberId)) bus.publish(TOAST, { text: `${directory.nameOf(memberId)} kann diese Aufgabe nicht bekommen.` });
+    else if (!form.isAssigned(memberId)) form.toggleAssignee(memberId);
+  }
 </script>
 
-<fieldset class="stack">
+<fieldset class="stack" {@attach recordDrop(['member'], (ref) => drop(ref.id))}>
   <legend>Zugewiesen</legend>
   <PeoplePicker {list} chosen={form.assignees} ontoggle={(id) => form.toggleAssignee(id)} emptyText="Keine passenden Mitglieder." />
   {#if error}<span class="error" role="alert">{error}</span>{/if}

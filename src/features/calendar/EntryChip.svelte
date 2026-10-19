@@ -6,6 +6,7 @@
   import { menu } from '../../ui/contextMenu';
   import { tooltip } from '../../ui/tooltip';
   import type { CalendarDrag } from './CalendarDrag';
+  import { RecordDrag } from '../../lib/records/RecordDrag';
 
   /** One calendar entry as a compact, clickable chip in the entry's hue. */
   let { entry, showTime = true, fill = false, drag }: { entry: CalendarEntry; showTime?: boolean; fill?: boolean; drag?: CalendarDrag } = $props();
@@ -20,8 +21,8 @@
   class="chip"
   class:inactive={entry.inactive}
   class:fill
-  draggable={drag?.canMove(entry) ? 'true' : undefined}
-  ondragstart={(e) => drag?.start(entry, e)}
+  draggable="true"
+  ondragstart={(e) => (drag?.start(entry, e), RecordDrag.set(e, { ...entry.window, title: entry.title }))}
   style:--chip-bg="var(--color-tag-{entry.hue}-bg)"
   style:--chip-text="var(--color-tag-{entry.hue}-text)"
   aria-label="{entry.label}: {entry.title}"

@@ -13,6 +13,7 @@
   import SearchSelect from './SearchSelect.svelte';
   import Tag from './Tag.svelte';
   import { tooltip } from './tooltip';
+  import { recordDrop } from './recordDrop';
 
   /**
    * "Benötigt" (inventory items with quantity) and "Dateien" of an appointment or task, shared by
@@ -38,69 +39,82 @@
     if (await model.commit()) bus.publish(TOAST, { text: 'Benötigt und Dateien gespeichert.' });
   }
   backStack.while(() => model.editing, () => model.cancel());
+
+  // Items and files dragged in from a list, the other pane or a name (record windows: `item`, `folderId:fileId`).
+  function dropItem(itemId: string, name: string) {
+    model.addItem(itemId);
+    if (!model.needs.some((n) => n.itemId === itemId)) bus.publish(TOAST, { text: `„${name}“ ist nicht im Inventar.` });
+  }
+  async function dropFile(id: string, name: string) {
+    if (!(await model.dropFile(id.slice(id.indexOf(':') + 1), name))) bus.publish(TOAST, { text: `„${name}“ lässt sich hier nicht anhängen.` });
+  }
 </script>
 
 {#if model.editing}
   <div class="stack">
-    <h2>Benötigt</h2>
-    {#if model.needs.length}
-      <ul class="entries">
-        {#each model.needs as need (need.itemId)}
-          {@const error = LinksModel.quantityError(need.quantity)}
-          <li class:deleted={need.deleted}>
-            <span class="name">
-              <!-- Members see what is needed; only admin, board and coaches open the inventory. -->
-              <RecordLink kind="item" id={need.itemId} allowed={!need.deleted && permissions.isPrivileged} hint="Gegenstand öffnen">{need.name}</RecordLink>
-            </span>
-            {#if need.deleted}<Tag tone="danger">Gelöscht</Tag>{:else}<span></span>{/if}
-            <input
-              class="quantity"
-              type="number"
-              min="1"
-              max={settings.links.maxQuantity}
-              aria-label="Menge {need.name}"
-              aria-invalid={error !== null}
-              bind:value={need.quantity}
-            />
-            <span class="muted stock">{need.stock !== null ? `von ${need.stock}` : ''}</span>
-            <Button size="sm" variant="ghost" onclick={() => model.removeItem(need.itemId)}>Entfernen</Button>
-          </li>
-        {/each}
-      </ul>
-    {/if}
-    <div class="add">
-      <SearchSelect
-        search={(q) => model.findItems(q).map((o) => ({ value: o.id, label: o.label }))}
-        onpick={(id) => model.addItem(id)}
-        placeholder={model.items.loading ? 'Inventar wird geladen' : 'Gegenstand suchen und hinzufügen'}
-        emptyText={model.items.value?.length === 0 ? 'Das Inventar ist leer.' : 'Kein passender Gegenstand.'}
-        aria-label="Gegenstand hinzufügen"
-      />
+    <div class="stack drop" {@attach recordDrop(['item'], (ref) => dropItem(ref.id, ref.title))}>
+      <h2>Benötigt</h2>
+      {#if model.needs.length}
+        <ul class="entries">
+          {#each model.needs as need (need.itemId)}
+            {@const error = LinksModel.quantityError(need.quantity)}
+            <li class:deleted={need.deleted}>
+              <span class="name">
+                <!-- Members see what is needed; only admin, board and coaches open the inventory. -->
+                <RecordLink kind="item" id={need.itemId} allowed={!need.deleted && permissions.isPrivileged} hint="Gegenstand öffnen">{need.name}</RecordLink>
+              </span>
+              {#if need.deleted}<Tag tone="danger">Gelöscht</Tag>{:else}<span></span>{/if}
+              <input
+                class="quantity"
+                type="number"
+                min="1"
+                max={settings.links.maxQuantity}
+                aria-label="Menge {need.name}"
+                aria-invalid={error !== null}
+                bind:value={need.quantity}
+              />
+              <span class="muted stock">{need.stock !== null ? `von ${need.stock}` : ''}</span>
+              <Button size="sm" variant="ghost" onclick={() => model.removeItem(need.itemId)}>Entfernen</Button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      <div class="add">
+        <SearchSelect
+          search={(q) => model.findItems(q).map((o) => ({ value: o.id, label: o.label }))}
+          onpick={(id) => model.addItem(id)}
+          placeholder={model.items.loading ? 'Inventar wird geladen' : 'Gegenstand suchen und hinzufügen'}
+          emptyText={model.items.value?.length === 0 ? 'Das Inventar ist leer.' : 'Kein passender Gegenstand.'}
+          aria-label="Gegenstand hinzufügen"
+        />
+      </div>
     </div>
 
-    <h2>Dateien</h2>
-    {#if model.files.length}
-      <ul class="entries">
-        {#each model.files as file (file.id)}
-          <li class:deleted={file.deleted}>
-            <span class="name">{file.name}</span>
-            {#if file.deleted}<Tag tone="danger">Gelöscht</Tag>{:else}<span></span>{/if}
-            <span></span>
-            <span></span>
-            <Button size="sm" variant="ghost" onclick={() => model.removeFile(file.id)}>Entfernen</Button>
-          </li>
-        {/each}
-      </ul>
-    {/if}
-    <div class="add">
-      <SearchSelect
-        search={async (q) => (await model.findFiles(q)).map((o) => ({ value: o.id, label: o.label }))}
-        onpick={(id) => model.addFile(id)}
-        debounceMs={settings.links.searchDebounceMs}
-        placeholder="Datei suchen und hinzufügen"
-        emptyText="Keine passende Datei."
-        aria-label="Datei hinzufügen"
-      />
+    <div class="stack drop" {@attach recordDrop(['file'], (ref) => void dropFile(ref.id, ref.title))}>
+      <h2>Dateien</h2>
+      {#if model.files.length}
+        <ul class="entries">
+          {#each model.files as file (file.id)}
+            <li class:deleted={file.deleted}>
+              <span class="name">{file.name}</span>
+              {#if file.deleted}<Tag tone="danger">Gelöscht</Tag>{:else}<span></span>{/if}
+              <span></span>
+              <span></span>
+              <Button size="sm" variant="ghost" onclick={() => model.removeFile(file.id)}>Entfernen</Button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      <div class="add">
+        <SearchSelect
+          search={async (q) => (await model.findFiles(q)).map((o) => ({ value: o.id, label: o.label }))}
+          onpick={(id) => model.addFile(id)}
+          debounceMs={settings.links.searchDebounceMs}
+          placeholder="Datei suchen und hinzufügen"
+          emptyText="Keine passende Datei."
+          aria-label="Datei hinzufügen"
+        />
+      </div>
     </div>
 
     <ErrorNote error={model.save.error ?? model.items.error} />
@@ -228,6 +242,9 @@
   }
   .add {
     max-width: var(--layout-field-width);
+  }
+  .drop {
+    border-radius: var(--radius-md);
   }
   .none {
     margin: 0;

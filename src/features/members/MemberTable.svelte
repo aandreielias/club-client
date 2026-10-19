@@ -19,6 +19,7 @@
   {limit}
   {emptyAction}
   rowKey={(m) => m.id}
+  record={(m) => ({ kind: 'member', id: m.id, title: `${m.firstName} ${m.lastName}` })}
   onopen={(m) => bus.publish(WINDOW_OPEN, { kind: 'member', id: m.id })}
   menu={(m) => windowMenu(bus, windows, router, 'member', m.id)}
   selected={windows.current?.kind === 'member' ? windows.current.id : null}

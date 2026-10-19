@@ -3,7 +3,7 @@
 export type NotificationKind = 'TASK_ASSIGNED' | 'TASK_DUE' | 'APPOINTMENT_CANCELLED' | 'SECURITY' | 'CHANGE_DECIDED' | 'MESSAGE' | 'ITEM_REMINDER';
 
 /** Records a message can link (server: NotificationsApi.RefKind). */
-export type RefKind = 'TASK' | 'APPOINTMENT' | 'ITEM' | 'FILE' | 'MEMBER';
+export type RefKind = 'TASK' | 'APPOINTMENT' | 'ITEM' | 'FILE' | 'MEMBER' | 'TEAM' | 'LOCATION' | 'TOURNAMENT';
 
 /** A linked record with its title when the message was sent; parentId: a file's folder. */
 export interface MessageRef {
@@ -13,7 +13,16 @@ export interface MessageRef {
   parentId: string | null;
 }
 
-export const REF_ICONS = { TASK: 'tasks', APPOINTMENT: 'calendar', ITEM: 'inventory', FILE: 'document', MEMBER: 'account' } as const;
+export const REF_ICONS = {
+  TASK: 'tasks',
+  APPOINTMENT: 'calendar',
+  ITEM: 'inventory',
+  FILE: 'document',
+  MEMBER: 'account',
+  TEAM: 'teams',
+  LOCATION: 'location',
+  TOURNAMENT: 'trophy',
+} as const;
 
 /** Window that opens a linked record. */
 export function refWindow(ref: Pick<MessageRef, 'kind' | 'id' | 'parentId'>): { kind: string; id: string } {

@@ -1,12 +1,12 @@
 // Mirror of the club-server search DTOs (gateway SearchController).
 
-export type HitKind = 'APPOINTMENT' | 'TASK' | 'MEMBER' | 'TEAM' | 'ITEM' | 'FOLDER' | 'FILE';
+export type HitKind = 'APPOINTMENT' | 'TASK' | 'MEMBER' | 'TEAM' | 'ITEM' | 'LOCATION' | 'TOURNAMENT' | 'FOLDER' | 'FILE';
 
 export interface SearchHit {
   kind: HitKind;
   id: string;
   title: string;
-  /** Location, team season, item category, folder name; a task's status code. */
+  /** Location, team season, item category, a place's address, folder name; a task's status code. */
   detail: string | null;
   /** Start of an appointment or due date of a task. */
   at: string | null;
@@ -25,6 +25,8 @@ export const HIT_KINDS: readonly { value: HitKind; label: string }[] = [
   { value: 'MEMBER', label: 'Mitglied' },
   { value: 'TEAM', label: 'Team' },
   { value: 'ITEM', label: 'Inventar' },
+  { value: 'LOCATION', label: 'Ort' },
+  { value: 'TOURNAMENT', label: 'Turnier' },
   { value: 'FOLDER', label: 'Ordner' },
   { value: 'FILE', label: 'Datei' },
 ];
@@ -53,6 +55,10 @@ export function hitTarget(hit: SearchHit): { window: { kind: string; id: string 
       return { window: { kind: 'team', id: hit.id } };
     case 'ITEM':
       return { window: { kind: 'item', id: hit.id } };
+    case 'LOCATION':
+      return { window: { kind: 'location', id: hit.id } };
+    case 'TOURNAMENT':
+      return { window: { kind: 'tournament', id: hit.id } };
     case 'FILE':
       return { window: { kind: 'file', id: `${hit.folderId}:${hit.id}` } };
     case 'FOLDER':

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { directory, store } from '../../lib/container';
+  import { bus, directory, store } from '../../lib/container';
+  import { TOAST } from '../../channels';
   import { PersonListModel } from '../../lib/directory/PersonListModel.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -31,7 +32,14 @@
     store,
     'photo-tags',
   );
-  void list.load();
+  const loaded = list.load();
+
+  /** A member dragged onto the photo: chosen when they are a candidate here. */
+  export async function addPerson(id: string) {
+    await loaded;
+    if (!list.data.value?.some((p) => p.memberId === id)) bus.publish(TOAST, { text: `${directory.nameOf(id)} kann auf diesem Foto nicht markiert werden.` });
+    else if (!selected.includes(id)) selected = [...selected, id];
+  }
 
   function toggle(id: string) {
     selected = selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id];

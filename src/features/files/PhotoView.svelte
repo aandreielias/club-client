@@ -2,7 +2,9 @@
   import ActivitySection from '../../ui/ActivitySection.svelte';
   import MemberName from '../../ui/MemberName.svelte';
   import { settings } from '../../settings';
+  import { tick } from 'svelte';
   import { bus, directory, pendingDeletes, session } from '../../lib/container';
+  import { recordDrop } from '../../ui/recordDrop';
   import { APP_ERROR, TOAST } from '../../channels';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
@@ -13,7 +15,7 @@
   import { FolderContents } from './FolderContents.svelte';
   import { FolderTree } from './FolderTree.svelte';
   import type { Folder, StoredFile } from './model';
-  import { fileDownloads, fileLinks, filePolicy, filePreviews, filesApi, fileTypes } from './services';
+  import { fileDownloads, fileLinks, filePolicy, filePreviews, filesApi, fileTypes, photoTagDrops } from './services';
   import DocumentPreview from './DocumentPreview.svelte';
   import TagEditor from './TagEditor.svelte';
   import EditFileDialog from './EditFileDialog.svelte';
@@ -29,6 +31,7 @@
   const contents = new FolderContents(filesApi, fileLinks, folderId);
   const tree = new FolderTree(filesApi, settings.files.maxFolderDepth);
   let tagging = $state(false);
+  let tagEditor = $state<TagEditor>();
   let editing = $state(false);
   let versioning = $state(false);
 
@@ -50,6 +53,20 @@
 
   const image = $derived(!!file && fileTypes.isImage(file.contentType));
 
+  /** A member dropped onto the photo (here or on its gallery tile) goes into the tag editor; saving stays a click. */
+  async function tagDropped(memberId: string) {
+    tagging = true;
+    await tick();
+    await tagEditor?.addPerson(memberId);
+  }
+  $effect(() => {
+    const dropped = photoTagDrops.get(fileId);
+    if (dropped && data.value && file && filePolicy.canTag(file, data.value.folder)) {
+      photoTagDrops.delete(fileId);
+      void tagDropped(dropped);
+    }
+  });
+
   function remove(target: StoredFile) {
     pendingDeletes.schedule({ ids: [target.id], text: `„${target.name}“ gelöscht.`, commit: () => filesApi.deleteFile(target.id) });
     handle?.close();
@@ -67,6 +84,7 @@
 <AsyncView resource={data}>
   {#snippet children({ folder })}
     {#if file}
+      <div class="drop" {@attach recordDrop(['member'], (ref) => void tagDropped(ref.id), () => image && filePolicy.canTag(file, folder))}>
       <Detail title={file.name}>
         {#snippet actions()}
           <Button icon="download" onclick={() => download(file)}>Herunterladen</Button>
@@ -106,11 +124,12 @@
 
         {#if tagging}
           <h2>Personen markieren</h2>
-          <TagEditor {file} {folder} {contents} ondone={() => (tagging = false)} />
+          <TagEditor bind:this={tagEditor} {file} {folder} {contents} ondone={() => (tagging = false)} />
         {/if}
         {#if folder.kind === 'DOCUMENTS'}<VersionsSection {file} onopencompare={(open) => (handle ? handle.close(open) : open())} />{/if}
         <ActivitySection kind="FILE" id={file.id} describe={(e) => (e.action === 'UPDATED' ? 'umbenannt oder verschoben' : null)} />
       </Detail>
+      </div>
     {/if}
   {/snippet}
 </AsyncView>
@@ -137,6 +156,9 @@
 {/if}
 
 <style>
+  .drop {
+    border-radius: var(--radius-lg);
+  }
   .image {
     display: grid;
     place-items: center;

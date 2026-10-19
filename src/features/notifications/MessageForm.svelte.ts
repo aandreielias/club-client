@@ -1,3 +1,4 @@
+import type { RecordRef } from '../../lib/records/RecordDrag';
 import { settings } from '../../settings';
 import type { MessageRef, OutgoingMessage, RefKind } from './model';
 
@@ -5,6 +6,18 @@ export type Audience = 'everyone' | 'teams' | 'people';
 export type MessageField = 'title' | 'body' | 'recipients' | 'refs';
 
 const limits = settings.notifications.message;
+
+/** Window kinds of records that can be dragged onto a message (RecordDrag) and their ref kind. */
+export const DROPPABLE: Readonly<Record<string, RefKind>> = {
+  appointment: 'APPOINTMENT',
+  task: 'TASK',
+  item: 'ITEM',
+  file: 'FILE',
+  member: 'MEMBER',
+  team: 'TEAM',
+  location: 'LOCATION',
+  tournament: 'TOURNAMENT',
+};
 
 /** A message being written: recipients, text and linked records. Errors show after the first submit. */
 export class MessageForm {
@@ -48,6 +61,16 @@ export class MessageForm {
 
   addRef(ref: Omit<MessageRef, 'parentId'>): void {
     if (!this.hasRef(ref.kind, ref.id) && this.refs.length < limits.maxRefs) this.refs = [...this.refs, ref];
+  }
+
+  /** A record dropped onto the message; false when it cannot be linked (kind, duplicate, limit). */
+  addRecord(record: RecordRef): boolean {
+    const kind = DROPPABLE[record.kind];
+    // Files travel as `folderId:fileId` (their window id); the server links the file id.
+    const id = kind === 'FILE' ? record.id.slice(record.id.indexOf(':') + 1) : record.id;
+    if (!kind || !id || this.hasRef(kind, id) || this.refs.length >= limits.maxRefs) return false;
+    this.addRef({ kind, id, title: record.title });
+    return true;
   }
 
   removeRef(ref: Omit<MessageRef, 'parentId'>): void {

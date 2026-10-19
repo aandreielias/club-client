@@ -25,6 +25,7 @@
   {toolbar}
   {limit}
   rowKey={(t) => t.id}
+  record={(t) => ({ kind: 'task', id: t.id, title: t.title })}
   onopen={(t) => bus.publish(WINDOW_OPEN, { kind: 'task', id: t.id })}
   {menu}
   selected={windows.current?.kind === 'task' ? windows.current.id : null}

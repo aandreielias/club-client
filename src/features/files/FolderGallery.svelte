@@ -12,6 +12,8 @@
   import Icon from '../../ui/Icon.svelte';
   import { colorHue } from './model';
   import { RowDragging, type RowDrag } from '../../ui/rowDrag';
+  import { RecordDrag, type RecordRef } from '../../lib/records/RecordDrag';
+  import { recordDrop } from '../../ui/recordDrop';
 
   /** Gallery view of the same list model as the table: tiles for folders, photos and documents. */
   let {
@@ -23,6 +25,8 @@
     selected,
     onselect,
     drag,
+    record,
+    tagDrop,
   }: {
     model: FolderItemListModel;
     onopen: (item: FolderItem) => void;
@@ -33,7 +37,17 @@
     selected?: (item: FolderItem) => boolean;
     onselect?: (item: FolderItem) => void;
     drag?: RowDrag<FolderItem>;
+    /** The record a tile stands for, to drag it onto a message or Benötigt. */
+    record?: (item: FolderItem) => RecordRef | null;
+    /** Photos that take a dragged member (opens the photo with them in its tag editor). */
+    tagDrop?: { accepts: (item: FolderItem) => boolean; drop: (item: FolderItem, memberId: string) => void };
   } = $props();
+
+  function dragStart(item: FolderItem, event: DragEvent) {
+    if (drag) RowDragging.start(drag, item, event);
+    const ref = record?.(item);
+    if (ref) RecordDrag.set(event, ref);
+  }
 
   let dropId = $state<string | null>(null);
 </script>
@@ -46,8 +60,10 @@
         <ul class="tiles">
           {#each model.rows.filter((item) => !pendingDeletes.isHidden(item.id)) as item (item.id)}
             <li class="cell" class:chosen={selected?.(item)} class:drop-target={dropId === item.id}
-              draggable={drag?.can(item) ? 'true' : undefined}
-              ondragstart={(e) => drag && RowDragging.start(drag, item, e)}
+              class:movable={!!drag?.can(item)}
+              draggable={drag?.can(item) || record?.(item) ? 'true' : undefined}
+              ondragstart={(e) => dragStart(item, e)}
+              {@attach recordDrop(['member'], (ref) => tagDrop?.drop(item, ref.id), () => !!tagDrop?.accepts(item))}
               ondragover={(e) => drag && RowDragging.over(drag, item, e) && (dropId = item.id)}
               ondragleave={() => dropId === item.id && (dropId = null)}
               ondrop={(e) => ((dropId = null), drag && RowDragging.drop(drag, item, e))}>
@@ -121,7 +137,7 @@
     box-shadow: 0 0 0 2px var(--color-accent);
     transform: scale(1.02);
   }
-  .cell[draggable='true'] .tile {
+  .cell.movable .tile {
     cursor: grab;
   }
   .tile {

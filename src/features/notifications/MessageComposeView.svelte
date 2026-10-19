@@ -7,6 +7,7 @@
   import { Action } from '../../lib/state/Action.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import { autofocus } from '../../ui/autofocus';
+  import { recordDrop } from '../../ui/recordDrop';
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import Detail from '../../ui/Detail.svelte';
@@ -14,7 +15,7 @@
   import Field from '../../ui/Field.svelte';
   import PeoplePicker from '../../ui/PeoplePicker.svelte';
   import TeamPicker from '../../ui/TeamPicker.svelte';
-  import { MessageForm, type Audience } from './MessageForm.svelte';
+  import { DROPPABLE, MessageForm, type Audience } from './MessageForm.svelte';
   import MessageRefPicker from './MessageRefPicker.svelte';
   import { notificationsApi } from './services';
 
@@ -73,7 +74,8 @@
 </script>
 
 <Detail title="Nachricht senden">
-  <form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
+  <!-- Records dragged in from anywhere (the other split pane, a list, a name) are linked. -->
+  <form class="stack" onsubmit={submit} novalidate {@attach autofocus} {@attach recordDrop(Object.keys(DROPPABLE), (ref) => form.addRecord(ref))}>
     <fieldset class="stack">
       <legend>An</legend>
       <ChoiceGroup name="message-audience" label="Empfänger" options={audiences} bind:value={form.audience} />

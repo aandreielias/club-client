@@ -9,6 +9,7 @@
   import AsyncView from './AsyncView.svelte';
   import Empty, { type EmptyAction } from './Empty.svelte';
   import { RowDragging, type RowDrag } from './rowDrag';
+  import { RecordDrag, type RecordRef } from '../lib/records/RecordDrag';
   import ListToolbar from './ListToolbar.svelte';
   import { tooltip } from './tooltip';
   import { menu as contextMenu, openMenuAt } from './contextMenu';
@@ -33,6 +34,7 @@
     limit,
     emptyAction,
     drag,
+    record,
   }: {
     model: ListModel<T>;
     rowKey: (item: T) => string;
@@ -54,7 +56,15 @@
     check?: { checked: (item: T) => boolean; toggle: (item: T) => void; disabled?: (item: T) => boolean; hidden?: (item: T) => boolean; label: (item: T) => string };
     /** Drag rows onto other rows (e.g. files onto folders): the payload travels as `type`. */
     drag?: RowDrag<T>;
+    /** The record a row stands for, so it can be dragged onto anything that links records (a message, Benötigt). */
+    record?: (item: T) => RecordRef | null;
   } = $props();
+
+  function dragStart(item: T, event: DragEvent) {
+    if (drag) RowDragging.start(drag, item, event);
+    const ref = record?.(item);
+    if (ref) RecordDrag.set(event, ref);
+  }
 
   /** Row currently under a dragged payload it accepts. */
   let dropKey = $state<string | null>(null);
@@ -138,8 +148,9 @@
                 in:motion.rise|global={{ delay: motion.stagger(rowIndex), distance: 4 }} animate:flip={{ duration: motion.ms('base') }}
                 class:checked={!!check?.checked(item)}
                 class:drop-target={dropKey === rowKey(item)}
-                draggable={drag?.can(item) ? 'true' : undefined}
-                ondragstart={(e) => drag && RowDragging.start(drag, item, e)}
+                class:movable={!!drag?.can(item)}
+                draggable={drag?.can(item) || record?.(item) ? 'true' : undefined}
+                ondragstart={(e) => dragStart(item, e)}
                 ondragover={(e) => drag && RowDragging.over(drag, item, e) && (dropKey = rowKey(item))}
                 ondragleave={() => dropKey === rowKey(item) && (dropKey = null)}
                 ondrop={(e) => ((dropKey = null), drag && RowDragging.drop(drag, item, e))}
@@ -263,7 +274,7 @@
     background: var(--color-accent-soft);
     box-shadow: inset 0 0 0 1px var(--color-accent);
   }
-  tr[draggable='true'] {
+  tr.movable {
     cursor: grab;
   }
   tbody tr.clickable:hover td {

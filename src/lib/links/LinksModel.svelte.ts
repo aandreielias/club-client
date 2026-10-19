@@ -83,6 +83,18 @@ export class LinksModel {
     if (option && !this.files.some((f) => f.id === fileId)) this.files.push({ ...option.file });
   }
 
+  /**
+   * A file dragged in: looked up by name through the same search as the picker, so only files the
+   * editor may attach get in. False when it is not found.
+   */
+  async dropFile(fileId: string, name: string): Promise<boolean> {
+    if (!this.files.some((f) => f.id === fileId)) {
+      this.#found = await this.api.files(name, settings.links.fileResults);
+      this.addFile(fileId);
+    }
+    return this.files.some((f) => f.id === fileId);
+  }
+
   removeFile(fileId: string): void {
     this.files = this.files.filter((f) => f.id !== fileId);
   }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { directory, MockDirectory } from '../../lib/mock/core';
+import type { LinksApi } from '../../lib/links/LinksApi';
 import { LinksModel } from '../../lib/links/LinksModel.svelte';
 import type { Member } from '../../lib/types';
 import { calendar } from '../calendar/mock';
@@ -153,5 +154,17 @@ describe('StockForm', () => {
     ]);
     form.lines[0].quantity = 0;
     expect(form.error).toBe('Jede Zeile braucht eine Anzahl ab 1.');
+  });
+});
+
+describe('LinksModel drops', () => {
+  it('attaches a dropped file only when the editor finds it by name', async () => {
+    const file = { id: 'f1', folderId: 'd1', name: 'Plan.pdf', contentType: 'application/pdf', sizeBytes: 1, deleted: false };
+    const api = { files: async (q: string) => (q === 'Plan.pdf' ? [{ id: 'f1', label: 'Plan.pdf', file }] : []) } as unknown as LinksApi;
+    const model = new LinksModel(api, '/api/v1/tasks/t1');
+    expect(await model.dropFile('f1', 'Plan.pdf')).toBe(true);
+    expect(await model.dropFile('f1', 'Plan.pdf')).toBe(true);
+    expect(model.files).toHaveLength(1);
+    expect(await model.dropFile('f2', 'Geheim.pdf')).toBe(false);
   });
 });

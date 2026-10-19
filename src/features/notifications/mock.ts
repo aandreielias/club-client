@@ -10,6 +10,8 @@ import { settings } from '../../settings';
 import { calendar } from '../calendar/mock';
 import { files } from '../files/mock';
 import { inventory } from '../inventory/mock';
+import { locations } from '../locations/mock';
+import { tournaments } from '../tournaments/mock';
 import { tasks } from '../tasks/mock';
 import { CHANGE_FIELD_LABELS, type ChangeField } from '../members/MembersApi';
 
@@ -138,7 +140,17 @@ export class MockNotifications {
         case 'FILE': {
           const f = files.refs(viewer, [{ fileId: ref.id, folderId: null, name: null }]).find((r) => !r.deleted);
           if (f) return { ...ref, title: f.name, parentId: f.folderId };
+          break;
         }
+        case 'TEAM': {
+          const team = this.people.teams.data.find((t) => t.id === ref.id);
+          if (team) return { ...ref, title: team.name, parentId: null };
+          break;
+        }
+        case 'LOCATION':
+          return { ...ref, title: locations.get(ref.id).name, parentId: null };
+        case 'TOURNAMENT':
+          return { ...ref, title: tournaments.get(viewer, ref.id).name, parentId: null };
       }
     } catch {
       // not visible: refused below

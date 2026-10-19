@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { backStack, bus, directory, router, store, windows } from '../../lib/container';
+  import { backStack, bus, directory, permissions, router, store, windows } from '../../lib/container';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import type { RosterEntry, TeamRole } from '../../lib/types';
@@ -88,7 +88,8 @@
 
   <AsyncView resource={model.roster}>
     {#snippet children()}
-      <DataTable model={list} rowKey={(e) => e.memberId} onopen={open} menu={rowMenu} emptyText="Noch keine Mitglieder im Team.">
+      <DataTable model={list} rowKey={(e) => e.memberId} onopen={open}
+        record={(e) => (permissions.canSeeMember(e.memberId) ? { kind: 'member', id: e.memberId, title: e.name } : null)} menu={rowMenu} emptyText="Noch keine Mitglieder im Team.">
         {#snippet cell(entry, column)}
           {#if column.key === 'role'}
             {#if policy.canAssign()}

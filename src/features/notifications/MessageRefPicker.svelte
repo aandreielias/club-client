@@ -12,7 +12,7 @@
   let { form }: { form: MessageForm } = $props();
 
   const limits = settings.notifications.message;
-  const LINKABLE: readonly HitKind[] = ['APPOINTMENT', 'TASK', 'ITEM', 'FILE', 'MEMBER'];
+  const LINKABLE: readonly HitKind[] = ['APPOINTMENT', 'TASK', 'ITEM', 'FILE', 'MEMBER', 'TEAM', 'LOCATION', 'TOURNAMENT'];
   let found = new Map<string, { kind: RefKind; id: string; title: string }>();
 
   async function search(query: string) {
@@ -26,10 +26,10 @@
 </script>
 
 <div class="stack refs">
-  <span class="label">Verknüpfen (optional)</span>
+  <span class="label">Verknüpfen (optional) <span class="muted">– suchen oder Einträge aus Listen, Kalender und Namen hierher ziehen</span></span>
   {#if form.refs.length < limits.maxRefs}
     <SearchSelect {search} onpick={(value) => { const ref = found.get(value); if (ref) form.addRef(ref); }}
-      placeholder="Termin, Aufgabe, Inventar, Datei oder Person suchen" aria-label="Datensatz zum Verknüpfen suchen" debounceMs={200} />
+      placeholder="Termin, Aufgabe, Person, Team, Ort, Turnier, Inventar oder Datei suchen" aria-label="Datensatz zum Verknüpfen suchen" debounceMs={200} />
   {/if}
   {#if form.refs.length}
     <ul class="chips">

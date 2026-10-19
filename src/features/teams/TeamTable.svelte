@@ -11,7 +11,7 @@
   let { list, toolbar = true, limit, emptyAction }: { list: TeamListModel; toolbar?: boolean; limit?: number; emptyAction?: EmptyAction | null } = $props();
 </script>
 
-<DataTable model={list} {toolbar} {limit} {emptyAction} rowKey={(t) => t.id} onopen={(t) => bus.publish(WINDOW_OPEN, { kind: 'team', id: t.id })}
+<DataTable model={list} {toolbar} {limit} {emptyAction} rowKey={(t) => t.id} record={(t) => ({ kind: 'team', id: t.id, title: t.name })} onopen={(t) => bus.publish(WINDOW_OPEN, { kind: 'team', id: t.id })}
   menu={(t) => windowMenu(bus, windows, router, 'team', t.id)} emptyText="Du bist noch in keinem Team.">
   {#snippet cell(team, column)}
     {#if column.key === 'mine'}

@@ -40,6 +40,7 @@
     <DataTable
       model={list}
       rowKey={(h) => `${h.kind}:${h.id}`}
+      record={(h) => { const target = hitTarget(h); return 'window' in target ? { ...target.window, title: h.title } : null; }}
       onopen={open}
       menu={hitMenu}
       selected={windows.current ? `${windows.current.kind.toUpperCase()}:${windows.current.id}` : null}
