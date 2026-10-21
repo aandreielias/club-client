@@ -9,7 +9,6 @@ export class TaskDetailModel {
   readonly statusAction = new Action();
   readonly checkAction = new Action();
   readonly commentAction = new Action();
-  readonly deleteAction = new Action();
   readonly dueAction = new Action();
 
   /** Checklist item whose change is in flight. */
@@ -48,21 +47,14 @@ export class TaskDetailModel {
     return this.write(this.commentAction, () => this.api.comment(this.id, text.trim()));
   }
 
-  delete(): Promise<boolean> {
-    return this.deleteAction.run(() => this.api.delete(this.id));
-  }
-
   /** Checklist progress, e.g. { done: 2, total: 5 }. */
   static progress(task: Task): { done: number; total: number } {
     return { done: task.checklist.filter((i) => i.done).length, total: task.checklist.length };
   }
 
   private async write(action: Action, request: () => Promise<Task>): Promise<boolean> {
-    let updated: Task | null = null;
-    const ok = await action.run(async () => {
-      updated = await request();
-    });
+    const updated = await action.attempt(request);
     if (updated) this.task.set(updated);
-    return ok;
+    return !!updated;
   }
 }

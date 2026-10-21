@@ -31,14 +31,10 @@ export class PreferencesModel {
   }
 
   async save(): Promise<boolean> {
-    let saved: Preference[] | null = null;
-    const ok = await this.saveAction.run(async () => {
-      saved = await this.api.savePreferences(this.draft);
-    });
-    if (saved) {
-      this.stored.set(saved);
-      this.draft = (saved as Preference[]).map((p) => ({ ...p }));
-    }
-    return ok;
+    const saved = await this.saveAction.attempt(() => this.api.savePreferences(this.draft));
+    if (!saved) return false;
+    this.stored.set(saved);
+    this.draft = saved.map((p) => ({ ...p }));
+    return true;
   }
 }

@@ -26,14 +26,6 @@ export class RosterModel {
     return this.assignAction.busy || this.removeAction.busy;
   }
 
-  coaches(): RosterEntry[] {
-    return (this.roster.value?.entries ?? []).filter((e) => e.teamRole === 'COACH');
-  }
-
-  players(): RosterEntry[] {
-    return (this.roster.value?.entries ?? []).filter((e) => e.teamRole === 'PLAYER');
-  }
-
   has(memberId: string): boolean {
     return !!this.roster.value?.entries.some((e) => e.memberId === memberId);
   }
@@ -48,15 +40,11 @@ export class RosterModel {
   }
 
   private async write(action: Action, request: () => Promise<Roster>): Promise<boolean> {
-    let updated: Roster | null = null;
-    const ok = await action.run(async () => {
-      updated = await request();
-    });
-    if (updated) {
-      this.roster.set(updated);
-      // Other pages resolve names and team roles from the cached roster.
-      this.directory.forgetRoster(this.teamId);
-    }
-    return ok;
+    const updated = await action.attempt(request);
+    if (!updated) return false;
+    this.roster.set(updated);
+    // Other pages resolve names and team roles from the cached roster.
+    this.directory.forgetRoster(this.teamId);
+    return true;
   }
 }

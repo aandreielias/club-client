@@ -22,14 +22,6 @@ describe('Router.match', () => {
     expect(Router.match('/tasks/:id', '/tasks/%E0')).toBeNull();
   });
 
-  it('resolves the first matching route', () => {
-    const router = new Router(bus());
-    router.path = '/calendar/new';
-    const routes = [{ path: '/calendar/new' }, { path: '/calendar/:id' }];
-    expect(router.resolve(routes)?.route).toBe(routes[0]);
-    router.path = '/calendar/42';
-    expect(router.resolve(routes)).toEqual({ route: routes[1], params: { id: '42' } });
-  });
 });
 
 describe('Router query helpers', () => {

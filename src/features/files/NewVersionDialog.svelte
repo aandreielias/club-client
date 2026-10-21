@@ -29,8 +29,8 @@
     event.preventDefault();
     submitted = true;
     if (!chosen || labelError || !date) return;
-    let saved: StoredFile | null = null;
-    if (await action.run(async () => (saved = await filesApi.uploadVersion(file.id, chosen!, label.trim(), date)))) onsaved(saved!);
+    const saved = await action.attempt(() => filesApi.uploadVersion(file.id, chosen!, label.trim(), date));
+    if (saved) onsaved(saved);
   }
 </script>
 

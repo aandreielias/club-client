@@ -101,17 +101,18 @@ export class LinksModel {
 
   async commit(): Promise<boolean> {
     if (!this.valid) return false;
-    let saved: Links | null = null;
-    const ok = await this.save.run(async () => {
-      saved = await this.api.set(
+    const saved = await this.save.attempt(() =>
+      this.api.set(
         this.owner,
         this.needs.map((n) => ({ itemId: n.itemId, quantity: n.quantity })),
         this.files.map((f) => f.id),
-      );
-    });
-    if (saved) this.links.set(saved);
-    if (ok) this.editing = false;
-    return ok;
+      ),
+    );
+    if (saved) {
+      this.links.set(saved);
+      this.editing = false;
+    }
+    return !!saved;
   }
 
   downloadUrl(file: FileRef): Promise<string> {

@@ -43,10 +43,6 @@ export class FolderTree {
     return this.path(id).length;
   }
 
-  canHaveSubfolders(id: string): boolean {
-    return this.depth(id) < this.maxDepth;
-  }
-
   /** Adds a newly created folder without reloading the list. */
   add(folder: Folder): void {
     this.folders.set([...(this.folders.value ?? []), folder]);

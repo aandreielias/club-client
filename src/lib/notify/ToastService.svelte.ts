@@ -41,14 +41,6 @@ export class ToastService {
     );
   }
 
-  show(text: string): void {
-    this.push(text, false, this.durationMs);
-  }
-
-  error(text: string): void {
-    this.push(text, true, this.errorDurationMs);
-  }
-
   dismiss(id: number): void {
     const index = this.items.findIndex((t) => t.id === id);
     if (index >= 0) this.items.splice(index, 1);

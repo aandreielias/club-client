@@ -43,7 +43,7 @@
   view.title(() => detail.task.value?.title);
   view.watch(TASK_CHANGED, (data) => data.taskId === detail.id, {
     deleted: 'Diese Aufgabe wurde gelöscht.',
-    busy: () => detail.deleteAction.busy || edit.save.busy,
+    busy: () => edit.save.busy,
     changed: () => {
       if (!edit.editing) void detail.load();
       if (!links.editing && !links.save.busy) void links.load();
@@ -78,7 +78,7 @@
       {#snippet actions()}
         {#if !edit.form && policy.canManage(task)}
           <Button icon="edit" onclick={() => edit.edit(TaskForm.edit(session.clock, task))}>Bearbeiten</Button>
-          <Button variant="danger" icon="delete" busy={detail.deleteAction.busy} onclick={() => remove(task.title)}>Löschen</Button>
+          <Button variant="danger" icon="delete" onclick={() => remove(task.title)}>Löschen</Button>
         {/if}
       {/snippet}
       {#snippet meta()}

@@ -2,13 +2,11 @@
   import { backStack, bus, pendingDeletes, permissions, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
-  import { Action } from '../../lib/state/Action.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { tooltip } from '../../ui/tooltip';
   import { APPOINTMENTS_CHANGED } from '../calendar/events';
@@ -30,7 +28,6 @@
   const view = new DetailController(bus, handle, onclosed);
   const edit = new EditSession<ItemForm>(bus, backStack);
   const stockEdit = new EditSession<StockForm>(bus, backStack);
-  const remove = new Action();
   // svelte-ignore state_referenced_locally
   const item = new Resource(() => inventoryApi.get(id));
   // svelte-ignore state_referenced_locally
@@ -43,7 +40,7 @@
   useBus(bus, [APPOINTMENTS_CHANGED, TASK_CHANGED], () => void uses.load());
   view.watch(ITEM_CHANGED, (data) => data.itemId === id, {
     deleted: 'Dieser Gegenstand wurde gelöscht.',
-    busy: () => edit.save.busy || stockEdit.save.busy || remove.busy,
+    busy: () => edit.save.busy || stockEdit.save.busy,
     changed: () => !edit.editing && !stockEdit.editing && void item.load(),
   });
 
@@ -71,7 +68,7 @@
       {#snippet actions()}
         {#if !edit.form && policy.canManage()}
           <Button icon="edit" onclick={() => edit.edit(ItemForm.edit(value))}>Bearbeiten</Button>
-          <Button variant="danger" icon="delete" busy={remove.busy} onclick={() => destroy(value.name)}>Löschen</Button>
+          <Button variant="danger" icon="delete" onclick={() => destroy(value.name)}>Löschen</Button>
         {/if}
       {/snippet}
       {#snippet meta()}
@@ -83,7 +80,6 @@
           <ItemEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={submit} />
         </div>
       {:else}
-        <ErrorNote error={remove.error} />
         <dl class="props">
           <dt>Bestand</dt>
           <dd>{value.quantity}</dd>

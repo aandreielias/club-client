@@ -48,11 +48,8 @@ export class MemberDetailModel {
   }
 
   private async write(action: Action, request: () => Promise<Member>): Promise<boolean> {
-    let updated: Member | null = null;
-    const ok = await action.run(async () => {
-      updated = await request();
-    });
+    const updated = await action.attempt(request);
     if (updated) this.member.set(updated);
-    return ok;
+    return !!updated;
   }
 }

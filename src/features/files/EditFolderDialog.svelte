@@ -46,8 +46,7 @@
     form.submitted = true;
     if (!form.valid) return;
     if (!form.changed) return onclose();
-    let saved: Folder | null = null;
-    await action.run(async () => (saved = await filesApi.updateFolder(folder.id, form.toPatch())));
+    const saved = await action.attempt(() => filesApi.updateFolder(folder.id, form.toPatch()));
     if (saved) onsaved(saved);
   }
 </script>

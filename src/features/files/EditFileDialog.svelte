@@ -40,8 +40,7 @@
     if (!form.valid) return;
     const patch = form.toPatch();
     if (!Object.keys(patch).length) return onclose();
-    let saved: StoredFile | null = null;
-    await action.run(async () => (saved = await filesApi.updateFile(file.id, patch)));
+    const saved = await action.attempt(() => filesApi.updateFile(file.id, patch));
     if (saved) onsaved(saved);
   }
 </script>

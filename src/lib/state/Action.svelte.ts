@@ -19,6 +19,13 @@ export class Action {
     }
   }
 
+  /** Like run, but resolves the write's result (null when it failed or another write was running). */
+  async attempt<T>(write: () => Promise<T>): Promise<T | null> {
+    let result: T | null = null;
+    await this.run(async () => (result = await write()));
+    return result;
+  }
+
   reset(): void {
     this.error = null;
   }

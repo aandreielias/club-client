@@ -92,7 +92,7 @@
           {#if folder.kind === 'DOCUMENTS' && !image && filePolicy.canModify(file, folder)}<Button icon="upload" onclick={() => (versioning = true)}>Neue Version</Button>{/if}
           {#if image && filePolicy.canTag(file, folder) && !tagging}<Button onclick={() => (tagging = true)}>Personen markieren</Button>{/if}
           {#if filePolicy.canModify(file, folder)}
-            <Button variant="danger" busy={contents.deleteAction.busy} onclick={() => remove(file)} tooltip="{image ? 'Foto' : 'Datei'} endgültig löschen">Löschen</Button>
+            <Button variant="danger" onclick={() => remove(file)} tooltip="{image ? 'Foto' : 'Datei'} endgültig löschen">Löschen</Button>
           {/if}
         {/snippet}
 

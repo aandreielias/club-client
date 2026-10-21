@@ -1,13 +1,13 @@
 <script lang="ts" module>
   import type { Hue } from '../lib/types';
 
-  export type TagHue = Hue;
+  type TagHue = Hue;
   /** Semantic aliases used across features. */
   export type TagTone = TagHue | 'neutral' | 'success' | 'warning' | 'danger';
 
   const ALIASES: Record<string, TagHue> = { neutral: 'gray', success: 'green', warning: 'yellow', danger: 'red' };
 
-  export const hueOf = (tone: TagTone): TagHue => ALIASES[tone] ?? (tone as TagHue);
+  const hueOf = (tone: TagTone): TagHue => ALIASES[tone] ?? (tone as TagHue);
 </script>
 
 <script lang="ts">

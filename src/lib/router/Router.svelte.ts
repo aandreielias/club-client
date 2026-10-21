@@ -5,15 +5,6 @@ export const NAVIGATE = defineEvent<{ path: string; replace?: boolean }>('ui/nav
 
 export type RouteParams = Record<string, string>;
 
-export interface Matchable {
-  path: string;
-}
-
-export interface RouteMatch<R extends Matchable> {
-  route: R;
-  params: RouteParams;
-}
-
 /**
  * Hash router: GitHub Pages has no SPA fallback, so the route lives after '#'.
  * Patterns use ':name' segments; the first matching route wins, so list specific paths first.
@@ -76,14 +67,6 @@ export class Router {
   replace(path: string): void {
     history.replaceState(null, '', `#${path}`);
     this.read();
-  }
-
-  resolve<R extends Matchable>(routes: readonly R[]): RouteMatch<R> | null {
-    for (const route of routes) {
-      const params = Router.match(route.path, this.path);
-      if (params) return { route, params };
-    }
-    return null;
   }
 
   /** '/tasks/:id' matches '/tasks/42' → { id: '42' }; null when it does not match. */

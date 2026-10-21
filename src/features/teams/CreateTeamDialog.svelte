@@ -19,10 +19,7 @@
     event.preventDefault();
     form.submitted = true;
     if (!form.valid) return;
-    let created: Team | null = null;
-    await action.run(async () => {
-      created = await teamsApi.create(form.name.trim(), form.season.trim());
-    });
+    const created = await action.attempt(() => teamsApi.create(form.name.trim(), form.season.trim()));
     if (created) oncreated(created);
   }
 </script>

@@ -31,10 +31,7 @@
     event.preventDefault();
     form.submitted = true;
     if (!form.valid) return;
-    let created: Folder | null = null;
-    await action.run(async () => {
-      created = await filesApi.createFolder(form.toNew());
-    });
+    const created = await action.attempt(() => filesApi.createFolder(form.toNew()));
     if (created) oncreated(created);
   }
 </script>

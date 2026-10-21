@@ -34,8 +34,6 @@ describe('FolderTree', () => {
     await tree.load();
     expect(tree.children(null).map((f) => f.id)).toEqual(['z', 'a', 'orphan']);
     expect(tree.path('c').map((f) => f.id)).toEqual(['a', 'b', 'c']);
-    expect(tree.canHaveSubfolders('b')).toBe(true);
-    expect(tree.canHaveSubfolders('c')).toBe(false);
   });
 });
 

@@ -70,10 +70,6 @@ export class CalendarModel {
     this.byDay = $derived(this.bucket(this.visible));
   }
 
-  get position(): CalendarPosition {
-    return { view: this.view, date: this.anchor, teamId: this.teamId };
-  }
-
   get today(): LocalDate {
     return this.clock.today();
   }
