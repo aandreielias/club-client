@@ -11,6 +11,8 @@ export class MemberDetailModel {
   readonly guardianAction = new Action();
   readonly resetAction = new Action();
   readonly deactivateAction = new Action();
+  readonly reactivateAction = new Action();
+  readonly eraseAction = new Action();
 
   constructor(
     private readonly api: MembersApi,
@@ -45,6 +47,21 @@ export class MemberDetailModel {
 
   deactivate(): Promise<boolean> {
     return this.write(this.deactivateAction, () => this.api.deactivate(this.id));
+  }
+
+  reactivate(): Promise<boolean> {
+    return this.write(this.reactivateAction, () => this.api.reactivate(this.id));
+  }
+
+  /** The record stays (anonymised); reload shows the erased state. */
+  async erase(): Promise<boolean> {
+    if (!(await this.eraseAction.run(() => this.api.erase(this.id)))) return false;
+    await this.member.load();
+    return true;
+  }
+
+  unlinkGuardian(guardianId: string): Promise<boolean> {
+    return this.write(this.guardianAction, () => this.api.unlinkGuardian(this.id, guardianId));
   }
 
   private async write(action: Action, request: () => Promise<Member>): Promise<boolean> {

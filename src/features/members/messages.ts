@@ -18,4 +18,8 @@ export const MEMBER_MESSAGES: MessageCatalog = {
   'change-request.decided': 'Über diese Anfrage wurde schon entschieden.',
   'change-request.not-found': 'Diese Anfrage gibt es nicht mehr.',
   'change-request.field-missing': 'Bitte angeben, was geändert werden soll.',
+  'member.erased': 'Gelöschte Personendaten lassen sich nicht wiederherstellen.',
+  'member.erase-active': 'Das Mitglied zuerst deaktivieren.',
+  'member.guardian-cycle': 'Diese Person ist schon von diesem Mitglied abhängig (Kreis).',
+  'member.guardian-not-linked': 'Diese Person ist nicht (mehr) zugeordnet.',
 };

@@ -330,12 +330,72 @@ export class MockDirectory {
     return this.visibleTo(viewer, target);
   }
 
+  /** server: MemberHandlers.reactivate */
+  reactivate(viewer: Member, memberId: string): Member {
+    this.requirePrivileged(viewer, ADMIN_BOARD);
+    const target = this.members.data.find((m) => m.id === memberId) ?? fail(404, 'member.not-found');
+    if (!target.active && target.roles.length === 0) fail(409, 'member.erased');
+    if (target.roles.includes('ADMIN') && !this.hasRole(viewer, ['ADMIN'])) fail(403, 'access.denied');
+    target.active = true;
+    this.members.save();
+    return this.visibleTo(viewer, target);
+  }
+
+  /** server: MemberHandlers.erase; the record stays, every personal value goes. */
+  erase(viewer: Member, memberId: string): void {
+    this.requirePrivileged(viewer, ['ADMIN']);
+    const target = this.members.data.find((m) => m.id === memberId) ?? fail(404, 'member.not-found');
+    if (target.active) fail(409, 'member.erase-active');
+    Object.assign(target, { email: `geloescht-${target.id}@example.invalid`, firstName: 'Gelöschtes', lastName: 'Mitglied', birthDate: null, phone: null,
+      photoConsent: false, roles: [] });
+    delete this.wards.data[memberId];
+    for (const wards of Object.values(this.wards.data)) wards.splice(0, wards.length, ...wards.filter((id) => id !== memberId));
+    this.members.save();
+    this.wards.save();
+  }
+
+  /** server: MemberHandlers.listGuardians (admin/board) */
+  listGuardians(viewer: Member, minorId: string): { items: { memberId: string; name: string }[] } {
+    if (!this.hasRole(viewer, ADMIN_BOARD)) fail(403, 'access.denied');
+    return {
+      items: this.members.data
+        .filter((m) => m.active && this.wards.data[m.id]?.includes(minorId))
+        .map((m) => ({ memberId: m.id, name: `${m.firstName} ${m.lastName}` })),
+    };
+  }
+
+  unlinkGuardian(viewer: Member, minorId: string, guardianId: string): Member {
+    this.requirePrivileged(viewer, ADMIN_BOARD);
+    const minor = this.members.data.find((m) => m.id === minorId) ?? fail(404, 'member.not-found');
+    const wards = this.wards.data[guardianId] ?? [];
+    if (!wards.includes(minorId)) fail(404, 'member.guardian-not-linked');
+    this.wards.data[guardianId] = wards.filter((id) => id !== minorId);
+    this.wards.save();
+    return this.visibleTo(viewer, minor);
+  }
+
+  /** server: MemberHandlers.wouldCycle */
+  private wouldCycle(guardianId: string, minorId: string): boolean {
+    const open = [...(this.wards.data[minorId] ?? [])];
+    const seen = new Set<string>();
+    while (open.length) {
+      const ward = open.pop()!;
+      if (ward === guardianId) return true;
+      if (!seen.has(ward)) {
+        seen.add(ward);
+        open.push(...(this.wards.data[ward] ?? []));
+      }
+    }
+    return false;
+  }
+
   linkGuardian(viewer: Member, minorId: string, guardianId: unknown): Member {
     this.requirePrivileged(viewer, ADMIN_BOARD);
     if (typeof guardianId !== 'string') return fail(400, 'request.invalid');
     if (guardianId === minorId) fail(400, 'member.guardian-is-self');
     if (!this.members.data.some((m) => m.id === guardianId && m.active)) fail(404, 'member.not-found');
     const minor = this.members.data.find((m) => m.id === minorId) ?? fail(404, 'member.not-found');
+    if (this.wouldCycle(guardianId, minorId)) fail(409, 'member.guardian-cycle');
     const wards = (this.wards.data[guardianId] ??= []);
     if (!wards.includes(minorId)) wards.push(minorId);
     this.wards.save();

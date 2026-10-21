@@ -31,4 +31,6 @@ export const FILE_MESSAGES: MessageCatalog = {
   'file.versions-documents-only': 'Versionen gibt es nur für Dokumente, nicht für Fotos.',
   'folder.cover-invalid': 'Das Titelbild muss ein Foto aus diesem Ordner sein.',
   'folder.scope-inherited': 'Unterordner übernehmen die Sichtbarkeit ihres obersten Ordners.',
+  'folder.move-into-self': 'Ein Ordner kann nicht in sich selbst verschoben werden.',
+  'file.quota-exceeded': 'Dein Speicherplatz für Uploads (2 GB) ist voll.',
 };

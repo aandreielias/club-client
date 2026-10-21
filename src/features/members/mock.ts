@@ -12,6 +12,10 @@ mockServer
   .on('PUT', '/api/v1/members/:id/roles', (req) => directory.setRoles(directory.actor(req), req.params.id, req.body?.roles))
   .on('POST', '/api/v1/members/:id/deactivate', (req) => directory.deactivate(directory.actor(req), req.params.id))
   .on('POST', '/api/v1/members/:id/guardians', (req) => directory.linkGuardian(directory.actor(req), req.params.id, req.body?.guardianId))
+  .on('GET', '/api/v1/members/:id/guardians', (req) => directory.listGuardians(directory.actor(req), req.params.id))
+  .on('DELETE', '/api/v1/members/:id/guardians/:guardianId', (req) => directory.unlinkGuardian(directory.actor(req), req.params.id, req.params.guardianId))
+  .on('POST', '/api/v1/members/:id/reactivate', (req) => directory.reactivate(directory.actor(req), req.params.id))
+  .on('POST', '/api/v1/members/:id/erase', (req) => directory.erase(directory.actor(req), req.params.id))
   .on('POST', '/api/v1/members/:id/security/reset', (req) => directory.resetSecurity(directory.actor(req), req.params.id));
 
 /** server: ChangeRequestHandlers. Requests become tasks (tasks mock) and decisions notifications (notifications mock). */

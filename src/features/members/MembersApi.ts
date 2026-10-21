@@ -41,6 +41,12 @@ export interface ChangeRequest {
 export type ProfilePatch = Partial<Pick<Member, 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'photoConsent'>>;
 
 /** Typed access to the member administration endpoints. Every write needs a step-up. */
+/** A linked guardian of a member (server: MembersApi.GuardianRef). */
+export interface GuardianRef {
+  memberId: string;
+  name: string;
+}
+
 export class MembersApi {
   static readonly BASE = '/api/v1/members';
 
@@ -69,6 +75,23 @@ export class MembersApi {
 
   deactivate(id: string): Promise<Member> {
     return this.api.post<Member>(`${this.path(id)}/deactivate`);
+  }
+
+  reactivate(id: string): Promise<Member> {
+    return this.api.post<Member>(`${this.path(id)}/reactivate`);
+  }
+
+  /** GDPR erasure of a deactivated member (admin): personal data overwritten, login deleted. */
+  erase(id: string): Promise<void> {
+    return this.api.post(`${this.path(id)}/erase`);
+  }
+
+  async guardians(minorId: string): Promise<GuardianRef[]> {
+    return (await this.api.get<{ items: GuardianRef[] }>(`${this.path(minorId)}/guardians`)).items;
+  }
+
+  unlinkGuardian(minorId: string, guardianId: string): Promise<Member> {
+    return this.api.delete<Member>(`${this.path(minorId)}/guardians/${encodeURIComponent(guardianId)}`);
   }
 
   linkGuardian(minorId: string, guardianId: string): Promise<Member> {

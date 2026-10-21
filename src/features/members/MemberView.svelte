@@ -66,6 +66,21 @@
     await view.confirm(request, () => view.attempt(model.resetAction, () => model.resetSecurity()), 'Sperre aufgehoben, Geräte entfernt.');
   }
 
+  async function reactivate(member: Member) {
+    const request = { title: 'Mitglied reaktivieren', message: `${member.firstName} ${member.lastName} kann sich wieder anmelden. Teams und Rollen bitte neu zuordnen.`, confirmLabel: 'Reaktivieren' };
+    await view.confirm(request, () => view.attempt(model.reactivateAction, () => model.reactivate()), 'Mitglied reaktiviert.');
+  }
+
+  async function erase(member: Member) {
+    const request = {
+      title: 'Personendaten löschen (DSGVO)',
+      message: `Name, E-Mail, Telefon, Geburtsdatum und Login von ${member.firstName} ${member.lastName} werden endgültig gelöscht, ebenso Erziehungsberechtigte, Benachrichtigungen und Foto-Markierungen. Einträge wie Aufgaben oder Dateien bleiben, ohne Namen. Das lässt sich nicht rückgängig machen.`,
+      confirmLabel: 'Endgültig löschen',
+      danger: true,
+    };
+    await view.confirm(request, () => view.attempt(model.eraseAction, () => model.erase()), 'Personendaten gelöscht.');
+  }
+
   async function deactivate(member: Member) {
     const request = {
       title: 'Mitglied deaktivieren',
@@ -119,7 +134,7 @@
         <GuardianLinker {member} {model} />
       {/if}
 
-      {#if policy.canResetSecurity() || policy.canDeactivate(member)}
+      {#if policy.canResetSecurity() || policy.canDeactivate(member) || policy.canReactivate(member) || policy.canErase(member)}
         <h2>Zugang</h2>
         <div class="row">
           {#if policy.canResetSecurity() && member.active}
@@ -127,6 +142,12 @@
           {/if}
           {#if policy.canDeactivate(member)}
             <Button variant="danger" busy={model.deactivateAction.busy} onclick={() => deactivate(member)}>Deaktivieren</Button>
+          {/if}
+          {#if policy.canReactivate(member)}
+            <Button busy={model.reactivateAction.busy} onclick={() => reactivate(member)}>Reaktivieren</Button>
+          {/if}
+          {#if policy.canErase(member)}
+            <Button variant="danger" busy={model.eraseAction.busy} onclick={() => erase(member)}>Personendaten löschen (DSGVO)</Button>
           {/if}
         </div>
       {/if}
