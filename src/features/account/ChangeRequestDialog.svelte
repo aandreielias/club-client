@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings } from '../../settings';
   import { session } from '../../lib/container';
+  import { ZonedClock } from '../../lib/time/ZonedClock';
   import Button from '../../ui/Button.svelte';
   import Dialog from '../../ui/Dialog.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -39,7 +40,7 @@
     <p class="muted">Der Vorstand bekommt die Anfrage als Aufgabe. Du wirst benachrichtigt, sobald entschieden ist.</p>
     <Field label="Neue Angabe: {label}">
       <input {type} bind:value required maxlength={type === 'text' ? settings.members.nameMaxLength : undefined}
-        max={type === 'date' ? session.clock.today() : undefined} />
+        max={type === 'date' ? ZonedClock.addDays(session.clock.today(), -1) : undefined} />
     </Field>
     <Field label="Begründung (optional)">
       <textarea bind:value={note} rows="3" maxlength={settings.members.changeNoteMaxLength}></textarea>

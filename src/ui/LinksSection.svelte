@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { openTab } from '../lib/window/openTab';
   import { settings } from '../settings';
   import { backStack, bus, permissions, session } from '../lib/container';
   import RecordLink from './RecordLink.svelte';
@@ -29,7 +30,7 @@
 
   async function download(file: FileRef) {
     try {
-      window.open(await model.downloadUrl(file), '_blank', 'noopener');
+      await openTab(model.downloadUrl(file));
     } catch {
       bus.publish(TOAST, { text: 'Die Datei lässt sich gerade nicht öffnen.' });
     }

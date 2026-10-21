@@ -23,4 +23,12 @@ export const FILE_MESSAGES: MessageCatalog = {
   'file.tags-invalid': `Nur Fotos lassen sich markieren, höchstens ${limits.maxTags} Personen.`,
   'file.tag-without-consent': 'Eine markierte Person hat keine Foto-Einwilligung.',
   'request.too-large': `Die Datei ist zu groß (höchstens ${Math.floor(limits.maxUploadBytes / 1024 / 1024)} MB).`,
+  'file.version-exists': 'Diese Versionsnummer gibt es schon.',
+  'file.version-label-invalid': 'Versionsnummer mit 1 bis 20 Zeichen angeben.',
+  'file.version-date-missing': 'Bitte ein Datum für die Version angeben.',
+  'file.version-not-found': 'Die Version gibt es nicht mehr.',
+  'file.version-type-mismatch': 'Die neue Version muss dasselbe Dateiformat haben.',
+  'file.versions-documents-only': 'Versionen gibt es nur für Dokumente, nicht für Fotos.',
+  'folder.cover-invalid': 'Das Titelbild muss ein Foto aus diesem Ordner sein.',
+  'folder.scope-inherited': 'Unterordner übernehmen die Sichtbarkeit ihres obersten Ordners.',
 };

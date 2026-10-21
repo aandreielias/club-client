@@ -30,7 +30,7 @@
 
   async function submitPhone(event: SubmitEvent) {
     event.preventDefault();
-    if (await savePhone.run(() => session.updateProfile({ phone: phone.trim() || null }))) bus.publish(TOAST, { text: 'Telefonnummer gespeichert.' });
+    if (await savePhone.run(() => session.updateProfile({ phone: phone.trim() }))) bus.publish(TOAST, { text: 'Telefonnummer gespeichert.' });
   }
 </script>
 

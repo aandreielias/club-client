@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { settings } from '../../settings';
   import { bus, directory, permissions, session, store } from '../../lib/container';
   import { TOAST } from '../../channels';
@@ -52,13 +53,22 @@
 
   // How many people the message reaches, asked from the server (same rules as sending).
   let reach = $state<number | null>(null);
+  // Only the recipients matter: typing the title or text must not ask the server again.
+  const recipients = $derived.by(() => {
+    const { everyone, teamIds, memberIds, includeGuardians } = form.toMessage();
+    return JSON.stringify({ everyone, teamIds, memberIds, includeGuardians });
+  });
   $effect(() => {
-    const message = form.toMessage();
+    void recipients;
     if (!form.hasTargets) return void (reach = null);
+    let current = true; // a slow older answer must not overwrite a newer one
     const timer = setTimeout(() => {
-      notificationsApi.preview(message).then((n) => (reach = n), () => (reach = null));
+      notificationsApi.preview(untrack(() => form.toMessage())).then((n) => current && (reach = n), () => current && (reach = null));
     }, limits.previewDebounceMs);
-    return () => clearTimeout(timer);
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
   });
 
   async function submit(event: SubmitEvent) {

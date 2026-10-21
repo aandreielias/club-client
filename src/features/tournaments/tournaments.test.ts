@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { TournamentModel } from './TournamentModel.svelte';
+import type { TournamentMatch } from './model';
 import { firstRound, koRounds, roundName, roundRobin, seeds, setsProblem, standings, tablePoints, tally } from './logic';
 
 describe('tournament logic', () => {
@@ -121,5 +123,16 @@ describe('mock tournaments', () => {
     expect((ask('/api/v1/tournaments') as { items: { id: string }[] }).items.map((t) => t.id)).toEqual(['tm-herbst']);
     expect(() => ask('/api/v1/appointments?from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00Z')).toThrow(expect.objectContaining({ status: 403 }));
     expect(directory.activeIds()).not.toContain('gast');
+  });
+});
+
+describe('TournamentModel.winner', () => {
+  const match = (round: number, homeId: string | null, awayId: string | null): TournamentMatch => ({
+    id: 'm', stage: 'KO', group: null, round, slot: 0, homeId, awayId, homeScore: null, awayScore: null, sets: [], startsAt: null, field: null,
+  });
+
+  it('counts a missing opponent as a bye only in the first knockout round', () => {
+    expect(TournamentModel.winner(match(1, 'a', null))).toBe('a');
+    expect(TournamentModel.winner(match(2, 'a', null))).toBeNull(); // the other semifinal is not played yet
   });
 });

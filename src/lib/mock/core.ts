@@ -484,8 +484,8 @@ export class MockDirectory {
         return fail(400, 'member.phone-invalid');
       }
       member.phone = phone;
-    } else if (phone !== undefined) {
-      member.phone = null;
+    } else if (phone === '') {
+      member.phone = null; // server: '' clears, null leaves the number unchanged
     }
     if (firstName !== undefined) member.firstName = MockDirectory.name(firstName, 'member.first-name-invalid');
     if (lastName !== undefined) member.lastName = MockDirectory.name(lastName, 'member.last-name-invalid');

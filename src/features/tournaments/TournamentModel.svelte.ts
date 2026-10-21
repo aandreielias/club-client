@@ -37,7 +37,8 @@ export class TournamentModel {
   }
 
   static winner(m: TournamentMatch): string | null {
-    if (m.homeId && !m.awayId && m.stage === 'KO') return m.homeId;
+    // A bye exists only in the first knockout round; later, a missing opponent is not decided yet.
+    if (m.homeId && !m.awayId && m.stage === 'KO' && m.round === 1) return m.homeId;
     if (m.homeScore === null || m.awayScore === null) return null;
     return m.homeScore > m.awayScore ? m.homeId : m.awayScore > m.homeScore ? m.awayId : null;
   }

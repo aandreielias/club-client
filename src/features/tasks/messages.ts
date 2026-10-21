@@ -17,4 +17,6 @@ export const TASK_MESSAGES: MessageCatalog = {
   'task.due-conflict': 'Fälligkeit entweder setzen oder entfernen.',
   'task.range-invalid': 'Der Zeitraum ist ungültig.',
   'task.comment-invalid': `Kommentar mit 1 bis ${limits.commentMaxLength} Zeichen angeben.`,
+  'task.repeat-invalid': 'Ungültiger Wiederholungs-Abstand.',
+  'task.repeat-needs-due': 'Eine wiederkehrende Aufgabe braucht ein Fälligkeitsdatum.',
 };

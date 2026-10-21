@@ -1,5 +1,6 @@
 <script lang="ts">
   import { session } from '../../lib/container';
+  import { ZonedClock } from '../../lib/time/ZonedClock';
   import { Action } from '../../lib/state/Action.svelte';
   import Button from '../../ui/Button.svelte';
   import Centered from '../../ui/Centered.svelte';
@@ -9,7 +10,8 @@
   let { onlogout }: { onlogout: () => void } = $props();
 
   const action = new Action();
-  const today = session.clock.today();
+  // The server wants a date in the past (@Past): today is refused.
+  const yesterday = ZonedClock.addDays(session.clock.today(), -1);
 
   let birthDate = $state('');
 
@@ -26,7 +28,7 @@
       Trainer:innen und Admins.
     </p>
     <Field label="Geburtsdatum">
-      <input type="date" bind:value={birthDate} max={today} required />
+      <input type="date" bind:value={birthDate} max={yesterday} required />
     </Field>
     <ErrorNote error={action.error} />
     <div class="row">

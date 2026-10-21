@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { minuteClock } from '../../lib/time/minuteClock.svelte';
   import { settings } from '../../settings';
   import { session } from '../../lib/container';
   import Tag from '../../ui/Tag.svelte';
@@ -8,8 +9,8 @@
   /** Due date with an overdue / due-soon marker. */
   let { task }: { task: Task } = $props();
 
-  const overdue = $derived(taskPolicy.isOverdue(task));
-  const soon = $derived(taskPolicy.isDueSoon(task, settings.tasks.dueSoonHours));
+  const overdue = $derived(taskPolicy.isOverdue(task, minuteClock.now));
+  const soon = $derived(taskPolicy.isDueSoon(task, settings.tasks.dueSoonHours, minuteClock.now));
 </script>
 
 {#if task.dueAt}

@@ -11,8 +11,9 @@
   /** Drop zone + file picker + per-file progress for one folder. */
   let { folder, onuploaded }: { folder: Folder; onuploaded: (file: StoredFile) => void } = $props();
 
+  // The server's limit counts the whole multipart request: keep room for its headers and fields.
   // svelte-ignore state_referenced_locally
-  const queue = new UploadQueue(filesApi, fileTypes, errors, settings.files.maxUploadBytes, () => folder, (f) => onuploaded(f));
+  const queue = new UploadQueue(filesApi, fileTypes, errors, settings.files.maxUploadBytes - 64 * 1024, () => folder, (f) => onuploaded(f));
   let input: HTMLInputElement;
   let dragging = $state(false);
 

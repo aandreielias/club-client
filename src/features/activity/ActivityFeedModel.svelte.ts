@@ -18,6 +18,8 @@ function changeText(e: FeedEntry): string {
 export class ActivityFeedModel extends ListModel<FeedEntry> {
   readonly more = new Action();
   #next: string | null = $state(null);
+  /** Bumped by every first-page load: a "more" answer that arrives after it belongs to the old list. */
+  #page = 0;
   #kind: ActivityKind | null = null;
 
   constructor(
@@ -31,6 +33,7 @@ export class ActivityFeedModel extends ListModel<FeedEntry> {
         id: 'activity',
         load: async (server) => {
           this.#kind = (server.kind || null) as ActivityKind | null;
+          this.#page++;
           const page = await api.feed(this.#kind, null, pageSize);
           this.#next = page.next;
           return page.items;
@@ -66,7 +69,9 @@ export class ActivityFeedModel extends ListModel<FeedEntry> {
   loadMore(): Promise<boolean> {
     return this.more.run(async () => {
       if (!this.#next) return;
+      const started = this.#page;
       const page = await this.api.feed(this.#kind, this.#next, this.pageSize);
+      if (started !== this.#page) return;
       this.#next = page.next;
       this.set([...(this.data.value ?? []), ...page.items]);
     });

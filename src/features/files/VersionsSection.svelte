@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { openTab } from '../../lib/window/openTab';
   import { bus, session } from '../../lib/container';
   import { APP_ERROR } from '../../channels';
   import { Resource } from '../../lib/state/Resource.svelte';
@@ -15,8 +16,7 @@
 
   // svelte-ignore state_referenced_locally
   const versions = new Resource(() => filesApi.versions(file.id));
-  void versions.load();
-  // Reload when a new version arrives (the window shows the fresh file).
+  // Loads on mount and again when a new version arrives (the window shows the fresh file).
   $effect(() => {
     void file.version;
     void versions.load();
@@ -35,7 +35,7 @@
 
   async function download(versionId: string) {
     try {
-      window.open(await fileLinks.versionUrl(file.id, versionId), '_blank', 'noopener');
+      await openTab(fileLinks.versionUrl(file.id, versionId));
     } catch (error) {
       bus.publish(APP_ERROR, error);
     }

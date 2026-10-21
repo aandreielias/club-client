@@ -11,4 +11,4 @@ export const dueReminders = new DueReminders(tasksApi, store, bus, () => session
   dueSoonHours: settings.tasks.dueSoonHours,
   checkEveryMs: settings.tasks.reminderCheckMs,
   maxToasts: settings.tasks.reminderMaxToasts,
-});
+}, (now) => session.clock.today(now));

@@ -11,12 +11,13 @@
     element.setPointerCapture(event.pointerId);
     const box = container.getBoundingClientRect();
     const move = (e: PointerEvent) => split.setRatio((e.clientX - box.left) / box.width);
+    // pointercancel / lostpointercapture: the drag ends without pointerup (touch scroll, alert, lost focus).
     const end = () => {
       element.removeEventListener('pointermove', move);
-      element.removeEventListener('pointerup', end);
+      for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) element.removeEventListener(type, end);
     };
     element.addEventListener('pointermove', move);
-    element.addEventListener('pointerup', end);
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) element.addEventListener(type, end);
   }
 
   function key(event: KeyboardEvent) {

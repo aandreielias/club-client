@@ -17,4 +17,5 @@ export const MEMBER_MESSAGES: MessageCatalog = {
   'change-request.note-too-long': `Begründung mit höchstens ${limits.changeNoteMaxLength} Zeichen.`,
   'change-request.decided': 'Über diese Anfrage wurde schon entschieden.',
   'change-request.not-found': 'Diese Anfrage gibt es nicht mehr.',
+  'change-request.field-missing': 'Bitte angeben, was geändert werden soll.',
 };

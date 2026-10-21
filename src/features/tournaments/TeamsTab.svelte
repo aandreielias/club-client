@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { bus, permissions, session } from '../../lib/container';
   import { TOAST } from '../../channels';
   import Button from '../../ui/Button.svelte';
@@ -14,13 +15,18 @@
   let { tournament, model }: { tournament: Tournament; model: TournamentModel } = $props();
 
   const editable = $derived(policy.canManage() && tournament.status === 'DRAFT');
+  type Line = { key: string; id: string | null; name: string; clubTeamId: string };
+  const linesOf = (teams: Tournament['teams']): Line[] => teams.map((t) => ({ key: t.id, id: t.id, name: t.name, clubTeamId: t.clubTeamId ?? '' }));
+  const keyOf = (teams: readonly { id: string | null; name: string; clubTeamId: string | null }[]) =>
+    JSON.stringify(teams.map((t) => [t.id, t.name.trim(), t.clubTeamId ?? '']));
   // svelte-ignore state_referenced_locally
-  let lines = $state(tournament.teams.map((t) => ({ key: t.id, id: t.id as string | null, name: t.name, clubTeamId: t.clubTeamId ?? '' })));
+  let lines = $state(linesOf(tournament.teams));
+  // svelte-ignore state_referenced_locally
+  let shown = tournament.teams; // the teams the lines were last reset to
   let next = 0;
   let inviting = $state(false);
   const clubTeams = $derived([{ value: '', label: 'Gastteam' }, ...permissions.filterableTeams().map((t) => ({ value: t.id, label: `Eigenes Team: ${t.name}` }))]);
-  const dirty = $derived(JSON.stringify(lines.map(({ id, name, clubTeamId }) => [id, name.trim(), clubTeamId]))
-    !== JSON.stringify(tournament.teams.map((t) => [t.id, t.name, t.clubTeamId ?? ''])));
+  const dirty = $derived(keyOf(lines) !== keyOf(tournament.teams));
 
   function add() {
     lines = [...lines, { key: `new-${next++}`, id: null, name: '', clubTeamId: '' }];
@@ -31,9 +37,13 @@
     if (await model.setTeams(teams)) bus.publish(TOAST, { text: 'Teams gespeichert.' });
   }
 
-  // A fresh answer (e.g. after saving) resets the lines.
+  // A fresh answer (after saving, or another manager's change) resets the lines, unless they hold unsaved edits.
   $effect(() => {
-    lines = tournament.teams.map((t) => ({ key: t.id, id: t.id, name: t.name, clubTeamId: t.clubTeamId ?? '' }));
+    const teams = tournament.teams;
+    untrack(() => {
+      if (keyOf(lines) === keyOf(shown)) lines = linesOf(teams);
+      shown = teams;
+    });
   });
 </script>
 

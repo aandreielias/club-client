@@ -1,7 +1,7 @@
 import type { SessionStore } from '../../lib/session/SessionStore.svelte';
 import { PRIVILEGED } from '../../lib/types';
 
-/** server: InventoryHandlers. Every member sees the inventory; admin, board and coaches manage it. */
+/** server: InventoryHandlers. Only admin, board and coaches see and manage the inventory. */
 export class InventoryPolicy {
   constructor(private readonly session: SessionStore) {}
 

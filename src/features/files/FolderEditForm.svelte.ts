@@ -1,5 +1,6 @@
 import { settings } from '../../settings';
 import type { FilePatch, Folder, FolderColor, FolderPatch, FolderScope, StoredFile } from './model';
+import { MAX_FOLDER_TEAMS } from './FolderForm.svelte';
 
 export interface FolderEditErrors {
   name?: string;
@@ -68,6 +69,7 @@ export class FolderEditForm {
     const name = this.name.trim();
     if (!name || name.length > max) errors.name = `Name mit 1 bis ${max} Zeichen angeben.`;
     if (this.canChangeScope && this.scope === 'TEAM' && !this.teamIds.length) errors.team = 'Mindestens ein Team auswählen.';
+    if (this.teamIds.length > MAX_FOLDER_TEAMS) errors.team = `Höchstens ${MAX_FOLDER_TEAMS} Teams.`;
     return errors;
   }
 }
@@ -102,7 +104,9 @@ export class FileEditForm {
   }
 
   private validate(): string | null {
+    // server: the whole name, extension included, has at most 100 characters
     const base = this.base.trim();
-    return base && base.length <= 100 ? null : 'Name mit 1 bis 100 Zeichen angeben.';
+    const max = 100 - this.extension.length;
+    return base && base.length <= max ? null : `Name mit 1 bis ${max} Zeichen angeben.`;
   }
 }

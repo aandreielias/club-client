@@ -51,7 +51,7 @@
     <Field label="Name" error={form.error}>
       <div class="name">
         <!-- svelte-ignore a11y_autofocus -->
-        <input bind:value={form.base} maxlength="100" autofocus required />
+        <input bind:value={form.base} maxlength={100 - form.extension.length} autofocus required />
         {#if form.extension}<span class="muted extension">{form.extension}</span>{/if}
       </div>
     </Field>

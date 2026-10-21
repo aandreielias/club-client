@@ -1,4 +1,4 @@
-/** Suggests the next version label: "1.2" → "1.3", "2" → "3", "v1.9" → "v1.10"; null when it has no number. */
+/** Suggests the next version label: "1.2" → "1.3", "2" → "3", "v1.9" → "v1.10"; "Entwurf" → "Entwurf.1"; no label → "1.1". */
 export function nextVersion(label: string | null): string {
   if (!label) return '1.1';
   const match = /^(.*?)(\d+)(\D*)$/.exec(label.trim());

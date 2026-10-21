@@ -73,7 +73,7 @@
       {#if mode === 'preview' || !comparable}
         {#if !comparable}<p class="muted note">Änderungen lassen sich nur bei Word, Excel, PowerPoint und Text anzeigen. Hier die beiden Versionen nebeneinander.</p>{/if}
         <div class="sides">
-          {#each [a, b] as id (id)}
+          {#each [a, b] as id, side (side)}
             <section>
               <h2>Version {label(versions, id)}</h2>
               {#key id}<DocumentPreview {file} load={() => filePreviews.versionContent(file.id, id, file.contentType)} />{/key}

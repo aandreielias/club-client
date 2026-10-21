@@ -8,6 +8,7 @@ export const STATUS_MESSAGES: Readonly<Record<number, string>> = {
   404: 'Nicht gefunden.',
   409: 'Die Daten wurden inzwischen geändert.',
   429: 'Zu viele Anfragen. Bitte kurz warten.',
+  500: 'Fehler auf dem Server. Bitte später erneut versuchen.',
   503: 'Dienst vorübergehend nicht verfügbar.',
 };
 
@@ -35,4 +36,6 @@ export const CORE_MESSAGES: MessageCatalog = {
   'member.birth-date-in-future': 'Das Geburtsdatum liegt in der Zukunft.',
   'member.birth-date-invalid': 'Das Geburtsdatum ist ungültig.',
   'member.phone-invalid': 'Die Telefonnummer ist ungültig.',
+  'auth.required': 'Bitte neu anmelden.',
+  'idempotency.key-reused': 'Die Anfrage wurde schon mit anderen Daten gesendet. Bitte neu laden.',
 };

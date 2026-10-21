@@ -48,7 +48,7 @@ describe('ProfileForm', () => {
     expect(form.toPatch()).toEqual({});
     form.phone = '';
     form.photoConsent = false;
-    expect(form.toPatch()).toEqual({ phone: null, photoConsent: false });
+    expect(form.toPatch()).toEqual({ phone: '', photoConsent: false }); // '' clears; null would mean "unchanged"
     form.phone = 'abc';
     expect(form.errors.phone).toBeDefined();
   });

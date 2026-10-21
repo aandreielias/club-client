@@ -29,6 +29,8 @@ export class DueReminders {
     private readonly bus: EventBus,
     private readonly format: () => Formatter,
     private readonly options: ReminderOptions,
+    /** The club's calendar day, so "shown today" turns over at local midnight, not UTC. */
+    private readonly today: (now: Date) => string = (now) => now.toISOString().slice(0, 10),
   ) {}
 
   /** Session hook: checks now and then regularly; returns the cleanup. */
@@ -45,7 +47,7 @@ export class DueReminders {
     } catch {
       return; // reminders are a convenience; the task list shows errors itself
     }
-    const today = now.toISOString().slice(0, 10);
+    const today = this.today(now);
     const shown = this.store.get<Record<string, string>>(DueReminders.KEY) ?? {};
     const due = DueReminders.due(tasks, now, this.options.dueSoonHours).filter((t) => shown[t.id] !== today);
     if (!due.length) return;

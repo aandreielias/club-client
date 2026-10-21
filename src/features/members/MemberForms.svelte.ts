@@ -120,7 +120,8 @@ export class ProfileForm extends MemberFormBase {
     if (this.firstName.trim() !== o.firstName) patch.firstName = this.firstName.trim();
     if (this.lastName.trim() !== o.lastName) patch.lastName = this.lastName.trim();
     if (this.birthDate && this.birthDate !== o.birthDate) patch.birthDate = this.birthDate;
-    if ((this.phone.trim() || null) !== o.phone) patch.phone = this.phone.trim() || null;
+    // '' clears the number; null would mean "unchanged" to the server.
+    if ((this.phone.trim() || null) !== o.phone) patch.phone = this.phone.trim();
     if (this.photoConsent !== o.photoConsent) patch.photoConsent = this.photoConsent;
     return patch;
   }

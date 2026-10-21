@@ -56,7 +56,7 @@ export class UploadQueue {
   private precheck(file: File): string | null {
     const folder = this.folder();
     if (!this.types.allows(folder.kind, file.name)) return `Dateityp nicht erlaubt. Erlaubt: ${this.types.describe(folder.kind)}.`;
-    if (file.size > this.maxBytes) return `Zu groß (höchstens ${Math.floor(this.maxBytes / 1024 / 1024)} MB).`;
+    if (file.size > this.maxBytes) return `Zu groß (höchstens ${Math.round(this.maxBytes / 1024 / 1024)} MB).`;
     if (file.size === 0) return 'Die Datei ist leer.';
     return null;
   }

@@ -79,21 +79,21 @@
   let container: HTMLElement | undefined = $state();
 
   $effect(() => {
-    if (cursor >= model.rows.length) cursor = model.rows.length - 1;
+    if (cursor >= shownRows.length) cursor = shownRows.length - 1;
   });
 
   function move(delta: number) {
-    if (!model.rows.length) return;
-    cursor = cursor < 0 ? (delta > 0 ? 0 : model.rows.length - 1) : Math.min(Math.max(cursor + delta, 0), model.rows.length - 1);
+    if (!shownRows.length) return;
+    cursor = cursor < 0 ? (delta > 0 ? 0 : shownRows.length - 1) : Math.min(Math.max(cursor + delta, 0), shownRows.length - 1);
     void tick().then(() => container?.querySelector('tr.cursor')?.scrollIntoView({ block: 'nearest' }));
   }
 
   // Lists with clickable rows take the list keys while mounted (the newest list wins, e.g. one in an open window).
-  const navigable = () => !!onopen && model.rows.length > 0;
+  const navigable = () => !!onopen && shownRows.length > 0;
   useCommands(commands, {
     'list.next': { run: () => move(1), when: navigable },
     'list.previous': { run: () => move(-1), when: navigable },
-    'list.open': { run: () => onopen?.(model.rows[cursor]), when: () => navigable() && cursor >= 0 && cursor < model.rows.length },
+    'list.open': { run: () => onopen?.(shownRows[cursor]), when: () => navigable() && cursor >= 0 && cursor < shownRows.length },
     'list.search': {
       run: () => container?.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
       when: () => !!onopen && toolbar && model.searchable,
@@ -101,9 +101,9 @@
     'list.menu': {
       run: () => {
         const row = container?.querySelector('tr.cursor');
-        if (row && menu) openMenuAt(row, menu(model.rows[cursor]));
+        if (row && menu) openMenuAt(row, menu(shownRows[cursor]));
       },
-      when: () => !!menu && navigable() && cursor >= 0 && cursor < model.rows.length,
+      when: () => !!menu && navigable() && cursor >= 0 && cursor < shownRows.length,
     },
     'list.reset': { run: () => model.reset(), when: () => !!onopen && model.activeFilters > 0 },
   });

@@ -19,6 +19,7 @@
   function created(team: Team) {
     creating = false;
     directory.forgetTeams();
+    void list.load();
     bus.publish(TOAST, { text: 'Team angelegt.' });
     bus.publish(WINDOW_OPEN, { kind: 'team', id: team.id });
   }

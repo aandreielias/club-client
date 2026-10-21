@@ -39,7 +39,9 @@
   $effect(() => {
     const locationId = detail.appointment.value?.locationId;
     place = null;
-    if (locationId) locationsApi.get(locationId).then((p) => (place = p), () => {});
+    let current = true; // an older answer must not replace the place of a newer link
+    if (locationId) locationsApi.get(locationId).then((p) => current && (place = p), () => {});
+    return () => (current = false);
   });
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle);
