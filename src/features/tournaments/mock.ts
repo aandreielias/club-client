@@ -50,8 +50,10 @@ export class MockTournaments {
       format: body.format ?? 'VOLLEYBALL', setsToWin: body.setsToWin ?? 2, teamSize: body.teamSize ?? null, fieldCount: body.fieldCount ?? 1,
       status: 'DRAFT', createdAt: now,
     });
+    // server: teams entered with the tournament are checked first, so a bad name leaves nothing behind
+    const teams = MockTournaments.teamsFrom(body.teams ?? [], new Set());
     this.tournaments.data.push(t);
-    this.teams.data[t.id] = [];
+    this.teams.data[t.id] = teams;
     this.matches.data[t.id] = [];
     this.save(t.id, 'CREATED');
     return this.dto(viewer, t);
@@ -83,17 +85,7 @@ export class MockTournaments {
     this.people.requirePrivileged(viewer, PRIVILEGED);
     const t = this.find(id);
     if (t.status !== 'DRAFT') fail(409, 'tournament.drawn');
-    if (!Array.isArray(inputs)) return fail(400, 'request.invalid');
-    if (inputs.length > 64) fail(400, 'tournament.too-many-teams');
-    const existing = new Set((this.teams.data[id] ?? []).map((team) => team.id));
-    const names = new Set<string>();
-    this.teams.data[id] = (inputs as TeamInput[]).map((input) => {
-      const name = (input.name ?? '').trim();
-      if (!name || name.length > 80) fail(400, 'tournament.team-name-invalid');
-      if (names.has(name.toLowerCase())) fail(400, 'tournament.team-duplicate');
-      names.add(name.toLowerCase());
-      return { id: input.id && existing.has(input.id) ? input.id : crypto.randomUUID(), name, clubTeamId: input.clubTeamId ?? null, group: null };
-    });
+    this.teams.data[id] = MockTournaments.teamsFrom(inputs, new Set((this.teams.data[id] ?? []).map((team) => team.id)));
     this.save(id, 'UPDATED');
     return this.dto(viewer, t);
   }
@@ -286,6 +278,20 @@ export class MockTournaments {
       const homeTakes = i < Math.min(home, away) ? home < away : home > away;
       const [win, lose] = i === 2 * setsToWin - 2 ? [15, 10] : [25, 20];
       return homeTakes ? { home: win, away: lose } : { home: lose, away: win };
+    });
+  }
+
+  /** server: TournamentHandlers.teamsFrom */
+  private static teamsFrom(inputs: unknown, existing: ReadonlySet<string>): TournamentTeam[] {
+    if (!Array.isArray(inputs)) return fail(400, 'request.invalid');
+    if (inputs.length > 64) fail(400, 'tournament.too-many-teams');
+    const names = new Set<string>();
+    return (inputs as TeamInput[]).map((input) => {
+      const name = (input.name ?? '').trim();
+      if (!name || name.length > 80) fail(400, 'tournament.team-name-invalid');
+      if (names.has(name.toLowerCase())) fail(400, 'tournament.team-duplicate');
+      names.add(name.toLowerCase());
+      return { id: input.id && existing.has(input.id) ? input.id : crypto.randomUUID(), name, clubTeamId: input.clubTeamId ?? null, group: null };
     });
   }
 

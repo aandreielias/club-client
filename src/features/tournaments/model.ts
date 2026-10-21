@@ -115,6 +115,8 @@ export interface NewTournament {
   setsToWin: number;
   teamSize: number | null;
   fieldCount: number;
+  /** Only when creating: teams entered right away, saved with the tournament. */
+  teams?: TeamInput[];
 }
 
 export interface TeamInput {

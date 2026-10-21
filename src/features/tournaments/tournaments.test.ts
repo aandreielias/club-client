@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { TournamentForm } from './TournamentForm.svelte';
 import { TournamentModel } from './TournamentModel.svelte';
 import type { TournamentMatch } from './model';
 import { fieldPlan, groupChoices, groupPhase } from './logic';
@@ -157,5 +158,18 @@ describe('field plan', () => {
     expect(groupChoices(6, 2)).toEqual([1, 2, 3]); // 4 groups would need 8 teams
     expect(groupPhase(6, 2, 2)).toEqual({ matches: 6, waves: 3 });
     expect(groupPhase(6, 1, 3)).toEqual({ matches: 15, waves: 5 });
+  });
+});
+
+describe('TournamentForm teams', () => {
+  it('takes one team per line, limits the groups to them and catches duplicates', () => {
+    const form = new TournamentForm('2026-11-07');
+    form.name = 'Cup';
+    form.teamsText = ' UVC \n\nTSV\nASK\nSDG\n';
+    expect(form.teamNames).toEqual(['UVC', 'TSV', 'ASK', 'SDG']);
+    expect(form.groupOptions).toEqual([1, 2]);
+    expect(form.toNew().teams?.map((t) => t.name)).toEqual(['UVC', 'TSV', 'ASK', 'SDG']);
+    form.teamsText += 'uvc';
+    expect(form.errors.teams).toBe('„uvc“ steht zweimal in der Liste.');
   });
 });

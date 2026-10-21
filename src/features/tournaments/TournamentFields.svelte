@@ -35,6 +35,12 @@
 <Field label="Ort (optional)">
   <Select bind:value={form.locationId} placeholder="Kein Ort" options={[{ value: '', label: 'Kein Ort' }, ...places.map((l) => ({ value: l.id, label: l.name }))]} />
 </Field>
+{#if !form.original}
+  <Field label="Teams (optional)" error={form.error('teams')}
+    hint={form.teamNames.length ? `${form.teamNames.length} Teams. Eigene Teams lassen sich danach im Reiter „Teams“ verknüpfen.` : 'Ein Team pro Zeile; geht auch später im Reiter „Teams“.'}>
+    <textarea bind:value={form.teamsText} rows="6" placeholder={'SDG Damen 1\nUVC Graz\nTSV Seeblick'}></textarea>
+  </Field>
+{/if}
 <fieldset class="stack" disabled={!form.settingsEditable}>
   <div class="grid-2">
     <Field label="Spielfelder" error={form.error('fields')} hint={fieldHint}>
