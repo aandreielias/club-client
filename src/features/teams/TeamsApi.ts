@@ -15,6 +15,15 @@ export class TeamsApi {
     return this.api.post<Team>(TeamsApi.BASE, { name, season });
   }
 
+  update(teamId: string, patch: { name?: string; season?: string }): Promise<Team> {
+    return this.api.patch<Team>(this.path(teamId), patch);
+  }
+
+  /** server: refused with team.in-use while appointments, tasks or folders belong to the team. */
+  delete(teamId: string): Promise<void> {
+    return this.api.delete(this.path(teamId));
+  }
+
   roster(teamId: string): Promise<Roster> {
     return this.api.get<Roster>(`${this.path(teamId)}/roster`);
   }

@@ -10,21 +10,26 @@
   import { TeamForm } from './TeamForm.svelte';
   import { teamsApi } from './services';
 
-  let { oncreated, onclose }: { oncreated: (team: Team) => void; onclose: () => void } = $props();
+  /** New team, or rename `team` (name and season). */
+  let { team = null, onsaved, onclose }: { team?: Team | null; onsaved: (team: Team) => void; onclose: () => void } = $props();
 
   const form = new TeamForm(session.clock);
+  // svelte-ignore state_referenced_locally
+  if (team) Object.assign(form, { name: team.name, season: team.season });
   const action = new Action();
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
     form.submitted = true;
     if (!form.valid) return;
-    const created = await action.attempt(() => teamsApi.create(form.name.trim(), form.season.trim()));
-    if (created) oncreated(created);
+    const name = form.name.trim();
+    const season = form.season.trim();
+    const saved = await action.attempt(() => (team ? teamsApi.update(team.id, { name, season }) : teamsApi.create(name, season)));
+    if (saved) onsaved(saved);
   }
 </script>
 
-<Dialog open title="Neues Team" {onclose}>
+<Dialog open title={team ? 'Team bearbeiten' : 'Neues Team'} {onclose}>
   <form class="stack" onsubmit={submit} novalidate>
     <Field label="Name" error={form.error('name')}>
       <!-- svelte-ignore a11y_autofocus -->
@@ -35,7 +40,7 @@
     </Field>
     <ErrorNote error={action.error} />
     <div class="row">
-      <Button type="submit" variant="primary" busy={action.busy}>Anlegen</Button>
+      <Button type="submit" variant="primary" busy={action.busy}>{team ? 'Speichern' : 'Anlegen'}</Button>
       <Button variant="ghost" onclick={onclose}>Abbrechen</Button>
     </div>
   </form>

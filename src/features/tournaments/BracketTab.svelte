@@ -3,7 +3,7 @@
   import Icon from '../../ui/Icon.svelte';
   import { tooltip } from '../../ui/tooltip';
   import { roundName } from './logic';
-  import type { Tournament, TournamentMatch } from './model';
+  import { matchPlace, type Tournament, type TournamentMatch } from './model';
   import ResultDialog from './ResultDialog.svelte';
   import { TournamentModel } from './TournamentModel.svelte';
   import { tournamentPolicy as policy } from './services';
@@ -40,8 +40,8 @@
                     <span class="score">{score ?? ''}</span>
                   </span>
                 {/each}
-                {#if m.sets.length || m.field}
-                  <span class="meta">{[m.sets.map((s) => `${s.home}:${s.away}`).join(' · '), m.field].filter(Boolean).join(' – ')}</span>
+                {#if m.sets.length || m.field || m.wave}
+                  <span class="meta">{[m.sets.map((s) => `${s.home}:${s.away}`).join(' · '), matchPlace(m)].filter(Boolean).join(' – ')}</span>
                 {/if}
               </button>
             </div>

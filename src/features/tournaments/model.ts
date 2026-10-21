@@ -37,6 +37,8 @@ export interface TournamentMatch {
   sets: SetScore[];
   startsAt: string | null;
   field: string | null;
+  /** Durchgang from the field plan: matches of one wave run at the same time; null for byes. */
+  wave: number | null;
 }
 
 export interface StandingRow {
@@ -82,6 +84,8 @@ export interface Tournament {
   setsToWin: number;
   /** Players per team: 6 for volleyball, 2 to 4 for beach, null for simple. */
   teamSize: number | null;
+  /** Fields played on at the same time (1 to 16); the draw spreads the matches over them. */
+  fieldCount: number;
   status: TournamentStatus;
   teams: TournamentTeam[];
   groups: TournamentGroup[];
@@ -110,6 +114,7 @@ export interface NewTournament {
   format: TournamentFormat;
   setsToWin: number;
   teamSize: number | null;
+  fieldCount: number;
 }
 
 export interface TeamInput {
@@ -148,3 +153,7 @@ export const STATUS_LABELS: Readonly<Record<TournamentStatus, string>> = {
 };
 
 export const STATUS_TONES = { DRAFT: 'gray', GROUPS: 'blue', KO: 'purple', DONE: 'green' } as const;
+
+/** "Durchgang 2 · Feld 1": when and where a match is played; empty when not planned. */
+export const matchPlace = (m: Pick<TournamentMatch, 'wave' | 'field'>): string =>
+  [m.wave ? `Durchgang ${m.wave}` : null, m.field].filter(Boolean).join(' · ');

@@ -13,8 +13,9 @@
   import BracketTab from './BracketTab.svelte';
   import { TOURNAMENT_CHANGED } from './events';
   import GroupsTab from './GroupsTab.svelte';
-  import { FORMAT_LABELS, STATUS_LABELS, STATUS_TONES, type Tournament } from './model';
+  import { FORMAT_LABELS, matchPlace, STATUS_LABELS, STATUS_TONES, type Tournament } from './model';
   import TeamsTab from './TeamsTab.svelte';
+  import TournamentEditDialog from './TournamentEditDialog.svelte';
   import { TournamentModel } from './TournamentModel.svelte';
   import { tournamentPolicy as policy, tournamentsApi } from './services';
 
@@ -48,7 +49,12 @@
     t.format === 'SIMPLE' ? 'Sieg 3 Punkte, Unentschieden 1, Niederlage 0'
     : t.format === 'BEACH' ? 'Zwei Gewinnsätze bis 21 (dritter bis 15); Sieg 2 Punkte, Niederlage 1'
     : `${t.setsToWin === 3 ? 'Drei' : 'Zwei'} Gewinnsätze bis 25; Sieg ${t.setsToWin}:${t.setsToWin - 1} gibt 2:1 Punkte, sonst 3:0`;
-  const upcoming = (t: Tournament) => t.matches.filter((m) => m.homeId && m.awayId && m.homeScore === null).slice(0, 6);
+  // In plan order: the next Durchgang first, then by field.
+  const upcoming = (t: Tournament) =>
+    t.matches
+      .filter((m) => m.homeId && m.awayId && m.homeScore === null)
+      .sort((a, b) => (a.wave ?? Infinity) - (b.wave ?? Infinity) || (a.field ?? '').localeCompare(b.field ?? '', 'de', { numeric: true }))
+      .slice(0, 6);
 
   function remove(name: string) {
     // The prop is gone once the view closed, before the undo time ends: keep the id itself.
@@ -56,6 +62,7 @@
     pendingDeletes.schedule({ ids: [target], text: `„${name}“ gelöscht.`, commit: () => tournamentsApi.delete(target) });
     view.leave();
   }
+  let editing = $state(false);
 </script>
 
 <script lang="ts" module>
@@ -81,6 +88,7 @@
               onclick={() => model.startKnockout().then((ok) => ok && (tab = 'ko'))}>KO-Runde starten</Button>
           {/if}
         {/if}
+        {#if policy.canManage()}<Button icon="edit" onclick={() => (editing = true)}>Bearbeiten</Button>{/if}
         {#if policy.canDelete()}<Button variant="danger" icon="delete" onclick={() => remove(t.name)}>Löschen</Button>{/if}
       {/snippet}
       {#snippet meta()}
@@ -103,7 +111,7 @@
             <dd><RecordLink kind="location" id={t.locationId}>Ort öffnen</RecordLink></dd>
           {/if}
           <dt>Modus</dt>
-          <dd>{t.groupCount} {t.groupCount === 1 ? 'Gruppe' : 'Gruppen'}, je {t.advancePerGroup} weiter in die KO-Runde</dd>
+          <dd>{t.groupCount} {t.groupCount === 1 ? 'Gruppe' : 'Gruppen'}, je {t.advancePerGroup} weiter in die KO-Runde, {t.fieldCount} {t.fieldCount === 1 ? 'Feld' : 'Felder'}</dd>
           <dt>Spielart</dt>
           <dd>{FORMAT_LABELS[t.format]}{t.teamSize ? `, Teams zu ${t.teamSize}` : ''}</dd>
           <dt>Wertung</dt>
@@ -118,7 +126,7 @@
               <li>
                 <span class="muted">{m.stage === 'GROUP' ? `Gruppe ${m.group}` : 'KO-Runde'}</span>
                 <span>{model.teamName(m.homeId)} – {model.teamName(m.awayId)}</span>
-                <span class="muted">{m.field ?? ''}</span>
+                <span class="muted">{matchPlace(m)}</span>
               </li>
             {/each}
           </ul>
@@ -131,6 +139,7 @@
         <TeamsTab tournament={t} {model} />
       {/if}
     </Detail>
+    {#if editing}<TournamentEditDialog tournament={t} {model} onclose={() => (editing = false)} />{/if}
   {/snippet}
 </AsyncView>
 

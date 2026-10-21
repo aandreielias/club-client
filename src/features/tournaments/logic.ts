@@ -176,3 +176,53 @@ export function firstRound(seedList: readonly string[]): { slot: number; home: s
 export function roundName(round: number, rounds: number): string {
   return ['Finale', 'Halbfinale', 'Viertelfinale', 'Achtelfinale'][rounds - round] ?? `Runde ${round}`;
 }
+
+/**
+ * server: FieldPlan. Spreads matches over `fields` in waves (Durchgänge): per wave at most one match per field and
+ * no team twice; earlier rounds first, groups taking turns. Returns the matches with field and wave set.
+ */
+export function fieldPlan<M extends { id: string; round: number; slot: number; group: string | null; homeId: string | null; awayId: string | null }>(
+  matches: readonly M[],
+  fields: number,
+  firstWave: number,
+): (M & { field: string; wave: number })[] {
+  const pending = [...matches].sort((a, b) => a.round - b.round || a.slot - b.slot || (a.group ?? '').localeCompare(b.group ?? ''));
+  const planned = new Map<string, M & { field: string; wave: number }>();
+  for (let wave = firstWave; pending.length; wave++) {
+    const busy = new Set<string>();
+    let field = 0;
+    for (let i = 0; i < pending.length && field < fields; ) {
+      const m = pending[i];
+      if ((m.homeId && busy.has(m.homeId)) || (m.awayId && busy.has(m.awayId))) {
+        i++;
+        continue;
+      }
+      if (m.homeId) busy.add(m.homeId);
+      if (m.awayId) busy.add(m.awayId);
+      planned.set(m.id, { ...m, field: `Feld ${++field}`, wave });
+      pending.splice(i, 1);
+    }
+  }
+  return matches.map((m) => planned.get(m.id)!);
+}
+
+/** Group sizes when `teams` are dealt evenly into `groups`. */
+export const groupSizes = (teams: number, groups: number): number[] =>
+  Array.from({ length: groups }, (_, g) => Math.floor(teams / groups) + (g < teams % groups ? 1 : 0));
+
+/** Group matches (everyone against everyone) and the fewest waves they need on `fields`. */
+export function groupPhase(teams: number, groups: number, fields: number): { matches: number; waves: number } {
+  const sizes = groupSizes(teams, groups);
+  const matches = sizes.reduce((sum, n) => sum + (n * (n - 1)) / 2, 0);
+  // A group of n plays n-1 rounds (n even) or n rounds (n odd); per wave each field takes one match.
+  const rounds = Math.max(0, ...sizes.map((n) => (n < 2 ? 0 : n % 2 ? n : n - 1)));
+  return { matches, waves: Math.max(rounds, Math.ceil(matches / Math.max(1, fields))) };
+}
+
+/** server: TournamentHandlers.draw. Group counts the teams allow: at least 2 per group and enough to advance; 2 to 32 in the knockout. */
+export function groupChoices(teams: number, advancePerGroup: number): number[] {
+  return Array.from({ length: 8 }, (_, i) => i + 1).filter((g) => {
+    const qualifiers = g * advancePerGroup;
+    return qualifiers >= 2 && qualifiers <= 32 && (teams === 0 || teams >= Math.max(2 * g, qualifiers));
+  });
+}

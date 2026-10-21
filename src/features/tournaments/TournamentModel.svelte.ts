@@ -1,6 +1,6 @@
 import { Action } from '../../lib/state/Action.svelte';
 import { Resource } from '../../lib/state/Resource.svelte';
-import type { GuestInput, ResultInput, TeamInput, Tournament, TournamentMatch } from './model';
+import type { GuestInput, NewTournament, ResultInput, TeamInput, Tournament, TournamentMatch } from './model';
 import type { TournamentsApi } from './TournamentsApi';
 
 /** One tournament and the steps of running it; every answer is the whole tournament, so it replaces the shown one. */
@@ -57,6 +57,10 @@ export class TournamentModel {
 
   setResult(matchId: string, result: ResultInput): Promise<boolean> {
     return this.run(() => this.api.setResult(this.id, matchId, result));
+  }
+
+  update(patch: Partial<NewTournament>): Promise<boolean> {
+    return this.run(() => this.api.update(this.id, patch));
   }
 
   inviteGuest(guest: GuestInput): Promise<boolean> {

@@ -3,7 +3,7 @@ import { directory, type MockDirectory } from '../../lib/mock/core';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import { guestOnly, ADMIN_BOARD, PRIVILEGED, type Member } from '../../lib/types';
-import { firstRound, koRounds, roundRobin, seeds, setsProblem, standings, tally } from './logic';
+import { fieldPlan, firstRound, koRounds, roundRobin, seeds, setsProblem, standings, tally } from './logic';
 import type { Guest, NewTournament, ResultInput, SetScore, TeamInput, Tournament, TournamentMatch, TournamentSummary, TournamentTeam } from './model';
 
 const fail = MockServer.fail;
@@ -47,7 +47,8 @@ export class MockTournaments {
     const t = MockTournaments.validated({
       id: crypto.randomUUID(), name: body.name ?? '', startsOn: body.startsOn ?? '', endsOn: body.endsOn ?? '', locationId: body.locationId ?? null,
       appointmentId: body.appointmentId ?? null, groupCount: body.groupCount ?? 2, advancePerGroup: body.advancePerGroup ?? 2,
-      format: body.format ?? 'VOLLEYBALL', setsToWin: body.setsToWin ?? 2, teamSize: body.teamSize ?? null, status: 'DRAFT', createdAt: now,
+      format: body.format ?? 'VOLLEYBALL', setsToWin: body.setsToWin ?? 2, teamSize: body.teamSize ?? null, fieldCount: body.fieldCount ?? 1,
+      status: 'DRAFT', createdAt: now,
     });
     this.tournaments.data.push(t);
     this.teams.data[t.id] = [];
@@ -59,9 +60,11 @@ export class MockTournaments {
   update(viewer: Member, id: string, patch: Partial<NewTournament>): Tournament {
     this.people.requirePrivileged(viewer, PRIVILEGED);
     const t = this.find(id);
-    const settings = (['groupCount', 'advancePerGroup', 'format', 'setsToWin', 'teamSize'] as const).some((k) => patch[k] != null);
+    const settings = (['groupCount', 'advancePerGroup', 'format', 'setsToWin', 'teamSize', 'fieldCount'] as const).some((k) => patch[k] != null);
     if (settings && t.status !== 'DRAFT') fail(409, 'tournament.drawn');
     const defined = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== null && v !== undefined));
+    // server: a new format brings its own default team size
+    if (patch.format && patch.format !== t.format && patch.teamSize == null) defined.teamSize = null;
     Object.assign(t, MockTournaments.validated({ ...t, ...defined }));
     this.save(id, 'UPDATED');
     return this.dto(viewer, t);
@@ -108,9 +111,9 @@ export class MockTournaments {
       const members = teams.filter((team) => team.group === label(g)).map((team) => team.id);
       roundRobin(members).forEach((p, slot) =>
         matches.push({ id: crypto.randomUUID(), stage: 'GROUP', group: label(g), round: p.round, slot, homeId: p.home, awayId: p.away,
-          homeScore: null, awayScore: null, sets: [], startsAt: null, field: null }));
+          homeScore: null, awayScore: null, sets: [], startsAt: null, field: null, wave: null }));
     }
-    this.matches.data[id] = matches;
+    this.matches.data[id] = fieldPlan(matches, t.fieldCount, 1);
     t.status = 'GROUPS';
     this.save(id, 'UPDATED');
     return this.dto(viewer, t);
@@ -127,7 +130,15 @@ export class MockTournaments {
     const tree: TournamentMatch[] = firstRound(order).map((p) => MockTournaments.ko(1, p.slot, p.home, p.away));
     for (let round = 2; round <= rounds; round++) for (let slot = 0; slot < 2 ** (rounds - round); slot++) tree.push(MockTournaments.ko(round, slot, null, null));
     tree.filter((m) => m.round === 1 && m.homeId && !m.awayId).forEach((bye) => MockTournaments.advance(tree, bye));
-    this.matches.data[id] = [...matches, ...tree];
+    // server: planKnockout, round by round after the last group wave; byes get no field
+    let wave = Math.max(0, ...matches.map((m) => m.wave ?? 0)) + 1;
+    const planned = new Map<string, TournamentMatch>();
+    for (let round = 1; round <= rounds; round++) {
+      const playing = tree.filter((m) => m.round === round && (round > 1 || (m.homeId && m.awayId)));
+      fieldPlan(playing, t.fieldCount, wave).forEach((m) => planned.set(m.id, m));
+      wave = Math.max(wave, ...[...planned.values()].map((m) => (m.wave ?? 0) + 1));
+    }
+    this.matches.data[id] = [...matches, ...tree.map((m) => planned.get(m.id) ?? m)];
     t.status = 'KO';
     this.save(id, 'UPDATED');
     return this.dto(viewer, t);
@@ -279,7 +290,7 @@ export class MockTournaments {
   }
 
   private static ko(round: number, slot: number, homeId: string | null, awayId: string | null): TournamentMatch {
-    return { id: crypto.randomUUID(), stage: 'KO', group: null, round, slot, homeId, awayId, homeScore: null, awayScore: null, sets: [], startsAt: null, field: null };
+    return { id: crypto.randomUUID(), stage: 'KO', group: null, round, slot, homeId, awayId, homeScore: null, awayScore: null, sets: [], startsAt: null, field: null, wave: null };
   }
 
   /** server: Tournament constructor checks */
@@ -296,7 +307,9 @@ export class MockTournaments {
     const teamSize = format === 'VOLLEYBALL' ? 6 : format === 'BEACH' ? (t.teamSize ?? 2) : null;
     if (setsToWin !== 2 && setsToWin !== 3) fail(400, 'tournament.sets-invalid');
     if (teamSize !== null && (teamSize < 2 || teamSize > (format === 'BEACH' ? 4 : 6))) fail(400, 'tournament.team-size-invalid');
-    return { ...t, name, format, setsToWin, teamSize };
+    const fieldCount = t.fieldCount ?? 1; // stored before fields existed
+    if (fieldCount < 1 || fieldCount > 16) fail(400, 'tournament.fields-invalid');
+    return { ...t, name, format, setsToWin, teamSize, fieldCount };
   }
 
   /** Herbstcup in three weeks: six teams drawn into two groups, some results in. */
@@ -309,10 +322,10 @@ export class MockTournaments {
     const teams: TournamentTeam[] = names.map(([id, name, clubTeamId], i) => ({ id, name, clubTeamId, group: i % 2 ? 'B' : 'A' }));
     const match = (id: string, group: string, round: number, slot: number, home: string, away: string, sets: [number, number][]): TournamentMatch =>
       ({ id, stage: 'GROUP', group, round, slot, homeId: home, awayId: away, ...MockTournaments.scores(sets.map(([h, a]) => ({ home: h, away: a }))),
-        startsAt: null, field: group === 'A' ? 'Feld 1' : 'Feld 2' });
+        startsAt: null, field: group === 'A' ? 'Feld 1' : 'Feld 2', wave: round });
     return {
       tournaments: [{ id: 'tm-herbst', name: 'Herbstcup 2026', startsOn: day(21), endsOn: day(21), locationId: 'l-west', appointmentId: null,
-        groupCount: 2, advancePerGroup: 2, format: 'VOLLEYBALL', setsToWin: 2, teamSize: 6, status: 'GROUPS', createdAt: new Date().toISOString() } as StoredTournament],
+        groupCount: 2, advancePerGroup: 2, format: 'VOLLEYBALL', setsToWin: 2, teamSize: 6, fieldCount: 2, status: 'GROUPS', createdAt: new Date().toISOString() } as StoredTournament],
       teams: { 'tm-herbst': teams },
       matches: {
         'tm-herbst': [

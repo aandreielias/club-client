@@ -3,7 +3,7 @@
   import type { Tournament } from './model';
   import Button from '../../ui/Button.svelte';
   import ResultDialog from './ResultDialog.svelte';
-  import type { TournamentMatch } from './model';
+  import { matchPlace, type TournamentMatch } from './model';
   import type { TournamentModel } from './TournamentModel.svelte';
   import { tournamentPolicy as policy } from './services';
 
@@ -55,7 +55,7 @@
               <span class="result" class:open={m.homeScore === null}>{m.homeScore === null ? '–:–' : `${m.homeScore}:${m.awayScore}`}</span>
               <span class="away">{model.teamName(m.awayId)}</span>
               <span class="end">
-                {#if m.field}<span class="muted small">{m.field}</span>{/if}
+                {#if m.field || m.wave}<span class="muted small">{matchPlace(m)}</span>{/if}
                 {#if editable}
                   <Button size="sm" variant="ghost" icon={m.homeScore === null ? 'add' : 'edit'} tooltip="Ergebnis eintragen" onclick={() => (editing = m)} />
                 {/if}

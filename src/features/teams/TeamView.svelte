@@ -13,6 +13,8 @@
   import Tag from '../../ui/Tag.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AddMemberPanel from './AddMemberPanel.svelte';
+  import TeamDialog from './TeamDialog.svelte';
+  import { Action } from '../../lib/state/Action.svelte';
   import { MEMBERSHIP_CHANGED } from './events';
   import { RosterListModel } from './RosterListModel.svelte';
   import { RosterModel } from './RosterModel.svelte';
@@ -36,6 +38,8 @@
   });
 
   let adding = $state(false);
+  let editing = $state(false);
+  const deleteAction = new Action();
   backStack.while(() => adding, () => (adding = false));
 
   // svelte-ignore state_referenced_locally
@@ -55,6 +59,21 @@
     await view.confirm(request, () => view.attempt(model.removeAction, () => model.remove(entry)), 'Aus dem Team entfernt.');
   }
 
+  async function deleteTeam(name: string) {
+    const request = { title: 'Team löschen', message: `„${name}“ wird gelöscht, die Mitgliedschaften mit ihm.`, confirmLabel: 'Löschen', danger: true };
+    const deleted = await view.confirm(request, () => view.attempt(deleteAction, () => deleteAction.run(() => teamsApi.delete(model.teamId))), 'Team gelöscht.');
+    if (deleted) {
+      directory.forgetTeams();
+      view.leave();
+    }
+  }
+
+  function renamed() {
+    editing = false;
+    directory.forgetTeams();
+    void model.load();
+  }
+
   function open(entry: RosterEntry) {
     if (policy.canOpenProfile(model.teamId, entry)) view.open('member', entry.memberId);
   }
@@ -71,6 +90,11 @@
 <Detail title={model.roster.value?.team.name ?? 'Team'}>
   {#snippet actions()}
     {#if policy.canAssign() && !adding}<Button variant="primary" onclick={() => (adding = true)}>Mitglied hinzufügen</Button>{/if}
+    {#if policy.canEdit() && model.roster.value}
+      {@const team = model.roster.value.team}
+      <Button icon="edit" onclick={() => (editing = true)}>Bearbeiten</Button>
+      <Button variant="danger" icon="delete" busy={deleteAction.busy} onclick={() => deleteTeam(team.name)}>Löschen</Button>
+    {/if}
   {/snippet}
   {#snippet meta()}
     {#if model.roster.value}
@@ -110,6 +134,7 @@
     {/snippet}
   </AsyncView>
 </Detail>
+{#if editing && model.roster.value}<TeamDialog team={model.roster.value.team} onsaved={renamed} onclose={() => (editing = false)} />{/if}
 
 <style>
   .add {

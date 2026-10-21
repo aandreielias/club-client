@@ -13,6 +13,11 @@ export class TeamPolicy {
     return this.permissions.isManager;
   }
 
+  /** Renaming and deleting teams is admin/board only (server: TeamHandlers.update/delete). */
+  canEdit(): boolean {
+    return this.permissions.isManager;
+  }
+
   /** Adding members and changing roles is admin/board only (coaches would gain access to member data). */
   canAssign(): boolean {
     return this.permissions.isManager;

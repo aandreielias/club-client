@@ -346,6 +346,32 @@ export class MockDirectory {
     return team;
   }
 
+  /** server: TeamHandlers.update; name and season, unique per season. */
+  updateTeam(viewer: Member, teamId: string, body: Record<string, unknown>): Team {
+    this.requirePrivileged(viewer, ADMIN_BOARD);
+    const team = this.teams.data.find((t) => t.id === teamId) ?? fail(404, 'team.not-found');
+    const name = typeof body.name === 'string' ? body.name.trim() : team.name;
+    const season = typeof body.season === 'string' ? body.season : team.season;
+    if (!name || name.length > settings.teams.nameMaxLength) fail(400, 'team.name-invalid');
+    if (!new RegExp(settings.teams.seasonPattern).test(season)) fail(400, 'team.season-invalid');
+    if (this.teams.data.some((t) => t.id !== teamId && t.name.toLowerCase() === name.toLowerCase() && t.season === season)) fail(409, 'team.exists');
+    Object.assign(team, { name, season });
+    this.teams.save();
+    return team;
+  }
+
+  /** server: TeamHandlers.delete; `inUse` stands in for the foreign keys of appointments, tasks and folders. */
+  deleteTeam(viewer: Member, teamId: string, inUse: boolean): void {
+    this.requirePrivileged(viewer, ADMIN_BOARD);
+    const index = this.teams.data.findIndex((t) => t.id === teamId);
+    if (index < 0) fail(404, 'team.not-found');
+    if (inUse) fail(409, 'team.in-use');
+    this.teams.data.splice(index, 1);
+    for (const roles of Object.values(this.memberships.data)) delete roles[teamId];
+    this.teams.save();
+    this.memberships.save();
+  }
+
   /** Admin/board only; a coach of the team gets 403, everyone else 404. Also changes the role of existing members. */
   setTeamMember(viewer: Member, teamId: string, memberId: string, teamRole: unknown): Roster {
     if (!this.teams.data.some((t) => t.id === teamId)) fail(404, 'team.not-found');

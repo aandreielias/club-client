@@ -6,7 +6,7 @@
   import Button from '../../ui/Button.svelte';
   import TeamTable from './TeamTable.svelte';
   import Page from '../../ui/Page.svelte';
-  import CreateTeamDialog from './CreateTeamDialog.svelte';
+  import TeamDialog from './TeamDialog.svelte';
   import { TeamListModel } from '../../lib/directory/TeamListModel.svelte';
   import { teamPolicy, teamsApi } from './services';
 
@@ -33,4 +33,4 @@
   <TeamTable {list} emptyAction={teamPolicy.canCreate() ? { label: 'Neues Team', icon: 'add', run: () => (creating = true) } : null} />
 </Page>
 
-{#if creating}<CreateTeamDialog oncreated={created} onclose={() => (creating = false)} />{/if}
+{#if creating}<TeamDialog onsaved={created} onclose={() => (creating = false)} />{/if}

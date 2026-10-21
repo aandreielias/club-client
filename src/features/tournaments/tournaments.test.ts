@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TournamentModel } from './TournamentModel.svelte';
 import type { TournamentMatch } from './model';
+import { fieldPlan, groupChoices, groupPhase } from './logic';
 import { firstRound, koRounds, roundName, roundRobin, seeds, setsProblem, standings, tablePoints, tally } from './logic';
 
 describe('tournament logic', () => {
@@ -128,11 +129,33 @@ describe('mock tournaments', () => {
 
 describe('TournamentModel.winner', () => {
   const match = (round: number, homeId: string | null, awayId: string | null): TournamentMatch => ({
-    id: 'm', stage: 'KO', group: null, round, slot: 0, homeId, awayId, homeScore: null, awayScore: null, sets: [], startsAt: null, field: null,
+    id: 'm', stage: 'KO', group: null, round, slot: 0, homeId, awayId, homeScore: null, awayScore: null, sets: [], startsAt: null, field: null, wave: null,
   });
 
   it('counts a missing opponent as a bye only in the first knockout round', () => {
     expect(TournamentModel.winner(match(1, 'a', null))).toBe('a');
     expect(TournamentModel.winner(match(2, 'a', null))).toBeNull(); // the other semifinal is not played yet
+  });
+});
+
+describe('field plan', () => {
+  it('uses each field once per wave and never puts a team on two fields at once', () => {
+    const teams = ['a', 'b', 'c', 'd', 'e'];
+    const matches = roundRobin(teams).map((p, slot) => ({ id: `m${slot}`, round: p.round, slot, group: 'A', homeId: p.home, awayId: p.away }));
+    const planned = fieldPlan(matches, 2, 1);
+    for (const number of new Set(planned.map((m) => m.wave))) {
+      const wave = planned.filter((m) => m.wave === number);
+      expect(new Set(wave.map((m) => m.field)).size).toBe(wave.length);
+      const playing = wave.flatMap((m) => [m.homeId, m.awayId]);
+      expect(new Set(playing).size).toBe(playing.length);
+    }
+    expect(planned.every((m) => m.field === 'Feld 1' || m.field === 'Feld 2')).toBe(true);
+  });
+
+  it('offers only the group counts the teams allow and estimates the waves', () => {
+    expect(groupChoices(0, 2)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(groupChoices(6, 2)).toEqual([1, 2, 3]); // 4 groups would need 8 teams
+    expect(groupPhase(6, 2, 2)).toEqual({ matches: 6, waves: 3 });
+    expect(groupPhase(6, 1, 3)).toEqual({ matches: 15, waves: 5 });
   });
 });

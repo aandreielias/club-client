@@ -28,4 +28,5 @@ export const TOURNAMENT_MESSAGES: MessageCatalog = {
   'tournament.field-invalid': 'Der Platz hat höchstens 40 Zeichen.',
   'tournament.match-not-found': 'Dieses Spiel gibt es nicht mehr.',
   'tournament.team-unknown': 'Dieses Team gehört nicht zum Turnier.',
+  'tournament.fields-invalid': '1 bis 16 Spielfelder angeben.',
 };
