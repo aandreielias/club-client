@@ -18,6 +18,10 @@ describe('Router.match', () => {
     expect(Router.match('/', '/account')).toBeNull();
   });
 
+  it('treats malformed escapes in a link as no match instead of throwing', () => {
+    expect(Router.match('/tasks/:id', '/tasks/%E0')).toBeNull();
+  });
+
   it('resolves the first matching route', () => {
     const router = new Router(bus());
     router.path = '/calendar/new';

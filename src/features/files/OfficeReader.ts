@@ -18,6 +18,16 @@ export interface OfficeLimits {
 }
 
 const RELS_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+/** Characters of one XML part; real club documents stay far below this. */
+const MAX_PART_CHARS = 20_000_000;
+
+interface ZipStream {
+  on(event: 'data', listener: (chunk: string) => void): ZipStream;
+  on(event: 'error', listener: (error: Error) => void): ZipStream;
+  on(event: 'end', listener: () => void): ZipStream;
+  pause(): ZipStream;
+  resume(): ZipStream;
+}
 
 /**
  * Reads the text of Excel and PowerPoint files (Office Open XML) for previews: cell values per sheet,
@@ -136,9 +146,32 @@ export class OfficeReader {
   private static async xml(zip: JSZip, path: string): Promise<Document> {
     const file = zip.file(path);
     if (!file) throw new Error(`Teil ${path} fehlt.`);
-    const doc = new DOMParser().parseFromString(await file.async('text'), 'application/xml');
+    const doc = new DOMParser().parseFromString(await OfficeReader.text(file, path), 'application/xml');
     if (doc.getElementsByTagName('parsererror').length) throw new Error(`Teil ${path} ist kein gültiges XML.`);
     return doc;
+  }
+
+  /** Inflates one part, stopping at MAX_PART_CHARS: a small zip can unpack to gigabytes and freeze the tab. */
+  private static text(file: JSZip.JSZipObject, path: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const parts: string[] = [];
+      let size = 0;
+      // internalStream exists at runtime but is missing from JSZip's types.
+      const stream = (file as unknown as { internalStream(type: 'string'): ZipStream }).internalStream('string');
+      stream
+        .on('data', (chunk: string) => {
+          size += chunk.length;
+          if (size > MAX_PART_CHARS) {
+            stream.pause();
+            reject(new Error(`Teil ${path} ist zu groß für die Vorschau.`));
+          } else {
+            parts.push(chunk);
+          }
+        })
+        .on('error', reject)
+        .on('end', () => resolve(parts.join('')))
+        .resume();
+    });
   }
 
   private static all(node: Document | Element, localName: string): Element[] {

@@ -19,6 +19,8 @@ import type { Pane } from './lib/split/Pane';
 import type { PageNavigator } from './lib/navigation/PageNavigator';
 import type { SplitView } from './lib/split/SplitView.svelte';
 import type { SessionStore } from './lib/session/SessionStore.svelte';
+import type { PendingDeletes } from './lib/state/PendingDeletes.svelte';
+import { ProblemError } from './lib/http/ProblemError';
 import { guestOnly } from './lib/types';
 
 /** Which top-level screen the app shows; derived from auth, profile and route state. */
@@ -43,6 +45,9 @@ export interface AppDependencies {
   split: SplitView;
   splitPane: Pane;
   pageNavigator: PageNavigator;
+  pendingDeletes: PendingDeletes;
+  /** Removes what the last member left in this browser (recent records, list filters …); keeps device settings. */
+  forgetUser: () => void;
 }
 
 /** A resolved page: what to render and with which route parameters. */
@@ -106,7 +111,8 @@ export class AppController {
       .loadMe()
       .catch((error) => {
         bus.publish(APP_ERROR, error);
-        return this.logout();
+        // Only a refused login ends the session; a network blip or a 5xx keeps it (the error says to retry).
+        if (error instanceof ProblemError && (error.status === 401 || error.status === 403)) return this.logout();
       })
       .finally(() => (this.#loadingMe = false));
   }
@@ -201,10 +207,12 @@ export class AppController {
   }
 
   async logout(): Promise<void> {
-    const { auth, session, directory, bus } = this.deps;
+    const { auth, session, directory, bus, pendingDeletes, forgetUser } = this.deps;
+    await pendingDeletes.flush(); // deletes the member already confirmed, while their token still works
     await auth.signOut();
     session.clear();
     directory.clear();
+    forgetUser();
     bus.publish(NAVIGATE, { path: '/' });
   }
 

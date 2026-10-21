@@ -1,6 +1,6 @@
 import type { Component } from 'svelte';
 import { defineEvent, type EventBus } from '../bus';
-import type { Router } from '../router/Router.svelte';
+import { Router } from '../router/Router.svelte';
 import type { LocalStore } from '../storage/LocalStore';
 import type { Role } from '../types';
 
@@ -212,7 +212,8 @@ export class WindowService {
     const slash = raw.indexOf('/');
     if (slash <= 0) return null;
     const kind = raw.slice(0, slash);
-    const id = decodeURIComponent(raw.slice(slash + 1));
+    const id = Router.decode(raw.slice(slash + 1));
+    if (id === null) return null;
     const content = this.#contents.get(kind);
     const allowed = !!content && (!content.roles || this.hasRole(content.roles)) && (!content.canOpen || content.canOpen(id));
     return id && allowed ? { kind, id } : null;

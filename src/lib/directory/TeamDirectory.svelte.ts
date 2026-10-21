@@ -1,4 +1,5 @@
 import type { ApiClient } from '../http/ApiClient';
+import { ProblemError } from '../http/ProblemError';
 import type { SessionStore } from '../session/SessionStore.svelte';
 import type { Member, MemberList, Roster, RosterEntry, Team, TeamRole } from '../types';
 
@@ -16,6 +17,8 @@ export class TeamDirectory {
   #pendingRosters = new Map<string, Promise<Roster | null>>();
   #teamsLoad: Promise<void> | null = null;
   #membersLoad: Promise<readonly Member[]> | null = null;
+  /** Bumped by clear(): answers to requests of the previous member are dropped. */
+  #generation = 0;
 
   constructor(
     private readonly api: ApiClient,
@@ -24,10 +27,11 @@ export class TeamDirectory {
 
   /** Loads the team list once per session. */
   loadTeams(): Promise<void> {
+    const generation = this.#generation;
     this.#teamsLoad ??= this.api
       .get<{ items: Team[] }>('/api/v1/teams')
       .then(({ items }) => {
-        this.teams = items;
+        if (generation === this.#generation) this.teams = items;
       })
       .catch((error) => {
         this.#teamsLoad = null;
@@ -40,14 +44,22 @@ export class TeamDirectory {
   roster(teamId: string): Promise<Roster | null> {
     let pending = this.#pendingRosters.get(teamId);
     if (!pending) {
-      pending = this.api
+      const generation = this.#generation;
+      const request: Promise<Roster | null> = this.api
         .get<Roster>(`/api/v1/teams/${encodeURIComponent(teamId)}/roster`)
         .then((roster) => {
+          if (generation !== this.#generation) return null;
           this.#rosters[teamId] = roster;
           this.remember(roster.entries);
           return roster;
         })
-        .catch(() => null);
+        .catch((error) => {
+          // A refusal stays cached (null); a network or server failure is asked again next time.
+          const refused = error instanceof ProblemError && (error.status === 403 || error.status === 404);
+          if (!refused && this.#pendingRosters.get(teamId) === request) this.#pendingRosters.delete(teamId);
+          return null;
+        });
+      pending = request;
       this.#pendingRosters.set(teamId, pending);
     }
     return pending;
@@ -62,9 +74,11 @@ export class TeamDirectory {
 
   /** Every member (admin/board only; the server asks for a step-up). */
   allMembers(): Promise<readonly Member[]> {
+    const generation = this.#generation;
     this.#membersLoad ??= this.api
       .get<MemberList>('/api/v1/members')
       .then(({ items }) => {
+        if (generation !== this.#generation) return [];
         this.remember(items.map((m) => ({ memberId: m.id, name: `${m.firstName} ${m.lastName}` })));
         return items;
       })
@@ -123,6 +137,7 @@ export class TeamDirectory {
 
   /** Forgets cached rosters and members (e.g. after logout). */
   clear(): void {
+    this.#generation++;
     this.#names = {};
     this.#rosters = {};
     this.#pendingRosters.clear();

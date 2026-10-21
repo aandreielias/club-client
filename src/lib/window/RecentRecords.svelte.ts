@@ -26,6 +26,12 @@ export class RecentRecords {
     this.store?.set(RecentRecords.KEY, this.items);
   }
 
+  /** After logout: the next member must not see the previous one's records. */
+  clear(): void {
+    this.items = [];
+    this.store?.remove(RecentRecords.KEY);
+  }
+
   forget(kind: string, id: string): void {
     this.items = this.items.filter((r) => r.kind !== kind || r.id !== id);
     this.store?.set(RecentRecords.KEY, this.items);

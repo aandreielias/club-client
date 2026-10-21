@@ -14,6 +14,7 @@ import { TeamDirectory } from './directory/TeamDirectory.svelte';
 import { ErrorMessages } from './errors/ErrorMessages';
 import { ApiClient } from './http/ApiClient';
 import { HttpTransport } from './http/HttpTransport';
+import { ProblemError } from './http/ProblemError';
 import { LazyTransport, type Transport } from './http/Transport';
 import { webSocketFactory, type SocketFactory } from './live/LiveSocket';
 import { LiveUpdates } from './live/LiveUpdates.svelte';
@@ -101,7 +102,8 @@ const transport: Transport =
 
 export const stepUp: StepUpService = new StepUpService((pin) => api.post<StepUp>('/api/v1/me/step-up', { pin }));
 
-export const api: ApiClient = new ApiClient(transport, () => stepUp.request());
+// 401: the login is gone (expired, revoked); AppController sees the signed-out state and clears the session.
+export const api: ApiClient = new ApiClient(transport, () => stepUp.request(), () => void auth.signOut());
 
 export const session = new SessionStore(api);
 
@@ -152,6 +154,13 @@ export const toasts = new ToastService(bus, settings.notify.toastMs, settings.no
 /** Deletes with undo instead of a confirmation. */
 export const pendingDeletes = new PendingDeletes(bus, settings.notify.undoMs);
 
+/** Per-member data in this browser; device settings (preferences, shortcuts, window sizes) stay. */
+export function forgetUser(): void {
+  recentRecords.clear();
+  // Keys of SplitView, ListModel, CalendarModel and DueReminders (features may not be imported here).
+  for (const key of ['split', 'list.', 'calendar.hidden-sources', 'due-reminders']) store.clear(key);
+}
+
 export const tooltips = new TooltipService(settings.overlay.tooltipDelayMs, settings.overlay.tooltipSkipDelayMs);
 
 export const contextMenu = new ContextMenuService();
@@ -166,9 +175,17 @@ const openSocket: SocketFactory =
     : async () => (await import('./mock')).createMockSocket();
 
 export const live = new LiveUpdates(openSocket, auth.token, settings.live, bus, () => {
-  // The server closes with 4403 when the member was deactivated: end the session here as well.
-  bus.publish(TOAST, { text: 'Dein Zugang ist nicht mehr aktiv.', tone: 'error' });
-  void auth.signOut();
+  // 4403: the server says access ended. Confirm with /me before ending the session; if /me still works
+  // (e.g. birth date still missing), try live updates again later, never in a tight loop.
+  const retryLater = () => setTimeout(() => live.start(), settings.live.reconnectMaxMs);
+  api.get('/api/v1/me').then(
+    retryLater,
+    (error) => {
+      if (!(error instanceof ProblemError) || (error.status !== 401 && error.status !== 403)) return void retryLater();
+      bus.publish(TOAST, { text: 'Dein Zugang ist nicht mehr aktiv.', tone: 'error' });
+      void auth.signOut();
+    },
+  );
 });
 
 // Dev only: this module holds the app's singletons (session, router, bus …). A hot update must not create a second

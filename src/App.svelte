@@ -6,7 +6,7 @@
   import SetPasswordPage from './features/auth/SetPasswordPage.svelte';
   import { features } from './features';
   import OnboardingPage from './features/onboarding/OnboardingPage.svelte';
-  import { auth, backStack, bus, commands, documentTitle, pendingDeletes, scrollMemory, directory, errors, keyboard, live, mainPane, pageNavigator, preferences, router, session, split, splitPane, windows } from './lib/container';
+  import { auth, backStack, bus, commands, documentTitle, forgetUser, pendingDeletes, scrollMemory, directory, errors, keyboard, live, mainPane, pageNavigator, preferences, router, session, split, splitPane, windows } from './lib/container';
   import PaneHost from './ui/PaneHost.svelte';
   import { guestOnly } from './lib/types';
   import SplitDivider from './ui/SplitDivider.svelte';
@@ -23,7 +23,7 @@
   import Toasts from './ui/Toasts.svelte';
   import TooltipHost from './ui/TooltipHost.svelte';
 
-  const app = new AppController({ auth, session, directory, router, features, live, errors, bus, commands, keyboard, windows, preferences, backStack, split, splitPane, pageNavigator });
+  const app = new AppController({ auth, session, directory, router, features, live, errors, bus, commands, keyboard, windows, preferences, backStack, split, splitPane, pageNavigator, pendingDeletes, forgetUser });
   const logout = () => app.logout();
 
   onMount(() => {
@@ -61,7 +61,7 @@
   });
 </script>
 
-<svelte:window onscroll={rememberScroll} onbeforeunload={beforeUnload} onpagehide={() => pendingDeletes.flush()} />
+<svelte:window onscroll={rememberScroll} onbeforeunload={beforeUnload} onpagehide={() => void pendingDeletes.flush()} />
 
 {#if app.screen === 'failed'}
   <Centered title="Nicht erreichbar">

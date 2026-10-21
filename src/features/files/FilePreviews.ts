@@ -59,11 +59,20 @@ export class FilePreviews {
     return new Blob([await response.blob()], { type: contentType });
   }
 
-  /** Renders a Word document into `target`; styles stay inside the generated markup. */
-  async renderDocx(content: Blob, target: HTMLElement): Promise<void> {
+  /**
+   * A Word document as a standalone HTML page, for a sandboxed iframe: docx-preview copies style values from the
+   * file into CSS unescaped, so rendering it into the app's own DOM would let a document restyle the app.
+   * Images become data: URIs (no object URLs left to revoke).
+   */
+  async renderDocx(content: Blob, background: string): Promise<string> {
     const { renderAsync } = await import('docx-preview');
-    await renderAsync(content, target, undefined, { inWrapper: true, ignoreLastRenderedPageBreak: true, breakPages: true });
-    FilePreviews.defuseLinks(target);
+    const body = document.createElement('div');
+    const styles = document.createElement('div');
+    await renderAsync(content, body, styles, { inWrapper: true, ignoreLastRenderedPageBreak: true, breakPages: true, useBase64URL: true });
+    FilePreviews.defuseLinks(body);
+    // docx-preview draws white pages on a grey desk; the desk takes the house colour.
+    const desk = `body{margin:0}.docx-wrapper{padding:16px;background:${background.replace(/[^#\w(),.% -]/g, '')}}`;
+    return `<!doctype html><html><head><meta charset="utf-8"><style>${desk}</style>${styles.innerHTML}</head><body>${body.innerHTML}</body></html>`;
   }
 
   /** Links inside a document must not run script in the app (javascript: and the like): keep web and mail links only. */

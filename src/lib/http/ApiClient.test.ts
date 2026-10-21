@@ -18,6 +18,31 @@ describe('ApiClient', () => {
     expect(send).toHaveBeenCalledTimes(2);
   });
 
+  it('keeps one idempotency key across the step-up retry and a network retry', async () => {
+    const send = vi.fn<Transport['send']>().mockRejectedValueOnce(stepUpRequired).mockRejectedValueOnce(ProblemError.network())
+      .mockResolvedValueOnce('done');
+    expect(await new ApiClient(transport(send), async () => true).post('/x')).toBe('done');
+    const keys = send.mock.calls.map((call) => call[3]);
+    expect(keys).toHaveLength(3);
+    expect(new Set(keys).size).toBe(1);
+    expect(keys[0]).toMatch(/^[A-Za-z0-9_-]{8,100}$/);
+  });
+
+  it('retries a server outage once, but not a server bug', async () => {
+    const outage = vi.fn<Transport['send']>().mockRejectedValueOnce(new ProblemError(503, 'unavailable')).mockResolvedValueOnce('ok');
+    expect(await new ApiClient(transport(outage), async () => false).get('/x')).toBe('ok');
+    const bug = vi.fn<Transport['send']>().mockRejectedValue(new ProblemError(500, 'internal'));
+    await expect(new ApiClient(transport(bug), async () => false).get('/x')).rejects.toMatchObject({ status: 500 });
+    expect(bug).toHaveBeenCalledOnce();
+  });
+
+  it('reports 401 so the session ends', async () => {
+    const unauthorized = vi.fn();
+    const send = vi.fn<Transport['send']>().mockRejectedValue(new ProblemError(401, 'http.401'));
+    await expect(new ApiClient(transport(send), async () => false, unauthorized).get('/x')).rejects.toMatchObject({ status: 401 });
+    expect(unauthorized).toHaveBeenCalledOnce();
+  });
+
   it('does not loop when the retry needs a step-up again', async () => {
     const send = vi.fn<Transport['send']>().mockRejectedValue(stepUpRequired);
     await expect(new ApiClient(transport(send), async () => true).post('/x')).rejects.toBe(stepUpRequired);

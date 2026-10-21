@@ -19,12 +19,17 @@ export class FolderZip {
     private readonly maxBytes: number,
   ) {}
 
+  /** One path segment: folder names are free text, and "..", "/" or "\\" would write outside the unpacked folder. */
+  static segment(name: string): string {
+    return name.replace(/[/\\]/g, '_').replace(/^\.+/, '').trim() || '_';
+  }
+
   /** Every visible file below `folder`, with paths relative to it. */
   async entries(folder: Folder, tree: FolderTree): Promise<ZipEntry[]> {
     const entries: ZipEntry[] = [];
     const walk = async (current: Folder, prefix: string) => {
-      for (const file of await this.api.files(current.id)) entries.push({ path: prefix + file.name, file });
-      for (const child of tree.children(current.id)) await walk(child, `${prefix}${child.name}/`);
+      for (const file of await this.api.files(current.id)) entries.push({ path: prefix + FolderZip.segment(file.name), file });
+      for (const child of tree.children(current.id)) await walk(child, `${prefix}${FolderZip.segment(child.name)}/`);
     };
     await walk(folder, '');
     return entries;

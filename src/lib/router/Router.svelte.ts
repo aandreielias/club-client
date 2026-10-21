@@ -93,8 +93,11 @@ export class Router {
     if (want.length !== got.length) return null;
     const params: RouteParams = {};
     for (let i = 0; i < want.length; i++) {
-      if (want[i].startsWith(':')) params[want[i].slice(1)] = decodeURIComponent(got[i]);
-      else if (want[i] !== got[i]) return null;
+      if (want[i].startsWith(':')) {
+        const value = Router.decode(got[i]);
+        if (value === null) return null;
+        params[want[i].slice(1)] = value;
+      } else if (want[i] !== got[i]) return null;
     }
     return params;
   }
@@ -127,6 +130,15 @@ export class Router {
         this.#allowed = path;
         location.hash = target;
       });
+    }
+  }
+
+  /** Null for malformed escapes (e.g. a crafted link with "%E0"): no route instead of a crash. */
+  static decode(part: string): string | null {
+    try {
+      return decodeURIComponent(part);
+    } catch {
+      return null;
     }
   }
 }

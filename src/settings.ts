@@ -9,7 +9,8 @@ const env = import.meta.env;
 export type ApiMode = 'mock' | 'http';
 
 function readApiMode(): ApiMode {
-  const mode = env.VITE_API_MODE || 'mock';
+  // The mock (dev login accepts any password) is only a default in development; a release build must say which.
+  const mode = env.VITE_API_MODE || (env.PROD ? '' : 'mock');
   if (mode !== 'mock' && mode !== 'http') throw new Error(`VITE_API_MODE must be "mock" or "http", got "${mode}"`);
   return mode;
 }

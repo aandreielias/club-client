@@ -18,24 +18,22 @@ afterEach(() => vi.unstubAllGlobals());
 describe('HttpTransport', () => {
   const transport = new HttpTransport('https://api.test', async () => 'tok');
 
-  it('sends bearer and JSON, and an idempotency key on POST only', async () => {
+  it('sends bearer and JSON, and the idempotency key it is given', async () => {
     const fetch = stubFetch(json(200, { ok: 1 }), json(200, {}));
-    expect(await transport.send('POST', '/api/v1/x', { a: 1 })).toEqual({ ok: 1 });
+    expect(await transport.send('POST', '/api/v1/x', { a: 1 }, 'key-00000001')).toEqual({ ok: 1 });
     await transport.send('PUT', '/api/v1/x', { a: 1 });
 
     const post = fetch.mock.calls[0];
     expect(post[0]).toBe('https://api.test/api/v1/x');
     expect(headersOf(post)).toMatchObject({ Authorization: 'Bearer tok', 'Content-Type': 'application/json' });
-    expect(headersOf(post)['Idempotency-Key']).toMatch(/^[A-Za-z0-9_-]{8,100}$/);
+    expect(headersOf(post)['Idempotency-Key']).toBe('key-00000001');
     expect(post[1]!.body).toBe('{"a":1}');
     expect(headersOf(fetch.mock.calls[1])['Idempotency-Key']).toBeUndefined();
   });
 
-  it('uses a new idempotency key for every POST', async () => {
-    const fetch = stubFetch(json(200, {}), json(200, {}));
-    await transport.send('POST', '/x');
-    await transport.send('POST', '/x');
-    expect(headersOf(fetch.mock.calls[0])['Idempotency-Key']).not.toBe(headersOf(fetch.mock.calls[1])['Idempotency-Key']);
+  it('turns a broken success body into ProblemError, not a SyntaxError', async () => {
+    stubFetch(new Response('<html>', { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    await expect(transport.send('GET', '/x')).rejects.toMatchObject({ name: 'ProblemError', code: 'internal' });
   });
 
   it('turns problem answers into ProblemError', async () => {

@@ -75,7 +75,8 @@ export class LiveUpdates {
 
   /** Reconnects immediately if the connection is down (e.g. the tab became visible again). */
   wake(): void {
-    if (this.status !== 'reconnecting') return;
+    // A socket that is open but not yet authenticated would be orphaned by a second connect.
+    if (this.status !== 'reconnecting' || this.#socket) return;
     clearTimeout(this.#reconnectTimer);
     void this.connect(this.#generation);
   }
@@ -99,10 +100,17 @@ export class LiveUpdates {
   }
 
   private async authenticate(socket: LiveSocket, generation: number): Promise<void> {
-    const token = await this.token().catch(() => null);
+    let token: string | null;
+    try {
+      token = await this.token();
+    } catch {
+      // Token refresh failed (network): close, so the usual reconnect tries again with a fresh token.
+      if (generation === this.#generation && socket === this.#socket) socket.close(1000, 'no token');
+      return;
+    }
     if (generation !== this.#generation || socket !== this.#socket) return;
     if (!token) {
-      this.stop();
+      this.stop(); // signed out
       return;
     }
     socket.send(JSON.stringify({ type: 'auth', token }));

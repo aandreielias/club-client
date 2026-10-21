@@ -45,9 +45,9 @@ export class PendingDeletes {
     this.bus.publish(TOAST, { text: 'Wiederhergestellt.' });
   }
 
-  /** Runs every pending delete now (e.g. the page is about to unload). */
-  flush(): void {
-    for (const id of [...this.#pending.keys()]) void this.commit(id);
+  /** Runs every pending delete now (the page unloads, or the member logs out while the token is still valid). */
+  flush(): Promise<void> {
+    return Promise.all([...this.#pending.keys()].map((id) => this.commit(id))).then(() => undefined);
   }
 
   private async commit(key: string): Promise<void> {

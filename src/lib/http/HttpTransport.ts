@@ -11,9 +11,17 @@ export class HttpTransport implements Transport {
     private readonly token: TokenSource,
   ) {}
 
-  async send(method: HttpMethod, path: string, body?: unknown): Promise<unknown> {
-    const response = await this.fetch(method, path, await this.headers(method), body);
-    const data = response.headers.get('Content-Type')?.includes('json') ? await response.json() : undefined;
+  async send(method: HttpMethod, path: string, body?: unknown, idempotencyKey?: string): Promise<unknown> {
+    const headers = await this.headers();
+    if (idempotencyKey) headers[HttpTransport.IDEMPOTENCY_HEADER] = idempotencyKey;
+    const response = await this.fetch(method, path, headers, body);
+    let data: any;
+    try {
+      data = response.headers.get('Content-Type')?.includes('json') ? await response.json() : undefined;
+    } catch {
+      // A broken body (proxy error page, cut connection) is a failure like any other, never a raw SyntaxError.
+      if (response.ok) throw new ProblemError(502, 'internal', response.headers.get(HttpTransport.CORRELATION_HEADER));
+    }
     if (!response.ok) {
       throw new ProblemError(
         response.status,
@@ -25,7 +33,8 @@ export class HttpTransport implements Transport {
   }
 
   async upload(path: string, form: FormData, onProgress?: ProgressListener): Promise<unknown> {
-    const headers = await this.headers('POST');
+    // No idempotency key: the server does not buffer multipart bodies, so it would not apply.
+    const headers = await this.headers();
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', this.url(path));
@@ -54,12 +63,10 @@ export class HttpTransport implements Transport {
     return this.baseUrl + path;
   }
 
-  private async headers(method: HttpMethod): Promise<Record<string, string>> {
+  private async headers(): Promise<Record<string, string>> {
     const headers: Record<string, string> = {};
     const token = await this.token();
     if (token) headers.Authorization = `Bearer ${token}`;
-    // A new key per call: the server also stores 4xx answers, so a retry after step-up must not reuse it.
-    if (method === 'POST') headers[HttpTransport.IDEMPOTENCY_HEADER] = crypto.randomUUID();
     return headers;
   }
 
@@ -72,7 +79,8 @@ export class HttpTransport implements Transport {
       payload = JSON.stringify(body);
     }
     try {
-      return await fetch(this.url(path), { method, headers, body: payload });
+      // keepalive: a delete sent while the page unloads (pending deletes) still reaches the server.
+      return await fetch(this.url(path), { method, headers, body: payload, keepalive: method === 'DELETE' });
     } catch {
       throw ProblemError.network();
     }

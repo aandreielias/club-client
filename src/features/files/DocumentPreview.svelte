@@ -14,7 +14,7 @@
   const kind = filePreviews.kind(file.contentType);
   // svelte-ignore state_referenced_locally
   const content = new Resource(() => (load ? load() : filePreviews.content(file.id, file.contentType)));
-  void content.load();
+  const loaded = content.load();
 
   let pdfUrl = $state<string | null>(null);
   $effect(() => {
@@ -28,17 +28,20 @@
   // Excel and PowerPoint: their text, read once the content is there.
   // svelte-ignore state_referenced_locally
   const office = new Resource<Sheet[] | Slide[]>(async () => {
-    await content.load();
+    await loaded; // the same download, not a second one
     if (!content.value) throw content.error ?? new Error('Vorschau nicht verfügbar.');
     return kind === 'xlsx' ? filePreviews.office.sheets(content.value) : filePreviews.office.slides(content.value);
   });
   if (kind === 'xlsx' || kind === 'pptx') void office.load();
 
   let docxError = $state<unknown>(null);
-  function renderDocx(target: HTMLElement) {
+  let docxHtml = $state<string | null>(null);
+  $effect(() => {
     const blob = content.value;
-    if (blob) filePreviews.renderDocx(blob, target).catch((error) => (docxError = error));
-  }
+    if (!blob || kind !== 'docx') return;
+    const background = getComputedStyle(document.documentElement).getPropertyValue('--color-surface');
+    filePreviews.renderDocx(blob, background).then((html) => (docxHtml = html), (error) => (docxError = error));
+  });
 </script>
 
 <div class="preview">
@@ -50,7 +53,8 @@
         {#if docxError}
           <p class="muted note">Für dieses Dokument gibt es keine Vorschau. Bitte herunterladen.</p>
         {:else}
-          <div class="docx" {@attach renderDocx}></div>
+          <!-- No allow-scripts and no allow-same-origin: the document cannot reach the app. -->
+          {#if docxHtml}<iframe sandbox="allow-popups allow-popups-to-escape-sandbox" srcdoc={docxHtml} title="Vorschau {file.name}"></iframe>{/if}
         {/if}
       {:else if kind === 'xlsx' || kind === 'pptx'}
         {#if office.error}
@@ -80,15 +84,6 @@
     width: 100%;
     height: min(75vh, 900px);
     border: 0;
-  }
-  .docx {
-    max-height: min(75vh, 900px);
-    overflow: auto;
-  }
-  /* docx-preview draws white pages on a grey desk; keep the desk in the house colours. */
-  .docx :global(.docx-wrapper) {
-    padding: var(--space-lg);
-    background: var(--color-surface);
   }
   .note {
     margin: 0;

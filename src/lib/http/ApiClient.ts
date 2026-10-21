@@ -10,13 +10,17 @@ type QueryValue = string | number | boolean | null | undefined;
 export type QueryParams = Record<string, QueryValue | readonly QueryValue[]>;
 
 /**
- * Typed entry point for every server call. On `auth.step-up-required` it asks for a step-up once
- * and retries the request once; every other failure propagates as ProblemError.
+ * Typed entry point for every server call. On `auth.step-up-required` it asks for a step-up once and retries;
+ * a network failure or an unavailable server (502–504) is retried once with the same idempotency key, so the
+ * server runs a POST at most once. 401 ends the session. Every other failure propagates as ProblemError.
  */
 export class ApiClient {
+  static readonly RETRY_DELAY_MS = 400;
+
   constructor(
     private readonly transport: Transport,
     private readonly stepUp: StepUpHandler,
+    private readonly unauthorized: () => void = () => {},
   ) {}
 
   get<T>(path: string, query?: QueryParams): Promise<T> {
@@ -62,13 +66,26 @@ export class ApiClient {
   }
 
   private request<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
-    return this.withStepUp(() => this.transport.send(method, path, body)) as Promise<T>;
+    // One key per logical POST, kept for every retry of it (step-up and network).
+    const key = method === 'POST' ? crypto.randomUUID() : undefined;
+    return this.withStepUp(() => this.retryOnce(() => this.transport.send(method, path, body, key))) as Promise<T>;
+  }
+
+  private async retryOnce(call: () => Promise<unknown>): Promise<unknown> {
+    try {
+      return await call();
+    } catch (error) {
+      if (!(error instanceof ProblemError) || !(error.status === 0 || (error.status >= 502 && error.status <= 504))) throw error;
+      await new Promise((resolve) => setTimeout(resolve, ApiClient.RETRY_DELAY_MS));
+      return call();
+    }
   }
 
   private async withStepUp(call: () => Promise<unknown>): Promise<unknown> {
     try {
       return await call();
     } catch (error) {
+      if (error instanceof ProblemError && error.status === 401) this.unauthorized();
       if (error instanceof ProblemError && error.isStepUpRequired && (await this.stepUp())) return call();
       throw error;
     }
