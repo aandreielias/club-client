@@ -196,3 +196,25 @@ describe('teamStats', () => {
     expect(stats.find((s) => s.teamId === 'c')!.knockout).toBe('im Finale');
   });
 });
+
+describe('mock seed tournaments', () => {
+  it('has a finished tournament and one with the group phase done, each with its own guest', async () => {
+    const { directory, MockDirectory } = await import('../../lib/mock/core');
+    const { tournaments } = await import('./mock');
+    const member = (id: string) => directory.members.data.find((m) => m.id === id)!;
+
+    const sommer = tournaments.get(member('gast-sommer'), 'tm-sommer');
+    expect(sommer.status).toBe('DONE');
+    expect(sommer.matches.every((m) => m.homeScore !== null && m.field && m.wave)).toBe(true);
+    const sommerStats = teamStats(sommer);
+    expect(sommerStats.filter((s) => s.knockout === 'Sieger')).toHaveLength(1);
+    expect(sommerStats.filter((s) => s.knockout === '2. Platz')).toHaveLength(1);
+    expect(() => tournaments.get(member('gast-sommer'), 'tm-fruehling')).toThrow();
+
+    const fruehling = tournaments.get(member('gast-fruehling'), 'tm-fruehling');
+    expect(fruehling.status).toBe('GROUPS');
+    expect(fruehling.matches.every((m) => m.stage === 'GROUP' && m.homeScore !== null)).toBe(true);
+    directory.stepUp(member('trainer'), MockDirectory.PIN);
+    expect(tournaments.startKnockout(member('trainer'), 'tm-fruehling').status).toBe('KO');
+  });
+});

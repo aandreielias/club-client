@@ -62,18 +62,36 @@ export class MockDirectory {
     { id: 't-u16', name: 'U16', season: '2026/27' },
   ]);
 
-  readonly members = new MockTable<Member[]>('members', () => [
-    seedMember('admin', 'Anna', 'Admin', ['ADMIN'], '1985-03-12'),
-    seedMember('vorstand', 'Bernd', 'Vorstand', ['BOARD'], '1978-11-02'),
-    seedMember('trainer', 'Clara', 'Trainer', ['COACH', 'PLAYER'], '1992-06-30'),
-    // Minor without photo consent: photos tagged with him are hidden from everyone but managers.
-    { ...seedMember('spieler', 'David', 'Spieler', ['PLAYER'], '2010-01-20'), photoConsent: false },
-    seedMember('spielerin', 'Lena', 'Spielerin', ['PLAYER'], '1998-08-08'),
-    seedMember('eltern', 'Eva', 'Eltern', ['PARENT'], '1980-09-14'),
-    seedMember('neu', 'Felix', 'Neu', ['PLAYER'], null),
-    // Temporary account of a visiting team (Herbstcup): sees only that tournament.
-    seedMember('gast', 'Gerd', 'Gast', ['GUEST'], null),
-  ]);
+  readonly members = new MockTable<Member[]>('members', () => MockDirectory.seedMembers());
+
+  private static seedMembers(): Member[] {
+    return [
+      seedMember('admin', 'Anna', 'Admin', ['ADMIN'], '1985-03-12'),
+      seedMember('vorstand', 'Bernd', 'Vorstand', ['BOARD'], '1978-11-02'),
+      seedMember('trainer', 'Clara', 'Trainer', ['COACH', 'PLAYER'], '1992-06-30'),
+      // Minor without photo consent: photos tagged with him are hidden from everyone but managers.
+      { ...seedMember('spieler', 'David', 'Spieler', ['PLAYER'], '2010-01-20'), photoConsent: false },
+      seedMember('spielerin', 'Lena', 'Spielerin', ['PLAYER'], '1998-08-08'),
+      seedMember('eltern', 'Eva', 'Eltern', ['PARENT'], '1980-09-14'),
+      seedMember('neu', 'Felix', 'Neu', ['PLAYER'], null),
+      // Temporary accounts of visiting teams: each sees only its tournament.
+      seedMember('gast', 'Gerd', 'Gast', ['GUEST'], null), // Herbstcup (group phase running)
+      seedMember('gast-sommer', 'Sven', 'Sommer', ['GUEST'], null), // Sommerturnier (finished)
+      seedMember('gast-fruehling', 'Frieda', 'Frühling', ['GUEST'], null), // Frühlingscup (groups done, no knockout yet)
+    ];
+  }
+
+  constructor() {
+    this.addMissingMembers();
+  }
+
+  /** Members added to the seed later reach browsers that already stored the mock data. */
+  private addMissingMembers(): void {
+    const missing = MockDirectory.seedMembers().filter((m) => !this.members.data.some((x) => x.id === m.id));
+    if (!missing.length) return;
+    this.members.data.push(...missing);
+    this.members.save();
+  }
 
   /** memberId → teamId → role in that team */
   readonly memberships = new MockTable<Record<string, Record<string, TeamRole>>>('memberships', () => ({

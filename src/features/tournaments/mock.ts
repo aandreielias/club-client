@@ -19,10 +19,41 @@ export class MockTournaments {
   readonly teams = new MockTable<Record<string, TournamentTeam[]>>('tournament-teams', () => MockTournaments.seed().teams);
   readonly matches = new MockTable<Record<string, TournamentMatch[]>>('tournament-matches', () => MockTournaments.seed().matches);
   /** memberId → guest of which tournament */
-  readonly guests = new MockTable<Record<string, StoredGuest>>('tournament-guests', () => ({ gast: { tournamentId: 'tm-herbst', teamId: 'tt-uvc' } }));
+  readonly guests = new MockTable<Record<string, StoredGuest>>('tournament-guests', () => ({ ...MockTournaments.SEED_GUESTS }));
+
+  /** One guest login per seeded tournament (members in MockDirectory). */
+  private static readonly SEED_GUESTS: Readonly<Record<string, StoredGuest>> = {
+    gast: { tournamentId: 'tm-herbst', teamId: 'tt-uvc' },
+    'gast-sommer': { tournamentId: 'tm-sommer', teamId: 'tm-sommer-t2' },
+    'gast-fruehling': { tournamentId: 'tm-fruehling', teamId: 'tm-fruehling-t1' },
+  };
 
   constructor(private readonly people: MockDirectory) {
     this.upgradeStored();
+    this.addMissingSeeds();
+  }
+
+  /** Browsers that stored mock data before a seed tournament existed get it too (their own data stays). */
+  private addMissingSeeds(): void {
+    const seed = MockTournaments.seed();
+    let changed = false;
+    for (const t of seed.tournaments) {
+      if (this.tournaments.data.some((x) => x.id === t.id)) continue;
+      this.tournaments.data.push(t);
+      this.teams.data[t.id] = seed.teams[t.id];
+      this.matches.data[t.id] = seed.matches[t.id];
+      changed = true;
+    }
+    for (const [memberId, guest] of Object.entries(MockTournaments.SEED_GUESTS)) {
+      if (this.guests.data[memberId] || !this.tournaments.data.some((t) => t.id === guest.tournamentId)) continue;
+      this.guests.data[memberId] = guest;
+      changed = true;
+    }
+    if (!changed) return;
+    this.tournaments.save();
+    this.teams.save();
+    this.matches.save();
+    this.guests.save();
   }
 
   list(viewer: Member): { items: TournamentSummary[] } {
@@ -318,8 +349,58 @@ export class MockTournaments {
     return { ...t, name, format, setsToWin, teamSize, fieldCount };
   }
 
+  /**
+   * A tournament whose group phase is fully played (`finished`: the knockout too). The team listed first in a group
+   * is the strongest; every third match goes to a deciding set. Built with the mock's own rules, so tables and
+   * bracket match what the app computes.
+   */
+  private static played(id: string, name: string, on: string, finished: boolean, groupNames: string[][]) {
+    const teams: TournamentTeam[] = groupNames.flatMap((names, g) => names.map((teamName, i) => ({
+      id: `${id}-t${g * 10 + i}`, name: teamName, clubTeamId: teamName === 'SDG Damen 1' ? 't-damen' : teamName === 'SDG U16' ? 't-u16' : null, group: label(g),
+    })));
+    const strength = (teamId: string) => teams.findIndex((t) => t.id === teamId) % 10; // lower index in its group: stronger
+    let count = 0;
+    const result = (home: string, away: string, homeStronger: boolean): Pick<TournamentMatch, 'sets' | 'homeScore' | 'awayScore'> => {
+      const close = ++count % 3 === 0;
+      const won: [number, number][] = close ? [[25, 23], [21, 25], [15, 12]] : [[25, 19], [25, 21]];
+      return MockTournaments.scores(won.map(([w, l]) => (homeStronger ? { home: w, away: l } : { home: l, away: w })));
+    };
+    const group: TournamentMatch[] = groupNames.flatMap((_, g) => {
+      const members = teams.filter((t) => t.group === label(g)).map((t) => t.id);
+      return roundRobin(members).map((p, slot) => ({ id: `${id}-g${g}-${slot}`, stage: 'GROUP' as const, group: label(g), round: p.round, slot,
+        homeId: p.home, awayId: p.away, ...result(p.home, p.away, strength(p.home) < strength(p.away)), startsAt: null, field: null, wave: null }));
+    });
+    const fieldCount = 2;
+    let matches: TournamentMatch[] = fieldPlan(group, fieldCount, 1);
+    if (finished) {
+      const ranked = groupNames.map((_, g) => standings(new Map(teams.filter((t) => t.group === label(g)).map((t) => [t.id, t.name])),
+        matches.filter((m) => m.group === label(g)).map((m) => ({ home: m.homeId, away: m.awayId, ...tally(m.sets), homeSets: m.homeScore, awaySets: m.awayScore })),
+        'VOLLEYBALL').map((s) => s.teamId));
+      const order = seeds(ranked, 2);
+      const rounds = koRounds(order.length);
+      const tree: TournamentMatch[] = firstRound(order).map((p) => MockTournaments.ko(1, p.slot, p.home, p.away));
+      for (let round = 2; round <= rounds; round++) for (let slot = 0; slot < 2 ** (rounds - round); slot++) tree.push(MockTournaments.ko(round, slot, null, null));
+      let wave = Math.max(...matches.map((m) => m.wave ?? 0)) + 1;
+      for (let round = 1; round <= rounds; round++) {
+        for (const m of tree.filter((x) => x.round === round)) {
+          // In the knockout the better seed wins, except one upset in the first round.
+          const homeStronger = order.indexOf(m.homeId!) < order.indexOf(m.awayId!) !== (round === 1 && m.slot === 1);
+          Object.assign(m, result(m.homeId!, m.awayId!, homeStronger));
+          MockTournaments.advance(tree, m);
+        }
+        const planned = fieldPlan(tree.filter((x) => x.round === round), fieldCount, wave);
+        planned.forEach((p) => Object.assign(tree.find((x) => x.id === p.id)!, { field: p.field, wave: p.wave }));
+        wave = Math.max(...planned.map((p) => p.wave)) + 1;
+      }
+      matches = [...matches, ...tree];
+    }
+    const tournament = { id, name, startsOn: on, endsOn: on, locationId: 'l-west', appointmentId: null, groupCount: groupNames.length, advancePerGroup: 2,
+      format: 'VOLLEYBALL', setsToWin: 2, teamSize: 6, fieldCount, status: finished ? 'DONE' : 'GROUPS', createdAt: new Date().toISOString() } as StoredTournament;
+    return { tournament, teams, matches };
+  }
+
   /** Herbstcup in three weeks: six teams drawn into two groups, some results in. */
-  private static seed() {
+  private static seed(): { tournaments: StoredTournament[]; teams: Record<string, TournamentTeam[]>; matches: Record<string, TournamentMatch[]> } {
     const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
     const names: [string, string, string | null][] = [
       ['tt-sdg1', 'SDG Damen 1', 't-damen'], ['tt-sdgu', 'SDG U16', 't-u16'], ['tt-uvc', 'UVC Graz', null],
@@ -329,11 +410,18 @@ export class MockTournaments {
     const match = (id: string, group: string, round: number, slot: number, home: string, away: string, sets: [number, number][]): TournamentMatch =>
       ({ id, stage: 'GROUP', group, round, slot, homeId: home, awayId: away, ...MockTournaments.scores(sets.map(([h, a]) => ({ home: h, away: a }))),
         startsAt: null, field: group === 'A' ? 'Feld 1' : 'Feld 2', wave: round });
+    const sommer = MockTournaments.played('tm-sommer', 'Sommerturnier 2026', day(-7), true,
+      [['SDG Damen 1', 'UVC Graz', 'TSV Seeblick', 'ASK Bergdorf'], ['VC Musterstadt', 'SDG U16', 'SV Talheim', 'VBC Ostend']]);
+    const fruehling = MockTournaments.played('tm-fruehling', 'Frühlingscup 2026', day(-1), false,
+      [['UVC Graz', 'SDG Damen 1', 'SV Talheim'], ['TSV Seeblick', 'VC Musterstadt', 'ASK Bergdorf']]);
     return {
       tournaments: [{ id: 'tm-herbst', name: 'Herbstcup 2026', startsOn: day(21), endsOn: day(21), locationId: 'l-west', appointmentId: null,
-        groupCount: 2, advancePerGroup: 2, format: 'VOLLEYBALL', setsToWin: 2, teamSize: 6, fieldCount: 2, status: 'GROUPS', createdAt: new Date().toISOString() } as StoredTournament],
-      teams: { 'tm-herbst': teams },
+        groupCount: 2, advancePerGroup: 2, format: 'VOLLEYBALL', setsToWin: 2, teamSize: 6, fieldCount: 2, status: 'GROUPS', createdAt: new Date().toISOString() } as StoredTournament,
+        sommer.tournament, fruehling.tournament],
+      teams: { 'tm-herbst': teams, 'tm-sommer': sommer.teams, 'tm-fruehling': fruehling.teams },
       matches: {
+        'tm-sommer': sommer.matches,
+        'tm-fruehling': fruehling.matches,
         'tm-herbst': [
           match('tg-1', 'A', 1, 0, 'tt-sdg1', 'tt-ask', [[25, 18], [25, 21]]),
           match('tg-2', 'A', 2, 1, 'tt-uvc', 'tt-sdg1', [[25, 23], [19, 25], [12, 15]]),
