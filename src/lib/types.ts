@@ -13,7 +13,7 @@ export type TeamRole = 'COACH' | 'PLAYER';
 
 export const TEAM_ROLE_LABELS: Readonly<Record<TeamRole, string>> = { PLAYER: 'Spieler:in', COACH: 'Trainer:in' };
 
-/** Task status names; here because search shows them too (features may not import each other). */
+/** Task status names, shown by the tasks and search features. */
 export const TASK_STATUS_LABELS = { OPEN: 'Offen', IN_PROGRESS: 'In Arbeit', DONE: 'Erledigt' } as const;
 
 /** Roles that need a PIN and a step-up for privileged changes (server: Actor.PRIVILEGED). */
