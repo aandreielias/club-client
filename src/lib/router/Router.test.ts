@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { EventBusBuilder } from '../bus';
+import { EventBus } from '../bus';
 import { Router } from './Router.svelte';
 
-const bus = () => EventBusBuilder.create().build();
+const bus = () => new EventBus();
 
 describe('Router.match', () => {
   it('matches static and parameter segments', () => {

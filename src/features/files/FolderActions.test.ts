@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { EventBusBuilder } from '../../lib/bus';
+import { EventBus } from '../../lib/bus';
 import { PendingDeletes } from '../../lib/state/PendingDeletes.svelte';
 import { FolderActions, type FolderActionsDeps } from './FolderActions.svelte';
 import type { Folder, StoredFile } from './model';
@@ -7,7 +7,7 @@ import type { Folder, StoredFile } from './model';
 const file = (id: string, mine: boolean) => ({ id, name: `${id}.pdf`, mine }) as unknown as StoredFile & { mine: boolean };
 
 function setup() {
-  const bus = EventBusBuilder.create().build();
+  const bus = new EventBus();
   const files = [file('a', true), file('b', false), file('c', true)];
   const deletes = new PendingDeletes(bus, 5000);
   const schedule = vi.spyOn(deletes, 'schedule');

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EventBusBuilder } from '../bus';
+import { EventBus } from '../bus';
 import { Router } from '../router/Router.svelte';
 import { LocalStore } from '../storage/LocalStore';
 import { MainPane, SplitPane } from './Pane';
@@ -7,7 +7,7 @@ import { SPLIT_OPEN, SplitView } from './SplitView.svelte';
 
 /** A router whose URL is a plain string (no window.location in tests). */
 function setup() {
-  const bus = EventBusBuilder.create().build();
+  const bus = new EventBus();
   const router = new Router(bus);
   let url = '/';
   const apply = () => {

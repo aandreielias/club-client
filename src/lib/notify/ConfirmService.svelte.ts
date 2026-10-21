@@ -9,7 +9,7 @@ export interface ConfirmRequest {
 }
 
 /** Asks the user: `await bus.request(CONFIRM, {...})` resolves true when confirmed. */
-export const CONFIRM = defineRequest<ConfirmRequest, boolean>('ui/confirm', { timeoutMs: 0 });
+export const CONFIRM = defineRequest<ConfirmRequest, boolean>('ui/confirm');
 
 /** Promise-based confirmation dialog (rendered once by the app shell), instead of window.confirm. */
 export class ConfirmService {

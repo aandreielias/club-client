@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { EventBusBuilder } from '../../lib/bus';
+import { EventBus } from '../../lib/bus';
 import { TOAST, type ToastRequest } from '../../lib/notify/ToastService.svelte';
 import type { LocalStore } from '../../lib/storage/LocalStore';
 import type { Formatter } from '../../lib/time/Formatter';
@@ -10,7 +10,7 @@ import type { TasksApi } from './TasksApi';
 const task = (id: string, dueAt: string | null, status: Task['status'] = 'OPEN') => ({ id, title: `T${id}`, dueAt, status }) as Task;
 
 function setup(tasks: Task[]) {
-  const bus = EventBusBuilder.create().build();
+  const bus = new EventBus();
   const toasts: ToastRequest[] = [];
   bus.subscribe(TOAST, (t) => toasts.push(t));
   const saved = new Map<string, unknown>();

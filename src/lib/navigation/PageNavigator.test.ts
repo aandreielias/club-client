@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { EventBusBuilder } from '../bus';
+import { EventBus } from '../bus';
 import { Router } from '../router/Router.svelte';
 import type { LocalStore } from '../storage/LocalStore';
 import { MainPane, SplitPane } from '../split/Pane';
@@ -8,7 +8,7 @@ import type { Dock } from '../window/WindowService.svelte';
 import { PageNavigator } from './PageNavigator';
 
 function setup(start: string, dock: Dock = 'side') {
-  const bus = EventBusBuilder.create().build();
+  const bus = new EventBus();
   const router = new Router(bus);
   let url = start;
   const apply = () => {

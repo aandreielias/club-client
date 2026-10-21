@@ -1,58 +1,55 @@
-import type { Channel } from './Channel';
-import type { Priority } from './Priority';
-import type { EventRegistry } from './registry/EventRegistry';
-import type { EventEnvelope, EventHandler, Subscription } from './Subscription';
 import type { EventChannel, RequestChannel } from './tokens';
 
 // `0 extends 1 & T` catches `any` (e.g. a catch variable), which would otherwise match `void`.
 export type Payload<T> = 0 extends 1 & T ? [payload: T] : [T] extends [void] ? [] : [payload: T];
 
-export interface SubscribeOptions {
-  priority?: Priority;
+export type EventHandler<T> = (payload: T) => void;
+
+export interface Subscription {
+  unsubscribe(): void;
 }
 
-export type RequestHandler<Req, Res> = (request: Req) => Res | Promise<Res>;
-
-/** Called with every handler failure; never reaches the publisher. */
-export type SubscriberExceptionHandler = (error: unknown, subscription: Subscription, envelope: EventEnvelope) => void;
-
-/** Called for every published event that no subscriber received. */
-export type DeadLetterHandler = (envelope: EventEnvelope) => void;
-
 /**
- * Pub/sub bus with hierarchical channels, priorities and request/response
- * (TypeScript port of ae.eventbus.core.EventBus). Components publish to channels and subscribe to
- * them without knowing each other. Dispatch is synchronous; handler errors are isolated.
+ * The app's pub/sub: components publish to typed channels and subscribe without knowing each other.
+ * Dispatch is synchronous and exact (one channel path, no hierarchy); a failing handler is logged and never
+ * reaches the publisher or the other handlers. A request channel has one responder (e.g. the confirm dialog).
  */
-export interface EventBus {
+export class EventBus {
+  readonly #handlers = new Map<string, Set<EventHandler<any>>>();
+  readonly #responders = new Map<string, (request: any) => unknown>();
+
   /** Channels typed `void` take no payload: `bus.publish(WINDOW_CLOSE)`. */
-  publish<T>(channel: EventChannel<T>, ...payload: Payload<T>): void;
+  publish<T>(channel: EventChannel<T>, ...payload: Payload<T>): void {
+    for (const handler of [...(this.#handlers.get(channel.path) ?? [])]) {
+      try {
+        handler(payload[0]);
+      } catch (error) {
+        console.error(`Handler on ${channel.path} failed`, error);
+      }
+    }
+  }
 
-  subscribe<T>(channel: EventChannel<T>, handler: EventHandler<T>, options?: SubscribeOptions): Subscription;
+  subscribe<T>(channel: EventChannel<T>, handler: EventHandler<T>): Subscription {
+    let handlers = this.#handlers.get(channel.path);
+    if (!handlers) this.#handlers.set(channel.path, (handlers = new Set()));
+    handlers.add(handler);
+    return { unsubscribe: () => handlers.delete(handler) };
+  }
 
-  /** Receives events of `path` and all its child channels (needs hierarchical routing). */
-  subscribeHierarchy(path: string, handler: EventHandler<unknown>, options?: SubscribeOptions): Subscription;
+  /** Number of live handlers on a channel (tests check that components clean up). */
+  subscribers(channel: EventChannel<unknown>): number {
+    return this.#handlers.get(channel.path)?.size ?? 0;
+  }
 
-  /** Registers a responder; several responders per channel are allowed. */
-  handleRequest<Req, Res>(channel: RequestChannel<Req, Res>, handler: RequestHandler<Req, Res>): Subscription;
+  handleRequest<Req, Res>(channel: RequestChannel<Req, Res>, responder: (request: Req) => Res | Promise<Res>): Subscription {
+    this.#responders.set(channel.path, responder);
+    return { unsubscribe: () => this.#responders.get(channel.path) === responder && this.#responders.delete(channel.path) };
+  }
 
-  /** First successful answer; rejects when no responder exists, every responder failed or the timeout passed. */
-  request<Req, Res>(channel: RequestChannel<Req, Res>, request: Req, timeoutMs?: number): Promise<Res>;
-
-  /** Every successful answer; rejects only when all responders failed (or none exists). */
-  requestAll<Req, Res>(channel: RequestChannel<Req, Res>, request: Req, timeoutMs?: number): Promise<Res[]>;
-
-  getSubscription(id: string): Subscription | undefined;
-
-  /** True if the subscription was live. */
-  unsubscribe(id: string): boolean;
-
-  readonly registry: EventRegistry;
-  readonly separator: string;
-  readonly closed: boolean;
-
-  parse(path: string): Channel;
-
-  /** Ends every subscription and rejects pending requests. */
-  close(): void;
+  /** The responder's answer; rejects when nobody answers this channel. */
+  async request<Req, Res>(channel: RequestChannel<Req, Res>, request: Req): Promise<Res> {
+    const responder = this.#responders.get(channel.path);
+    if (!responder) throw new Error(`No responder on ${channel.path}`);
+    return (await responder(request)) as Res;
+  }
 }

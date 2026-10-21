@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { EventBusBuilder } from '../../lib/bus';
+import { EventBus } from '../../lib/bus';
 import { ToastService } from '../../lib/notify/ToastService.svelte';
 import { NOTIFICATION_CREATED, NotificationCenter } from './NotificationCenter.svelte';
 import type { NotificationsApi } from './NotificationsApi';
@@ -10,7 +10,7 @@ const entry = (id: string, read: boolean): Notification => ({
 });
 
 function setup(list: NotificationList) {
-  const bus = EventBusBuilder.create().build();
+  const bus = new EventBus();
   const api = {
     list: vi.fn(async () => structuredClone(list)),
     markRead: vi.fn(async () => {}),
@@ -30,7 +30,7 @@ describe('NotificationCenter', () => {
     expect(toasts.items.map((t) => t.text)).toEqual(['PIN geändert']);
     expect(api.list).toHaveBeenCalledTimes(2);
     stop();
-    expect(bus.registry.subscriberInfo(NOTIFICATION_CREATED.path)).toHaveLength(0);
+    expect(bus.subscribers(NOTIFICATION_CREATED)).toBe(0);
     expect(center.unread).toBe(0);
   });
 

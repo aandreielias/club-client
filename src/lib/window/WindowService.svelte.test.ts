@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Router } from '../router/Router.svelte';
 import type { LocalStore } from '../storage/LocalStore';
-import { EventBusBuilder } from '../bus';
+import { EventBus } from '../bus';
 import { WINDOW_CLOSE, WINDOW_OPEN, WindowService } from './WindowService.svelte';
 
 /** Minimal reactive router: history as a list of query strings. */
@@ -31,7 +31,7 @@ class FakeRouter {
 
 function setup(stored: string | null = null) {
   const router = new FakeRouter();
-  const bus = EventBusBuilder.create().build();
+  const bus = new EventBus();
   const saved = new Map<string, unknown>(stored ? [['window-dock', stored]] : []);
   const store = { get: (k: string) => saved.get(k) ?? null, set: (k: string, v: unknown) => saved.set(k, v) } as unknown as LocalStore;
   const windows = new WindowService(router as unknown as Router, store, 'center', bus);

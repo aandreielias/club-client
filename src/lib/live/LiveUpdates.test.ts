@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LiveSocket } from './LiveSocket';
-import { EventBusBuilder } from '../bus';
+import { EventBus } from '../bus';
 import { CLOSE_CODES, LiveUpdates, liveEvent } from './LiveUpdates.svelte';
 
 class FakeSocket implements LiveSocket {
@@ -32,7 +32,7 @@ const options = { reconnectMinMs: 1000, reconnectMaxMs: 8000, reauthLeadMs: 60_0
 function setup(token: string | null = 'tok') {
   const sockets: FakeSocket[] = [];
   const onForbidden = vi.fn();
-  const bus = EventBusBuilder.create().withHierarchicalRouting().build();
+  const bus = new EventBus();
   const live = new LiveUpdates(
     async () => {
       const socket = new FakeSocket();
@@ -65,19 +65,16 @@ describe('LiveUpdates', () => {
     expect(live.status).toBe('online');
   });
 
-  it('publishes events on the bus by type and under the domain root', async () => {
+  it('publishes events on the bus by type', async () => {
     const { live, sockets, bus } = setup();
     const tasks = vi.fn();
-    const all = vi.fn();
     const sub = bus.subscribe(liveEvent('tasks.task-changed'), tasks);
-    bus.subscribeHierarchy('domain', all);
     live.start();
     await flush();
     sockets[0].receive({ type: 'tasks.task-changed', occurredAt: 'x', data: { taskId: '1' } });
     sockets[0].receive({ type: 'files.files-changed', occurredAt: 'x', data: {} });
     expect(tasks).toHaveBeenCalledOnce();
     expect(tasks.mock.calls[0][0].data).toEqual({ taskId: '1' });
-    expect(all).toHaveBeenCalledTimes(2);
     sub.unsubscribe();
     sockets[0].receive({ type: 'tasks.task-changed', occurredAt: 'x', data: {} });
     expect(tasks).toHaveBeenCalledOnce();

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { EventBusBuilder } from '../bus';
+import { EventBus } from '../bus';
 import { TOAST, type ToastRequest } from '../notify/ToastService.svelte';
 import { APP_ERROR } from '../errors/ErrorReporter';
 import { PendingDeletes } from './PendingDeletes.svelte';
@@ -8,7 +8,7 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 function setup() {
-  const bus = EventBusBuilder.create().build();
+  const bus = new EventBus();
   const toasts: ToastRequest[] = [];
   const errors: unknown[] = [];
   bus.subscribe(TOAST, (t) => toasts.push(t));

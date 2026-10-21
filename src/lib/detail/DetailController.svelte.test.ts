@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { EventBusBuilder } from '../bus';
+import { EventBus } from '../bus';
 import { APP_ERROR } from '../errors/ErrorReporter';
 import { CONFIRM } from '../notify/ConfirmService.svelte';
 import { TOAST } from '../notify/ToastService.svelte';
@@ -7,7 +7,7 @@ import { Action } from '../state/Action.svelte';
 import { DetailController, EditSession } from './DetailController.svelte';
 
 function setup(answer: boolean) {
-  const bus = EventBusBuilder.create().build();
+  const bus = new EventBus();
   const toasts: string[] = [];
   const errors: unknown[] = [];
   bus.subscribe(TOAST, ({ text }) => toasts.push(text));

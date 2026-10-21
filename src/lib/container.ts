@@ -4,7 +4,7 @@
  */
 import { ActivityApi } from './activity/ActivityApi';
 import { settings } from '../settings';
-import { EventBusBuilder } from './bus';
+import { EventBus } from './bus';
 import { ErrorReporter } from './errors/ErrorReporter';
 import { AuthService } from './auth/AuthService.svelte';
 import { DevAuthProvider } from './auth/DevAuthProvider';
@@ -53,14 +53,7 @@ import type { StepUp } from './types';
 const { runtime } = settings;
 
 /** The app's central event bus: server events, UI commands and app events all travel over it. */
-export const bus = EventBusBuilder.create()
-  .withHierarchicalRouting()
-  .withDefaultRequestTimeout(settings.bus.requestTimeoutMs)
-  .withMaxHistorySize(import.meta.env.DEV ? settings.bus.historySize : 0)
-  .build();
-
-// Debug access in development: window.__bus.registry.history()
-if (import.meta.env.DEV && typeof window !== 'undefined') Object.assign(window, { __bus: bus });
+export const bus = new EventBus();
 
 export const store = new LocalStore(settings.storage.prefix);
 

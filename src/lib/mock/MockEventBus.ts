@@ -1,4 +1,3 @@
-import { defineEvent, EventBusBuilder, type EventBus } from '../bus';
 import { guestOnly, type Role } from '../types';
 
 /** Who receives a pushed event (server: platform.Audience). */
@@ -20,23 +19,23 @@ export interface MockEvent {
 
 export type MockEventListener = (event: MockEvent) => void;
 
-/**
- * The mock server's event bus, built on the same EventBus as the app (the server uses the Java
- * original). Event type 'tasks.task-changed' travels on channel 'server/tasks/task-changed'.
- */
+/** The mock server's event stream: every listener sees every event, in publish order. */
 export class MockEventBus {
-  static readonly ROOT = 'server';
-
-  readonly #bus: EventBus = EventBusBuilder.create().withHierarchicalRouting().withMaxHistorySize(0).build();
+  readonly #listeners = new Set<MockEventListener>();
 
   publish(event: MockEvent): void {
-    this.#bus.publish(defineEvent<MockEvent>(`${MockEventBus.ROOT}/${event.type.replaceAll('.', '/')}`), event);
+    for (const listener of [...this.#listeners]) {
+      try {
+        listener(event);
+      } catch (error) {
+        console.error(`Mock listener failed on ${event.type}`, error);
+      }
+    }
   }
 
-  /** Every event, in publish order. */
   subscribe(listener: MockEventListener): () => void {
-    const subscription = this.#bus.subscribeHierarchy(MockEventBus.ROOT, (event) => listener(event as MockEvent));
-    return () => subscription.unsubscribe();
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
   }
 
   /** "Everyone" means the club: tournament guests get only what names them (server: Audience.includes). */

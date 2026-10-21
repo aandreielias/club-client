@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { EventBusBuilder } from '../bus';
+import { EventBus } from '../bus';
 import { CONFIRM, ConfirmService } from './ConfirmService.svelte';
 
-const bus = () => EventBusBuilder.create().build();
+const bus = () => new EventBus();
 
 describe('ConfirmService', () => {
   const request = { title: 'Löschen', message: 'Sicher?', confirmLabel: 'Löschen' };

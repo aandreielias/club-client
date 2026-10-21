@@ -9,7 +9,7 @@ export interface LiveEvent<T = unknown> {
   data: T;
 }
 
-/** Bus root of every server event; subscribe to its hierarchy to see all of them. */
+/** Bus prefix of every server event. */
 const LIVE_ROOT = 'domain';
 
 /** Bus channel of a server event type: 'tasks.task-changed' → 'domain/tasks/task-changed'. */
