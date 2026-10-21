@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { TournamentForm } from './TournamentForm.svelte';
 import { TournamentModel } from './TournamentModel.svelte';
 import type { TournamentMatch } from './model';
-import { fieldPlan, groupChoices, groupPhase } from './logic';
+import { fieldPlan, groupChoices, groupPhase, teamStats } from './logic';
 import { firstRound, koRounds, roundName, roundRobin, seeds, setsProblem, standings, tablePoints, tally } from './logic';
 
 describe('tournament logic', () => {
@@ -171,5 +171,28 @@ describe('TournamentForm teams', () => {
     expect(form.toNew().teams?.map((t) => t.name)).toEqual(['UVC', 'TSV', 'ASK', 'SDG']);
     form.teamsText += 'uvc';
     expect(form.errors.teams).toBe('„uvc“ steht zweimal in der Liste.');
+  });
+});
+
+describe('teamStats', () => {
+  const m = (stage: string, round: number, homeId: string, awayId: string | null, homeScore: number | null, awayScore: number | null,
+    sets: { home: number; away: number }[] = []) => ({ stage, round, homeId, awayId, homeScore, awayScore, sets });
+
+  it('adds group and knockout matches and names how far each team came', () => {
+    const stats = teamStats({
+      status: 'KO',
+      format: 'VOLLEYBALL',
+      teams: ['a', 'b', 'c', 'd'].map((id) => ({ id, name: id.toUpperCase(), group: 'A' })),
+      groups: [{ label: 'A', standings: [{ teamId: 'a', points: 9 }, { teamId: 'b', points: 6 }, { teamId: 'c', points: 3 }, { teamId: 'd', points: 0 }] }],
+      matches: [
+        m('GROUP', 1, 'a', 'b', 2, 1, [{ home: 25, away: 20 }, { home: 20, away: 25 }, { home: 15, away: 10 }]),
+        m('KO', 1, 'a', 'b', 2, 0, [{ home: 25, away: 10 }, { home: 25, away: 12 }]),
+        m('KO', 1, 'c', 'd', null, null),
+      ],
+    });
+    const a = stats.find((s) => s.teamId === 'a')!;
+    expect(a).toMatchObject({ rank: 1, points: 9, played: 2, won: 2, lost: 0, setsWon: 4, setsLost: 1, ballsWon: 110, ballsLost: 77, knockout: 'Sieger' });
+    expect(stats.find((s) => s.teamId === 'b')).toMatchObject({ won: 0, lost: 2, knockout: '2. Platz' });
+    expect(stats.find((s) => s.teamId === 'c')!.knockout).toBe('im Finale');
   });
 });

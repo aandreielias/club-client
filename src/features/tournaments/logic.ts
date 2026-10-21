@@ -226,3 +226,85 @@ export function groupChoices(teams: number, advancePerGroup: number): number[] {
     return qualifiers >= 2 && qualifiers <= 32 && (teams === 0 || teams >= Math.max(2 * g, qualifiers));
   });
 }
+
+/** One team over the whole tournament (group and knockout); `points` and `rank` come from its group table. */
+export interface TeamStats {
+  teamId: string;
+  name: string;
+  group: string | null;
+  rank: number | null;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  setsWon: number;
+  setsLost: number;
+  ballsWon: number;
+  ballsLost: number;
+  points: number | null;
+  /** "Sieger", "2. Platz", "Aus im Halbfinale", "im Viertelfinale", "Aus in der Gruppe"; null before the knockout. */
+  knockout: string | null;
+}
+
+type StatsInput = {
+  status: string;
+  format: TournamentFormat;
+  teams: readonly { id: string; name: string; group: string | null }[];
+  groups: readonly { label: string; standings: readonly { teamId: string; points: number }[] }[];
+  matches: readonly {
+    stage: string; round: number; homeId: string | null; awayId: string | null; homeScore: number | null; awayScore: number | null;
+    sets: readonly { home: number; away: number }[];
+  }[];
+};
+
+export function teamStats(t: StatsInput): TeamStats[] {
+  const stats = new Map<string, TeamStats>(
+    t.teams.map((team) => [team.id, { teamId: team.id, name: team.name, group: team.group, rank: null, played: 0, won: 0, drawn: 0, lost: 0,
+      setsWon: 0, setsLost: 0, ballsWon: 0, ballsLost: 0, points: null, knockout: null }]),
+  );
+  for (const group of t.groups) {
+    group.standings.forEach((row, i) => {
+      const s = stats.get(row.teamId);
+      if (s) Object.assign(s, { rank: i + 1, points: row.points });
+    });
+  }
+  const simple = t.format === 'SIMPLE'; // a simple score is the outcome (1:0), not sets
+  for (const m of t.matches) {
+    if (!m.homeId || !m.awayId || m.homeScore === null || m.awayScore === null) continue;
+    for (const [id, own, other, side] of [[m.homeId, m.homeScore, m.awayScore, 'home'], [m.awayId, m.awayScore, m.homeScore, 'away']] as const) {
+      const s = stats.get(id);
+      if (!s) continue;
+      s.played++;
+      if (own > other) s.won++;
+      else if (own < other) s.lost++;
+      else s.drawn++;
+      if (!simple) {
+        s.setsWon += own;
+        s.setsLost += other;
+      }
+      for (const set of m.sets) {
+        s.ballsWon += side === 'home' ? set.home : set.away;
+        s.ballsLost += side === 'home' ? set.away : set.home;
+      }
+    }
+  }
+  const ko = t.matches.filter((m) => m.stage === 'KO');
+  if (ko.length) {
+    const rounds = Math.max(...ko.map((m) => m.round));
+    for (const s of stats.values()) {
+      const own = ko.filter((m) => m.homeId === s.teamId || m.awayId === s.teamId);
+      if (!own.length) {
+        s.knockout = 'Aus in der Gruppe';
+        continue;
+      }
+      const last = own.reduce((a, b) => (b.round > a.round ? b : a));
+      const name = roundName(last.round, rounds);
+      const played = last.homeId && last.awayId && last.homeScore !== null && last.awayScore !== null;
+      const lost = played && (last.homeId === s.teamId ? last.homeScore! < last.awayScore! : last.awayScore! < last.homeScore!);
+      if (last.round === rounds && played) s.knockout = lost ? '2. Platz' : 'Sieger';
+      else if (lost) s.knockout = name.startsWith('Runde') ? `Aus in ${name}` : `Aus im ${name}`;
+      else s.knockout = name.startsWith('Runde') ? `in ${name}` : `im ${name}`;
+    }
+  }
+  return [...stats.values()].sort((a, b) => (a.group ?? '~').localeCompare(b.group ?? '~') || (a.rank ?? 99) - (b.rank ?? 99) || a.name.localeCompare(b.name, 'de'));
+}
