@@ -3,14 +3,13 @@
   import { settings } from '../../settings';
   import { session } from '../../lib/container';
   import Tag from '../../ui/Tag.svelte';
-  import type { Task } from './model';
-  import { taskPolicy } from './services';
+  import { isDueSoon, isOverdue, type Task } from './model';
 
   /** Due date with an overdue / due-soon marker. */
   let { task }: { task: Task } = $props();
 
-  const overdue = $derived(taskPolicy.isOverdue(task, minuteClock.now));
-  const soon = $derived(taskPolicy.isDueSoon(task, settings.tasks.dueSoonHours, minuteClock.now));
+  const overdue = $derived(isOverdue(task, minuteClock.now));
+  const soon = $derived(isDueSoon(task, settings.tasks.dueSoonHours, minuteClock.now));
 </script>
 
 {#if task.dueAt}

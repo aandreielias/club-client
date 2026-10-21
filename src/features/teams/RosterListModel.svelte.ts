@@ -1,9 +1,8 @@
 import { ListModel } from '../../lib/list/ListModel.svelte';
 import type { LocalStore } from '../../lib/storage/LocalStore';
-import type { RosterEntry } from '../../lib/types';
+import { TEAM_ROLE_LABELS, type RosterEntry } from '../../lib/types';
 import type { RosterModel } from './RosterModel.svelte';
 
-const ROLE_LABELS = { COACH: 'Trainer:in', PLAYER: 'Spieler:in' } as const;
 
 /** A team's members as a list; data comes from the RosterModel (which also performs the changes). */
 export class RosterListModel extends ListModel<RosterEntry> {
@@ -19,7 +18,7 @@ export class RosterListModel extends ListModel<RosterEntry> {
         searchText: (e) => e.name,
         columns: [
           { key: 'name', label: 'Name', value: (e) => e.name },
-          { key: 'role', label: 'Rolle im Team', value: (e) => (e.teamRole === 'COACH' ? 0 : 1), format: (e) => ROLE_LABELS[e.teamRole], width: '12rem' },
+          { key: 'role', label: 'Rolle im Team', value: (e) => (e.teamRole === 'COACH' ? 0 : 1), format: (e) => TEAM_ROLE_LABELS[e.teamRole], width: '12rem' },
           { key: 'actions', label: 'Aktionen', value: () => null, sortable: false, width: '7rem', align: 'end' },
         ],
         filters: [
@@ -28,7 +27,7 @@ export class RosterListModel extends ListModel<RosterEntry> {
             label: 'Rolle',
             kind: 'select',
             allLabel: 'Alle Rollen',
-            options: () => Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label })),
+            options: () => Object.entries(TEAM_ROLE_LABELS).map(([value, label]) => ({ value, label })),
             test: (e, value) => e.teamRole === value,
           },
         ],

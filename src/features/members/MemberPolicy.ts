@@ -1,5 +1,5 @@
 import type { SessionStore } from '../../lib/session/SessionStore.svelte';
-import { MANAGERS, type Member, type Role } from '../../lib/types';
+import { ADMIN_BOARD, type Member, type Role } from '../../lib/types';
 
 /** GUEST is not granted here: guest accounts come from a tournament's teams. */
 const ALL_ROLES: readonly Role[] = ['ADMIN', 'BOARD', 'COACH', 'PLAYER', 'PARENT', 'VOLUNTEER'];
@@ -9,7 +9,7 @@ export class MemberPolicy {
   constructor(private readonly session: SessionStore) {}
 
   get isManager(): boolean {
-    return this.session.hasRole(...MANAGERS);
+    return this.session.hasRole(...ADMIN_BOARD);
   }
 
   get isAdmin(): boolean {

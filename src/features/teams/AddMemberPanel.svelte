@@ -2,7 +2,7 @@
   import { bus, directory } from '../../lib/container';
   import { TOAST } from '../../channels';
   import { Resource } from '../../lib/state/Resource.svelte';
-  import type { TeamRole } from '../../lib/types';
+  import { TEAM_ROLE_LABELS, type TeamRole } from '../../lib/types';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -38,7 +38,7 @@
             options={candidates.map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` }))} />
         </Field>
         <Field label="Rolle im Team">
-          <Select bind:value={role} options={[{ value: 'PLAYER', label: 'Spieler:in' }, { value: 'COACH', label: 'Trainer:in' }]} />
+          <Select bind:value={role} options={Object.entries(TEAM_ROLE_LABELS).map(([value, label]) => ({ value, label }))} />
         </Field>
         <div class="row">
           <Button type="submit" variant="primary" busy={model.assignAction.busy} disabled={!memberId}>Hinzufügen</Button>

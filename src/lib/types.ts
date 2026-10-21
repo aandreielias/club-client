@@ -11,11 +11,16 @@ export const guestOnly = (roles: readonly Role[]): boolean => roles.length === 1
 
 export type TeamRole = 'COACH' | 'PLAYER';
 
+export const TEAM_ROLE_LABELS: Readonly<Record<TeamRole, string>> = { PLAYER: 'Spieler:in', COACH: 'Trainer:in' };
+
+/** Task status names; here because search shows them too (features may not import each other). */
+export const TASK_STATUS_LABELS = { OPEN: 'Offen', IN_PROGRESS: 'In Arbeit', DONE: 'Erledigt' } as const;
+
 /** Roles that need a PIN and a step-up for privileged changes (server: Actor.PRIVILEGED). */
 export const PRIVILEGED: readonly Role[] = ['ADMIN', 'BOARD', 'COACH'];
 
-/** Roles that manage the whole club (server: Role.ADMIN, Role.BOARD checks). */
-export const MANAGERS: readonly Role[] = ['ADMIN', 'BOARD'];
+/** Admin and board: they manage the whole club (server: checks for Role.ADMIN, Role.BOARD; not the server's MANAGERS, which adds coaches). */
+export const ADMIN_BOARD: readonly Role[] = ['ADMIN', 'BOARD'];
 
 export const ROLE_LABELS: Readonly<Record<Role, string>> = {
   ADMIN: 'Admin',

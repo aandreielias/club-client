@@ -1,5 +1,5 @@
 import type { SessionStore } from '../../lib/session/SessionStore.svelte';
-import { MANAGERS, PRIVILEGED } from '../../lib/types';
+import { ADMIN_BOARD, PRIVILEGED } from '../../lib/types';
 
 /** server: TournamentHandlers. Admin, board and coaches run tournaments; admin and board invite guests and delete. */
 export class TournamentPolicy {
@@ -10,10 +10,10 @@ export class TournamentPolicy {
   }
 
   canInviteGuests(): boolean {
-    return this.session.hasRole(...MANAGERS);
+    return this.session.hasRole(...ADMIN_BOARD);
   }
 
   canDelete(): boolean {
-    return this.session.hasRole(...MANAGERS);
+    return this.session.hasRole(...ADMIN_BOARD);
   }
 }

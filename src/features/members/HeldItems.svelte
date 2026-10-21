@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { permissions } from '../../lib/container';
   import { Resource } from '../../lib/state/Resource.svelte';
   import RecordLink from '../../ui/RecordLink.svelte';
-  import { inventoryPolicy, inventoryApi } from '../inventory/services';
+  import { inventoryApi } from '../inventory/services';
 
   /** Club items the member has right now (stock held by this person); hidden when there are none. */
   let { memberId }: { memberId: string } = $props();
@@ -16,7 +17,7 @@
   <ul class="held">
     {#each held.value as item (item.itemId)}
       <li>
-        <RecordLink kind="item" id={item.itemId} allowed={inventoryPolicy.canManage()}>{item.name}</RecordLink>
+        <RecordLink kind="item" id={item.itemId} allowed={permissions.isPrivileged}>{item.name}</RecordLink>
         <span class="count">{item.quantity}</span>
       </li>
     {/each}

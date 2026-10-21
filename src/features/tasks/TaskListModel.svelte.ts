@@ -1,7 +1,7 @@
 import type { TeamDirectory } from '../../lib/directory/TeamDirectory.svelte';
 import { ListModel } from '../../lib/list/ListModel.svelte';
 import type { LocalStore } from '../../lib/storage/LocalStore';
-import { statusLabel, statusRank, TASK_STATUSES, type Task } from './model';
+import { isOverdue, statusLabel, statusRank, TASK_STATUSES, type Task } from './model';
 import type { TaskPolicy } from './TaskPolicy';
 import type { TasksApi } from './TasksApi';
 
@@ -77,7 +77,7 @@ export class TaskListModel extends ListModel<Task> {
     if (filter === 'none') return task.dueAt === null;
     if (!task.dueAt) return false;
     const due = Date.parse(task.dueAt);
-    if (filter === 'overdue') return task.status !== 'DONE' && due < now.getTime();
+    if (filter === 'overdue') return isOverdue(task, now);
     if (filter === 'week') return due >= now.getTime() && due < now.getTime() + 7 * DAY_MS;
     return true;
   }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { bus, commands, router, store, windows } from '../../lib/container';
+  import { bus, commands, permissions, router, store, windows } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
@@ -10,17 +10,17 @@
   import Page from '../../ui/Page.svelte';
   import { ITEM_CHANGED } from './events';
   import { InventoryListModel } from './InventoryListModel.svelte';
-  import { inventoryApi, inventoryPolicy as policy } from './services';
+  import { inventoryApi } from './services';
 
   const list = new InventoryListModel(inventoryApi, store);
   void list.load();
   useBus(bus, ITEM_CHANGED, () => void list.load());
-  useCommands(commands, { 'page.new': { run: () => bus.publish(WINDOW_OPEN, { kind: 'item-new', id: '-' }), when: () => policy.canManage() } });
+  useCommands(commands, { 'page.new': { run: () => bus.publish(WINDOW_OPEN, { kind: 'item-new', id: '-' }), when: () => permissions.isPrivileged } });
 </script>
 
 <Page title="Inventar">
   {#snippet actions()}
-    {#if policy.canManage()}
+    {#if permissions.isPrivileged}
       <Button variant="primary" icon="add" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'item-new', id: '-' })}>Neuer Gegenstand</Button>
     {/if}
   {/snippet}
@@ -33,6 +33,6 @@
     menu={(i) => windowMenu(bus, windows, router, 'item', i.id)}
     selected={windows.current?.kind === 'item' ? windows.current.id : null}
     emptyText="Noch nichts im Inventar."
-    emptyAction={policy.canManage() ? { label: 'Neuer Gegenstand', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'item-new', id: '-' }) } : null}
+    emptyAction={permissions.isPrivileged ? { label: 'Neuer Gegenstand', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'item-new', id: '-' }) } : null}
   />
 </Page>

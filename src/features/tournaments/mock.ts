@@ -2,7 +2,7 @@
 import { directory, type MockDirectory } from '../../lib/mock/core';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
-import { guestOnly, MANAGERS, PRIVILEGED, type Member } from '../../lib/types';
+import { guestOnly, ADMIN_BOARD, PRIVILEGED, type Member } from '../../lib/types';
 import { firstRound, koRounds, roundRobin, seeds, setsProblem, standings, tally } from './logic';
 import type { Guest, NewTournament, ResultInput, SetScore, TeamInput, Tournament, TournamentMatch, TournamentSummary, TournamentTeam } from './model';
 
@@ -68,7 +68,7 @@ export class MockTournaments {
   }
 
   delete(viewer: Member, id: string): void {
-    this.people.requirePrivileged(viewer, MANAGERS);
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const t = this.find(id);
     this.tournaments.data.splice(this.tournaments.data.indexOf(t), 1);
     delete this.teams.data[id];

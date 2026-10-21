@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { backStack, bus, pendingDeletes, session } from '../../lib/container';
+  import { backStack, bus, pendingDeletes, permissions, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
@@ -13,7 +13,7 @@
   import { LOCATION_CHANGED } from './events';
   import LocationEditor from './LocationEditor.svelte';
   import { LocationForm } from './LocationForm.svelte';
-  import { locationPolicy as policy, locationsApi } from './services';
+  import { locationsApi } from './services';
 
   /** One place: address, note, map links and the small map, upcoming appointments there. Window and page. */
   let { id, handle, onclosed }: { id: string; handle?: WindowHandle; onclosed?: () => void } = $props();
@@ -54,7 +54,7 @@
   {#snippet children(value)}
     <Detail title={edit.form ? 'Ort bearbeiten' : value.name}>
       {#snippet actions()}
-        {#if !edit.form && policy.canManage()}
+        {#if !edit.form && permissions.isPrivileged}
           <Button icon="edit" onclick={() => edit.edit(LocationForm.edit(value))}>Bearbeiten</Button>
           <Button variant="danger" icon="delete" onclick={() => destroy(value.name)}>Löschen</Button>
         {/if}

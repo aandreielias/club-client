@@ -1,6 +1,6 @@
 import type { TeamDirectory } from '../directory/TeamDirectory.svelte';
 import type { SessionStore } from '../session/SessionStore.svelte';
-import { MANAGERS, PRIVILEGED, type Team } from '../types';
+import { ADMIN_BOARD, PRIVILEGED, type Team } from '../types';
 
 /**
  * The club-wide permission pattern shared by calendar and tasks (server: requireMayEdit /
@@ -14,7 +14,7 @@ export class ClubPermissions {
   ) {}
 
   get isManager(): boolean {
-    return this.session.hasRole(...MANAGERS);
+    return this.session.hasRole(...ADMIN_BOARD);
   }
 
   /** Admin, board or coach: inventory, profiles of team members, creating entries. */

@@ -3,7 +3,7 @@
 import { settings } from '../../settings';
 import { ZonedClock } from '../time/ZonedClock';
 import {
-  MANAGERS,
+  ADMIN_BOARD,
   PRIVILEGED,
   guestOnly,
   type Club,
@@ -109,7 +109,7 @@ export class MockDirectory {
     const guardians = Object.entries(this.wards.data)
       .filter(([, minors]) => minors.some((m) => members.includes(m)))
       .map(([guardian]) => guardian);
-    return { members: [...members, ...guardians], roles: MANAGERS };
+    return { members: [...members, ...guardians], roles: ADMIN_BOARD };
   }
 
   /** Club members; tournament guests are not part of "everyone". */
@@ -148,7 +148,7 @@ export class MockDirectory {
   }
 
   isManager(member: Member): boolean {
-    return this.hasRole(member, MANAGERS);
+    return this.hasRole(member, ADMIN_BOARD);
   }
 
   /** Server: actor.requireRole(roles) = one of the roles, no step-up (restricted reads). */
@@ -199,7 +199,7 @@ export class MockDirectory {
 
   /** server: MemberHandlers.list (admin/board with step-up; birth dates for admins only) */
   list(viewer: Member): MemberList {
-    this.requirePrivileged(viewer, MANAGERS);
+    this.requirePrivileged(viewer, ADMIN_BOARD);
     const items = [...this.members.data]
       .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName))
       .map((m) => (this.hasRole(viewer, ['ADMIN']) || m.id === viewer.id ? m : { ...m, birthDate: null }));
@@ -243,8 +243,8 @@ export class MockDirectory {
 
   /** server: SecurityHandlers SET_CLUB_PIN - admin/board; the first PIN needs no step-up (there is none to confirm with). */
   setClubPin(member: Member, newPin: unknown): void {
-    if (this.clubPin.data.pin) this.requirePrivileged(member, MANAGERS);
-    else this.requireRole(member, MANAGERS);
+    if (this.clubPin.data.pin) this.requirePrivileged(member, ADMIN_BOARD);
+    else this.requireRole(member, ADMIN_BOARD);
     this.clubPin.data.pin = MockDirectory.validPin(newPin);
     this.clubPin.data.changedAt = new Date().toISOString();
     this.clubPin.save();
@@ -264,7 +264,7 @@ export class MockDirectory {
   }
 
   invite(viewer: Member, body: Record<string, any>): Member {
-    this.requirePrivileged(viewer, MANAGERS);
+    this.requirePrivileged(viewer, ADMIN_BOARD);
     const roles = MockDirectory.roles(body.roles);
     if (roles.includes('ADMIN') && !this.hasRole(viewer, ['ADMIN'])) fail(403, 'access.denied');
     const email = MockDirectory.email(body.email);
@@ -285,7 +285,7 @@ export class MockDirectory {
     this.members.data.push(member);
     this.members.save();
     if (body.guardianId != null) this.linkGuardian(viewer, member.id, body.guardianId);
-    mockServer.events.publish({ type: 'members.member-invited', data: { memberId: member.id }, audience: { roles: MANAGERS } });
+    mockServer.events.publish({ type: 'members.member-invited', data: { memberId: member.id }, audience: { roles: ADMIN_BOARD } });
     return member;
   }
 
@@ -300,20 +300,20 @@ export class MockDirectory {
   }
 
   deactivate(viewer: Member, memberId: string): Member {
-    this.requirePrivileged(viewer, MANAGERS);
+    this.requirePrivileged(viewer, ADMIN_BOARD);
     if (viewer.id === memberId) fail(409, 'member.cannot-deactivate-self');
     const target = this.members.data.find((m) => m.id === memberId) ?? fail(404, 'member.not-found');
     if (target.roles.includes('ADMIN') && !this.hasRole(viewer, ['ADMIN'])) fail(403, 'access.denied');
     target.active = false;
     this.members.save();
-    mockServer.events.publish({ type: 'members.member-deactivated', data: { memberId }, audience: { roles: MANAGERS } });
+    mockServer.events.publish({ type: 'members.member-deactivated', data: { memberId }, audience: { roles: ADMIN_BOARD } });
     // server: TeamHandlers.onMemberDeactivated
     for (const teamId of Object.keys(this.teamRoles(memberId))) this.removeFromTeamUnchecked(teamId, memberId);
     return this.visibleTo(viewer, target);
   }
 
   linkGuardian(viewer: Member, minorId: string, guardianId: unknown): Member {
-    this.requirePrivileged(viewer, MANAGERS);
+    this.requirePrivileged(viewer, ADMIN_BOARD);
     if (typeof guardianId !== 'string') return fail(400, 'request.invalid');
     if (guardianId === minorId) fail(400, 'member.guardian-is-self');
     if (!this.members.data.some((m) => m.id === guardianId && m.active)) fail(404, 'member.not-found');
@@ -335,7 +335,7 @@ export class MockDirectory {
   // --- teams admin (server: TeamHandlers) ---
 
   createTeam(viewer: Member, body: Record<string, unknown>): Team {
-    this.requirePrivileged(viewer, MANAGERS);
+    this.requirePrivileged(viewer, ADMIN_BOARD);
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     if (!name || name.length > settings.teams.nameMaxLength) fail(400, 'team.name-invalid');
     if (typeof body.season !== 'string' || !new RegExp(settings.teams.seasonPattern).test(body.season)) fail(400, 'team.season-invalid');
@@ -354,7 +354,7 @@ export class MockDirectory {
       if (this.teamRoles(viewer.id)[teamId] === 'COACH') fail(403, 'access.denied');
       fail(404, 'team.not-found');
     }
-    this.requirePrivileged(viewer, MANAGERS);
+    this.requirePrivileged(viewer, ADMIN_BOARD);
     if (teamRole !== 'COACH' && teamRole !== 'PLAYER') fail(400, 'request.invalid');
     if (!this.name(memberId)) fail(404, 'member.not-found');
     (this.memberships.data[memberId] ??= {})[teamId] = teamRole as TeamRole;
@@ -367,7 +367,7 @@ export class MockDirectory {
   removeTeamMember(viewer: Member, teamId: string, memberId: string): Roster {
     if (!this.teams.data.some((t) => t.id === teamId)) fail(404, 'team.not-found');
     if (this.isManager(viewer)) {
-      this.requirePrivileged(viewer, MANAGERS);
+      this.requirePrivileged(viewer, ADMIN_BOARD);
     } else {
       if (this.teamRoles(viewer.id)[teamId] !== 'COACH') fail(404, 'team.not-found');
       this.requirePrivileged(viewer, ['COACH']);
@@ -401,7 +401,7 @@ export class MockDirectory {
     mockServer.events.publish({
       type: 'teams.membership-changed',
       data: { teamId, memberId },
-      audience: { members: [...this.teamMembers(teamId), memberId], roles: MANAGERS },
+      audience: { members: [...this.teamMembers(teamId), memberId], roles: ADMIN_BOARD },
     });
   }
 
@@ -433,7 +433,7 @@ export class MockDirectory {
     const own = viewer.id === memberId || this.wardsOf(viewer.id).includes(memberId);
     if (!own) {
       if (!this.isManager(viewer)) return fail(404, 'member.not-found');
-      this.requirePrivileged(viewer, MANAGERS);
+      this.requirePrivileged(viewer, ADMIN_BOARD);
     }
     if (!target) return fail(404, 'member.not-found');
     this.applyProfile(target, patch);
@@ -449,7 +449,7 @@ export class MockDirectory {
 
   /** server: MemberHandlers.changeEmail / ChangeRequestHandlers.moveLogin */
   changeEmail(viewer: Member, memberId: string, raw: unknown): Member {
-    this.requirePrivileged(viewer, MANAGERS);
+    this.requirePrivileged(viewer, ADMIN_BOARD);
     const target = this.members.data.find((m) => m.id === memberId) ?? fail(404, 'member.not-found');
     this.moveLogin(target, raw);
     return this.visibleTo(viewer, target);

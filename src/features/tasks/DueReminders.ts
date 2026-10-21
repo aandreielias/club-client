@@ -4,7 +4,7 @@ import { NAVIGATE } from '../../lib/router/Router.svelte';
 import type { LocalStore } from '../../lib/storage/LocalStore';
 import type { Formatter } from '../../lib/time/Formatter';
 import { WINDOW_OPEN } from '../../lib/window/WindowService.svelte';
-import type { Task } from './model';
+import { isDueSoon, isOverdue, type Task } from './model';
 import type { TasksApi } from './TasksApi';
 
 export interface ReminderOptions {
@@ -68,9 +68,8 @@ export class DueReminders {
 
   /** Open tasks with a due date before `now + hours`, soonest first. */
   static due(tasks: readonly Task[], now: Date, hours: number): Task[] {
-    const limit = now.getTime() + hours * 3_600_000;
     return tasks
-      .filter((t) => t.status !== 'DONE' && t.dueAt && Date.parse(t.dueAt) <= limit)
+      .filter((t) => isOverdue(t, now) || isDueSoon(t, hours, now))
       .sort((a, b) => a.dueAt!.localeCompare(b.dueAt!));
   }
 }

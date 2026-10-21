@@ -1,3 +1,4 @@
+import { TASK_STATUS_LABELS } from '../../lib/types';
 // Mirror of the club-server search DTOs (gateway SearchController).
 
 export type HitKind = 'APPOINTMENT' | 'TASK' | 'MEMBER' | 'TEAM' | 'ITEM' | 'LOCATION' | 'TOURNAMENT' | 'FOLDER' | 'FILE';
@@ -34,11 +35,9 @@ export const HIT_KINDS: readonly { value: HitKind; label: string }[] = [
 export const kindLabel = (kind: HitKind): string => HIT_KINDS.find((k) => k.value === kind)?.label ?? kind;
 export const kindRank = (kind: HitKind): number => HIT_KINDS.findIndex((k) => k.value === kind);
 
-/** Task status codes as the tasks feature names them (features may not import each other). */
-const TASK_STATUS: Readonly<Record<string, string>> = { OPEN: 'Offen', IN_PROGRESS: 'In Arbeit', DONE: 'Erledigt' };
 
 export function hitDetail(hit: SearchHit): string {
-  if (hit.kind === 'TASK') return hit.detail ? (TASK_STATUS[hit.detail] ?? hit.detail) : '';
+  if (hit.kind === 'TASK') return hit.detail ? (TASK_STATUS_LABELS[hit.detail as keyof typeof TASK_STATUS_LABELS] ?? hit.detail) : '';
   return hit.detail ?? '';
 }
 

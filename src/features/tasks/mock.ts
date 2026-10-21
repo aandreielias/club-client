@@ -9,7 +9,7 @@ import type { Member } from '../../lib/types';
 import { ZonedClock } from '../../lib/time/ZonedClock';
 import type { NewTask, Task, TaskComment, TaskPatch, TaskSource, TaskStatus } from './model';
 import type { MockEvent } from '../../lib/mock/MockEventBus';
-import { MANAGERS } from '../../lib/types';
+import { ADMIN_BOARD } from '../../lib/types';
 import { CHANGE_FIELD_LABELS, type ChangeField } from '../members/MembersApi';
 
 type StoredTask = Omit<Task, 'comments' | 'source'>;
@@ -65,7 +65,7 @@ export class MockTasks {
   private onEvent(event: MockEvent): void {
     const data = event.data as Record<string, any>;
     if (event.type === 'members.change-requested') {
-      const managers = this.people.audienceIds({ roles: MANAGERS }).sort().slice(0, limits.maxAssignees);
+      const managers = this.people.audienceIds({ roles: ADMIN_BOARD }).sort().slice(0, limits.maxAssignees);
       if (!managers.length) return;
       const task: StoredTask = {
         id: crypto.randomUUID(), teamId: null, appointmentId: null,

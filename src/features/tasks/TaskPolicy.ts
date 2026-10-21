@@ -49,14 +49,4 @@ export class TaskPolicy {
       (task.teamId !== null && this.permissions.isCoachOf(task.teamId))
     );
   }
-
-  isOverdue(task: Task, now: Date = new Date()): boolean {
-    return task.status !== 'DONE' && task.dueAt !== null && new Date(task.dueAt) < now;
-  }
-
-  isDueSoon(task: Task, withinHours: number, now: Date = new Date()): boolean {
-    if (task.status === 'DONE' || task.dueAt === null) return false;
-    const due = new Date(task.dueAt).getTime();
-    return due >= now.getTime() && due - now.getTime() <= withinHours * 3_600_000;
-  }
 }

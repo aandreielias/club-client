@@ -19,7 +19,7 @@
   import { placeName } from './model';
   import StockEditor from './StockEditor.svelte';
   import { StockForm } from './StockForm.svelte';
-  import { inventoryApi, inventoryPolicy as policy } from './services';
+  import { inventoryApi } from './services';
 
   /** One inventory item; edit and delete for admin, board and coaches. Window and page. */
   let { id, handle, onclosed }: { id: string; handle?: WindowHandle; onclosed?: () => void } = $props();
@@ -66,7 +66,7 @@
   {#snippet children(value)}
     <Detail title={edit.form ? 'Gegenstand bearbeiten' : value.name}>
       {#snippet actions()}
-        {#if !edit.form && policy.canManage()}
+        {#if !edit.form && permissions.isPrivileged}
           <Button icon="edit" onclick={() => edit.edit(ItemForm.edit(value))}>Bearbeiten</Button>
           <Button variant="danger" icon="delete" onclick={() => destroy(value.name)}>Löschen</Button>
         {/if}
@@ -90,7 +90,7 @@
 
         <h2 class="heading">
           Wo ist es?
-          {#if !stockEdit.form && policy.canManage()}
+          {#if !stockEdit.form && permissions.isPrivileged}
             <Button size="sm" variant="ghost" onclick={() => stockEdit.edit(new StockForm(value.stock))} tooltip="Auf Orte und Personen verteilen">Bearbeiten</Button>
           {/if}
         </h2>

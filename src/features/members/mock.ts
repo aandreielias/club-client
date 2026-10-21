@@ -2,7 +2,7 @@
 import { directory, MockDirectory } from '../../lib/mock/core';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
-import { MANAGERS, type Member } from '../../lib/types';
+import { ADMIN_BOARD, type Member } from '../../lib/types';
 import { settings } from '../../settings';
 import type { ChangeField, ChangeRequest } from './MembersApi';
 
@@ -46,12 +46,12 @@ export class MockChangeRequests {
   }
 
   get(viewer: Member, id: string): ChangeRequest {
-    this.people.requireRole(viewer, MANAGERS);
+    this.people.requireRole(viewer, ADMIN_BOARD);
     return this.dto(this.find(id));
   }
 
   decide(viewer: Member, id: string, approve: boolean): ChangeRequest {
-    this.people.requirePrivileged(viewer, MANAGERS);
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const row = this.find(id);
     if (row.status !== 'OPEN') fail(409, 'change-request.decided');
     if (approve) {

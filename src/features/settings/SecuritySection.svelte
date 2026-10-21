@@ -10,14 +10,14 @@
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import Tag from '../../ui/Tag.svelte';
-  import { MANAGERS } from '../../lib/types';
+  import { ADMIN_BOARD } from '../../lib/types';
 
   const pinLength = settings.security.pinLength;
   const policy = new PasswordPolicy(settings.auth.passwordMinLength);
   const security = new Resource(() => session.security());
   void security.load();
 
-  const canSetClubPin = session.hasRole(...MANAGERS);
+  const canSetClubPin = session.hasRole(...ADMIN_BOARD);
   const pinAction = new Action();
   let newPin = $state('');
   let repeatPin = $state('');

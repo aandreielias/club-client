@@ -2,7 +2,7 @@
   import { backStack, bus, directory, permissions, router, store, windows } from '../../lib/container';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
-  import type { RosterEntry, TeamRole } from '../../lib/types';
+  import { TEAM_ROLE_LABELS, type RosterEntry, type TeamRole } from '../../lib/types';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
@@ -21,10 +21,7 @@
   /** One team: season, roster with roles; adding and removing members for those allowed. Window and page. */
   let { id, handle }: { id: string; handle?: WindowHandle } = $props();
 
-  const ROLE_OPTIONS: readonly { value: TeamRole; label: string }[] = [
-    { value: 'PLAYER', label: 'Spieler:in' },
-    { value: 'COACH', label: 'Trainer:in' },
-  ];
+  const ROLE_OPTIONS = Object.entries(TEAM_ROLE_LABELS).map(([value, label]) => ({ value: value as TeamRole, label }));
 
   // svelte-ignore state_referenced_locally
   const model = new RosterModel(teamsApi, directory, id);

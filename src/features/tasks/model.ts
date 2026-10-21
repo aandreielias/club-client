@@ -1,4 +1,4 @@
-import type { Hue } from '../../lib/types';
+import { TASK_STATUS_LABELS, type Hue } from '../../lib/types';
 
 // Mirrors of the club-server tasks DTOs. API times are UTC instants.
 
@@ -89,11 +89,19 @@ export interface TaskQuery {
   dueTo?: string;
 }
 
-export const TASK_STATUSES: readonly { value: TaskStatus; label: string }[] = [
-  { value: 'OPEN', label: 'Offen' },
-  { value: 'IN_PROGRESS', label: 'In Arbeit' },
-  { value: 'DONE', label: 'Erledigt' },
-];
+export const TASK_STATUSES: readonly { value: TaskStatus; label: string }[] = (Object.keys(TASK_STATUS_LABELS) as TaskStatus[]).map(
+  (value) => ({ value, label: TASK_STATUS_LABELS[value] }),
+);
+
+/** Not done and past its due time; the one rule behind tags, the "überfällig" filter and reminders. */
+export const isOverdue = (task: Task, now: Date): boolean => task.status !== 'DONE' && task.dueAt !== null && Date.parse(task.dueAt) < now.getTime();
+
+/** Not done and due within the next `hours`. */
+export function isDueSoon(task: Task, hours: number, now: Date): boolean {
+  if (task.status === 'DONE' || task.dueAt === null) return false;
+  const due = Date.parse(task.dueAt);
+  return due >= now.getTime() && due - now.getTime() <= hours * 3_600_000;
+}
 
 export const statusLabel = (status: TaskStatus): string => TASK_STATUSES.find((s) => s.value === status)?.label ?? status;
 
