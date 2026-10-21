@@ -1,3 +1,4 @@
+import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import type { Item, ItemPatch, NewItem } from './model';
 
@@ -8,21 +9,16 @@ export type ItemFormErrors = Partial<Record<ItemField, string>>;
 const limits = settings.inventory;
 
 /** Editable state of a new or existing inventory item; validation mirrors the server's Item. */
-export class ItemForm {
+export class ItemForm extends FormState<ItemFormErrors> {
   name = $state('');
   category = $state('');
   quantity = $state(1);
   /** Where a new item starts: a place id, or '' for "ohne Ort". Existing items change it in the stock. */
   locationId = $state('');
   description = $state('');
-  submitted = $state(false);
-
-  readonly errors: ItemFormErrors;
-  readonly valid: boolean;
 
   private constructor(readonly original: Item | null) {
-    this.errors = $derived(this.validate());
-    this.valid = $derived(Object.keys(this.errors).length === 0);
+    super();
   }
 
   static blank(): ItemForm {
@@ -36,10 +32,6 @@ export class ItemForm {
     form.quantity = item.quantity;
     form.description = item.description ?? '';
     return form;
-  }
-
-  error(field: ItemField): string | null {
-    return this.submitted ? (this.errors[field] ?? null) : null;
   }
 
   toNew(): NewItem {
@@ -58,7 +50,7 @@ export class ItemForm {
     return { name: value.name, category: value.category ?? '', description: value.description ?? '' };
   }
 
-  private validate(): ItemFormErrors {
+  protected validate(): ItemFormErrors {
     const errors: ItemFormErrors = {};
     const name = this.name.trim();
     if (!name || name.length > limits.nameMaxLength) errors.name = `Name mit 1 bis ${limits.nameMaxLength} Zeichen angeben.`;

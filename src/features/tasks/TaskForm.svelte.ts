@@ -1,3 +1,4 @@
+import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import type { ZonedClock, LocalDateTime } from '../../lib/time/ZonedClock';
 import type { NewTask, Task, TaskPatch } from './model';
@@ -21,7 +22,7 @@ const limits = settings.tasks;
  * Editable state of a new or existing task. The due time is club-local; conversion to a UTC instant
  * happens in `toNew` / `toPatch`. Validation mirrors the server.
  */
-export class TaskForm {
+export class TaskForm extends FormState<TaskFormErrors> {
   teamId = $state<string>(CLUB_WIDE);
   title = $state('');
   description = $state('');
@@ -31,10 +32,6 @@ export class TaskForm {
   repeat = $state('');
   assignees = $state<string[]>([]);
   checklist = $state<ChecklistLine[]>([]);
-  submitted = $state(false);
-
-  readonly errors: TaskFormErrors;
-  readonly valid: boolean;
 
   #nextKey = 0;
 
@@ -42,8 +39,7 @@ export class TaskForm {
     private readonly clock: ZonedClock,
     readonly original: Task | null,
   ) {
-    this.errors = $derived(this.validate());
-    this.valid = $derived(Object.keys(this.errors).length === 0);
+    super();
   }
 
   get isEdit(): boolean {
@@ -70,10 +66,6 @@ export class TaskForm {
 
   get teamOrNull(): string | null {
     return this.teamId === CLUB_WIDE ? null : this.teamId;
-  }
-
-  error(field: TaskField): string | null {
-    return this.submitted ? (this.errors[field] ?? null) : null;
   }
 
   isAssigned(memberId: string): boolean {
@@ -149,7 +141,7 @@ export class TaskForm {
     return { key: this.#nextKey++, text };
   }
 
-  private validate(): TaskFormErrors {
+  protected validate(): TaskFormErrors {
     const errors: TaskFormErrors = {};
     const title = this.title.trim();
     if (!title || title.length > limits.titleMaxLength) errors.title = `Titel mit 1 bis ${limits.titleMaxLength} Zeichen angeben.`;

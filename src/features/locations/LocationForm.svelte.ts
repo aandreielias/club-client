@@ -1,3 +1,4 @@
+import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import type { Location, LocationPatch, NewLocation } from './model';
 
@@ -7,7 +8,7 @@ export type LocationFormErrors = Partial<Record<LocationField, string>>;
 const limits = settings.locations;
 
 /** Editable state of a new or existing place; validation mirrors the server's Location. */
-export class LocationForm {
+export class LocationForm extends FormState<LocationFormErrors> {
   name = $state('');
   street = $state('');
   zip = $state('');
@@ -16,14 +17,9 @@ export class LocationForm {
   /** Text inputs, so a half-typed number is not lost; empty = no map pin. */
   lat = $state('');
   lng = $state('');
-  submitted = $state(false);
-
-  readonly errors: LocationFormErrors;
-  readonly valid: boolean;
 
   private constructor(readonly original: Location | null) {
-    this.errors = $derived(this.validate());
-    this.valid = $derived(Object.keys(this.errors).length === 0);
+    super();
   }
 
   static blank(): LocationForm {
@@ -40,10 +36,6 @@ export class LocationForm {
     form.lat = location.lat?.toString() ?? '';
     form.lng = location.lng?.toString() ?? '';
     return form;
-  }
-
-  error(field: LocationField): string | null {
-    return this.submitted ? (this.errors[field] ?? null) : null;
   }
 
   /** "Hauptplatz 1, 1010 Wien" for the map search; empty without an address. */
@@ -90,7 +82,7 @@ export class LocationForm {
     return patch;
   }
 
-  private validate(): LocationFormErrors {
+  protected validate(): LocationFormErrors {
     const errors: LocationFormErrors = {};
     const name = this.name.trim();
     if (!name || name.length > limits.nameMaxLength) errors.name = `Name mit 1 bis ${limits.nameMaxLength} Zeichen angeben.`;

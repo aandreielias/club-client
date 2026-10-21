@@ -1,3 +1,4 @@
+import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import type { Member, Role } from '../../lib/types';
 import type { Invitation, ProfilePatch } from './MembersApi';
@@ -27,22 +28,11 @@ function phoneError(value: string): string | undefined {
   return value.trim() && !PHONE.test(value.trim()) ? 'Ziffern, Leerzeichen, / und -, optional mit + am Anfang.' : undefined;
 }
 
-/** Shared state handling of the member forms: errors only after the first submit. */
-abstract class MemberFormBase {
-  submitted = $state(false);
-  readonly errors: MemberFormErrors;
-  readonly valid: boolean;
-
+/** The member forms validate birth dates against the club's today. */
+abstract class MemberFormBase extends FormState<MemberFormErrors> {
   constructor(protected readonly today: string) {
-    this.errors = $derived(this.validate());
-    this.valid = $derived(Object.keys(this.errors).length === 0);
+    super();
   }
-
-  error(field: MemberField): string | null {
-    return this.submitted ? (this.errors[field] ?? null) : null;
-  }
-
-  protected abstract validate(): MemberFormErrors;
 }
 
 /** New account from the membership application: e-mail, name, optional birth date, phone, guardian, roles. */

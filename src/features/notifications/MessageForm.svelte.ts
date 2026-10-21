@@ -1,3 +1,4 @@
+import { FormState } from '../../lib/state/FormState.svelte';
 import type { RecordRef } from '../../lib/records/RecordDrag';
 import { settings } from '../../settings';
 import type { MessageRef, OutgoingMessage, RefKind } from './model';
@@ -20,7 +21,7 @@ export const DROPPABLE: Readonly<Record<string, RefKind>> = {
 };
 
 /** A message being written: recipients, text and linked records. Errors show after the first submit. */
-export class MessageForm {
+export class MessageForm extends FormState<Partial<Record<MessageField, string>>> {
   audience = $state<Audience>('teams');
   teamIds = $state<string[]>([]);
   memberIds = $state<string[]>([]);
@@ -28,18 +29,9 @@ export class MessageForm {
   title = $state('');
   body = $state('');
   refs = $state<Omit<MessageRef, 'parentId'>[]>([]);
-  submitted = $state(false);
-
-  readonly errors: Partial<Record<MessageField, string>>;
-  readonly valid: boolean;
 
   constructor(readonly mayWriteEveryone: boolean) {
-    this.errors = $derived(this.validate());
-    this.valid = $derived(Object.keys(this.errors).length === 0);
-  }
-
-  error(field: MessageField): string | null {
-    return this.submitted ? (this.errors[field] ?? null) : null;
+    super();
   }
 
   /** Whether anyone is chosen at all (else the preview stays empty). */
@@ -89,7 +81,7 @@ export class MessageForm {
     };
   }
 
-  private validate(): Partial<Record<MessageField, string>> {
+  protected validate(): Partial<Record<MessageField, string>> {
     const errors: Partial<Record<MessageField, string>> = {};
     const title = this.title.trim();
     if (!title || title.length > limits.titleMaxLength) errors.title = `Titel mit 1 bis ${limits.titleMaxLength} Zeichen.`;

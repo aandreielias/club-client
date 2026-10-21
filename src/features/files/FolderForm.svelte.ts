@@ -1,3 +1,4 @@
+import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import type { Folder, FolderKind, FolderScope, NewFolder } from './model';
 
@@ -7,27 +8,18 @@ export const MAX_FOLDER_TEAMS = 20;
 export type FolderFormErrors = Partial<Record<'name' | 'team', string>>;
 
 /** A new folder: at root level with its own scope, or a subfolder inheriting scope and team. */
-export class FolderForm {
+export class FolderForm extends FormState<FolderFormErrors> {
   name = $state('');
   kind = $state<FolderKind>('DOCUMENTS');
   scope = $state<FolderScope>('CLUB');
   teamIds = $state<string[]>([]);
   membersCanUpload = $state(false);
-  submitted = $state(false);
-
-  readonly errors: FolderFormErrors;
-  readonly valid: boolean;
 
   constructor(readonly parent: Folder | null, defaults: { scope: FolderScope; teamIds: string[] }) {
+    super();
     if (parent) this.kind = parent.kind;
     this.scope = defaults.scope;
     this.teamIds = [...defaults.teamIds];
-    this.errors = $derived(this.validate());
-    this.valid = $derived(Object.keys(this.errors).length === 0);
-  }
-
-  error(field: keyof FolderFormErrors): string | null {
-    return this.submitted ? (this.errors[field] ?? null) : null;
   }
 
   toNew(): NewFolder {
@@ -41,7 +33,7 @@ export class FolderForm {
     };
   }
 
-  private validate(): FolderFormErrors {
+  protected validate(): FolderFormErrors {
     const errors: FolderFormErrors = {};
     const max = settings.files.folderNameMaxLength;
     const name = this.name.trim();

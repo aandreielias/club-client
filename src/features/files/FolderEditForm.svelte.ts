@@ -1,3 +1,4 @@
+import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import type { FilePatch, Folder, FolderColor, FolderPatch, FolderScope, StoredFile } from './model';
 import { MAX_FOLDER_TEAMS } from './FolderForm.svelte';
@@ -8,34 +9,25 @@ export interface FolderEditErrors {
 }
 
 /** Edits an existing folder; `toPatch` sends only what changed. Visibility only on top-level folders. */
-export class FolderEditForm {
+export class FolderEditForm extends FormState<FolderEditErrors> {
   name = $state('');
   scope = $state<FolderScope>('CLUB');
   teamIds = $state<string[]>([]);
   color = $state<FolderColor | null>(null);
   coverFileId = $state<string | null>(null);
-  submitted = $state(false);
-
-  readonly errors: FolderEditErrors;
-  readonly valid: boolean;
 
   constructor(readonly folder: Folder) {
+    super();
     this.name = folder.name;
     this.scope = folder.scope;
     this.teamIds = [...folder.teamIds];
     this.color = folder.color;
     this.coverFileId = folder.coverFileId;
-    this.errors = $derived(this.validate());
-    this.valid = $derived(Object.keys(this.errors).length === 0);
   }
 
   /** Subfolders follow their top-level folder (server: folder.scope-inherited). */
   get canChangeScope(): boolean {
     return this.folder.parentId === null;
-  }
-
-  error(field: keyof FolderEditErrors): string | null {
-    return this.submitted ? (this.errors[field] ?? null) : null;
   }
 
   toPatch(): FolderPatch {
@@ -63,7 +55,7 @@ export class FolderEditForm {
     return Object.keys(this.toPatch()).length > 0;
   }
 
-  private validate(): FolderEditErrors {
+  protected validate(): FolderEditErrors {
     const errors: FolderEditErrors = {};
     const max = settings.files.folderNameMaxLength;
     const name = this.name.trim();

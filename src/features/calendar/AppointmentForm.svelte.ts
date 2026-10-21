@@ -1,3 +1,4 @@
+import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import { ZonedClock, type LocalDate, type LocalDateTime } from '../../lib/time/ZonedClock';
 import { hasCabins, type Appointment, type AppointmentPatch, type AppointmentType, type NewAppointment } from './model';
@@ -16,7 +17,7 @@ const limits = settings.calendar;
  * conversion to UTC instants happens only in `toNew` / `toPatch`. Validation mirrors the server so
  * most mistakes show before a request.
  */
-export class AppointmentForm {
+export class AppointmentForm extends FormState<FormErrors> {
   type = $state<AppointmentType>('TRAINING');
   teamId = $state<string>(CLUB_WIDE);
   title = $state('');
@@ -31,16 +32,12 @@ export class AppointmentForm {
   repeat = $state(false);
   repeatUntil = $state<LocalDate>('');
   intervalWeeks = $state(1);
-  /** Errors are shown only after the first submit attempt. */
-  submitted = $state(false);
-
-  readonly errors: FormErrors = $derived(this.validate());
-  readonly valid: boolean = $derived(Object.keys(this.errors).length === 0);
-
   private constructor(
     private readonly clock: ZonedClock,
     readonly original: Appointment | null,
-  ) {}
+  ) {
+    super();
+  }
 
   get isEdit(): boolean {
     return this.original !== null;
@@ -75,10 +72,6 @@ export class AppointmentForm {
     const duration = this.durationMinutes();
     this.start = start;
     if (start && duration !== null && duration > 0) this.end = ZonedClock.addMinutes(start, duration);
-  }
-
-  error(field: FormField): string | null {
-    return this.submitted ? (this.errors[field] ?? null) : null;
   }
 
   /** Cabins only for types that have them; switching to a meeting drops them. */
@@ -138,7 +131,7 @@ export class AppointmentForm {
     return (Date.parse(`${this.end}Z`) - Date.parse(`${this.start}Z`)) / 60_000;
   }
 
-  private validate(): FormErrors {
+  protected validate(): FormErrors {
     const errors: FormErrors = {};
     const title = this.title.trim();
     if (!title || title.length > limits.titleMaxLength) errors.title = `Titel mit 1 bis ${limits.titleMaxLength} Zeichen angeben.`;

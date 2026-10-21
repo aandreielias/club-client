@@ -1,9 +1,10 @@
+import { FormState } from '../../lib/state/FormState.svelte';
 import type { NewTournament, TournamentFormat } from './model';
 
 export type TournamentField = 'name' | 'dates' | 'groups';
 
 /** A new tournament: name, days, place, groups, format, sets to win and team size; validation mirrors the server's Tournament. */
-export class TournamentForm {
+export class TournamentForm extends FormState<Partial<Record<TournamentField, string>>> {
   name = $state('');
   startsOn = $state('');
   endsOn = $state('');
@@ -14,20 +15,11 @@ export class TournamentForm {
   setsToWin = $state(2);
   /** Beach only; volleyball teams always have 6, simple tournaments none. */
   beachTeamSize = $state(2);
-  submitted = $state(false);
-
-  readonly errors: Partial<Record<TournamentField, string>>;
-  readonly valid: boolean;
 
   constructor(today: string) {
+    super();
     this.startsOn = today;
     this.endsOn = today;
-    this.errors = $derived(this.validate());
-    this.valid = $derived(Object.keys(this.errors).length === 0);
-  }
-
-  error(field: TournamentField): string | null {
-    return this.submitted ? (this.errors[field] ?? null) : null;
   }
 
   /** Teams in the knockout round. */
@@ -50,7 +42,7 @@ export class TournamentForm {
     };
   }
 
-  private validate(): Partial<Record<TournamentField, string>> {
+  protected validate(): Partial<Record<TournamentField, string>> {
     const errors: Partial<Record<TournamentField, string>> = {};
     const name = this.name.trim();
     if (!name || name.length > 120) errors.name = 'Name mit 1 bis 120 Zeichen angeben.';

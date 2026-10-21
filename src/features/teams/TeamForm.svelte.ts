@@ -1,25 +1,17 @@
+import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import type { ZonedClock } from '../../lib/time/ZonedClock';
 
 export type TeamFormErrors = Partial<Record<'name' | 'season', string>>;
 
 /** A new team: name plus season ("2026/27"), the season defaulting to the current one. */
-export class TeamForm {
+export class TeamForm extends FormState<TeamFormErrors> {
   name = $state('');
   season = $state('');
-  submitted = $state(false);
-
-  readonly errors: TeamFormErrors;
-  readonly valid: boolean;
 
   constructor(clock: ZonedClock) {
+    super();
     this.season = TeamForm.currentSeason(clock.today(), settings.teams.seasonStartMonth);
-    this.errors = $derived(this.validate());
-    this.valid = $derived(Object.keys(this.errors).length === 0);
-  }
-
-  error(field: keyof TeamFormErrors): string | null {
-    return this.submitted ? (this.errors[field] ?? null) : null;
   }
 
   /** '2026-10-15' with start month 7 → '2026/27'; '2027-03-01' → '2026/27'. */
@@ -29,7 +21,7 @@ export class TeamForm {
     return `${first}/${String((first + 1) % 100).padStart(2, '0')}`;
   }
 
-  private validate(): TeamFormErrors {
+  protected validate(): TeamFormErrors {
     const errors: TeamFormErrors = {};
     const max = settings.teams.nameMaxLength;
     const name = this.name.trim();
