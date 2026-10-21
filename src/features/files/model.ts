@@ -51,6 +51,7 @@ export interface FolderPatch {
   clearColor?: boolean;
   coverFileId?: string;
   clearCover?: boolean;
+  membersCanUpload?: boolean;
 }
 
 /** Rename (the extension stays) and/or move to another folder. */

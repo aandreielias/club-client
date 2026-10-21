@@ -122,6 +122,7 @@ export class MockFiles {
     const viewer = this.viewer(member);
     const folder = this.visibleFolder(viewer, id);
     this.requireManage(viewer, folder);
+    if (typeof body.membersCanUpload === 'boolean') folder.membersCanUpload = body.membersCanUpload;
     const name = body.name === undefined ? folder.name : String(body.name).trim();
     if (!name || name.length > limits.folderNameMaxLength) fail(400, 'folder.name-invalid');
     const scope: FolderScope = body.scope ?? folder.scope;

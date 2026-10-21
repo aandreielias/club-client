@@ -15,9 +15,11 @@ export class FolderEditForm extends FormState<FolderEditErrors> {
   teamIds = $state<string[]>([]);
   color = $state<FolderColor | null>(null);
   coverFileId = $state<string | null>(null);
+  membersCanUpload = $state(false);
 
   constructor(readonly folder: Folder) {
     super();
+    this.membersCanUpload = folder.membersCanUpload;
     this.name = folder.name;
     this.scope = folder.scope;
     this.teamIds = [...folder.teamIds];
@@ -44,6 +46,7 @@ export class FolderEditForm extends FormState<FolderEditErrors> {
       if (this.color) patch.color = this.color;
       else patch.clearColor = true;
     }
+    if (this.membersCanUpload !== this.folder.membersCanUpload) patch.membersCanUpload = this.membersCanUpload;
     if (this.coverFileId !== this.folder.coverFileId) {
       if (this.coverFileId) patch.coverFileId = this.coverFileId;
       else patch.clearCover = true;

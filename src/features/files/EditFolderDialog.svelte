@@ -73,6 +73,8 @@
       <p class="muted hint">Sichtbar für: {scopeLabel(folder.scope)}. Unterordner übernehmen die Sichtbarkeit vom obersten Ordner.</p>
     {/if}
 
+    <label class="row"><input type="checkbox" bind:checked={form.membersCanUpload} /> Mitglieder dürfen hochladen</label>
+
     <fieldset class="group">
       <legend>Farbe</legend>
       <div class="swatches">
