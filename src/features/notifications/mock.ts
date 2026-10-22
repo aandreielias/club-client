@@ -7,12 +7,8 @@ import { MockTable } from '../../lib/mock/MockTable';
 import { isImportant, type MessageRef, type Notification, type NotificationKind, type Preference, type RefKind } from './model';
 import { PRIVILEGED, type Member } from '../../lib/types';
 import { settings } from '../../settings';
-import { calendar } from '../calendar/mock';
-import { files } from '../files/mock';
-import { inventory } from '../inventory/mock';
-import { locations } from '../locations/mock';
-import { tournaments } from '../tournaments/mock';
-import { tasks } from '../tasks/mock';
+import { resolveRef } from '../../lib/mock/recordRefs';
+import { meetings } from '../meetings/mock';
 import { CHANGE_FIELD_LABELS, type ChangeField } from '../members/MembersApi';
 
 const fail = MockServer.fail;
@@ -122,40 +118,15 @@ export class MockNotifications {
     return [...recipients];
   }
 
-  /** The record as the sender sees it (server: MessageHandlers.resolve). */
+  /** The record as the sender sees it (server: platform.RecordRefs). */
   private ref(viewer: Member, ref: { kind: RefKind; id: string }): MessageRef {
-    try {
-      switch (ref.kind) {
-        case 'TASK':
-          return { ...ref, title: tasks.get(viewer, ref.id).title, parentId: null };
-        case 'APPOINTMENT':
-          return { ...ref, title: calendar.visible(viewer, ref.id).title, parentId: null };
-        case 'ITEM':
-          this.people.requireRole(viewer, PRIVILEGED);
-          return { ...ref, title: inventory.get(ref.id).name, parentId: null };
-        case 'MEMBER': {
-          const m = this.people.get(viewer, ref.id);
-          return { ...ref, title: `${m.firstName} ${m.lastName}`, parentId: null };
-        }
-        case 'FILE': {
-          const f = files.refs(viewer, [{ fileId: ref.id, folderId: null, name: null }]).find((r) => !r.deleted);
-          if (f) return { ...ref, title: f.name, parentId: f.folderId };
-          break;
-        }
-        case 'TEAM': {
-          const team = this.people.teams.data.find((t) => t.id === ref.id);
-          if (team) return { ...ref, title: team.name, parentId: null };
-          break;
-        }
-        case 'LOCATION':
-          return { ...ref, title: locations.get(ref.id).name, parentId: null };
-        case 'TOURNAMENT':
-          return { ...ref, title: tournaments.get(viewer, ref.id).name, parentId: null };
+    return resolveRef(viewer, ref, 'message', (id) => {
+      try {
+        return meetings.get(viewer, id).title;
+      } catch {
+        return null;
       }
-    } catch {
-      // not visible: refused below
-    }
-    return fail(400, 'message.ref-unknown');
+    });
   }
 
   /** server: NotificationHandlers.on* */

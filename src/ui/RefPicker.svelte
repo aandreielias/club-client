@@ -1,23 +1,21 @@
 <script lang="ts">
-  import { settings } from '../../settings';
-  import Button from '../../ui/Button.svelte';
-  import Icon from '../../ui/Icon.svelte';
-  import SearchSelect from '../../ui/SearchSelect.svelte';
-  import { searchApi } from '../search/services';
-  import { kindLabel, type HitKind } from '../search/model';
-  import type { MessageForm } from './MessageForm.svelte';
-  import { REF_ICONS, type RefKind } from './model';
+  import Button from './Button.svelte';
+  import Icon from './Icon.svelte';
+  import SearchSelect from './SearchSelect.svelte';
+  import { searchApi } from '../features/search/services';
+  import { kindLabel, type HitKind } from '../features/search/model';
+  import type { RefList } from '../lib/records/RefList.svelte';
+  import { REF_ICONS, type RefKind } from '../lib/records/refs';
 
-  /** Linking records to a message: search like the global search, picked records as removable chips. */
-  let { form }: { form: MessageForm } = $props();
+  /** Linking records (message, meeting): search like the global search, picked records as removable chips. */
+  let { form, label = 'Verknüpfen (optional)', perKind = 5 }: { form: RefList; label?: string; perKind?: number } = $props();
 
-  const limits = settings.notifications.message;
-  const LINKABLE: readonly HitKind[] = ['APPOINTMENT', 'TASK', 'ITEM', 'FILE', 'MEMBER', 'TEAM', 'LOCATION', 'TOURNAMENT'];
+  const LINKABLE: readonly HitKind[] = ['APPOINTMENT', 'TASK', 'ITEM', 'FILE', 'MEMBER', 'TEAM', 'LOCATION', 'TOURNAMENT', 'MEETING'];
   let found = new Map<string, { kind: RefKind; id: string; title: string }>();
 
   async function search(query: string) {
     if (query.trim().length < 2) return [];
-    const hits = (await searchApi.search(query, limits.searchPerKind)).filter((h) => LINKABLE.includes(h.kind));
+    const hits = (await searchApi.search(query, perKind)).filter((h) => LINKABLE.includes(h.kind));
     found = new Map(hits.map((h) => [`${h.kind}:${h.id}`, { kind: h.kind as RefKind, id: h.id, title: h.title }]));
     return hits
       .filter((h) => !form.hasRef(h.kind as RefKind, h.id))
@@ -26,10 +24,10 @@
 </script>
 
 <div class="stack refs">
-  <span class="label">Verknüpfen (optional) <span class="muted">– suchen oder Einträge aus Listen, Kalender und Namen hierher ziehen</span></span>
-  {#if form.refs.length < limits.maxRefs}
+  <span class="label">{label} <span class="muted">– suchen oder Einträge aus Listen, Kalender und Namen hierher ziehen</span></span>
+  {#if form.refs.length < form.max}
     <SearchSelect {search} onpick={(value) => { const ref = found.get(value); if (ref) form.addRef(ref); }}
-      placeholder="Termin, Aufgabe, Person, Team, Ort, Turnier, Inventar oder Datei suchen" aria-label="Datensatz zum Verknüpfen suchen" debounceMs={200} />
+      placeholder="Termin, Aufgabe, Person, Team, Ort, Turnier, Sitzung, Inventar oder Datei suchen" aria-label="Datensatz zum Verknüpfen suchen" debounceMs={200} />
   {/if}
   {#if form.refs.length}
     <ul class="chips">

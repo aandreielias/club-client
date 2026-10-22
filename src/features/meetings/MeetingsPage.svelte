@@ -3,6 +3,7 @@
   import { WINDOW_OPEN } from '../../channels';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import { RecordDrag } from '../../lib/records/RecordDrag';
   import { Resource } from '../../lib/state/Resource.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
@@ -31,7 +32,7 @@
   <ul class="cards">
     {#each items as m (m.id)}
       <li>
-        <a href="#/meetings/{m.id}">
+        <a href="#/meetings/{m.id}" ondragstart={(e) => RecordDrag.set(e, { kind: 'meeting', id: m.id, title: m.title })}>
           <span class="icon" class:board={!isAssembly(m.kind)}><Icon name="meetings" /></span>
           <span class="name">{m.title}<span class="muted small kind">{KIND_LABELS[m.kind]}</span></span>
           <span class="muted">{session.format.dateTime(m.startsAt)}</span>

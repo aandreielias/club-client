@@ -2,6 +2,8 @@
 import { directory, type MockDirectory } from '../../lib/mock/core';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
+import { resolveRef } from '../../lib/mock/recordRefs';
+import type { RefKind } from '../../lib/records/refs';
 import { ADMIN_BOARD, type Member } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
 import {
@@ -56,13 +58,18 @@ export class MockMeetings {
       return d.toISOString();
     };
     const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
-    const base = { urgency: null, videoUrl: null, openedAt: null, closedAt: null, protocol: null, presence: {} };
+    const base = { urgency: null, videoUrl: null, openedAt: null, closedAt: null, protocol: null, presence: {}, links: [] };
     return [
       { ...base, id: 'mt-live', kind: 'EXTRA_ASSEMBLY', title: 'Außerordentliche Mitgliederversammlung',
         agenda: '1. Begrüßung und Beschlussfähigkeit\n2. Mitgliedsbeitrag 2027\n3. Statutenänderung § 4 Abs. 3\n4. Allfälliges',
         startsAt: ago(15), endsAt: ago(-105), location: 'Vereinsheim', videoUrl: 'https://meet.example.at/mv', status: 'OPEN',
         invitedAt: ago(20 * 24 * 60), openedAt: ago(10), protocol: '1. Begrüßung durch den Vorsitz, 8 von 12 Stimmberechtigten anwesend.',
-        presence: { vorstand: 'APP', kassier: 'APP', schrift: 'APP', beisitz: 'APP', beisitz2: 'APP', admin: 'APP', eltern: 'ANALOG', ehren: 'ANALOG' } },
+        presence: { vorstand: 'APP', kassier: 'APP', schrift: 'APP', beisitz: 'APP', beisitz2: 'APP', admin: 'APP', eltern: 'ANALOG', ehren: 'ANALOG' },
+        links: [
+          { kind: 'MEMBER', id: 'kassier', title: 'Karin Kassier', parentId: null },
+          { kind: 'MEETING', id: 'mt-past', title: 'Ordentliche Vorstandssitzung', parentId: null },
+          { kind: 'TEAM', id: 't-damen', title: 'Damen 1', parentId: null },
+        ] },
       { ...base, id: 'mt-past', kind: 'BOARD', title: 'Ordentliche Vorstandssitzung', agenda: '1. Jahresvoranschlag\n2. Hallenmiete Wintersaison',
         startsAt: at(-40, 17), endsAt: at(-40, 19), location: 'Vereinsheim', status: 'CLOSED', invitedAt: at(-60, 9), openedAt: at(-40, 17),
         closedAt: at(-40, 19), protocol: '1. Jahresvoranschlag besprochen und angenommen.\n2. Hallenmiete: siehe Beschluss.',
@@ -111,7 +118,7 @@ export class MockMeetings {
     if (!this.mayConvene(viewer, kind)) fail(403, 'meeting.may-not-convene');
     const meeting: StoredMeeting = {
       id: crypto.randomUUID(), kind, title: '', agenda: null, urgency: null, startsAt: '', endsAt: '', location: null, videoUrl: null,
-      status: 'DRAFT', invitedAt: null, openedAt: null, closedAt: null, protocol: null, presence: {},
+      status: 'DRAFT', invitedAt: null, openedAt: null, closedAt: null, protocol: null, presence: {}, links: [],
     };
     this.apply(meeting, body);
     this.meetings.data.push(meeting);
@@ -178,6 +185,23 @@ export class MockMeetings {
     if (mode === 'APP' || mode === 'ANALOG') meeting.presence[memberId] = mode;
     else delete meeting.presence[memberId];
     this.changed(meeting, 'PRESENCE');
+    return this.dto(viewer, meeting);
+  }
+
+  /** server: MeetingHandlers.setLinks — new links resolved as the viewer sees them, kept ones stay. */
+  setLinks(viewer: Member, id: string, refs: unknown): Meeting {
+    const meeting = this.managed(viewer, id);
+    if (!Array.isArray(refs) || refs.length > 30) return fail(400, 'meeting.too-many-refs');
+    const kept = meeting.links ?? [];
+    meeting.links = (refs as { kind: RefKind; id: string }[]).map((ref) => {
+      if (ref.kind === 'MEETING' && ref.id === id) return fail(400, 'meeting.ref-unknown');
+      return kept.find((k) => k.kind === ref.kind && k.id === ref.id)
+        ?? resolveRef(viewer, ref, 'meeting', (other) => {
+          const m = this.meetings.data.find((x) => x.id === other);
+          return m && this.maySee(viewer, m) ? m.title : null;
+        });
+    });
+    this.changed(meeting, 'UPDATED');
     return this.dto(viewer, meeting);
   }
 
@@ -429,6 +453,7 @@ export class MockMeetings {
     const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
     return {
       ...rest,
+      links: m.links ?? [], // mock data stored before links existed
       latestInvite: latestInvite(m.kind, m.startsAt),
       electorate: voters.map((id) => ({ memberId: id, name: name(id) })).sort(byName),
       present: Object.entries(presence).map(([id, mode]) => ({ memberId: id, name: name(id), mode })).sort(byName),
@@ -467,4 +492,5 @@ mockServer
   .on('POST', '/api/v1/resolutions/:id/vote', (req) => meetings.vote(actor(req), req.params.id, req.body?.choice))
   .on('POST', '/api/v1/resolutions/:id/recorded-vote', (req) => meetings.recordVote(actor(req), req.params.id, req.body?.memberId, req.body?.choice))
   .on('POST', '/api/v1/resolutions/:id/analog-votes', (req) => meetings.analogVotes(actor(req), req.params.id, req.body ?? {}))
+  .on('PUT', '/api/v1/meetings/:id/links', (req) => meetings.setLinks(actor(req), req.params.id, req.body?.refs))
   .on('PUT', '/api/v1/meetings/:id/presence/:memberId', (req) => meetings.setPresence(actor(req), req.params.id, req.params.memberId, req.body?.mode));

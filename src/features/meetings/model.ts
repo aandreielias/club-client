@@ -1,3 +1,4 @@
+import type { LinkedRef } from '../../lib/records/refs';
 import type { Hue } from '../../lib/types';
 
 // Mirrors of the club-server meetings DTOs (statutes §8, §10). API times are UTC instants.
@@ -78,6 +79,8 @@ export interface Meeting {
   quorate: boolean;
   /** The viewer may edit, invite, take presence, open and close. */
   canManage: boolean;
+  /** Linked records (files, members, appointments, ...) with the title they had when linked. */
+  links: LinkedRef[];
 }
 
 export type MeetingSummary = Pick<Meeting, 'id' | 'kind' | 'title' | 'startsAt' | 'endsAt' | 'location' | 'status'>;

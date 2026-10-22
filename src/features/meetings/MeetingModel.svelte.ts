@@ -1,6 +1,7 @@
 import { Action } from '../../lib/state/Action.svelte';
 import { Resource } from '../../lib/state/Resource.svelte';
 import type { MeetingsApi } from './MeetingsApi';
+import type { RefKind } from '../../lib/records/refs';
 import type { Meeting, PresenceMode } from './model';
 
 /** One meeting and the writes of whoever runs it; every write answers with the whole meeting. */
@@ -37,6 +38,10 @@ export class MeetingModel {
 
   setPresence(memberId: string, mode: PresenceMode | null): Promise<boolean> {
     return this.write(() => this.api.setPresence(this.id, memberId, mode));
+  }
+
+  setLinks(refs: readonly { kind: RefKind; id: string }[]): Promise<boolean> {
+    return this.write(() => this.api.setLinks(this.id, refs));
   }
 
   delete(): Promise<boolean> {

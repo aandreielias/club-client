@@ -17,7 +17,7 @@
   import PeoplePicker from '../../ui/PeoplePicker.svelte';
   import TeamPicker from '../../ui/TeamPicker.svelte';
   import { DROPPABLE, MessageForm, type Audience } from './MessageForm.svelte';
-  import MessageRefPicker from './MessageRefPicker.svelte';
+  import RefPicker from '../../ui/RefPicker.svelte';
   import { notificationsApi } from './services';
 
   /** Writing a message: recipients (everyone, teams or people), text and linked records. Admin, board and coaches. */
@@ -112,7 +112,7 @@
       <textarea bind:value={form.body} rows="5" maxlength={limits.bodyMaxLength}></textarea>
     </Field>
 
-    <MessageRefPicker {form} />
+    <RefPicker form={form.links} perKind={settings.notifications.message.searchPerKind} />
 
     <ErrorNote error={send.error} />
     <div class="row">

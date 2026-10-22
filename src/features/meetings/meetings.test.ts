@@ -121,3 +121,15 @@ describe('mock resolutions', () => {
     expect(meetings.recordVote(member('vorstand'), r.id, 'beisitz2', 'YES')).toMatchObject({ status: 'CLOSED', result: 'FAILED', yes: 2 });
   });
 });
+
+describe('meeting links', () => {
+  it('link records as the manager sees them, never the meeting itself', () => {
+    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(25), endsAt: inDays(25.1) });
+    const linked = meetings.setLinks(member('vorstand'), mv.id, [{ kind: 'MEMBER', id: 'kassier' }, { kind: 'MEETING', id: 'mt-past' }]);
+    expect(linked.links.map((l) => l.title)).toEqual(['Karin Kassier', 'Ordentliche Vorstandssitzung']);
+    expect(() => meetings.setLinks(member('vorstand'), mv.id, [{ kind: 'MEETING', id: mv.id }])).toThrow(expect.objectContaining({ code: 'meeting.ref-unknown' }));
+    expect(() => meetings.setLinks(member('vorstand'), mv.id, [{ kind: 'TASK', id: 'nope' }])).toThrow(expect.objectContaining({ code: 'meeting.ref-unknown' }));
+    expect(meetings.get(member('spielerin'), mv.id).links).toHaveLength(2);
+  });
+});

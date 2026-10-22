@@ -73,6 +73,8 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Sitzung eröffnen': { text: 'Sitzung beginnen: Anwesenheit und Protokoll' },
   'Sitzung beenden': { text: 'Sitzung schließen; Protokoll und Anwesenheit bleiben dann so' },
   'Protokoll speichern': { text: 'Protokoll zwischenspeichern' },
+  'Verknüpfungen bearbeiten': { text: 'Dateien, Personen, Termine und andere Einträge mit der Sitzung verknüpfen' },
+  'Verknüpfungen speichern': { text: 'Geänderte Verknüpfungen speichern' },
   'Antrag hinzufügen': { text: 'Antrag als Entwurf zur Tagesordnung legen; abgestimmt wird nach dem Öffnen' },
   'Abstimmung öffnen': { text: 'Stimmberechtigte können ab jetzt abstimmen' },
   'Abstimmung schließen': { text: 'Abstimmung beenden und Ergebnis zeigen' },

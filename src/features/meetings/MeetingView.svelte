@@ -11,6 +11,9 @@
   import { MEETING_CHANGED } from './events';
   import { MeetingModel } from './MeetingModel.svelte';
   import ResolutionList from './ResolutionList.svelte';
+  import MeetingLinks from './MeetingLinks.svelte';
+  import RecordLink from '../../ui/RecordLink.svelte';
+  import { permissions } from '../../lib/container';
   import { isAssembly, KIND_LABELS, QUORUM_TEXT, STATUS_LABELS, STATUS_TONES, type Meeting, type PresenceMode } from './model';
   import { meetingsApi } from './services';
 
@@ -114,6 +117,9 @@
       <h2>Tagesordnung</h2>
       {#if m.agenda}<p class="text">{m.agenda}</p>{:else}<p class="muted">Keine Tagesordnung eingetragen.</p>{/if}
 
+      <h2>Unterlagen und Verknüpfungen</h2>
+      <MeetingLinks meeting={m} {model} />
+
       {#if m.status !== 'DRAFT'}
         <h2>Anwesenheit</h2>
         <p>
@@ -123,7 +129,7 @@
         <ul class="people">
           {#each m.electorate as person (person.memberId)}
             <li>
-              <span>{person.name}</span>
+              <RecordLink kind="member" id={person.memberId} allowed={permissions.canSeeMember(person.memberId)}>{person.name}</RecordLink>
               {#if m.canManage && m.status !== 'CLOSED'}
                 <ChoiceGroup name="presence-{person.memberId}" label="Anwesenheit von {person.name}" size="sm" options={ATTENDANCE}
                   disabled={model.action.busy}

@@ -20,6 +20,8 @@ export const MEETING_MESSAGES: MessageCatalog = {
   'meeting.not-draft': 'Nur Entwürfe lassen sich löschen.',
   'meeting.not-voter': 'Nur stimmberechtigte Mitglieder zählen als anwesend.',
   'meeting.votes-open': 'Zuerst die offenen Abstimmungen schließen.',
+  'meeting.ref-unknown': 'Ein verknüpfter Eintrag ist unbekannt oder für dich nicht sichtbar.',
+  'meeting.too-many-refs': 'Höchstens 30 Verknüpfungen.',
   'resolution.not-found': 'Beschluss nicht gefunden.',
   'resolution.title-invalid': 'Titel mit 1 bis 200 Zeichen angeben.',
   'resolution.text-too-long': 'Der Antrag hat höchstens 4000 Zeichen.',

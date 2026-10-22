@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { bus, directory, session } from '../../lib/container';
+  import { bus, directory, permissions, session } from '../../lib/container';
+  import RecordLink from '../../ui/RecordLink.svelte';
   import { CONFIRM, TOAST } from '../../channels';
   import { Resource } from '../../lib/state/Resource.svelte';
   import { canVote } from '../../lib/types';
@@ -67,7 +68,7 @@
     {#each offices as o (o.id)}
       <li>
         <span class="function">{OFFICE_LABELS[o.office]}</span>
-        <span>{o.name}{#if o.coopted} <Tag tone="orange">Kooptiert</Tag>{/if}</span>
+        <span><RecordLink kind="member" id={o.memberId} allowed={permissions.canSeeMember(o.memberId)}>{o.name}</RecordLink>{#if o.coopted} <Tag tone="orange">Kooptiert</Tag>{/if}</span>
         <span class="muted small">{session.format.date(o.startsOn)} bis {session.format.date(o.termEndsOn)}</span>
         {#if policy.canManageOffices()}
           <Button size="sm" variant="ghost" busy={model.endAction.busy} onclick={() => end(o)}>Beenden</Button>

@@ -2,32 +2,12 @@
 
 export type NotificationKind = 'TASK_ASSIGNED' | 'TASK_DUE' | 'APPOINTMENT_CANCELLED' | 'SECURITY' | 'CHANGE_DECIDED' | 'MESSAGE' | 'ITEM_REMINDER' | 'MEETING';
 
-/** Records a message can link (server: NotificationsApi.RefKind). */
-export type RefKind = 'TASK' | 'APPOINTMENT' | 'ITEM' | 'FILE' | 'MEMBER' | 'TEAM' | 'LOCATION' | 'TOURNAMENT';
+import type { LinkedRef, RefKind } from '../../lib/records/refs';
 
-/** A linked record with its title when the message was sent; parentId: a file's folder. */
-export interface MessageRef {
-  kind: RefKind;
-  id: string;
-  title: string;
-  parentId: string | null;
-}
+export { REF_ICONS, refWindow, type RefKind } from '../../lib/records/refs';
 
-export const REF_ICONS = {
-  TASK: 'tasks',
-  APPOINTMENT: 'calendar',
-  ITEM: 'inventory',
-  FILE: 'document',
-  MEMBER: 'account',
-  TEAM: 'teams',
-  LOCATION: 'location',
-  TOURNAMENT: 'trophy',
-} as const;
-
-/** Window that opens a linked record. */
-export function refWindow(ref: Pick<MessageRef, 'kind' | 'id' | 'parentId'>): { kind: string; id: string } {
-  return ref.kind === 'FILE' ? { kind: 'file', id: `${ref.parentId}:${ref.id}` } : { kind: ref.kind.toLowerCase(), id: ref.id };
-}
+/** A linked record with its title when the message was sent. */
+export type MessageRef = LinkedRef;
 
 /** A message admin, board or a coach writes (server: MessagesController.MessageBody). */
 export interface OutgoingMessage {

@@ -1,4 +1,5 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
+import type { RefKind } from '../../lib/records/refs';
 import type { Choice, Meeting, MeetingPatch, MeetingSummary, NewMeeting, NewResolution, PresenceMode, Resolution } from './model';
 
 /** Typed access to the meetings endpoints. Every write needs a step-up and answers with the meeting. */
@@ -41,6 +42,11 @@ export class MeetingsApi {
 
   close(id: string, protocol: string): Promise<Meeting> {
     return this.api.post<Meeting>(`${this.path(id)}/close`, { protocol });
+  }
+
+  /** Replaces the linked records. */
+  setLinks(id: string, refs: readonly { kind: RefKind; id: string }[]): Promise<Meeting> {
+    return this.api.put<Meeting>(`${this.path(id)}/links`, { refs: refs.map(({ kind, id: refId }) => ({ kind, id: refId })) });
   }
 
   /** null = not there. */
