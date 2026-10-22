@@ -1,8 +1,8 @@
 import type { SessionStore } from '../../lib/session/SessionStore.svelte';
 import { ADMIN_BOARD, type Member, type Role } from '../../lib/types';
 
-/** GUEST is not granted here: guest accounts come from a tournament's teams. */
-const ALL_ROLES: readonly Role[] = ['ADMIN', 'BOARD', 'COACH', 'PLAYER', 'PARENT', 'VOLUNTEER'];
+/** GUEST comes from a tournament's teams, BOARD from a Vorstand office (server: member.board-by-office). */
+const ALL_ROLES: readonly Role[] = ['ADMIN', 'COACH', 'PLAYER', 'PARENT', 'VOLUNTEER'];
 
 /** Client-side mirror of MemberHandlers / SecurityHandlers; used only to show or hide actions. */
 export class MemberPolicy {
@@ -64,6 +64,16 @@ export class MemberPolicy {
 
   canDeactivate(member: Member): boolean {
     return this.isManager && member.active && !this.isSelf(member) && (this.isAdmin || !member.roles.includes('ADMIN'));
+  }
+
+  /** server: MembershipHandlers.setMembership */
+  canSetMembership(member: Member): boolean {
+    return this.isManager && member.active;
+  }
+
+  /** server: MembershipHandlers.assign / end (with step-up) */
+  canManageOffices(): boolean {
+    return this.isManager;
   }
 
   canLinkGuardian(member: Member): boolean {

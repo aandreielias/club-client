@@ -1,5 +1,5 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
-import type { Member, MemberList, Role } from '../../lib/types';
+import type { Member, MemberList, MembershipType, Role } from '../../lib/types';
 
 export interface Invitation {
   email: string;
@@ -11,6 +11,53 @@ export interface Invitation {
   /** Optional guardian (e.g. a parent) for a minor, linked right away. */
   guardianId: string | null;
   roles: Role[];
+  /** The server sets memberSince to today when given. */
+  membershipType: MembershipType | null;
+}
+
+export interface Membership {
+  membershipType: MembershipType | null;
+  honorary: boolean;
+  memberSince: string | null;
+}
+
+/** Vorstand functions (statutes §9) and Rechnungsprüfer (§11, not part of the board). */
+export type OfficeKind = 'CHAIR' | 'VICE_CHAIR' | 'TREASURER' | 'SECRETARY' | 'BOARD_MEMBER' | 'AUDITOR';
+
+export const OFFICE_LABELS: Readonly<Record<OfficeKind, string>> = {
+  CHAIR: 'Vorsitz',
+  VICE_CHAIR: 'Stellvertretung',
+  TREASURER: 'Kassier:in',
+  SECRETARY: 'Schriftführung',
+  BOARD_MEMBER: 'Vorstandsmitglied',
+  AUDITOR: 'Rechnungsprüfer:in',
+};
+
+export interface Office {
+  id: string;
+  memberId: string;
+  name: string;
+  office: OfficeKind;
+  startsOn: string;
+  termEndsOn: string;
+  endedOn: string | null;
+  /** Chosen by the board until the next general meeting confirms it (§9 Abs 6). */
+  coopted: boolean;
+}
+
+export interface NewOffice {
+  memberId: string;
+  office: OfficeKind;
+  startsOn: string;
+  /** null = three years after the start. */
+  termEndsOn: string | null;
+  coopted: boolean;
+}
+
+/** Running offices; warnings are codes like 'board.too-small' (texts in BOARD_WARNINGS). */
+export interface Board {
+  offices: Office[];
+  warnings: string[];
 }
 
 /** Account data a member cannot change alone; admin/board decide on a request. */
@@ -71,6 +118,23 @@ export class MembersApi {
 
   setRoles(id: string, roles: readonly Role[]): Promise<Member> {
     return this.api.put<Member>(`${this.path(id)}/roles`, { roles });
+  }
+
+  setMembership(id: string, membership: Membership): Promise<Member> {
+    return this.api.put<Member>(`${this.path(id)}/membership`, membership);
+  }
+
+  board(): Promise<Board> {
+    return this.api.get<Board>('/api/v1/board/offices');
+  }
+
+  /** The holder gets the BOARD role with a board office. */
+  assignOffice(office: NewOffice): Promise<Office> {
+    return this.api.post<Office>('/api/v1/board/offices', office);
+  }
+
+  endOffice(id: string): Promise<Office> {
+    return this.api.post<Office>(`/api/v1/board/offices/${encodeURIComponent(id)}/end`);
   }
 
   deactivate(id: string): Promise<Member> {

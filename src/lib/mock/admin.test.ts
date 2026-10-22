@@ -29,6 +29,27 @@ describe('mock members admin', () => {
     expect(directory.wardsOf('neu')).toContain(kid.id);
   });
 
+  it('gives BOARD only with a board office (server: MembershipHandlers)', () => {
+    stepUp('vorstand');
+    const today = directory.clock.today();
+    expect(() => directory.assignOffice(member('vorstand'), { memberId: 'spielerin', office: 'TREASURER', startsOn: today }))
+      .toThrow(expect.objectContaining({ code: 'office.not-eligible' }));
+    expect(() => directory.assignOffice(member('vorstand'), { memberId: 'trainer', office: 'CHAIR', startsOn: today }))
+      .toThrow(expect.objectContaining({ code: 'office.taken' }));
+    expect(() => directory.assignOffice(member('vorstand'), { memberId: 'admin', office: 'SECRETARY', startsOn: today }))
+      .toThrow(expect.objectContaining({ code: 'office.auditor-in-board' }));
+    const office = directory.assignOffice(member('vorstand'), { memberId: 'trainer', office: 'SECRETARY', startsOn: today });
+    expect(member('trainer').roles).toContain('BOARD');
+    expect(directory.board().warnings).toEqual(['board.too-small', 'board.treasurer-missing', 'board.auditors-missing']);
+    expect(() => directory.setMembership(member('vorstand'), 'trainer', { membershipType: 'ORDINARY' }))
+      .toThrow(expect.objectContaining({ code: 'member.holds-office' }));
+    expect(() => directory.setRoles(member('admin'), 'trainer', ['COACH'])).toThrow(expect.objectContaining({ code: 'auth.step-up-required' }));
+    stepUp('admin');
+    expect(() => directory.setRoles(member('admin'), 'trainer', ['COACH'])).toThrow(expect.objectContaining({ code: 'member.board-by-office' }));
+    directory.endOffice(member('vorstand'), office.id);
+    expect(member('trainer').roles).not.toContain('BOARD');
+  });
+
   it('shows birth dates only to self, admins, guardians and coaches', () => {
     expect(directory.get(member('vorstand'), 'spieler').birthDate).toBeNull();
     expect(directory.get(member('trainer'), 'spieler').birthDate).toBe('2010-01-20');

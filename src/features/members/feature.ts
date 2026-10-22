@@ -1,3 +1,4 @@
+import BoardPage from './BoardPage.svelte';
 import MembersHome from './MembersHome.svelte';
 import { permissions } from '../../lib/container';
 import { ADMIN_BOARD, PRIVILEGED } from '../../lib/types';
@@ -14,6 +15,8 @@ export const membersFeature: Feature = {
     { path: '/members', component: MembersPage, nav: 'Mitglieder', icon: 'members', roles: ADMIN_BOARD },
     // Coaches open profiles of their team members (server: requireMaySee).
     { path: '/members/:id', component: MemberPage, roles: PRIVILEGED },
+    // Who holds which function is known club-wide (server: LIST_OFFICES for every member).
+    { path: '/board', component: BoardPage, nav: 'Vorstand', icon: 'club' },
   ],
   windows: {
     // server: requireMaySee - coaches only the members of their teams.

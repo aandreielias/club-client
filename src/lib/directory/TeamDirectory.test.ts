@@ -7,7 +7,7 @@ import type { Me, Roster } from '../types';
 import { TeamDirectory } from './TeamDirectory.svelte';
 
 const me: Me = {
-  member: { id: 'm1', email: 'c@x.at', firstName: 'Clara', lastName: 'Coach', birthDate: null, phone: null, photoConsent: true, active: true, roles: ['COACH'] },
+  member: { id: 'm1', email: 'c@x.at', firstName: 'Clara', lastName: 'Coach', birthDate: null, phone: null, photoConsent: true, active: true, membershipType: null, honorary: false, memberSince: null, roles: ['COACH'] },
   teams: [
     { id: 'a', name: 'Team A', season: '2026/27' },
     { id: 'b', name: 'Team B', season: '2026/27' },

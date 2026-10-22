@@ -10,7 +10,7 @@ import type { MembersApi } from './MembersApi';
 const TODAY = '2026-10-15';
 
 const member = (id: string, roles: Role[], extra: Partial<Member> = {}): Member => ({
-  id, email: `${id}@x.at`, firstName: id, lastName: 'Test', birthDate: '2000-01-01', phone: null, photoConsent: true, active: true, roles, ...extra,
+  id, email: `${id}@x.at`, firstName: id, lastName: 'Test', birthDate: '2000-01-01', phone: null, photoConsent: true, active: true, membershipType: null, honorary: false, memberSince: null, roles, ...extra,
 });
 
 function policyFor(roles: Role[]): MemberPolicy {
@@ -36,7 +36,7 @@ describe('InviteForm', () => {
     form.phone = ' +43 660 1234567 ';
     expect(form.toInvitation()).toEqual({
       email: 'joerg@verein.at', firstName: 'Jörg', lastName: 'Muster', birthDate: null, phone: '+43 660 1234567',
-      photoConsent: false, guardianId: null, roles: ['PLAYER'],
+      photoConsent: false, guardianId: null, roles: ['PLAYER'], membershipType: 'ORDINARY',
     });
   });
 });
@@ -75,6 +75,7 @@ describe('MemberPolicy', () => {
     const admin = policyFor(['ADMIN']);
     expect(board.grantableRoles()).not.toContain('ADMIN');
     expect(admin.grantableRoles()).toContain('ADMIN');
+    expect(admin.grantableRoles()).not.toContain('BOARD'); // comes with a Vorstand office
     expect(board.canSetRoles(member('x', ['PLAYER']))).toBe(false);
     expect(board.canDeactivate(member('x', ['ADMIN']))).toBe(false);
     expect(admin.canDeactivate(member('x', ['ADMIN']))).toBe(true);

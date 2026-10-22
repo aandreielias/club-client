@@ -3,7 +3,7 @@
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { ROLE_LABELS, type Member, type Role } from '../../lib/types';
-  import { roleHue } from './roles';
+  import { membershipText, roleHue } from './roles';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -12,6 +12,7 @@
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import GuardianLinker from './GuardianLinker.svelte';
   import HeldItems from './HeldItems.svelte';
+  import MembershipEditor from './MembershipEditor.svelte';
   import { MemberDetailModel } from './MemberDetailModel.svelte';
   import ProfileEditor from './ProfileEditor.svelte';
   import RoleChecklist from './RoleChecklist.svelte';
@@ -100,6 +101,7 @@
       {/snippet}
       {#snippet meta()}
         {#if !member.active}<Tag tone="red">Inaktiv</Tag>{/if}
+        {#if member.honorary}<Tag tone="yellow">Ehrenmitglied</Tag>{/if}
         {#each member.roles as role (role)}<Tag tone={roleHue(role)}>{ROLE_LABELS[role]}</Tag>{/each}
       {/snippet}
 
@@ -115,14 +117,26 @@
           <dd>{member.birthDate ? session.format.date(member.birthDate) : '–'}</dd>
           <dt>Foto-Einwilligung</dt>
           <dd>{member.photoConsent ? 'Ja' : 'Nein'}</dd>
+          <dt>Mitgliedschaft</dt>
+          <dd>{membershipText(member)}</dd>
+          {#if member.memberSince}
+            <dt>Mitglied seit</dt>
+            <dd>{session.format.date(member.memberSince)}</dd>
+          {/if}
         </dl>
         <HeldItems memberId={member.id} />
+      {/if}
+
+      {#if policy.canSetMembership(member) && !editing}
+        <h2>Mitgliedschaft</h2>
+        {#key member.id + member.membershipType + member.honorary + member.memberSince}<MembershipEditor {member} {model} />{/key}
       {/if}
 
       {#if policy.canSetRoles(member)}
         <h2>Rollen</h2>
         <div class="stack">
           <RoleChecklist bind:value={roles} allowed={policy.grantableRoles()} legend="Rollen im Verein" />
+          <p class="muted small">Die Vorstandsrolle kommt mit einer Funktion auf der Seite <a href="/board">Vorstand</a>.</p>
           {#if policy.isSelf(member)}<p class="muted small">Die eigene Admin-Rolle lässt sich nicht entfernen.</p>{/if}
           <ErrorNote error={model.rolesAction.error} />
           <div><Button variant="primary" busy={model.rolesAction.busy} disabled={!rolesChanged} onclick={() => saveRoles(member)}>Rollen speichern</Button></div>

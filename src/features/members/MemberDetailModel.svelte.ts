@@ -1,13 +1,14 @@
 import { Action } from '../../lib/state/Action.svelte';
 import { Resource } from '../../lib/state/Resource.svelte';
 import type { Member, Role } from '../../lib/types';
-import type { MembersApi, ProfilePatch } from './MembersApi';
+import type { Membership, MembersApi, ProfilePatch } from './MembersApi';
 
 /** One member and the administrative actions on their page. */
 export class MemberDetailModel {
   readonly member: Resource<Member>;
   readonly profileAction = new Action();
   readonly rolesAction = new Action();
+  readonly membershipAction = new Action();
   readonly guardianAction = new Action();
   readonly resetAction = new Action();
   readonly deactivateAction = new Action();
@@ -35,6 +36,10 @@ export class MemberDetailModel {
 
   setRoles(roles: readonly Role[]): Promise<boolean> {
     return this.write(this.rolesAction, () => this.api.setRoles(this.id, roles));
+  }
+
+  setMembership(membership: Membership): Promise<boolean> {
+    return this.write(this.membershipAction, () => this.api.setMembership(this.id, membership));
   }
 
   linkGuardian(guardianId: string): Promise<boolean> {

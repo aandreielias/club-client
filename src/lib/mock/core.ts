@@ -7,8 +7,10 @@ import {
   PRIVILEGED,
   guestOnly,
   type Club,
+  canVote,
   type Member,
   type MemberList,
+  type MembershipType,
   type MissingProfileField,
   type Role,
   type Roster,
@@ -35,9 +37,28 @@ export interface DevAccount {
 
 const fail = MockServer.fail;
 
-function seedMember(id: string, firstName: string, lastName: string, roles: Role[], birthDate: string | null): Member {
-  return { id, email: `${id}@example.at`, firstName, lastName, birthDate, phone: null, photoConsent: true, active: true, roles };
+function seedMember(id: string, firstName: string, lastName: string, roles: Role[], birthDate: string | null,
+  membershipType: MembershipType | null = null): Member {
+  return {
+    id, email: `${id}@example.at`, firstName, lastName, birthDate, phone: null, photoConsent: true, active: true, roles,
+    membershipType, honorary: false, memberSince: membershipType ? '2024-09-01' : null,
+  };
 }
+
+/** server: members_office; mirrors BoardRules (one per function, two auditors outside the board, deputy combines). */
+interface OfficeRow {
+  id: string;
+  memberId: string;
+  office: 'CHAIR' | 'VICE_CHAIR' | 'TREASURER' | 'SECRETARY' | 'BOARD_MEMBER' | 'AUDITOR';
+  startsOn: string;
+  termEndsOn: string;
+  endedOn: string | null;
+  coopted: boolean;
+}
+
+const OFFICES = ['CHAIR', 'VICE_CHAIR', 'TREASURER', 'SECRETARY', 'BOARD_MEMBER', 'AUDITOR'] as const;
+const SINGLE_OFFICES: readonly string[] = ['CHAIR', 'VICE_CHAIR', 'TREASURER', 'SECRETARY'];
+const plusYears = (date: string, years: number): string => `${Number(date.slice(0, 4)) + years}${date.slice(4)}`;
 
 /** Members, teams and security state of the mock club, plus the server's authorization helpers. */
 export class MockDirectory {
@@ -66,14 +87,15 @@ export class MockDirectory {
 
   private static seedMembers(): Member[] {
     return [
-      seedMember('admin', 'Anna', 'Admin', ['ADMIN'], '1985-03-12'),
-      seedMember('vorstand', 'Bernd', 'Vorstand', ['BOARD'], '1978-11-02'),
-      seedMember('trainer', 'Clara', 'Trainer', ['COACH', 'PLAYER'], '1992-06-30'),
+      seedMember('admin', 'Anna', 'Admin', ['ADMIN'], '1985-03-12', 'EXTRAORDINARY'),
+      seedMember('vorstand', 'Bernd', 'Vorstand', ['BOARD'], '1978-11-02', 'EXTRAORDINARY'),
+      seedMember('trainer', 'Clara', 'Trainer', ['COACH', 'PLAYER'], '1992-06-30', 'EXTRAORDINARY'),
       // Minor without photo consent: photos tagged with him are hidden from everyone but managers.
-      { ...seedMember('spieler', 'David', 'Spieler', ['PLAYER'], '2010-01-20'), photoConsent: false },
-      seedMember('spielerin', 'Lena', 'Spielerin', ['PLAYER'], '1998-08-08'),
+      { ...seedMember('spieler', 'David', 'Spieler', ['PLAYER'], '2010-01-20', 'ORDINARY'), photoConsent: false },
+      seedMember('spielerin', 'Lena', 'Spielerin', ['PLAYER'], '1998-08-08', 'ORDINARY'),
+      // Parent of a player, no club member herself.
       seedMember('eltern', 'Eva', 'Eltern', ['PARENT'], '1980-09-14'),
-      seedMember('neu', 'Felix', 'Neu', ['PLAYER'], null),
+      seedMember('neu', 'Felix', 'Neu', ['PLAYER'], null, 'ORDINARY'),
       // Temporary accounts of visiting teams: each sees only its tournament.
       seedMember('gast', 'Gerd', 'Gast', ['GUEST'], null), // Herbstcup (group phase running)
       seedMember('gast-sommer', 'Sven', 'Sommer', ['GUEST'], null), // Sommerturnier (finished)
@@ -100,6 +122,12 @@ export class MockDirectory {
     spielerin: { 't-damen': 'PLAYER' },
     neu: { 't-damen': 'PLAYER' },
   }));
+
+  /** Bernd chairs, Anna checks the books; the rest of the board is still missing (warnings on the board page). */
+  readonly offices = new MockTable<OfficeRow[]>('offices', () => [
+    { id: 'o-chair', memberId: 'vorstand', office: 'CHAIR', startsOn: '2024-09-01', termEndsOn: '2027-09-01', endedOn: null, coopted: false },
+    { id: 'o-auditor', memberId: 'admin', office: 'AUDITOR', startsOn: '2024-09-01', termEndsOn: '2027-09-01', endedOn: null, coopted: false },
+  ]);
 
   /** guardianId → minor ids */
   readonly wards = new MockTable<Record<string, string[]>>('wards', () => ({ eltern: ['spieler'] }));
@@ -285,6 +313,7 @@ export class MockDirectory {
     this.requirePrivileged(viewer, ADMIN_BOARD);
     const roles = MockDirectory.roles(body.roles);
     if (roles.includes('ADMIN') && !this.hasRole(viewer, ['ADMIN'])) fail(403, 'access.denied');
+    if (roles.includes('BOARD')) fail(409, 'member.board-by-office');
     const email = MockDirectory.email(body.email);
     if (this.members.data.some((m) => m.email === email)) fail(409, 'member.email-taken');
     const member: Member = {
@@ -297,6 +326,9 @@ export class MockDirectory {
       photoConsent: false,
       active: true,
       roles,
+      membershipType: MockDirectory.membershipType(body.membershipType),
+      honorary: false,
+      memberSince: body.membershipType ? this.clock.today() : null,
     };
     this.applyProfile(member, { birthDate: body.birthDate || undefined, phone: body.phone ?? undefined, photoConsent: body.photoConsent });
     if (body.guardianId != null && !this.members.data.some((m) => m.id === body.guardianId && m.active)) fail(404, 'member.not-found');
@@ -312,6 +344,7 @@ export class MockDirectory {
     const roles = MockDirectory.roles(rawRoles);
     if (viewer.id === memberId && !roles.includes('ADMIN')) fail(409, 'member.cannot-remove-own-admin');
     const target = this.members.data.find((m) => m.id === memberId) ?? fail(404, 'member.not-found');
+    if (target.roles.includes('BOARD') !== roles.includes('BOARD')) fail(409, 'member.board-by-office');
     target.roles = roles;
     this.members.save();
     return this.visibleTo(viewer, target);
@@ -323,6 +356,10 @@ export class MockDirectory {
     const target = this.members.data.find((m) => m.id === memberId) ?? fail(404, 'member.not-found');
     if (target.roles.includes('ADMIN') && !this.hasRole(viewer, ['ADMIN'])) fail(403, 'access.denied');
     target.active = false;
+    // server: MembershipHandlers.endOfficesOf
+    for (const o of this.running().filter((o) => o.memberId === memberId)) o.endedOn = this.clock.today();
+    this.offices.save();
+    target.roles = target.roles.filter((r) => r !== 'BOARD');
     this.members.save();
     mockServer.events.publish({ type: 'members.member-deactivated', data: { memberId }, audience: { roles: ADMIN_BOARD } });
     // server: TeamHandlers.onMemberDeactivated
@@ -347,11 +384,101 @@ export class MockDirectory {
     const target = this.members.data.find((m) => m.id === memberId) ?? fail(404, 'member.not-found');
     if (target.active) fail(409, 'member.erase-active');
     Object.assign(target, { email: `geloescht-${target.id}@example.invalid`, firstName: 'Gelöschtes', lastName: 'Mitglied', birthDate: null, phone: null,
-      photoConsent: false, roles: [] });
+      photoConsent: false, roles: [], membershipType: null, honorary: false, memberSince: null });
     delete this.wards.data[memberId];
     for (const wards of Object.values(this.wards.data)) wards.splice(0, wards.length, ...wards.filter((id) => id !== memberId));
     this.members.save();
     this.wards.save();
+  }
+
+  // --- membership and offices (server: MembershipHandlers) ---
+
+  setMembership(viewer: Member, memberId: string, body: Record<string, any>): Member {
+    this.requirePrivileged(viewer, ADMIN_BOARD);
+    const target = this.members.data.find((m) => m.id === memberId && m.active) ?? fail(404, 'member.not-found');
+    const membershipType = MockDirectory.membershipType(body.membershipType);
+    const honorary = body.honorary === true;
+    const memberSince = membershipType || honorary ? (typeof body.memberSince === 'string' && body.memberSince ? body.memberSince : null) : null;
+    if (memberSince && memberSince > this.clock.today()) fail(400, 'member.member-since-in-future');
+    if (!canVote({ ...target, membershipType, honorary }) && this.running().some((o) => o.memberId === memberId)) fail(409, 'member.holds-office');
+    Object.assign(target, { membershipType, honorary, memberSince });
+    this.members.save();
+    return this.visibleTo(viewer, target);
+  }
+
+  board(): { offices: (OfficeRow & { name: string })[]; warnings: string[] } {
+    const running = this.running();
+    const people = new Set(running.filter((o) => o.office !== 'AUDITOR').map((o) => o.memberId));
+    const warnings: string[] = [];
+    if (people.size < 3) warnings.push('board.too-small');
+    else if (people.size % 2 === 0) warnings.push('board.even');
+    for (const kind of ['CHAIR', 'TREASURER', 'SECRETARY']) {
+      if (!running.some((o) => o.office === kind)) warnings.push(`board.${kind.toLowerCase()}-missing`);
+    }
+    if (running.filter((o) => o.office === 'AUDITOR').length < 2) warnings.push('board.auditors-missing');
+    const offices = running
+      .map((o) => ({ ...o, name: this.displayName(o.memberId) }))
+      .sort((a, b) => OFFICES.indexOf(a.office) - OFFICES.indexOf(b.office) || a.startsOn.localeCompare(b.startsOn));
+    return { offices, warnings };
+  }
+
+  assignOffice(viewer: Member, body: Record<string, any>): OfficeRow & { name: string } {
+    this.requirePrivileged(viewer, ADMIN_BOARD);
+    const office = body.office as OfficeRow['office'];
+    if (!OFFICES.includes(office) || typeof body.startsOn !== 'string') return fail(400, 'request.invalid');
+    if (body.startsOn > this.clock.today()) fail(400, 'office.start-in-future');
+    const termEndsOn = typeof body.termEndsOn === 'string' && body.termEndsOn ? body.termEndsOn : plusYears(body.startsOn, 3);
+    if (termEndsOn <= body.startsOn || termEndsOn > plusYears(body.startsOn, 3)) fail(400, 'office.term-invalid');
+    const holder = this.members.data.find((m) => m.id === body.memberId && m.active) ?? fail(404, 'member.not-found');
+    if (!canVote(holder)) fail(409, 'office.not-eligible');
+    const running = this.running();
+    if (SINGLE_OFFICES.includes(office) && running.some((o) => o.office === office)) fail(409, 'office.taken');
+    if (office === 'AUDITOR' && running.filter((o) => o.office === 'AUDITOR').length >= 2) fail(409, 'office.taken');
+    const held = running.filter((o) => o.memberId === holder.id).map((o) => o.office);
+    if (held.includes(office)) fail(409, 'office.already-held');
+    if (held.length && (held.includes('AUDITOR') || office === 'AUDITOR')) fail(409, 'office.auditor-in-board');
+    const both = [...held, office];
+    if (held.length && !(both.length === 2 && both.includes('VICE_CHAIR') && (both.includes('TREASURER') || both.includes('SECRETARY')))) {
+      fail(409, 'office.combination');
+    }
+    const row: OfficeRow = { id: crypto.randomUUID(), memberId: holder.id, office, startsOn: body.startsOn, termEndsOn, endedOn: null, coopted: body.coopted === true };
+    this.offices.data.push(row);
+    this.offices.save();
+    this.syncBoardRole(holder);
+    return { ...row, name: this.displayName(holder.id) };
+  }
+
+  endOffice(viewer: Member, officeId: string): OfficeRow & { name: string } {
+    this.requirePrivileged(viewer, ADMIN_BOARD);
+    const row = this.offices.data.find((o) => o.id === officeId) ?? fail(404, 'office.not-found');
+    if (row.endedOn) fail(409, 'office.already-ended');
+    row.endedOn = this.clock.today();
+    this.offices.save();
+    const holder = this.members.data.find((m) => m.id === row.memberId);
+    if (holder) this.syncBoardRole(holder);
+    return { ...row, name: this.displayName(row.memberId) };
+  }
+
+  private running(): OfficeRow[] {
+    return this.offices.data.filter((o) => !o.endedOn);
+  }
+
+  /** A running board office is the only way to BOARD; a change closes the live sessions like on the server. */
+  private syncBoardRole(member: Member): void {
+    const board = member.active && this.running().some((o) => o.memberId === member.id && o.office !== 'AUDITOR');
+    if (board === member.roles.includes('BOARD')) return;
+    member.roles = board ? [...member.roles, 'BOARD'] : member.roles.filter((r) => r !== 'BOARD');
+    this.members.save();
+  }
+
+  private displayName(memberId: string): string {
+    const m = this.members.data.find((x) => x.id === memberId);
+    return m ? `${m.firstName} ${m.lastName}` : '–';
+  }
+
+  private static membershipType(value: unknown): MembershipType | null {
+    if (value == null) return null;
+    return value === 'ORDINARY' || value === 'EXTRAORDINARY' ? value : fail(400, 'request.invalid');
   }
 
   /** server: MemberHandlers.listGuardians (admin/board) */

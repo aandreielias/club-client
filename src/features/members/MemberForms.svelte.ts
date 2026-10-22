@@ -1,6 +1,6 @@
 import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
-import type { Member, Role } from '../../lib/types';
+import type { Member, MembershipType, Role } from '../../lib/types';
 import type { Invitation, ProfilePatch } from './MembersApi';
 
 export type MemberField = 'email' | 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'roles';
@@ -45,6 +45,7 @@ export class InviteForm extends MemberFormBase {
   photoConsent = $state(false);
   guardianId = $state('');
   roles = $state<Role[]>(['PLAYER']);
+  membershipType = $state<MembershipType | 'NONE'>('ORDINARY');
 
   toInvitation(): Invitation {
     return {
@@ -56,6 +57,7 @@ export class InviteForm extends MemberFormBase {
       photoConsent: this.photoConsent,
       guardianId: this.guardianId || null,
       roles: [...this.roles],
+      membershipType: this.membershipType === 'NONE' ? null : this.membershipType,
     };
   }
 

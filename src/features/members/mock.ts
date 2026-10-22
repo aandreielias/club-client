@@ -16,7 +16,14 @@ mockServer
   .on('DELETE', '/api/v1/members/:id/guardians/:guardianId', (req) => directory.unlinkGuardian(directory.actor(req), req.params.id, req.params.guardianId))
   .on('POST', '/api/v1/members/:id/reactivate', (req) => directory.reactivate(directory.actor(req), req.params.id))
   .on('POST', '/api/v1/members/:id/erase', (req) => directory.erase(directory.actor(req), req.params.id))
-  .on('POST', '/api/v1/members/:id/security/reset', (req) => directory.resetSecurity(directory.actor(req), req.params.id));
+  .on('POST', '/api/v1/members/:id/security/reset', (req) => directory.resetSecurity(directory.actor(req), req.params.id))
+  .on('PUT', '/api/v1/members/:id/membership', (req) => directory.setMembership(directory.actor(req), req.params.id, req.body ?? {}))
+  .on('GET', '/api/v1/board/offices', (req) => {
+    directory.actor(req);
+    return directory.board();
+  })
+  .on('POST', '/api/v1/board/offices', (req) => directory.assignOffice(directory.actor(req), req.body ?? {}))
+  .on('POST', '/api/v1/board/offices/:id/end', (req) => directory.endOffice(directory.actor(req), req.params.id));
 
 /** server: ChangeRequestHandlers. Requests become tasks (tasks mock) and decisions notifications (notifications mock). */
 export class MockChangeRequests {

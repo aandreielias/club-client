@@ -16,7 +16,7 @@ describe('TaskPolicy', () => {
     const api = new ApiClient({ send: vi.fn(), upload: vi.fn(), url: (p) => p }, async () => false);
     const session = new SessionStore(api);
     session.me = {
-      member: { id: 'parent', email: 'p@x.at', firstName: 'P', lastName: 'P', birthDate: null, phone: null, photoConsent: true, active: true, roles: ['PARENT'] },
+      member: { id: 'parent', email: 'p@x.at', firstName: 'P', lastName: 'P', birthDate: null, phone: null, photoConsent: true, active: true, membershipType: null, honorary: false, memberSince: null, roles: ['PARENT'] },
       teams: [],
       missing: [],
       wardIds: ['kid'],

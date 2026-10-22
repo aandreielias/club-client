@@ -11,6 +11,8 @@
   import Field from '../../ui/Field.svelte';
   import { InviteForm } from './MemberForms.svelte';
   import RoleChecklist from './RoleChecklist.svelte';
+  import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
+  import { MEMBERSHIP_CHOICES } from './roles';
   import Select from '../../ui/Select.svelte';
   import { memberPolicy as policy, membersApi } from './services';
 
@@ -60,6 +62,11 @@
       <Select bind:value={form.guardianId} placeholder="Keine" options={guardianOptions} />
     </Field>
     <label class="check"><input type="checkbox" bind:checked={form.photoConsent} /> Einverständnis für Fotos liegt vor</label>
+    <fieldset class="stack">
+      <legend>Mitgliedschaft</legend>
+      <ChoiceGroup name="invite-membership" label="Mitgliedschaft" options={MEMBERSHIP_CHOICES} bind:value={form.membershipType} />
+      <p class="muted small">Mitglied ab heute. Eltern ohne eigene Mitgliedschaft: „Kein Mitglied“.</p>
+    </fieldset>
     <RoleChecklist bind:value={form.roles} allowed={policy.grantableRoles()} legend="Rollen" />
     <ErrorNote error={create.save.error} />
     <div class="row">

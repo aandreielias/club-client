@@ -19,7 +19,7 @@ import { tournamentsFeature } from './tournaments/feature';
 const navLayout = new NavLayout(
   [
     { id: 'events', label: 'Events', icon: 'eventGroup', paths: ['/events', '/tournaments'] },
-    { id: 'verein', label: 'Verein', icon: 'club', paths: ['/teams', '/members', '/locations'] },
+    { id: 'verein', label: 'Verein', icon: 'club', paths: ['/teams', '/members', '/board', '/locations'] },
     { id: 'ablage', label: 'Ablage', icon: 'archive', paths: ['/files', '/inventory'] },
   ],
   ['/', '/notifications', '/tasks', '/calendar', 'group:events', 'group:verein', 'group:ablage', '/activity'],
