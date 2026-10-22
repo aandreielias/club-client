@@ -38,12 +38,18 @@ export interface DevAccount {
 const fail = MockServer.fail;
 
 function seedMember(id: string, firstName: string, lastName: string, roles: Role[], birthDate: string | null,
-  membershipType: MembershipType | null = null): Member {
+  membershipType: MembershipType | null = null, honorary = false): Member {
   return {
     id, email: `${id}@example.at`, firstName, lastName, birthDate, phone: null, photoConsent: true, active: true, roles,
-    membershipType, honorary: false, memberSince: membershipType ? '2024-09-01' : null,
+    membershipType, honorary, memberSince: membershipType || honorary ? '2024-09-01' : null,
   };
 }
+
+const seedOffice = (id: string, memberId: string, office: OfficeRow['office']): OfficeRow =>
+  ({ id, memberId, office, startsOn: '2024-09-01', termEndsOn: '2027-09-01', endedOn: null, coopted: false });
+
+/** Bump when the seed changes in a way stored mock data should pick up (see MockDirectory.upgradeSeed). */
+const SEED_VERSION = 2;
 
 /** server: members_office; mirrors BoardRules (one per function, two auditors outside the board, deputy combines). */
 interface OfficeRow {
@@ -93,9 +99,24 @@ export class MockDirectory {
       // Minor without photo consent: photos tagged with him are hidden from everyone but managers.
       { ...seedMember('spieler', 'David', 'Spieler', ['PLAYER'], '2010-01-20', 'ORDINARY'), photoConsent: false },
       seedMember('spielerin', 'Lena', 'Spielerin', ['PLAYER'], '1998-08-08', 'ORDINARY'),
-      // Parent of a player, no club member herself.
-      seedMember('eltern', 'Eva', 'Eltern', ['PARENT'], '1980-09-14'),
+      // Parent of a player who helps run the club: extraordinary member.
+      seedMember('eltern', 'Eva', 'Eltern', ['PARENT'], '1980-09-14', 'EXTRAORDINARY'),
       seedMember('neu', 'Felix', 'Neu', ['PLAYER'], null, 'ORDINARY'),
+      // The rest of the board (five people with Bernd) and the second auditor.
+      seedMember('kassier', 'Karin', 'Kassier', ['PLAYER', 'BOARD'], '1988-04-21', 'EXTRAORDINARY'),
+      seedMember('schrift', 'Simon', 'Schrift', ['VOLUNTEER', 'BOARD'], '1990-02-11', 'EXTRAORDINARY'),
+      seedMember('beisitz', 'Maria', 'Beisitz', ['VOLUNTEER', 'BOARD'], '1975-07-03', 'EXTRAORDINARY'),
+      seedMember('beisitz2', 'Oskar', 'Ott', ['PLAYER', 'BOARD'], '1995-12-24', 'EXTRAORDINARY'),
+      seedMember('pruefer', 'Peter', 'Prüfer', ['VOLUNTEER'], '1969-05-30', 'EXTRAORDINARY'),
+      // Honorary member only (votes, §8 Abs 1).
+      seedMember('ehren', 'Hans', 'Ehren', ['VOLUNTEER'], '1950-01-15', null, true),
+      seedMember('helfer', 'Julia', 'Helfer', ['VOLUNTEER'], '1993-09-09', 'EXTRAORDINARY'),
+      seedMember('helfer2', 'Tobias', 'Tausend', ['VOLUNTEER', 'PARENT'], '1982-03-03', 'EXTRAORDINARY'),
+      // Ordinary members: take part, do not vote.
+      seedMember('mia', 'Mia', 'Muster', ['PLAYER'], '2001-06-06', 'ORDINARY'),
+      seedMember('noah', 'Noah', 'Netz', ['PLAYER'], '1999-10-10', 'ORDINARY'),
+      seedMember('sara', 'Sara', 'Satz', ['PLAYER'], '2009-04-04', 'ORDINARY'),
+      seedMember('leon', 'Leon', 'Lob', ['PLAYER'], '2000-11-11', 'ORDINARY'),
       // Temporary accounts of visiting teams: each sees only its tournament.
       seedMember('gast', 'Gerd', 'Gast', ['GUEST'], null), // Herbstcup (group phase running)
       seedMember('gast-sommer', 'Sven', 'Sommer', ['GUEST'], null), // Sommerturnier (finished)
@@ -105,6 +126,33 @@ export class MockDirectory {
 
   constructor() {
     this.addMissingMembers();
+    this.upgradeSeed();
+  }
+
+  /** Version 1 = mock data stored before the seed was versioned; a fresh seed runs the (harmless) upgrade once too. */
+  readonly #seed = new MockTable<{ version: number }>('seed-version', () => ({ version: 1 }));
+
+  /**
+   * Browsers that stored mock data from an older seed get the membership of the seeded people, the seeded offices and
+   * team places, and the BOARD role that comes with an office; their own changes otherwise stay.
+   */
+  private upgradeSeed(): void {
+    if (this.#seed.data.version >= SEED_VERSION) return;
+    for (const seeded of MockDirectory.seedMembers()) {
+      const stored = this.members.data.find((m) => m.id === seeded.id);
+      if (stored && stored.roles.length) Object.assign(stored, { membershipType: seeded.membershipType, honorary: seeded.honorary, memberSince: seeded.memberSince });
+    }
+    for (const office of MockDirectory.seedOffices()) {
+      const taken = SINGLE_OFFICES.includes(office.office) && this.running().some((o) => o.office === office.office);
+      if (!this.offices.data.some((o) => o.id === office.id) && !this.officesOf(office.memberId).includes(office.office) && !taken) this.offices.data.push(office);
+    }
+    for (const [memberId, teams] of Object.entries(MockDirectory.seedMemberships())) this.memberships.data[memberId] ??= teams;
+    for (const member of this.members.data) this.syncBoardRole(member);
+    this.members.save();
+    this.offices.save();
+    this.memberships.save();
+    this.#seed.data.version = SEED_VERSION;
+    this.#seed.save();
   }
 
   /** Members added to the seed later reach browsers that already stored the mock data. */
@@ -116,18 +164,37 @@ export class MockDirectory {
   }
 
   /** memberId → teamId → role in that team */
-  readonly memberships = new MockTable<Record<string, Record<string, TeamRole>>>('memberships', () => ({
-    trainer: { 't-damen': 'COACH', 't-u16': 'COACH' },
-    spieler: { 't-u16': 'PLAYER' },
-    spielerin: { 't-damen': 'PLAYER' },
-    neu: { 't-damen': 'PLAYER' },
-  }));
+  readonly memberships = new MockTable<Record<string, Record<string, TeamRole>>>('memberships', () => MockDirectory.seedMemberships());
 
-  /** Bernd chairs, Anna checks the books; the rest of the board is still missing (warnings on the board page). */
-  readonly offices = new MockTable<OfficeRow[]>('offices', () => [
-    { id: 'o-chair', memberId: 'vorstand', office: 'CHAIR', startsOn: '2024-09-01', termEndsOn: '2027-09-01', endedOn: null, coopted: false },
-    { id: 'o-auditor', memberId: 'admin', office: 'AUDITOR', startsOn: '2024-09-01', termEndsOn: '2027-09-01', endedOn: null, coopted: false },
-  ]);
+  private static seedMemberships(): Record<string, Record<string, TeamRole>> {
+    return {
+      trainer: { 't-damen': 'COACH', 't-u16': 'COACH' },
+      spieler: { 't-u16': 'PLAYER' },
+      spielerin: { 't-damen': 'PLAYER' },
+      neu: { 't-damen': 'PLAYER' },
+      kassier: { 't-damen': 'PLAYER' },
+      mia: { 't-damen': 'PLAYER' },
+      noah: { 't-damen': 'PLAYER' },
+      leon: { 't-damen': 'PLAYER' },
+      sara: { 't-u16': 'PLAYER' },
+    };
+  }
+
+  /** A complete board of five (odd, §9 Abs 1): Karin is deputy and treasurer (§9 Abs 4); Anna and Peter check the books. */
+  readonly offices = new MockTable<OfficeRow[]>('offices', () => MockDirectory.seedOffices());
+
+  private static seedOffices(): OfficeRow[] {
+    return [
+      seedOffice('o-chair', 'vorstand', 'CHAIR'),
+      seedOffice('o-vice', 'kassier', 'VICE_CHAIR'),
+      seedOffice('o-treasurer', 'kassier', 'TREASURER'),
+      seedOffice('o-secretary', 'schrift', 'SECRETARY'),
+      seedOffice('o-member', 'beisitz', 'BOARD_MEMBER'),
+      seedOffice('o-member2', 'beisitz2', 'BOARD_MEMBER'),
+      seedOffice('o-auditor', 'admin', 'AUDITOR'),
+      seedOffice('o-auditor2', 'pruefer', 'AUDITOR'),
+    ];
+  }
 
   /** guardianId → minor ids */
   readonly wards = new MockTable<Record<string, string[]>>('wards', () => ({ eltern: ['spieler'] }));

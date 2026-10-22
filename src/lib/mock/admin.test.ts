@@ -36,11 +36,12 @@ describe('mock members admin', () => {
       .toThrow(expect.objectContaining({ code: 'office.not-eligible' }));
     expect(() => directory.assignOffice(member('vorstand'), { memberId: 'trainer', office: 'CHAIR', startsOn: today }))
       .toThrow(expect.objectContaining({ code: 'office.taken' }));
-    expect(() => directory.assignOffice(member('vorstand'), { memberId: 'admin', office: 'SECRETARY', startsOn: today }))
+    expect(() => directory.assignOffice(member('vorstand'), { memberId: 'admin', office: 'BOARD_MEMBER', startsOn: today }))
       .toThrow(expect.objectContaining({ code: 'office.auditor-in-board' }));
-    const office = directory.assignOffice(member('vorstand'), { memberId: 'trainer', office: 'SECRETARY', startsOn: today });
+    expect(directory.board().warnings).toEqual([]); // the seeded board of five is complete
+    const office = directory.assignOffice(member('vorstand'), { memberId: 'trainer', office: 'BOARD_MEMBER', startsOn: today });
     expect(member('trainer').roles).toContain('BOARD');
-    expect(directory.board().warnings).toEqual(['board.too-small', 'board.treasurer-missing', 'board.auditors-missing']);
+    expect(directory.board().warnings).toEqual(['board.even']);
     expect(() => directory.setMembership(member('vorstand'), 'trainer', { membershipType: 'ORDINARY' }))
       .toThrow(expect.objectContaining({ code: 'member.holds-office' }));
     expect(() => directory.setRoles(member('admin'), 'trainer', ['COACH'])).toThrow(expect.objectContaining({ code: 'auth.step-up-required' }));
@@ -101,7 +102,7 @@ describe('mock teams admin', () => {
     expect(() => directory.setTeamMember(member('trainer'), 't-u16', 'spielerin', 'PLAYER')).toThrow(expect.objectContaining({ code: 'access.denied' }));
     expect(() => directory.setTeamMember(member('spielerin'), 't-u16', 'neu', 'PLAYER')).toThrow(expect.objectContaining({ code: 'team.not-found' }));
     directory.removeTeamMember(member('trainer'), 't-u16', 'spieler');
-    expect(directory.teamMembers('t-u16')).toEqual(['trainer']);
+    expect(directory.teamMembers('t-u16')).toEqual(['trainer', 'sara']);
     expect(() => directory.removeTeamMember(member('trainer'), 't-u16', 'trainer')).toThrow(expect.objectContaining({ code: 'access.denied' }));
   });
 });

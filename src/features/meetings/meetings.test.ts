@@ -65,13 +65,18 @@ describe('mock meetings', () => {
     const mv = meetings.create(member('vorstand'), body(20));
     expect(() => meetings.setPresence(member('vorstand'), mv.id, 'admin', 'APP')).toThrow(expect.objectContaining({ code: 'meeting.not-invited' }));
     meetings.invite(member('vorstand'), mv.id);
-    // extraordinary members vote: Anna, Bernd, Clara
-    expect(meetings.get(member('vorstand'), mv.id).electorate.map((p) => p.memberId).sort()).toEqual(['admin', 'trainer', 'vorstand']);
+    // extraordinary and honorary members vote; ordinary ones do not
+    const electorate = meetings.get(member('vorstand'), mv.id).electorate.map((p) => p.memberId);
+    expect(electorate).toHaveLength(12);
+    expect(electorate).toContain('ehren');
+    expect(electorate).not.toContain('spielerin');
     expect(() => meetings.setPresence(member('vorstand'), mv.id, 'spielerin', 'APP')).toThrow(expect.objectContaining({ code: 'meeting.not-voter' }));
-    expect(meetings.setPresence(member('vorstand'), mv.id, 'vorstand', 'APP').quorate).toBe(false);
-    expect(meetings.setPresence(member('vorstand'), mv.id, 'trainer', 'ANALOG').quorate).toBe(true);
+    for (const id of ['vorstand', 'kassier', 'schrift', 'beisitz', 'beisitz2']) {
+      expect(meetings.setPresence(member('vorstand'), mv.id, id, 'APP').quorate).toBe(false);
+    }
+    expect(meetings.setPresence(member('vorstand'), mv.id, 'trainer', 'ANALOG').quorate).toBe(true); // 6 of 12
 
-    expect(() => meetings.get(member('eltern'), mv.id)).toThrow(expect.objectContaining({ code: 'meeting.not-found' }));
+    expect(() => meetings.get(member('gast'), mv.id)).toThrow(expect.objectContaining({ code: 'meeting.not-found' }));
     expect(meetings.get(member('spielerin'), mv.id).canManage).toBe(false);
     expect(meetings.list(member('spielerin'), null, null).items.some((m) => m.kind === 'SIMPLE_BOARD')).toBe(false);
   });
@@ -82,7 +87,7 @@ describe('mock resolutions', () => {
     directory.stepUp(member('vorstand'), MockDirectory.PIN);
     const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(15), endsAt: inDays(15.1) });
     meetings.invite(member('vorstand'), mv.id);
-    meetings.setPresence(member('vorstand'), mv.id, 'vorstand', 'APP');
+    for (const id of ['vorstand', 'kassier', 'schrift', 'beisitz', 'beisitz2']) meetings.setPresence(member('vorstand'), mv.id, id, 'APP');
     meetings.setPresence(member('vorstand'), mv.id, 'trainer', 'ANALOG');
     const draft = meetings.createResolution(member('vorstand'), mv.id, { title: 'Statutenänderung', majority: 'TWO_THIRDS' });
     expect(() => meetings.openResolution(member('vorstand'), draft.id)).toThrow(expect.objectContaining({ code: 'meeting.not-open' }));
@@ -107,9 +112,12 @@ describe('mock resolutions', () => {
     expect(() => meetings.openResolution(member('vorstand'), soon.id)).toThrow(expect.objectContaining({ code: 'resolution.deadline-too-short' }));
     const r = meetings.createResolution(member('vorstand'), null, { title: 'Bälle', deadline: inDays(4) });
     const opened = meetings.openResolution(member('vorstand'), r.id);
-    expect(opened.voters).toBe(1); // the seeded board: Bernd
-    expect(opened.pending.map((p) => p.memberId)).toEqual(['vorstand']);
+    expect(opened.voters).toBe(5); // the seeded board
+    expect(opened.pending).toHaveLength(5);
     expect(() => meetings.getResolution(member('spielerin'), r.id)).toThrow(expect.objectContaining({ code: 'resolution.not-found' }));
-    expect(meetings.recordVote(member('vorstand'), r.id, 'vorstand', 'YES')).toMatchObject({ status: 'CLOSED', result: 'PASSED' });
+    meetings.vote(member('vorstand'), r.id, 'YES');
+    for (const id of ['kassier', 'schrift', 'beisitz']) meetings.recordVote(member('vorstand'), r.id, id, 'NO');
+    // the last board member's vote closes it: 2 yes, 3 no
+    expect(meetings.recordVote(member('vorstand'), r.id, 'beisitz2', 'YES')).toMatchObject({ status: 'CLOSED', result: 'FAILED', yes: 2 });
   });
 });

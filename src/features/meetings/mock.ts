@@ -28,23 +28,66 @@ const text = (value: unknown, max: number, code: string): string | null => {
 
 export class MockMeetings {
   readonly meetings = new MockTable<StoredMeeting[]>('meetings', () => MockMeetings.seed());
-  readonly resolutions = new MockTable<StoredResolution[]>('resolutions', () => []);
+  readonly resolutions = new MockTable<StoredResolution[]>('resolutions', () => MockMeetings.seedResolutions());
 
-  constructor(private readonly people: MockDirectory) {}
+  constructor(private readonly people: MockDirectory) {
+    this.addMissingSeeds();
+  }
 
-  /** A general meeting still to invite, and a simple board meeting already invited. */
+  /** Seeded meetings and votes added later reach browsers that already stored mock data. */
+  private addMissingSeeds(): void {
+    const meetings = MockMeetings.seed().filter((m) => !this.meetings.data.some((x) => x.id === m.id));
+    const resolutions = MockMeetings.seedResolutions().filter((r) => !this.resolutions.data.some((x) => x.id === r.id));
+    if (!meetings.length && !resolutions.length) return;
+    this.meetings.data.push(...meetings);
+    this.resolutions.data.push(...resolutions);
+    this.meetings.save();
+    this.resolutions.save();
+  }
+
+  /**
+   * To try everything: a general meeting running now (quorate, two members without the app, one vote open), one to invite, an
+   * invited board meeting, a closed board meeting with its protocol.
+   */
   private static seed(): StoredMeeting[] {
     const at = (days: number, hour: number) => {
       const d = new Date(Date.now() + days * DAY);
       d.setUTCHours(hour, 0, 0, 0);
       return d.toISOString();
     };
+    const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
     const base = { urgency: null, videoUrl: null, openedAt: null, closedAt: null, protocol: null, presence: {} };
     return [
+      { ...base, id: 'mt-live', kind: 'EXTRA_ASSEMBLY', title: 'Außerordentliche Mitgliederversammlung',
+        agenda: '1. Begrüßung und Beschlussfähigkeit\n2. Mitgliedsbeitrag 2027\n3. Statutenänderung § 4 Abs. 3\n4. Allfälliges',
+        startsAt: ago(15), endsAt: ago(-105), location: 'Vereinsheim', videoUrl: 'https://meet.example.at/mv', status: 'OPEN',
+        invitedAt: ago(20 * 24 * 60), openedAt: ago(10), protocol: '1. Begrüßung durch den Vorsitz, 8 von 12 Stimmberechtigten anwesend.',
+        presence: { vorstand: 'APP', kassier: 'APP', schrift: 'APP', beisitz: 'APP', beisitz2: 'APP', admin: 'APP', eltern: 'ANALOG', ehren: 'ANALOG' } },
+      { ...base, id: 'mt-past', kind: 'BOARD', title: 'Ordentliche Vorstandssitzung', agenda: '1. Jahresvoranschlag\n2. Hallenmiete Wintersaison',
+        startsAt: at(-40, 17), endsAt: at(-40, 19), location: 'Vereinsheim', status: 'CLOSED', invitedAt: at(-60, 9), openedAt: at(-40, 17),
+        closedAt: at(-40, 19), protocol: '1. Jahresvoranschlag besprochen und angenommen.\n2. Hallenmiete: siehe Beschluss.',
+        presence: { vorstand: 'APP', kassier: 'APP', schrift: 'APP', beisitz: 'APP', beisitz2: 'ANALOG' } },
       { ...base, id: 'mt-mv', kind: 'ASSEMBLY', title: 'Ordentliche Mitgliederversammlung', agenda: '1. Begrüßung\n2. Bericht des Vorstands\n3. Rechnungsabschluss\n4. Mitgliedsbeiträge',
         startsAt: at(30, 17), endsAt: at(30, 19), location: 'Vereinsheim', status: 'DRAFT', invitedAt: null },
       { ...base, id: 'mt-vs', kind: 'SIMPLE_BOARD', title: 'Vorstandssitzung', agenda: '1. Hallenzeiten\n2. Aufnahmeanträge',
         startsAt: at(10, 18), endsAt: at(10, 19), location: null, videoUrl: 'https://meet.example.at/vorstand', status: 'INVITED', invitedAt: new Date().toISOString() },
+    ];
+  }
+
+  private static seedResolutions(): StoredResolution[] {
+    const now = Date.now();
+    const iso = (ms: number) => new Date(ms).toISOString();
+    const base = { text: null, deadline: null, analogYes: null, analogNo: null, analogAbstain: null, result: null, openedAt: null, closedAt: null };
+    return [
+      { ...base, id: 'rs-beitrag', meetingId: 'mt-live', title: 'Mitgliedsbeitrag 2027: 60 €', text: 'Der Vorstand schlägt 60 € pro Jahr vor (bisher 50 €).',
+        majority: 'SIMPLE', status: 'OPEN', voters: 12, openedAt: iso(now - 5 * 60_000), yes: 1, no: 1, abstain: 0, ballots: ['kassier', 'schrift'] },
+      { ...base, id: 'rs-statuten', meetingId: 'mt-live', title: 'Statutenänderung § 4 Abs. 3', text: 'Ordentliche Mitglieder dürfen auch passiv teilnehmen.',
+        majority: 'TWO_THIRDS', status: 'DRAFT', voters: null, yes: 0, no: 0, abstain: 0, ballots: [] },
+      { ...base, id: 'rs-halle', meetingId: 'mt-past', title: 'Hallenmiete Wintersaison: 1.800 €', majority: 'SIMPLE', status: 'CLOSED', voters: 5,
+        openedAt: iso(now - 40 * DAY), closedAt: iso(now - 40 * DAY + 600_000), result: 'PASSED', analogYes: 1, analogNo: 0, analogAbstain: 0,
+        yes: 3, no: 0, abstain: 1, ballots: ['vorstand', 'kassier', 'schrift', 'beisitz'] },
+      { ...base, id: 'rs-baelle', meetingId: null, title: 'Zehn neue Bälle um 400 €', text: 'Die alten Bälle sind abgenutzt; Angebot im Ordner Vorstand.',
+        majority: 'SIMPLE', status: 'OPEN', voters: 5, deadline: iso(now + 4 * DAY), openedAt: iso(now - DAY), yes: 1, no: 0, abstain: 0, ballots: ['kassier'] },
     ];
   }
 

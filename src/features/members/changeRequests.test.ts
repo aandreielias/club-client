@@ -20,7 +20,7 @@ describe('mock change requests', () => {
 
     const task = taskFor(request.id);
     expect(task).toMatchObject({ title: 'Kontoänderung: Lena Spielerin – E-Mail', source: { kind: 'CHANGE_REQUEST', id: request.id }, status: 'OPEN' });
-    expect(task.assignees.sort()).toEqual(['admin', 'vorstand']);
+    expect(task.assignees.sort()).toEqual(['admin', 'beisitz', 'beisitz2', 'kassier', 'schrift', 'vorstand']); // admin and the board
     expect(() => tasks.get(member('spielerin'), task.id)).toThrow(expect.objectContaining({ status: 404 }));
 
     expect(() => changeRequests.decide(member('trainer'), request.id, true)).toThrow();
