@@ -143,8 +143,9 @@ describe('invitation document', () => {
     const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV Test', startsAt: inDays(30), endsAt: inDays(30.1) });
     const first = await meetings.generateInvitation(member('vorstand'), mv.id);
     expect(first.links[0]).toMatchObject({ kind: 'FILE', title: expect.stringMatching(/^Einladung .* MV Test\.docx$/) });
-    const folder = files.listFolders(member('spielerin')).find((f) => f.id === first.links[0].parentId)!;
-    expect(files.listFolders(member('spielerin')).find((f) => f.id === folder.parentId)).toMatchObject({ name: 'Mitgliederversammlungen', scope: 'CLUB' });
+    const folder = files.listFolders(member('helfer')).find((f) => f.id === first.links[0].parentId)!;
+    expect(files.listFolders(member('helfer')).find((f) => f.id === folder.parentId)).toMatchObject({ name: 'Mitgliederversammlungen', scope: 'ASSEMBLY' });
+    expect(files.listFolders(member('spielerin')).some((f) => f.name === 'Mitgliederversammlungen')).toBe(false);
 
     const templates = files.listFolders(member('vorstand')).find((f) => f.name === 'Vorlagen')!;
     expect(templates.scope).toBe('BOARD');

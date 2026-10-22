@@ -8,7 +8,7 @@ import { linkRefs, type FileLink } from '../../lib/mock/MockLinks';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import type { FileRef } from '../../lib/links/model';
-import type { Member } from '../../lib/types';
+import { canVote, type Member } from '../../lib/types';
 import type { DownloadLink, FileVersion, Folder, FolderKind, FolderScope, StoredFile } from './model';
 
 type StoredFolder = Omit<Folder, 'canUpload' | 'canManage'>;
@@ -27,12 +27,14 @@ const OFFICE: Readonly<Record<string, string>> = {
 /** server: FileHandlers.Viewer */
 class Viewer {
   readonly board: boolean;
+  readonly voter: boolean;
   readonly teamIds: Set<string>;
   readonly coachTeamIds: Set<string>;
 
   constructor(readonly member: Member, people: MockDirectory) {
     const own = people.teamRoles(member.id);
     this.board = people.isManager(member);
+    this.voter = canVote(member);
     this.teamIds = new Set(Object.keys(own));
     this.coachTeamIds = new Set(Object.keys(own).filter((t) => own[t] === 'COACH'));
   }
@@ -40,6 +42,7 @@ class Viewer {
   canSee(f: StoredFolder): boolean {
     if (f.scope === 'CLUB') return true;
     if (f.scope === 'TEAM') return this.board || f.teamIds.some((t) => this.teamIds.has(t));
+    if (f.scope === 'ASSEMBLY') return this.board || this.voter;
     return this.board;
   }
 
@@ -107,7 +110,7 @@ export class MockFiles {
       folder = { id: crypto.randomUUID(), parentId: parent.id, name, kind: body.kind, scope: parent.scope, teamIds: [...parent.teamIds], membersCanUpload: !!body.membersCanUpload, color: null, coverFileId: null };
     } else {
       const scope = body.scope as FolderScope;
-      if (!['CLUB', 'TEAM', 'BOARD'].includes(scope)) fail(400, 'folder.kind-or-scope-missing');
+      if (!['CLUB', 'TEAM', 'BOARD', 'ASSEMBLY'].includes(scope)) fail(400, 'folder.kind-or-scope-missing');
       const teamIds: string[] = Array.isArray(body.teamIds) ? [...new Set(body.teamIds.map(String))] : [];
       if ((scope === 'TEAM') !== teamIds.length > 0) fail(400, 'folder.team-scope-mismatch');
       folder = { id: crypto.randomUUID(), parentId: null, name, kind: body.kind, scope, teamIds, membersCanUpload: !!body.membersCanUpload, color: null, coverFileId: null };
@@ -460,7 +463,10 @@ export class MockFiles {
   /** server: FileHandlers.audience */
   private changed(folder: StoredFolder, fileId: string | null, change: 'UPLOADED' | 'DELETED' | 'TAGGED' | 'UPDATED' | 'FOLDER_UPDATED'): void {
     const audience: MockAudience =
-      folder.scope === 'CLUB' ? { everyone: true } : folder.scope === 'BOARD' ? { roles: ['ADMIN', 'BOARD'] } : this.teamsAudience(folder.teamIds);
+      folder.scope === 'CLUB' ? { everyone: true }
+        : folder.scope === 'BOARD' ? { roles: ['ADMIN', 'BOARD'] }
+        : folder.scope === 'ASSEMBLY' ? { members: this.people.electorate('ASSEMBLY'), roles: ['ADMIN', 'BOARD'] }
+        : this.teamsAudience(folder.teamIds);
     mockServer.events.publish({ type: 'files.files-changed', data: { folderId: folder.id, fileId, change }, audience });
   }
 

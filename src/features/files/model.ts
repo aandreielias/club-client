@@ -6,7 +6,7 @@ import type { Hue } from '../../lib/types';
 export type FolderKind = 'DOCUMENTS' | 'PHOTOS';
 
 /** CLUB: all members. TEAM: the team, guardians of its members, admin and board. BOARD: admin and board. */
-export type FolderScope = 'CLUB' | 'TEAM' | 'BOARD';
+export type FolderScope = 'CLUB' | 'TEAM' | 'BOARD' | 'ASSEMBLY';
 
 /** Folder colours: the hues of the tags. */
 export type FolderColor = 'GRAY' | 'BROWN' | 'ORANGE' | 'YELLOW' | 'GREEN' | 'BLUE' | 'PURPLE' | 'RED';
@@ -108,6 +108,7 @@ export const FOLDER_SCOPES: readonly { value: FolderScope; label: string; hint: 
   { value: 'CLUB', label: 'Ganzer Verein', hint: 'Alle Mitglieder sehen den Ordner.' },
   { value: 'TEAM', label: 'Team', hint: 'Das Team, Erziehungsberechtigte der Mitglieder, Vorstand und Admins.' },
   { value: 'BOARD', label: 'Vorstand', hint: 'Nur Vorstand und Admins.' },
+  { value: 'ASSEMBLY', label: 'Stimmberechtigte', hint: 'Außerordentliche und Ehrenmitglieder, Vorstand und Admins (wie die Mitgliederversammlung).' },
 ];
 
 export const scopeLabel = (scope: FolderScope): string => FOLDER_SCOPES.find((s) => s.value === scope)?.label ?? scope;

@@ -366,7 +366,7 @@ export class MockMeetings {
     const meeting = this.managed(viewer, id);
     const { default: JSZip } = await import('jszip');
     const request = (params: Record<string, string>, form: FormData) => ({ params, query: new URLSearchParams(), body: form, email: viewer.email });
-    const top = (name: string, scope: 'CLUB' | 'BOARD') => files.listFolders(viewer).find((f) => !f.parentId && f.name === name && f.scope === scope)
+    const top = (name: string, scope: 'ASSEMBLY' | 'BOARD') => files.listFolders(viewer).find((f) => !f.parentId && f.name === name && f.scope === scope)
       ?? files.createFolder(viewer, { name, kind: 'DOCUMENTS', scope, teamIds: [] });
 
     const templates = top('Vorlagen', 'BOARD');
@@ -406,7 +406,7 @@ export class MockMeetings {
       ({ fileId, folderId } = stored);
     } else {
       const assembly = isAssembly(meeting.kind);
-      const parent = top(assembly ? 'Mitgliederversammlungen' : 'Vorstandssitzungen', assembly ? 'CLUB' : 'BOARD');
+      const parent = top(assembly ? 'Mitgliederversammlungen' : 'Vorstandssitzungen', assembly ? 'ASSEMBLY' : 'BOARD');
       folderId = stored && files.listFolders(viewer).some((f) => f.id === stored.folderId) ? stored.folderId
         : files.createFolder(viewer, { parentId: parent.id, name: `${day} ${meeting.title}`.slice(0, 100), kind: 'DOCUMENTS' }).id;
       const form = new FormData();
