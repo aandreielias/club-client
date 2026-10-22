@@ -3,6 +3,7 @@ import { directory, type MockDirectory } from '../../lib/mock/core';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import { resolveRef } from '../../lib/mock/recordRefs';
+import { files } from '../files/mock';
 import type { RefKind } from '../../lib/records/refs';
 import { ADMIN_BOARD, type Member } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
@@ -31,6 +32,8 @@ const text = (value: unknown, max: number, code: string): string | null => {
 export class MockMeetings {
   readonly meetings = new MockTable<StoredMeeting[]>('meetings', () => MockMeetings.seed());
   readonly resolutions = new MockTable<StoredResolution[]>('resolutions', () => MockMeetings.seedResolutions());
+  /** meetingId → its folder and generated invitation (server: meetings_document). */
+  readonly documents = new MockTable<Record<string, { folderId: string; fileId: string }>>('meeting-documents', () => ({}));
 
   constructor(private readonly people: MockDirectory) {
     this.addMissingSeeds();
@@ -201,6 +204,55 @@ export class MockMeetings {
           return m && this.maySee(viewer, m) ? m.title : null;
         });
     });
+    this.changed(meeting, 'UPDATED');
+    return this.dto(viewer, meeting);
+  }
+
+  /** server: MeetingHandlers.generateInvitation + InvitationDocuments — a real (simple) Word file through the files mock. */
+  async generateInvitation(viewer: Member, id: string): Promise<Meeting> {
+    const meeting = this.managed(viewer, id);
+    const { default: JSZip } = await import('jszip');
+    const zip = new JSZip();
+    const p = (text: string, bold = false) =>
+      `<w:p><w:r>${bold ? '<w:rPr><w:b/></w:rPr>' : ''}<w:t xml:space="preserve">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</w:t></w:r></w:p>`;
+    const body = [p(this.people.club.name, true), p(`Einladung: ${meeting.title}`, true), p(`Wann: ${new Date(meeting.startsAt).toLocaleString('de-AT')}`),
+      ...(meeting.location ? [p(`Wo: ${meeting.location}`)] : []), p('Tagesordnung', true), ...(meeting.agenda ?? '').split('\n').filter(Boolean).map((l) => p(l))];
+    zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+      + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
+      + '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+    zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+      + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+    zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body.join('')}</w:body></w:document>`);
+    const content = await zip.generateAsync({ type: 'blob' });
+
+    const request = (params: Record<string, string>, form: FormData) => ({ params, query: new URLSearchParams(), body: form, email: viewer.email });
+    const stored = this.documents.data[id];
+    const day = meeting.startsAt.slice(0, 10);
+    let fileId: string;
+    let folderId: string;
+    if (stored && files.files.data.some((f) => f.id === stored.fileId)) {
+      const form = new FormData();
+      form.append('file', new File([content], 'einladung.docx'));
+      form.append('label', new Date().toLocaleString('de-AT').slice(0, 20));
+      form.append('date', new Date().toISOString().slice(0, 10));
+      await files.uploadVersion(request({ id: stored.fileId }, form));
+      ({ fileId, folderId } = stored);
+    } else {
+      const assembly = isAssembly(meeting.kind);
+      const topName = assembly ? 'Mitgliederversammlungen' : 'Vorstandssitzungen';
+      const scope = assembly ? 'CLUB' : 'BOARD';
+      const top = files.listFolders(viewer).find((f) => !f.parentId && f.name === topName && f.scope === scope)
+        ?? files.createFolder(viewer, { name: topName, kind: 'DOCUMENTS', scope, teamIds: [] });
+      folderId = stored && files.listFolders(viewer).some((f) => f.id === stored.folderId) ? stored.folderId
+        : files.createFolder(viewer, { parentId: top.id, name: `${day} ${meeting.title}`.slice(0, 100), kind: 'DOCUMENTS' }).id;
+      const form = new FormData();
+      form.append('file', new File([content], `Einladung ${day} ${meeting.title}.docx`));
+      fileId = (await files.upload(request({ folderId }, form))).id;
+    }
+    this.documents.data[id] = { folderId, fileId };
+    this.documents.save();
+    const name = files.files.data.find((f) => f.id === fileId)!.name;
+    meeting.links = [{ kind: 'FILE' as const, id: fileId, title: name, parentId: folderId }, ...(meeting.links ?? []).filter((l) => l.id !== fileId)].slice(0, 30);
     this.changed(meeting, 'UPDATED');
     return this.dto(viewer, meeting);
   }
@@ -492,5 +544,6 @@ mockServer
   .on('POST', '/api/v1/resolutions/:id/vote', (req) => meetings.vote(actor(req), req.params.id, req.body?.choice))
   .on('POST', '/api/v1/resolutions/:id/recorded-vote', (req) => meetings.recordVote(actor(req), req.params.id, req.body?.memberId, req.body?.choice))
   .on('POST', '/api/v1/resolutions/:id/analog-votes', (req) => meetings.analogVotes(actor(req), req.params.id, req.body ?? {}))
+  .on('POST', '/api/v1/meetings/:id/invitation-document', (req) => meetings.generateInvitation(actor(req), req.params.id))
   .on('PUT', '/api/v1/meetings/:id/links', (req) => meetings.setLinks(actor(req), req.params.id, req.body?.refs))
   .on('PUT', '/api/v1/meetings/:id/presence/:memberId', (req) => meetings.setPresence(actor(req), req.params.id, req.params.memberId, req.body?.mode));

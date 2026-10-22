@@ -44,6 +44,11 @@ export class MeetingsApi {
     return this.api.post<Meeting>(`${this.path(id)}/close`, { protocol });
   }
 
+  /** The invitation with agenda as a Word document in the meeting's folder (again: a new version); it is linked first. */
+  generateInvitation(id: string): Promise<Meeting> {
+    return this.api.post<Meeting>(`${this.path(id)}/invitation-document`);
+  }
+
   /** Replaces the linked records. */
   setLinks(id: string, refs: readonly { kind: RefKind; id: string }[]): Promise<Meeting> {
     return this.api.put<Meeting>(`${this.path(id)}/links`, { refs: refs.map(({ kind, id: refId }) => ({ kind, id: refId })) });

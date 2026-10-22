@@ -30,6 +30,10 @@
     }
   }
 
+  async function invitation() {
+    if (await model.generateInvitation()) bus.publish(TOAST, { text: 'Einladung im Sitzungsordner gespeichert und verknüpft.' });
+  }
+
   function drop(record: { kind: string; id: string; title: string }) {
     if (record.kind === 'meeting' && record.id === meeting.id) return;
     if (!draft?.addRecord(record)) bus.publish(TOAST, { text: `„${record.title}“ lässt sich hier nicht verknüpfen.` });
@@ -60,7 +64,10 @@
     <p class="muted">Nichts verknüpft.</p>
   {/if}
   {#if meeting.canManage}
-    <div><Button size="sm" icon="link" onclick={() => (draft = new RefList(MAX_LINKS, meeting.links))}>Verknüpfungen bearbeiten</Button></div>
+    <div class="row">
+      <Button size="sm" icon="document" busy={model.action.busy} onclick={invitation}>Einladung als Word-Dokument</Button>
+      <Button size="sm" icon="link" onclick={() => (draft = new RefList(MAX_LINKS, meeting.links))}>Verknüpfungen bearbeiten</Button>
+    </div>
   {/if}
 {/if}
 
