@@ -1,7 +1,4 @@
-import { session } from '../../lib/container';
 import { PRIVILEGED } from '../../lib/types';
-import { tournamentsApi } from './services';
-import { TournamentCalendarSource } from './TournamentCalendarSource';
 import type { Feature } from '../Feature';
 import { TOURNAMENT_MESSAGES } from './messages';
 import TournamentCreateView from './TournamentCreateView.svelte';
@@ -20,6 +17,5 @@ export const tournamentsFeature: Feature = {
     tournament: { component: TournamentView, page: (id) => `/tournaments/${encodeURIComponent(id)}` },
     'tournament-new': { component: TournamentCreateView, roles: PRIVILEGED },
   },
-  calendar: new TournamentCalendarSource(tournamentsApi, () => session.clock),
   messages: TOURNAMENT_MESSAGES,
 };

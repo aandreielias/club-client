@@ -228,6 +228,15 @@ export class MockCalendar {
     return this.absences.data.filter((a) => mine.has(a.memberId) && a.to >= today).sort((a, b) => a.from.localeCompare(b.from));
   }
 
+  /** server: AttendanceHandlers.calendarMove — the member or a guardian moves the absence. */
+  moveAbsence(member: Member, id: string, from: string, to: string): void {
+    const absence = this.absences.data.find((a) => a.id === id);
+    if (!absence || (absence.memberId !== member.id && !this.people.wardsOf(member.id).includes(absence.memberId))) fail(404, 'absence.not-found');
+    if (to < from) fail(400, 'absence.range-invalid');
+    Object.assign(absence!, { from, to });
+    this.absences.save();
+  }
+
   deleteAbsence(member: Member, id: string): void {
     const absence = this.absences.data.find((a) => a.id === id);
     if (!absence || (absence.memberId !== member.id && !this.people.wardsOf(member.id).includes(absence.memberId))) fail(404, 'absence.not-found');

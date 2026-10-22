@@ -1,68 +1,118 @@
+import type { ApiClient } from '../http/ApiClient';
 import type { Hue } from '../types';
 import type { WindowTarget } from '../window/WindowService.svelte';
+import { CATEGORIES, categoryInfo, type CalendarCategory, type CategoryInfo } from './categories';
 
-/** One item in the calendar, independent of the feature that provides it. */
+/** One calendar item as the server sends it (server: platform.CalendarItems.CalendarItem). */
+export interface CalendarItem {
+  kind: string;
+  id: string;
+  title: string;
+  start: string;
+  end: string | null;
+  allDay: boolean;
+  category: CalendarCategory;
+  teamId: string | null;
+  inactive: boolean;
+  /** Appointment type, task status, meeting kind, deadline kind, age, absence reason (for who may see it). */
+  detail: string | null;
+  movable: boolean;
+  resizable: boolean;
+}
+
+/** One item in the calendar views. */
 export interface CalendarEntry {
-  /** Unique across sources, e.g. 'appointment:a-1'. */
+  /** Unique, e.g. 'APPOINTMENT:a-1'. */
   key: string;
-  /** Source id, used by the source filter. */
-  source: string;
+  /** Category, used by the filter. */
+  source: CalendarCategory;
   title: string;
   /** UTC instants. */
   start: string;
-  /** null = a point in time (e.g. a due date). */
+  /** null = a point in time (e.g. a due date); all-day entries end at the start of the day after their last day. */
   end: string | null;
-  /** Shown in the all-day lane of the week view (due dates) instead of on the time grid. */
   allDay: boolean;
   hue: Hue;
   teamId: string | null;
-  /** Struck through (cancelled appointments, done tasks). */
+  /** Struck through (cancelled appointments, done tasks, closed meetings). */
   inactive: boolean;
   /** Short extra text, e.g. the type or "Fällig". */
   label: string;
-  /** What opens on click. */
-  window: WindowTarget;
+  /** What opens on click: a window, or a page when the record has none (absences, offices). */
+  window: WindowTarget | null;
+  path: string | null;
+  /** What the server moves. */
+  item: { kind: string; id: string };
+  movable: boolean;
+  resizable: boolean;
 }
 
-/** A feature that puts entries into the calendar (features never import each other). */
-export interface CalendarSource {
-  id: string;
-  label: string;
-  load(from: string, to: string): Promise<CalendarEntry[]>;
-  /** Whether the member may move this entry by dragging (omitted: never). */
-  canMove?(entry: CalendarEntry): boolean;
-  /** Saves the new time; `end` keeps the duration (null for points in time). */
-  move?(entry: CalendarEntry, start: string, end: string | null): Promise<void>;
-}
+/** A feature's look of its items: hue and label from the item's detail (e.g. appointment type). */
+export type CalendarStyle = (item: CalendarItem) => Partial<Pick<CalendarEntry, 'hue' | 'label'>>;
 
-/** Registry of all calendar sources; loads and merges the enabled ones for a time range. */
+/** Kinds that open as a window; the others go to a page. */
+const PAGES: Readonly<Record<string, string>> = { absence: '/calendar/absences', office: '/board' };
+
+/**
+ * The calendar's one source: everything with a date the member sees, collected by the server from every module
+ * (GET /api/v1/calendar/items). Features only style their categories.
+ */
 export class CalendarSources {
-  readonly #sources: CalendarSource[] = [];
+  readonly #styles = new Map<CalendarCategory, CalendarStyle>();
 
-  register(source: CalendarSource): this {
-    if (this.#sources.some((s) => s.id === source.id)) throw new Error(`Calendar source "${source.id}" registered twice`);
-    this.#sources.push(source);
+  constructor(private readonly api: ApiClient) {}
+
+  style(category: CalendarCategory, style: CalendarStyle): this {
+    this.#styles.set(category, style);
     return this;
   }
 
-  get all(): readonly CalendarSource[] {
-    return this.#sources;
+  /** Filter groups. */
+  get all(): readonly CategoryInfo[] {
+    return CATEGORIES;
   }
 
   canMove(entry: CalendarEntry): boolean {
-    return this.#sources.find((s) => s.id === entry.source)?.canMove?.(entry) ?? false;
+    return entry.movable;
   }
 
+  canResize(entry: CalendarEntry): boolean {
+    return entry.resizable;
+  }
+
+  /** Saves the new time; the server checks rights and rules. */
   async move(entry: CalendarEntry, start: string, end: string | null): Promise<void> {
-    const source = this.#sources.find((s) => s.id === entry.source);
-    if (!source?.move || !this.canMove(entry)) throw new Error('Dieser Eintrag lässt sich nicht verschieben.');
-    await source.move(entry, start, end);
+    if (!entry.movable && !entry.resizable) throw new Error('Dieser Eintrag lässt sich nicht verschieben.');
+    await this.api.put(`/api/v1/calendar/items/${encodeURIComponent(entry.item.kind)}/${encodeURIComponent(entry.item.id)}`, { start, end });
   }
 
-  /** Entries overlapping [from, to) of the enabled sources (all when `enabled` is omitted), sorted by start. */
+  /** Entries overlapping [from, to) of the enabled categories (all when `enabled` is omitted), sorted by start. */
   async load(from: string, to: string, enabled?: ReadonlySet<string>): Promise<CalendarEntry[]> {
-    const active = this.#sources.filter((s) => !enabled || enabled.has(s.id));
-    const lists = await Promise.all(active.map((s) => s.load(from, to)));
-    return lists.flat().sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
+    const items = (await this.api.get<{ items: CalendarItem[] }>('/api/v1/calendar/items', { from, to })).items;
+    return items.filter((i) => !enabled || enabled.has(i.category)).map((i) => this.entry(i))
+      .sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
+  }
+
+  entry(item: CalendarItem): CalendarEntry {
+    const info = categoryInfo(item.category);
+    const page = PAGES[item.kind] ?? null;
+    return {
+      key: `${item.category}:${item.kind}:${item.id}:${item.start}`,
+      source: item.category,
+      title: item.title,
+      start: item.start,
+      end: item.end,
+      allDay: item.allDay,
+      hue: info.hue,
+      teamId: item.teamId,
+      inactive: item.inactive,
+      label: info.label,
+      window: page ? null : { kind: item.kind, id: item.id },
+      path: page,
+      item: { kind: item.kind, id: item.id },
+      movable: item.movable,
+      resizable: item.resizable,
+      ...this.#styles.get(item.category)?.(item),
+    };
   }
 }

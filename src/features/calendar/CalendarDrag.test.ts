@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { CalendarSources, type CalendarEntry } from '../../lib/calendar/CalendarSources';
+import type { ApiClient } from '../../lib/http/ApiClient';
 import { ZonedClock } from '../../lib/time/ZonedClock';
 import { CalendarDrag } from './CalendarDrag';
 
 const entry: CalendarEntry = {
-  key: 'appointment:a', source: 'appointments', title: 'Training', start: '2026-10-20T17:00:00.000Z', end: '2026-10-20T18:30:00.000Z',
-  allDay: false, hue: 'blue', teamId: null, inactive: false, label: 'Training', window: { kind: 'appointment', id: 'a' },
+  key: 'appointment:a', source: 'APPOINTMENT', title: 'Training', start: '2026-10-20T17:00:00.000Z', end: '2026-10-20T18:30:00.000Z',
+  allDay: false, hue: 'blue', teamId: null, inactive: false, label: 'Training', window: { kind: 'appointment', id: 'a' }, path: null,
+  item: { kind: 'appointment', id: 'a' }, movable: true, resizable: true,
 };
 
 describe('CalendarDrag', () => {
-  const drag = new CalendarDrag(new CalendarSources(), new ZonedClock('Europe/Vienna'), 15);
+  const drag = new CalendarDrag(new CalendarSources({} as ApiClient), new ZonedClock('Europe/Vienna'), 15);
 
   it('keeps the time of day and the duration when dropped on another day', () => {
     expect(drag.toDay(entry, '2026-10-22')).toEqual({ start: '2026-10-22T17:00:00.000Z', end: '2026-10-22T18:30:00.000Z' });

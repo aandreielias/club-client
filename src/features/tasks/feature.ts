@@ -1,10 +1,8 @@
-import { permissions } from '../../lib/container';
 import TasksHome from './TasksHome.svelte';
 import { PRIVILEGED } from '../../lib/types';
 import type { Feature } from '../Feature';
 import { TASK_MESSAGES } from './messages';
-import { dueReminders, tasksApi } from './services';
-import { TaskCalendarSource } from './TaskCalendarSource';
+import { dueReminders } from './services';
 import TaskCreateView from './TaskCreateView.svelte';
 import TaskListPage from './TaskListPage.svelte';
 import TaskPage from './TaskPage.svelte';
@@ -20,7 +18,10 @@ export const tasksFeature: Feature = {
     task: { component: TaskView, page: (id) => `/tasks/${encodeURIComponent(id)}` },
     'task-new': { component: TaskCreateView, roles: PRIVILEGED },
   },
-  calendar: new TaskCalendarSource(tasksApi, (teamId) => permissions.canManage(teamId)),
+  calendar: {
+    TASK: (item) => ({ hue: item.inactive ? 'green' : 'orange', label: 'Fällig' }),
+    FOLLOW_UP: (item) => ({ hue: item.inactive ? 'green' : 'brown', label: 'Fällig (aus Sitzung)' }),
+  },
   messages: TASK_MESSAGES,
   start: () => dueReminders.start(),
   home: { id: 'tasks', label: 'Meine Aufgaben', component: TasksHome },

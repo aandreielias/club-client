@@ -129,7 +129,7 @@ export const scrollMemory = new ScrollMemory(settings.scrollRestoreMs);
 /** Records opened in the window, for the command palette. */
 export const recentRecords = new RecentRecords(store, settings.window.recentRecords);
 
-export const calendarSources = new CalendarSources();
+export const calendarSources = new CalendarSources(api);
 
 /** Start page sections of the features (e.g. notifications). */
 export const homeSections = new HomeSections();

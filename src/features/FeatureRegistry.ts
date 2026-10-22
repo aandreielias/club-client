@@ -1,5 +1,6 @@
 import type { ErrorMessages } from '../lib/errors/ErrorMessages';
 import type { CalendarSources } from '../lib/calendar/CalendarSources';
+import type { CalendarCategory } from '../lib/calendar/categories';
 import type { HomeSections } from '../lib/home/HomeSections';
 import type { LinkResolver } from '../lib/router/LinkResolver';
 import type { NavCatalog } from '../lib/navigation/NavCatalog';
@@ -80,7 +81,9 @@ export class FeatureRegistry {
   }
 
   registerCalendarSources(sources: CalendarSources): void {
-    for (const feature of this.features) if (feature.calendar) sources.register(feature.calendar);
+    for (const feature of this.features) {
+      for (const [category, style] of Object.entries(feature.calendar ?? {})) sources.style(category as CalendarCategory, style);
+    }
   }
 
   registerHome(sections: HomeSections): void {

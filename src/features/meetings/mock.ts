@@ -148,6 +148,17 @@ export class MockMeetings {
     return this.followUpDtos([f])[0];
   }
 
+  /** server: MeetingHandlers.calendarMove — a circular vote keeps its start; its deadline moves later (at least three days). */
+  extendDeadline(viewer: Member, id: string, start: string, end: string | null): void {
+    const r = this.managedResolution(viewer, id);
+    if (r.meetingId) fail(409, 'resolution.not-circular');
+    if (r.status !== 'OPEN') fail(409, 'resolution.not-open');
+    if (start !== r.openedAt) fail(409, 'resolution.start-fixed');
+    if (!end || Date.parse(end) < Date.parse(r.openedAt!) + CIRCULAR_MIN_MS || Date.parse(end) <= Date.now()) fail(400, 'resolution.deadline-too-short');
+    r.deadline = end;
+    this.resolutionChanged(r, 'UPDATED');
+  }
+
   /** server: ResolutionHandlers.setLinks */
   setResolutionLinks(viewer: Member, id: string, refs: unknown): Resolution {
     const r = this.managedResolution(viewer, id);

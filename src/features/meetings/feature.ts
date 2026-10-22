@@ -1,6 +1,6 @@
 import { ADMIN_BOARD } from '../../lib/types';
 import type { Feature } from '../Feature';
-import { MeetingCalendarSource } from './MeetingCalendarSource';
+import { isAssembly, type MeetingKind } from './model';
 import MeetingCreateView from './MeetingCreateView.svelte';
 import MeetingPage from './MeetingPage.svelte';
 import MeetingsPage from './MeetingsPage.svelte';
@@ -9,7 +9,6 @@ import CircularCreateView from './CircularCreateView.svelte';
 import ResolutionPage from './ResolutionPage.svelte';
 import ResolutionView from './ResolutionView.svelte';
 import { MEETING_MESSAGES } from './messages';
-import { meetingPolicy, meetingsApi } from './services';
 
 export const meetingsFeature: Feature = {
   id: 'meetings',
@@ -25,7 +24,13 @@ export const meetingsFeature: Feature = {
     resolution: { component: ResolutionView, page: (id) => `/resolutions/${encodeURIComponent(id)}` },
     'resolution-new': { component: CircularCreateView, roles: ADMIN_BOARD },
   },
-  calendar: new MeetingCalendarSource(meetingsApi, meetingPolicy),
+  calendar: {
+    MEETING: (item) => {
+      const assembly = isAssembly(item.detail as MeetingKind);
+      return { hue: assembly ? 'blue' : 'purple', label: assembly ? 'Mitgliederversammlung' : 'Vorstandssitzung' };
+    },
+    DEADLINE: (item) => ({ hue: item.kind === 'resolution' ? 'purple' : 'orange', label: item.kind === 'resolution' ? 'Umlaufbeschluss' : 'Einladungsfrist' }),
+  },
   messages: MEETING_MESSAGES,
   links: [
     { server: '/meetings/:id', to: ({ id }) => ({ window: { kind: 'meeting', id } }) },

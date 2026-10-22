@@ -97,10 +97,17 @@
 </script>
 
 {#snippet filters()}
-  {#each calendarSources.all as source (source.id)}
-    <Button size="sm" pressed={model.isShown(source.id)} onclick={() => model.toggleSource(source.id)}
-      tooltip="{source.label} im Kalender {model.isShown(source.id) ? 'ausblenden' : 'einblenden'}">{source.label}</Button>
+  <!-- Only the categories this range has (and hidden ones, so they can come back). -->
+  {#each calendarSources.all.filter((c) => model.countOf(c.id) > 0 || !model.isShown(c.id)) as category (category.id)}
+    <Button size="sm" pressed={model.isShown(category.id)} onclick={() => model.toggleSource(category.id)}
+      tooltip="{category.label} im Kalender {model.isShown(category.id) ? 'ausblenden' : 'einblenden'}">
+      <span class="dot" style:--dot="var(--color-tag-{category.hue}-text)"></span>{category.label}
+      <span class="count">{model.countOf(category.id)}</span>
+    </Button>
   {/each}
+  {#if model.hidden.length}
+    <Button size="sm" variant="ghost" onclick={() => model.showAll()} tooltip="Alle Arten wieder einblenden">Alle zeigen</Button>
+  {/if}
   {#if teamOptions.length}
     <Select inline aria-label="Team" value={model.teamId ?? ''} options={[{ value: '', label: 'Alle Teams' }, ...teamOptions]}
       onchange={(team) => model.setTeam(team || null)} />
@@ -156,5 +163,15 @@
   }
   .grid-view {
     margin-top: var(--space-sm);
+  }
+  .dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--dot);
+  }
+  .count {
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
   }
 </style>

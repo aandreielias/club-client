@@ -33,7 +33,7 @@ export interface PlacedEntry {
 }
 
 const MONTH_GRID_DAYS = 42;
-const HIDDEN_KEY = 'calendar.hidden-sources';
+const HIDDEN_KEY = 'calendar.hidden-categories';
 
 /**
  * The calendar page: one view (month or week) around an anchor date, entries of all
@@ -58,6 +58,8 @@ export class CalendarModel {
   readonly entries: Resource<CalendarEntry[]>;
   readonly range: DayRange;
   readonly days: LocalDate[];
+  /** Entries of the range for the chosen team, every category (for the filter counts). */
+  readonly inTeam: CalendarEntry[];
   readonly visible: CalendarEntry[];
   readonly byDay: Map<LocalDate, CalendarEntry[]>;
 
@@ -74,9 +76,10 @@ export class CalendarModel {
     this.range = $derived(CalendarModel.rangeOf(this.view, this.anchor));
     this.days = $derived(CalendarModel.daysOf(this.range));
     this.entries = new Resource(() =>
-      this.sources.load(this.clock.startOfDay(this.range.from), this.clock.startOfDay(this.range.to), this.enabledSources()),
+      this.sources.load(this.clock.startOfDay(this.range.from), this.clock.startOfDay(this.range.to)),
     );
-    this.visible = $derived((this.entries.value ?? []).filter((e) => !this.teamId || e.teamId === this.teamId));
+    this.inTeam = $derived((this.entries.value ?? []).filter((e) => !this.teamId || e.teamId === this.teamId));
+    this.visible = $derived(this.inTeam.filter((e) => this.isShown(e.source)));
     this.byDay = $derived(this.bucket(this.visible));
   }
 
@@ -120,10 +123,20 @@ export class CalendarModel {
     return !this.hidden.includes(sourceId);
   }
 
-  toggleSource(sourceId: string): Promise<void> {
+  /** Categories filter on the client: switching them needs no reload. */
+  toggleSource(sourceId: string): void {
     this.hidden = this.isShown(sourceId) ? [...this.hidden, sourceId] : this.hidden.filter((id) => id !== sourceId);
     this.store?.set(HIDDEN_KEY, this.hidden);
-    return this.load();
+  }
+
+  showAll(): void {
+    this.hidden = [];
+    this.store?.set(HIDDEN_KEY, this.hidden);
+  }
+
+  /** How many entries of a category the range has (for the chosen team). */
+  countOf(sourceId: string): number {
+    return this.inTeam.filter((e) => e.source === sourceId).length;
   }
 
   entriesOn(date: LocalDate): CalendarEntry[] {
@@ -236,10 +249,6 @@ export class CalendarModel {
       lane: p.lane,
       lanes: laneEnds.length,
     }));
-  }
-
-  private enabledSources(): Set<string> {
-    return new Set(this.sources.all.map((s) => s.id).filter((id) => this.isShown(id)));
   }
 
   /** Multi-day entries appear on every club-local day they touch (the views draw them as one bar). */

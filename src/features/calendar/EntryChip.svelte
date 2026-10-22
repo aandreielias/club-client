@@ -1,6 +1,6 @@
 <script lang="ts">
   import { bus, router, session, windows } from '../../lib/container';
-  import { WINDOW_OPEN } from '../../channels';
+  import { NAVIGATE, WINDOW_OPEN } from '../../channels';
   import type { CalendarEntry } from '../../lib/calendar/CalendarSources';
   import { windowMenu } from '../../lib/window/windowMenu';
   import { menu } from '../../ui/contextMenu';
@@ -30,6 +30,12 @@
   const hint = $derived(
     `${entry.label}: ${entry.title}\n${when()}`,
   );
+  /** A record opens in the window; absences and offices have pages instead. */
+  function open() {
+    if (entry.window) bus.publish(WINDOW_OPEN, { kind: entry.window.kind, id: entry.window.id });
+    else if (entry.path) bus.publish(NAVIGATE, { path: entry.path });
+  }
+
   function when(): string {
     const { format, clock } = session;
     if (!entry.end) return entry.allDay ? format.date(clock.localDate(entry.start)) : format.dateTime(entry.start);
@@ -49,13 +55,13 @@
   class:before
   class:after
   draggable="true"
-  ondragstart={(e) => (drag?.start(entry, e), RecordDrag.set(e, { ...entry.window, title: entry.title }))}
+  ondragstart={(e) => (drag?.start(entry, e), entry.window && RecordDrag.set(e, { ...entry.window, title: entry.title }))}
   style:--chip-bg="var(--color-tag-{entry.hue}-bg)"
   style:--chip-text="var(--color-tag-{entry.hue}-text)"
   aria-label="{entry.label}: {entry.title}"
   {@attach tooltip(hint)}
-  {@attach menu(() => windowMenu(bus, windows, router, entry.window.kind, entry.window.id))}
-  onclick={(e) => (e.stopPropagation(), bus.publish(WINDOW_OPEN, { kind: entry.window.kind, id: entry.window.id }))}
+  {@attach menu(() => (entry.window ? windowMenu(bus, windows, router, entry.window.kind, entry.window.id) : []))}
+  onclick={(e) => (e.stopPropagation(), open())}
 >
   {#if time}<span class="time">{time}</span>{/if}
   <span class="title">{entry.title}</span>

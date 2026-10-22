@@ -7,7 +7,7 @@ import { MockSocket } from './MockSocket';
 import { MockTransport } from './MockTransport';
 
 // Registers every mock module: the core directory plus each features/<name>/mock.ts.
-import.meta.glob(['./core.ts', '../../features/*/mock.ts'], { eager: true });
+import.meta.glob(['./core.ts', '../../features/*/mock.ts', './calendarItems.ts'], { eager: true });
 
 export function createMockTransport(token: TokenSource): MockTransport {
   return new MockTransport(mockServer, token, settings.api.mockLatencyMs, settings.api.mockOrigin);

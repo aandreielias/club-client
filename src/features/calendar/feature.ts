@@ -1,8 +1,7 @@
-import { permissions } from '../../lib/container';
 import CalendarHome from './CalendarHome.svelte';
 import { PRIVILEGED } from '../../lib/types';
 import type { Feature } from '../Feature';
-import { AppointmentCalendarSource } from './AppointmentCalendarSource';
+import { typeHue, typeLabel, type AppointmentType } from './model';
 import AppointmentCreateView from './AppointmentCreateView.svelte';
 import AppointmentPage from './AppointmentPage.svelte';
 import AppointmentView from './AppointmentView.svelte';
@@ -24,7 +23,9 @@ export const calendarFeature: Feature = {
     appointment: { component: AppointmentView, page: (id) => `/calendar/${encodeURIComponent(id)}` },
     'appointment-new': { component: AppointmentCreateView, roles: PRIVILEGED },
   },
-  calendar: new AppointmentCalendarSource(calendarApi, (teamId) => permissions.canManage(teamId)),
+  calendar: {
+    APPOINTMENT: (item) => ({ hue: typeHue(item.detail as AppointmentType), label: item.inactive ? 'Abgesagt' : typeLabel(item.detail as AppointmentType) }),
+  },
   messages: CALENDAR_MESSAGES,
   home: { id: 'calendar', label: 'Termine', component: CalendarHome },
   links: [{ server: '/appointments/:id', to: ({ id }) => ({ window: { kind: 'appointment', id } }) }],
