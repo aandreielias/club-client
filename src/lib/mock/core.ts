@@ -470,6 +470,7 @@ export class MockDirectory {
     if (!canVote({ ...target, membershipType, honorary }) && this.running().some((o) => o.memberId === memberId)) fail(409, 'member.holds-office');
     Object.assign(target, { membershipType, honorary, memberSince });
     this.members.save();
+    mockServer.events.publish({ type: 'members.membership-changed', data: { memberId, membershipType, honorary } });
     return this.visibleTo(viewer, target);
   }
 
@@ -512,6 +513,7 @@ export class MockDirectory {
     this.offices.data.push(row);
     this.offices.save();
     this.syncBoardRole(holder);
+    mockServer.events.publish({ type: 'members.office-assigned', data: { memberId: holder.id, office } });
     return { ...row, name: this.displayName(holder.id) };
   }
 

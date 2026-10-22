@@ -159,3 +159,38 @@ describe('invitation document', () => {
     expect(files.listVersions(member('vorstand'), first.links[0].id).items).toHaveLength(2);
   });
 });
+
+describe('follow-up tasks', () => {
+  it('a passed honorary membership becomes a task that finishes when it is entered', async () => {
+    const { tasks } = await import('../tasks/mock');
+    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    const mv = meetings.create(member('vorstand'), { kind: 'EXTRA_ASSEMBLY', title: 'aoMV', startsAt: inDays(15), endsAt: inDays(15.1) });
+    meetings.invite(member('vorstand'), mv.id);
+    for (const id of ['vorstand', 'kassier', 'schrift', 'beisitz', 'beisitz2', 'admin']) meetings.setPresence(member('vorstand'), mv.id, id, 'APP');
+    const opened = meetings.open(member('vorstand'), mv.id);
+    expect(opened.present.length * 2).toBeGreaterThanOrEqual(opened.electorate.length);
+    expect(() => meetings.createResolution(member('vorstand'), mv.id, { title: 'Statuten', majority: 'SIMPLE', action: 'STATUTES_CHANGE' }))
+      .toThrow(expect.objectContaining({ code: 'resolution.majority-mismatch' }));
+    const r = meetings.createResolution(member('vorstand'), mv.id,
+      { title: 'Ehrenmitglied Lena', majority: 'SIMPLE', action: 'HONORARY_GRANT', actionMemberId: 'spielerin', assigneeIds: ['schrift'] });
+    meetings.openResolution(member('vorstand'), r.id);
+    for (const id of ['vorstand', 'kassier', 'schrift']) meetings.vote(member(id), r.id, 'YES');
+    const closed = meetings.closeResolution(member('vorstand'), r.id);
+    expect(closed.followUps).toEqual([expect.objectContaining({ kind: 'ENTER_HONORARY', title: 'Ehrenmitgliedschaft eintragen: Lena Spielerin', automatic: true })]);
+    const task = tasks.get(member('schrift'), closed.followUps[0].taskId!);
+    expect(task).toMatchObject({ assignees: ['schrift'], status: 'OPEN', source: { kind: 'MEETING_FOLLOW_UP' } });
+
+    directory.setMembership(member('vorstand'), 'spielerin', { membershipType: 'ORDINARY', honorary: true });
+    expect(tasks.get(member('schrift'), task.id).status).toBe('DONE');
+
+    // Lena now votes too (13): one more must be there for the quorum.
+    meetings.setPresence(member('vorstand'), mv.id, 'helfer', 'APP');
+    meetings.setAutoTasks(member('vorstand'), mv.id, false);
+    const quiet = meetings.createResolution(member('vorstand'), mv.id, { title: 'Sonstiges', majority: 'SIMPLE' });
+    meetings.openResolution(member('vorstand'), quiet.id);
+    for (const id of ['vorstand', 'kassier', 'schrift']) meetings.vote(member(id), quiet.id, 'YES');
+    expect(meetings.closeResolution(member('vorstand'), quiet.id).followUps).toEqual([]);
+    const manual = meetings.addFollowUp(member('vorstand'), { meetingId: mv.id }, { title: 'Protokoll verteilen' });
+    expect(manual).toMatchObject({ kind: 'MANUAL', taskId: expect.any(String) });
+  });
+});

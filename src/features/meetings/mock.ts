@@ -8,9 +8,10 @@ import { defaultTemplate, fill, TEMPLATE_NAME } from './invitationDocument';
 import type { RefKind } from '../../lib/records/refs';
 import { ADMIN_BOARD, type Member } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
+import { tasks } from '../tasks/mock';
 import {
-  CIRCULAR_MIN_MS, isAssembly, latestInvite, majorities, type Choice, type Majority, type Meeting, type MeetingKind, type MeetingSummary,
-  type PresenceMode, type Resolution,
+  actionNeedsMember, actions, CIRCULAR_MIN_MS, IMPLIED_MAJORITY, isAssembly, latestInvite, majorities, type Choice, type FollowUp, type FollowUpKind,
+  type Majority, type Meeting, type MeetingKind, type MeetingSummary, type PresenceMode, type Resolution, type ResolutionAction,
 } from './model';
 
 const fail = MockServer.fail;
@@ -18,10 +19,20 @@ const KINDS: readonly MeetingKind[] = ['ASSEMBLY', 'EXTRA_ASSEMBLY', 'BOARD', 'E
 const DAY = 86_400_000;
 const GRACE = 30 * 60_000;
 
-type StoredMeeting = Omit<Meeting, 'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage'> & { presence: Record<string, PresenceMode> };
+type StoredMeeting = Omit<Meeting, 'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage' | 'autoTasks' | 'followUps'>
+  & { presence: Record<string, PresenceMode>; autoTasks?: boolean };
+/** server: meetings_follow_up */
+type StoredFollowUp = { id: string; meetingId: string | null; resolutionId: string | null; kind: FollowUpKind; memberId: string | null;
+  office: OfficeKind | null; title: string; dueAt: string | null; doneAt: string | null };
 /** Counters hold what was voted, `ballots` only who voted (server: meetings_resolution, meetings_ballot). */
 type StoredResolution = Pick<Resolution, 'id' | 'meetingId' | 'title' | 'text' | 'majority' | 'status' | 'deadline' | 'voters' | 'analogYes'
-  | 'analogNo' | 'analogAbstain' | 'result' | 'openedAt' | 'closedAt'> & { yes: number; no: number; abstain: number; ballots: string[] };
+  | 'analogNo' | 'analogAbstain' | 'result' | 'openedAt' | 'closedAt'> & { yes: number; no: number; abstain: number; ballots: string[];
+  action?: ResolutionAction; actionMemberId?: string | null; actionOffice?: OfficeKind | null; assigneeIds?: string[] };
+
+const DAY_MS = 86_400_000;
+const OFFICE_NAMES: Readonly<Record<OfficeKind, string>> = { CHAIR: 'Vorsitz', VICE_CHAIR: 'Stellvertretung', TREASURER: 'Kassier:in',
+  SECRETARY: 'Schriftführung', BOARD_MEMBER: 'Vorstandsmitglied', AUDITOR: 'Rechnungsprüfung' };
+const AUTOMATIC: readonly FollowUpKind[] = ['ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'CONVENE_ASSEMBLY'];
 
 const text = (value: unknown, max: number, code: string): string | null => {
   if (value == null) return null;
@@ -36,8 +47,109 @@ export class MockMeetings {
   /** meetingId → its folder and generated invitation (server: meetings_document). */
   readonly documents = new MockTable<Record<string, { folderId: string; fileId: string }>>('meeting-documents', () => ({}));
 
+  readonly followUps = new MockTable<StoredFollowUp[]>('meeting-follow-ups', () => []);
+
   constructor(private readonly people: MockDirectory) {
     this.addMissingSeeds();
+    // server: FollowUps.register — entering what a resolution decided finishes its task.
+    mockServer.events.subscribe((event) => {
+      const data = event.data as Record<string, any>;
+      if (event.type === 'members.membership-changed') {
+        this.complete((f) => f.kind === (data.honorary ? 'ENTER_HONORARY' : 'REVOKE_HONORARY') && f.memberId === data.memberId);
+      } else if (event.type === 'members.office-assigned') {
+        this.complete((f) => f.kind === 'ENTER_OFFICE' && f.memberId === data.memberId && f.office === data.office);
+      }
+    });
+  }
+
+  private complete(match: (f: StoredFollowUp) => boolean): void {
+    for (const f of this.followUps.data.filter((x) => !x.doneAt && match(x))) {
+      f.doneAt = new Date().toISOString();
+      mockServer.events.publish({ type: 'meetings.follow-up-done', data: { followUpId: f.id } });
+    }
+    this.followUps.save();
+  }
+
+  private createFollowUp(f: StoredFollowUp, description: string | null, assigneeIds: readonly string[], createdBy: string | null): void {
+    this.followUps.data.push(f);
+    this.followUps.save();
+    const assignees = assigneeIds.length ? [...assigneeIds] : this.people.electorate('BOARD');
+    mockServer.events.publish({ type: 'meetings.follow-up-created',
+      data: { followUpId: f.id, title: f.title, description, dueAt: f.dueAt, assignees, createdBy } });
+  }
+
+  private followUpDtos(list: readonly StoredFollowUp[]): FollowUp[] {
+    const refs = tasks.sourced('MEETING_FOLLOW_UP', list.map((f) => f.id));
+    return list.map((f) => ({ id: f.id, resolutionId: f.resolutionId, kind: f.kind, title: f.title, automatic: AUTOMATIC.includes(f.kind),
+      dueAt: f.dueAt, taskId: refs[f.id]?.taskId ?? null, taskStatus: refs[f.id]?.status ?? null }));
+  }
+
+  /** server: FollowUpPlanner.plan — the tasks a passed resolution brings. */
+  private planFollowUps(r: StoredResolution, meeting: StoredMeeting | null): void {
+    const action = r.action ?? 'GENERAL';
+    const name = r.actionMemberId ? this.name(r.actionMemberId) : '';
+    const office = r.actionOffice ? OFFICE_NAMES[r.actionOffice] : '';
+    const soon = new Date(Date.now() + 7 * DAY_MS).toISOString();
+    const authority = new Date(Date.now() + 28 * DAY_MS).toISOString();
+    const plan: [FollowUpKind, string, string | null, boolean][] = ({
+      GENERAL: [['IMPLEMENT', `Beschluss umsetzen: ${r.title}`, null, false]],
+      HONORARY_GRANT: [['ENTER_HONORARY', `Ehrenmitgliedschaft eintragen: ${name}`, soon, true]],
+      HONORARY_REVOKE: [['REVOKE_HONORARY', `Ehrenmitgliedschaft aberkennen: ${name}`, soon, true]],
+      ELECTION: [['ENTER_OFFICE', `Funktion eintragen: ${office} – ${name}`, soon, true],
+        ...(r.actionOffice === 'AUDITOR' ? [] : [['REPORT_AUTHORITY', `Vereinsbehörde informieren: ${office} – ${name}`, authority, false]])],
+      STATUTES_CHANGE: [['REPORT_AUTHORITY', `Statutenänderung der Vereinsbehörde anzeigen: ${r.title}`, authority, false]],
+      DISSOLUTION: [['REPORT_AUTHORITY', 'Auflösung der Vereinsbehörde anzeigen (§ 14 Abs. 2)', authority, false]],
+      EXCLUSION: [['NOTIFY_EXCLUSION', `Ausschluss schriftlich mit Gründen mitteilen: ${name}`, soon, true]],
+      CONVENE_ASSEMBLY: [['CONVENE_ASSEMBLY', 'Außerordentliche Mitgliederversammlung einberufen', soon, false]],
+    } as Record<ResolutionAction, [FollowUpKind, string, string | null, boolean][]>)[action];
+    const context = `${r.text ? `${r.text}\n\n` : ''}Beschlossen ${meeting ? `in „${meeting.title}“` : 'im Umlaufverfahren'}: „${r.title}“.`;
+    for (const [kind, title, dueAt, aboutMember] of plan) {
+      this.createFollowUp({ id: crypto.randomUUID(), meetingId: null, resolutionId: r.id, kind, memberId: aboutMember ? r.actionMemberId ?? null : null,
+        office: kind === 'ENTER_OFFICE' ? r.actionOffice ?? null : null, title: title.slice(0, 150), dueAt, doneAt: null }, context, r.assigneeIds ?? [], null);
+    }
+  }
+
+  private name(id: string): string {
+    const p = this.people.members.data.find((x) => x.id === id);
+    return p ? `${p.firstName} ${p.lastName}` : '–';
+  }
+
+  /** server: MeetingHandlers.setAutoTasks */
+  setAutoTasks(viewer: Member, id: string, on: unknown): Meeting {
+    const meeting = this.managed(viewer, id);
+    meeting.autoTasks = on === true;
+    this.changed(meeting, 'UPDATED');
+    return this.dto(viewer, meeting);
+  }
+
+  /** server: ResolutionHandlers.createFollowUp — a task by hand for the meeting or a resolution. */
+  addFollowUp(viewer: Member, target: { meetingId?: string; resolutionId?: string }, body: Record<string, any>): FollowUp {
+    let meetingId: string | null = null;
+    let resolutionId: string | null = null;
+    if (target.resolutionId) resolutionId = this.managedResolution(viewer, target.resolutionId).id;
+    else meetingId = this.managed(viewer, target.meetingId!).id;
+    const title = text(body.title, 150, 'meeting.follow-up-title-invalid') ?? fail(400, 'meeting.follow-up-title-invalid');
+    const assignees = this.checkedAssignees(body.assigneeIds);
+    const f: StoredFollowUp = { id: crypto.randomUUID(), meetingId, resolutionId, kind: 'MANUAL', memberId: null, office: null, title,
+      dueAt: typeof body.dueAt === 'string' && body.dueAt ? body.dueAt : null, doneAt: null };
+    this.createFollowUp(f, text(body.description, 2000, 'request.invalid'), assignees, viewer.id);
+    return this.followUpDtos([f])[0];
+  }
+
+  /** server: ResolutionHandlers.setAssignees */
+  setResolutionAssignees(viewer: Member, id: string, body: Record<string, any>): Resolution {
+    const r = this.managedResolution(viewer, id);
+    if (r.status === 'CLOSED') fail(409, 'resolution.closed');
+    r.assigneeIds = this.checkedAssignees(body.assigneeIds);
+    this.resolutionChanged(r, 'UPDATED');
+    return this.resolutionDto(viewer, r);
+  }
+
+  private checkedAssignees(value: unknown): string[] {
+    const ids = Array.isArray(value) ? [...new Set(value.map(String))] : [];
+    if (ids.length > 30) fail(400, 'meeting.too-many-assignees');
+    if (ids.some((id) => !this.people.members.data.some((m) => m.id === id && m.active))) fail(400, 'meeting.assignee-unknown');
+    return ids;
   }
 
   /** Seeded meetings and votes added later reach browsers that already stored mock data. */
@@ -155,6 +267,7 @@ export class MockMeetings {
     meeting.status = 'INVITED';
     meeting.invitedAt = new Date().toISOString();
     this.changed(meeting, 'INVITED');
+    if (meeting.kind === 'EXTRA_ASSEMBLY') this.complete((f) => f.kind === 'CONVENE_ASSEMBLY');
     mockServer.events.publish({
       type: 'meetings.meeting-invited',
       data: { meetingId: meeting.id, recipients: this.people.electorate(isAssembly(meeting.kind) ? 'CLUB' : 'BOARD'), kind: meeting.kind,
@@ -289,13 +402,22 @@ export class MockMeetings {
     const meeting = meetingId ? this.managed(viewer, meetingId) : null;
     if (!meeting && !this.runsCircular(viewer)) fail(403, 'access.denied');
     if (meeting?.status === 'CLOSED') fail(409, 'meeting.closed');
-    const majority = (meeting ? body.majority : 'SIMPLE') as Majority;
-    if (!majorities(meeting?.kind ?? null).includes(majority)) fail(400, 'resolution.majority-invalid');
+    // server: FollowUpPlanner.check
+    const action = (body.action ?? 'GENERAL') as ResolutionAction;
+    if (!actions(meeting?.kind ?? null).includes(action)) fail(400, 'resolution.action-not-here');
+    if (actionNeedsMember(action) !== !!body.actionMemberId) fail(400, 'resolution.action-member-missing');
+    if ((action === 'ELECTION') !== !!body.actionOffice) fail(400, 'resolution.action-office-missing');
+    const requested = (meeting ? body.majority ?? null : 'SIMPLE') as Majority | null;
+    const implied = IMPLIED_MAJORITY[action] ?? requested;
+    if (requested && implied !== requested) fail(400, 'resolution.majority-mismatch');
+    const majority = implied && majorities(meeting?.kind ?? null).includes(implied) ? implied : fail(400, 'resolution.majority-invalid');
+    const assigneeIds = this.checkedAssignees(body.assigneeIds);
     const title = text(body.title, 200, 'resolution.title-invalid') ?? fail(400, 'resolution.title-invalid');
     const deadline = meeting ? null : typeof body.deadline === 'string' ? new Date(body.deadline).toISOString() : fail(400, 'resolution.deadline-invalid');
     const r: StoredResolution = {
       id: crypto.randomUUID(), meetingId, title, text: text(body.text, 4000, 'resolution.text-too-long'), majority, status: 'DRAFT', deadline,
       voters: null, analogYes: null, analogNo: null, analogAbstain: null, result: null, openedAt: null, closedAt: null, yes: 0, no: 0, abstain: 0, ballots: [],
+      action, actionMemberId: body.actionMemberId ?? null, actionOffice: body.actionOffice ?? null, assigneeIds,
     };
     this.resolutions.data.push(r);
     this.resolutionChanged(r, 'CREATED');
@@ -377,6 +499,8 @@ export class MockMeetings {
     const passes = valid > 0 && (r.majority === 'SIMPLE' ? yes * 2 > valid : r.majority === 'TWO_THIRDS' ? yes * 3 >= valid * 2 : yes * 4 >= valid * 3);
     const result = !r.meetingId && r.ballots.length * 2 <= (r.voters ?? 0) ? 'NOT_QUORATE' : passes ? 'PASSED' : 'FAILED';
     Object.assign(r, { status: 'CLOSED', closedAt: new Date().toISOString(), result });
+    const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null;
+    if (result === 'PASSED' && (!meeting || meeting.autoTasks !== false)) this.planFollowUps(r, meeting);
     this.resolutionChanged(r, 'CLOSED');
     return r;
   }
@@ -419,7 +543,7 @@ export class MockMeetings {
   }
 
   private resolutionDto(viewer: Member, r: StoredResolution): Resolution {
-    const { yes, no, abstain, ballots, ...rest } = r;
+    const { yes, no, abstain, ballots, action: _a, actionMemberId: _m, actionOffice: _o, assigneeIds: _as, ...rest } = r;
     const closed = r.status === 'CLOSED';
     const voters = this.voters(r);
     const manages = this.managesResolution(viewer, r);
@@ -437,6 +561,11 @@ export class MockMeetings {
       canVote: r.status === 'OPEN' && !ballots.includes(viewer.id) && voters.includes(viewer.id) && mode === 'APP',
       canManage: manages,
       pending: !r.meetingId && r.status === 'OPEN' && manages ? voters.filter((id) => !ballots.includes(id)).map((id) => ({ memberId: id, name: name(id) })) : [],
+      action: r.action ?? 'GENERAL',
+      actionMember: r.actionMemberId ? { memberId: r.actionMemberId, name: name(r.actionMemberId) } : null,
+      actionOffice: r.actionOffice ?? null,
+      assignees: (r.assigneeIds ?? []).map((id) => ({ memberId: id, name: name(id) })),
+      followUps: this.followUpDtos(this.followUps.data.filter((f) => f.resolutionId === r.id)),
     };
   }
 
@@ -518,6 +647,8 @@ export class MockMeetings {
     return {
       ...rest,
       links: m.links ?? [], // mock data stored before links existed
+      autoTasks: m.autoTasks !== false,
+      followUps: this.followUpDtos(this.followUps.data.filter((f) => f.meetingId === m.id && !f.resolutionId)),
       latestInvite: latestInvite(m.kind, m.startsAt),
       electorate: voters.map((id) => ({ memberId: id, name: name(id) })).sort(byName),
       present: Object.entries(presence).map(([id, mode]) => ({ memberId: id, name: name(id), mode })).sort(byName),
@@ -557,5 +688,9 @@ mockServer
   .on('POST', '/api/v1/resolutions/:id/recorded-vote', (req) => meetings.recordVote(actor(req), req.params.id, req.body?.memberId, req.body?.choice))
   .on('POST', '/api/v1/resolutions/:id/analog-votes', (req) => meetings.analogVotes(actor(req), req.params.id, req.body ?? {}))
   .on('POST', '/api/v1/meetings/:id/invitation-document', (req) => meetings.generateInvitation(actor(req), req.params.id))
+  .on('PUT', '/api/v1/meetings/:id/auto-tasks', (req) => meetings.setAutoTasks(actor(req), req.params.id, req.body?.on))
+  .on('POST', '/api/v1/meetings/:id/follow-ups', (req) => meetings.addFollowUp(actor(req), { meetingId: req.params.id }, req.body ?? {}))
+  .on('POST', '/api/v1/resolutions/:id/follow-ups', (req) => meetings.addFollowUp(actor(req), { resolutionId: req.params.id }, req.body ?? {}))
+  .on('PUT', '/api/v1/resolutions/:id/assignees', (req) => meetings.setResolutionAssignees(actor(req), req.params.id, req.body ?? {}))
   .on('PUT', '/api/v1/meetings/:id/links', (req) => meetings.setLinks(actor(req), req.params.id, req.body?.refs))
   .on('PUT', '/api/v1/meetings/:id/presence/:memberId', (req) => meetings.setPresence(actor(req), req.params.id, req.params.memberId, req.body?.mode));

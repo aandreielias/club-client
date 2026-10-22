@@ -8,7 +8,10 @@
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
   import Tag from '../../ui/Tag.svelte';
-  import { CHOICE_LABELS, MAJORITY_LABELS, RESULT_LABELS, RESULT_TONES, type Choice, type Resolution } from './model';
+  import { OFFICE_LABELS } from '../members/MembersApi';
+  import FollowUpList from './FollowUpList.svelte';
+  import MemberChips from './MemberChips.svelte';
+  import { ACTION_LABELS, CHOICE_LABELS, MAJORITY_LABELS, RESULT_LABELS, RESULT_TONES, type Choice, type NewFollowUp, type Resolution } from './model';
   import { meetingsApi } from './services';
 
   /**
@@ -54,6 +57,16 @@
     writtenChoice = null;
   }
 
+  async function setAssignees(ids: string[]) {
+    await write(() => meetingsApi.setResolutionAssignees(r.id, ids));
+  }
+
+  async function addFollowUp(followUp: NewFollowUp): Promise<boolean> {
+    if (!(await action.attempt(() => meetingsApi.addResolutionFollowUp(r.id, followUp)))) return false;
+    await write(() => meetingsApi.resolution(r.id), 'Aufgabe angelegt.');
+    return true;
+  }
+
   async function remove() {
     if (!(await bus.request(CONFIRM, { title: 'Entwurf löschen', message: r.title, confirmLabel: 'Löschen', danger: true }))) return;
     if (await action.run(() => meetingsApi.deleteResolution(r.id))) ondeleted?.();
@@ -69,6 +82,15 @@
     </span>
   </header>
   {#if r.text}<p class="text">{r.text}</p>{/if}
+  {#if r.action !== 'GENERAL'}
+    <p class="small">{ACTION_LABELS[r.action]}{#if r.actionMember}: {r.actionMember.name}{/if}{#if r.actionOffice} als {OFFICE_LABELS[r.actionOffice]}{/if}</p>
+  {/if}
+  {#if r.canManage && r.status !== 'CLOSED'}
+    <MemberChips value={r.assignees.map((a) => a.memberId)} label="Verantwortlich für die Umsetzung" placeholder="Verantwortlich (leer = Vorstand)"
+      onchange={setAssignees} />
+  {:else if r.assignees.length}
+    <p class="muted small">Verantwortlich: {r.assignees.map((a) => a.name).join(', ')}</p>
+  {/if}
   {#if r.deadline && r.status !== 'CLOSED'}<p class="muted small">Abstimmen bis {session.format.dateTime(r.deadline)}</p>{/if}
 
   {#if r.status === 'OPEN'}
@@ -105,6 +127,10 @@
       <Button type="submit" busy={action.busy} disabled={roomSum > r.analogPresent}>Stimmen im Raum erfassen</Button>
     </form>
     <p class="muted small">Höchstens {r.analogPresent} Stimmen: so viele sind ohne App da.</p>
+  {/if}
+
+  {#if r.status === 'CLOSED' && (r.followUps.length || r.canManage)}
+    <FollowUpList followUps={r.followUps} canAdd={r.canManage} add={addFollowUp} />
   {/if}
 
   {#if r.canManage && r.status !== 'CLOSED'}

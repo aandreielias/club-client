@@ -40,7 +40,7 @@ export interface Task {
 }
 
 export interface TaskSource {
-  kind: 'CHANGE_REQUEST';
+  kind: 'CHANGE_REQUEST' | 'MEETING_FOLLOW_UP';
   id: string;
 }
 

@@ -44,6 +44,10 @@ export class MeetingModel {
     return this.write(() => this.api.generateInvitation(this.id));
   }
 
+  setAutoTasks(on: boolean): Promise<boolean> {
+    return this.write(() => this.api.setAutoTasks(this.id, on));
+  }
+
   setLinks(refs: readonly { kind: RefKind; id: string }[]): Promise<boolean> {
     return this.write(() => this.api.setLinks(this.id, refs));
   }

@@ -8,7 +8,9 @@
   import Detail from '../../ui/Detail.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
-  import { CIRCULAR_MIN_MS } from './model';
+  import Select from '../../ui/Select.svelte';
+  import MemberChips from './MemberChips.svelte';
+  import { ACTION_LABELS, actions, CIRCULAR_MIN_MS, type ResolutionAction } from './model';
   import { meetingsApi } from './services';
 
   /** New circular vote: the motion goes to the whole board at once and runs at least three days (§10 Abs 15). */
@@ -21,6 +23,9 @@
   let text = $state('');
   let deadline = $state(`${ZonedClock.addDays(earliest.slice(0, 10), 1)}T20:00`);
   let submitted = $state(false);
+  let action = $state<ResolutionAction>('GENERAL');
+  let assignees = $state<string[]>([]);
+  const actionOptions = actions(null).map((a) => ({ value: a, label: ACTION_LABELS[a] }));
   const tooSoon = $derived(deadline < earliest);
 
   async function submit(event: SubmitEvent) {
@@ -28,7 +33,7 @@
     submitted = true;
     if (!title.trim() || tooSoon) return;
     await create.submit(async () => {
-      const draft = await meetingsApi.createCircular(title.trim(), text.trim() || null, session.clock.toInstant(deadline));
+      const draft = await meetingsApi.createCircular(title.trim(), text.trim() || null, session.clock.toInstant(deadline), action, assignees);
       return (await meetingsApi.openResolution(draft.id)).id;
     }, 'resolution', 'Umlaufbeschluss an den Vorstand verschickt.');
   }
@@ -45,6 +50,10 @@
     <Field label="Abstimmen bis" hint="Mindestens drei Tage; gültig, wenn mehr als die Hälfte des Vorstands abstimmt." error={submitted && tooSoon ? 'Mindestens drei Tage ab jetzt.' : null}>
       <input type="datetime-local" bind:value={deadline} min={earliest} required />
     </Field>
+    <Field label="Art des Beschlusses" hint="Bestimmt die Aufgabe, die nach der Annahme entsteht.">
+      <Select bind:value={action} options={actionOptions} />
+    </Field>
+    <MemberChips bind:value={assignees} label="Verantwortlich für die Umsetzung" placeholder="Verantwortlich (leer = Vorstand)" />
     <ErrorNote error={create.save.error} />
     <div class="row">
       <Button type="submit" variant="primary" busy={create.save.busy}>An den Vorstand schicken</Button>

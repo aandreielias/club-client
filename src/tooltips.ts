@@ -75,6 +75,8 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Protokoll speichern': { text: 'Protokoll zwischenspeichern' },
   'Verknüpfungen bearbeiten': { text: 'Dateien, Personen, Termine und andere Einträge mit der Sitzung verknüpfen' },
   'Verknüpfungen speichern': { text: 'Geänderte Verknüpfungen speichern' },
+  'Aufgabe hinzufügen': { text: 'Eine Aufgabe zu dieser Sitzung oder diesem Beschluss anlegen' },
+  'Aufgabe anlegen': { text: 'Aufgabe für die Verantwortlichen anlegen (leer = Vorstand)' },
   'Einladung als Word-Dokument': { text: 'Einladung mit Tagesordnung als .docx im Sitzungsordner speichern; erneut: neue Version' },
   'Antrag hinzufügen': { text: 'Antrag als Entwurf zur Tagesordnung legen; abgestimmt wird nach dem Öffnen' },
   'Abstimmung öffnen': { text: 'Stimmberechtigte können ab jetzt abstimmen' },

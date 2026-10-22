@@ -80,14 +80,46 @@ export class MockTasks {
       this.changed(task, 'CREATED');
       this.assigned(task, []);
     } else if (event.type === 'members.change-decided') {
-      const taskId = Object.entries(this.sources.data).find(([, s]) => s.kind === 'CHANGE_REQUEST' && s.id === data.requestId)?.[0];
-      const task = this.tasks.data.find((t) => t.id === taskId && t.status !== 'DONE');
-      if (!task) return;
-      task.status = 'DONE';
-      task.completedAt = new Date().toISOString();
+      this.finish('CHANGE_REQUEST', data.requestId);
+    } else if (event.type === 'meetings.follow-up-created') {
+      // server: TaskHandlers.onFollowUpCreated
+      const assignees = (data.assignees as string[]).filter((id) => this.people.members.data.some((m) => m.id === id && m.active)).sort()
+        .slice(0, limits.maxAssignees);
+      if (!assignees.length) return;
+      const task: StoredTask = {
+        id: crypto.randomUUID(), teamId: null, appointmentId: null, title: String(data.title).slice(0, limits.titleMaxLength),
+        description: data.description ?? null, status: 'OPEN', dueAt: data.dueAt ?? null, createdBy: data.createdBy ?? assignees[0], assignees,
+        checklist: [], createdAt: new Date().toISOString(), completedAt: null, repeatWeeks: null,
+      };
+      this.tasks.data.push(task);
+      this.sources.data[task.id] = { kind: 'MEETING_FOLLOW_UP', id: data.followUpId };
       this.tasks.save();
-      this.changed(task, 'STATUS');
+      this.sources.save();
+      this.changed(task, 'CREATED');
+      this.assigned(task, []);
+    } else if (event.type === 'meetings.follow-up-done') {
+      this.finish('MEETING_FOLLOW_UP', data.followUpId);
     }
+  }
+
+  private finish(kind: TaskSource['kind'], sourceId: string): void {
+    const taskId = Object.entries(this.sources.data).find(([, s]) => s.kind === kind && s.id === sourceId)?.[0];
+    const task = this.tasks.data.find((t) => t.id === taskId && t.status !== 'DONE');
+    if (!task) return;
+    task.status = 'DONE';
+    task.completedAt = new Date().toISOString();
+    this.tasks.save();
+    this.changed(task, 'STATUS');
+  }
+
+  /** server: TasksApi.SOURCED — source id → task and its state. */
+  sourced(kind: TaskSource['kind'], ids: readonly string[]): Record<string, { taskId: string; status: Task['status'] }> {
+    const found: Record<string, { taskId: string; status: Task['status'] }> = {};
+    for (const [taskId, source] of Object.entries(this.sources.data)) {
+      const task = this.tasks.data.find((t) => t.id === taskId);
+      if (task && source.kind === kind && ids.includes(source.id)) found[source.id] = { taskId, status: task.status };
+    }
+    return found;
   }
 
   /** "Benötigt" list and attachments (server: TaskHandlers.getLinks / setLinks). */

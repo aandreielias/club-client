@@ -1,5 +1,6 @@
 import type { LinkedRef } from '../../lib/records/refs';
 import type { Hue } from '../../lib/types';
+import type { OfficeKind } from '../members/MembersApi';
 
 // Mirrors of the club-server meetings DTOs (statutes §8, §10). API times are UTC instants.
 
@@ -81,6 +82,69 @@ export interface Meeting {
   canManage: boolean;
   /** Linked records (files, members, appointments, ...) with the title they had when linked. */
   links: LinkedRef[];
+  /** Passed resolutions get their follow-up tasks. */
+  autoTasks: boolean;
+  /** The meeting's own tasks (those of its resolutions are on the resolutions). */
+  followUps: FollowUp[];
+}
+
+// --- follow-up tasks (server: MeetingsApi.FollowUpDto, FollowUpPlanner) ---
+
+export type ResolutionAction = 'GENERAL' | 'HONORARY_GRANT' | 'HONORARY_REVOKE' | 'ELECTION' | 'STATUTES_CHANGE' | 'DISSOLUTION' | 'EXCLUSION' | 'CONVENE_ASSEMBLY';
+
+export const ACTION_LABELS: Readonly<Record<ResolutionAction, string>> = {
+  GENERAL: 'Sonstiger Beschluss',
+  HONORARY_GRANT: 'Ehrenmitgliedschaft verleihen',
+  HONORARY_REVOKE: 'Ehrenmitgliedschaft aberkennen',
+  ELECTION: 'Wahl in eine Funktion',
+  STATUTES_CHANGE: 'Statutenänderung',
+  DISSOLUTION: 'Auflösung des Vereins',
+  EXCLUSION: 'Ausschluss eines Mitglieds',
+  CONVENE_ASSEMBLY: 'Außerordentliche Mitgliederversammlung einberufen',
+};
+
+/** server: FollowUpPlanner.actions — `null` = circular vote. */
+export function actions(kind: MeetingKind | null): ResolutionAction[] {
+  switch (kind) {
+    case null:
+      return ['GENERAL', 'CONVENE_ASSEMBLY'];
+    case 'ASSEMBLY':
+      return ['GENERAL', 'ELECTION'];
+    case 'EXTRA_ASSEMBLY':
+      return ['GENERAL', 'ELECTION', 'HONORARY_GRANT', 'HONORARY_REVOKE', 'STATUTES_CHANGE', 'DISSOLUTION'];
+    case 'EXTRA_BOARD':
+      return ['GENERAL', 'EXCLUSION', 'CONVENE_ASSEMBLY'];
+    default:
+      return ['GENERAL', 'CONVENE_ASSEMBLY'];
+  }
+}
+
+export const actionNeedsMember = (a: ResolutionAction): boolean => ['HONORARY_GRANT', 'HONORARY_REVOKE', 'ELECTION', 'EXCLUSION'].includes(a);
+
+/** server: FollowUpPlanner.check — actions that fix the majority. */
+export const IMPLIED_MAJORITY: Partial<Record<ResolutionAction, Majority>> = { STATUTES_CHANGE: 'TWO_THIRDS', DISSOLUTION: 'THREE_QUARTERS' };
+
+export type FollowUpKind = 'IMPLEMENT' | 'ENTER_HONORARY' | 'REVOKE_HONORARY' | 'ENTER_OFFICE' | 'REPORT_AUTHORITY' | 'NOTIFY_EXCLUSION' | 'CONVENE_ASSEMBLY' | 'MANUAL';
+
+export interface FollowUp {
+  id: string;
+  resolutionId: string | null;
+  kind: FollowUpKind;
+  title: string;
+  /** Finishes itself when its effect is entered (honorary membership, office, invitation). */
+  automatic: boolean;
+  dueAt: string | null;
+  /** null while the task is being created. */
+  taskId: string | null;
+  taskStatus: 'OPEN' | 'IN_PROGRESS' | 'DONE' | null;
+}
+
+export interface NewFollowUp {
+  title: string;
+  description: string | null;
+  /** Empty = the board. */
+  assigneeIds: string[];
+  dueAt: string | null;
 }
 
 export type MeetingSummary = Pick<Meeting, 'id' | 'kind' | 'title' | 'startsAt' | 'endsAt' | 'location' | 'status'>;
@@ -159,10 +223,22 @@ export interface Resolution {
   canManage: boolean;
   /** Circular votes: board members who have not voted yet (for who runs it). */
   pending: Person[];
+  action: ResolutionAction;
+  /** Whom it is about (honorary membership, election, exclusion). */
+  actionMember: Person | null;
+  actionOffice: OfficeKind | null;
+  /** Who carries it out; empty = the board. */
+  assignees: Person[];
+  followUps: FollowUp[];
 }
 
 export interface NewResolution {
   title: string;
   text: string | null;
-  majority: Majority;
+  /** null where the action fixes it. */
+  majority: Majority | null;
+  action: ResolutionAction;
+  actionMemberId: string | null;
+  actionOffice: OfficeKind | null;
+  assigneeIds: string[];
 }

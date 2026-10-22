@@ -1,6 +1,6 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
 import type { RefKind } from '../../lib/records/refs';
-import type { Choice, Meeting, MeetingPatch, MeetingSummary, NewMeeting, NewResolution, PresenceMode, Resolution } from './model';
+import type { Choice, FollowUp, Meeting, MeetingPatch, MeetingSummary, NewFollowUp, NewMeeting, NewResolution, PresenceMode, Resolution, ResolutionAction } from './model';
 
 /** Typed access to the meetings endpoints. Every write needs a step-up and answers with the meeting. */
 export class MeetingsApi {
@@ -78,8 +78,28 @@ export class MeetingsApi {
     return this.api.post<Resolution>(`${this.path(meetingId)}/resolutions`, resolution);
   }
 
-  createCircular(title: string, text: string | null, deadline: string): Promise<Resolution> {
-    return this.api.post<Resolution>(MeetingsApi.RESOLUTIONS, { title, text, deadline });
+  createCircular(title: string, text: string | null, deadline: string, action: ResolutionAction = 'GENERAL', assigneeIds: string[] = []): Promise<Resolution> {
+    return this.api.post<Resolution>(MeetingsApi.RESOLUTIONS, { title, text, deadline, action, assigneeIds });
+  }
+
+  /** Who carries the resolution out; until it closes. */
+  setResolutionAssignees(id: string, assigneeIds: readonly string[]): Promise<Resolution> {
+    return this.api.put<Resolution>(`${this.resolutionPath(id)}/assignees`, { assigneeIds });
+  }
+
+  /** A task by hand for a resolution. */
+  addResolutionFollowUp(id: string, followUp: NewFollowUp): Promise<FollowUp> {
+    return this.api.post<FollowUp>(`${this.resolutionPath(id)}/follow-ups`, followUp);
+  }
+
+  /** A task by hand for the meeting. */
+  addMeetingFollowUp(id: string, followUp: NewFollowUp): Promise<FollowUp> {
+    return this.api.post<FollowUp>(`${this.path(id)}/follow-ups`, followUp);
+  }
+
+  /** On: passed resolutions get their follow-up tasks. */
+  setAutoTasks(id: string, on: boolean): Promise<Meeting> {
+    return this.api.put<Meeting>(`${this.path(id)}/auto-tasks`, { on });
   }
 
   deleteResolution(id: string): Promise<void> {

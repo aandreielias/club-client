@@ -12,6 +12,8 @@
   import { MeetingModel } from './MeetingModel.svelte';
   import ResolutionList from './ResolutionList.svelte';
   import MeetingLinks from './MeetingLinks.svelte';
+  import FollowUpList from './FollowUpList.svelte';
+  import type { NewFollowUp } from './model';
   import RecordLink from '../../ui/RecordLink.svelte';
   import { permissions } from '../../lib/container';
   import { isAssembly, KIND_LABELS, QUORUM_TEXT, STATUS_LABELS, STATUS_TONES, type Meeting, type PresenceMode } from './model';
@@ -75,6 +77,13 @@
   async function remove() {
     if (await view.confirm({ title: 'Entwurf löschen', message: 'Die Sitzung wurde noch nicht eingeladen.', confirmLabel: 'Löschen', danger: true },
       () => view.attempt(model.action, () => model.delete()), 'Entwurf gelöscht.')) view.leave();
+  }
+
+  async function addFollowUp(followUp: NewFollowUp): Promise<boolean> {
+    if (!(await model.action.run(() => meetingsApi.addMeetingFollowUp(id, followUp)))) return false;
+    await model.load();
+    view.notify('Aufgabe angelegt.');
+    return true;
   }
 
   async function saveProtocol() {
@@ -147,6 +156,19 @@
       {#if m.status !== 'DRAFT'}
         <h2>Beschlüsse</h2>
         <ResolutionList meeting={m} />
+      {/if}
+
+      {#if m.status !== 'DRAFT' && (m.canManage || m.followUps.length)}
+        <h2>Aufgaben</h2>
+        <div class="stack">
+          {#if m.canManage}
+            <label class="check">
+              <input type="checkbox" checked={m.autoTasks} disabled={model.action.busy} onchange={(e) => void model.setAutoTasks(e.currentTarget.checked)} />
+              Angenommene Beschlüsse erzeugen automatisch Aufgaben
+            </label>
+          {/if}
+          <FollowUpList followUps={m.followUps} canAdd={m.canManage} add={addFollowUp} />
+        </div>
       {/if}
 
       {#if m.status === 'OPEN' && m.canManage}
