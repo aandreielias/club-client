@@ -24,6 +24,13 @@ import { MockServer, mockServer, type MockRequest } from './MockServer';
 import { MockTable } from './MockTable';
 
 /** Per member: wrong club-PIN tries and the current step-up (server: members_pin_lock, step-ups). */
+/** server: MembersApi.Relative */
+interface Relative {
+  memberId: string;
+  name: string;
+  canOpen: boolean;
+}
+
 interface PinState {
   attempts: number;
   stepUpUntil: string | null;
@@ -371,8 +378,7 @@ export class MockDirectory {
   /** Self, admin/board, guardian or a coach of one of the member's teams; others 404. */
   get(viewer: Member, memberId: string): Member {
     const target = this.members.data.find((m) => m.id === memberId);
-    const allowed = viewer.id === memberId || this.isManager(viewer) || this.wardsOf(viewer.id).includes(memberId) || this.isCoachOf(viewer.id, memberId);
-    if (!target || !allowed) return fail(404, 'member.not-found');
+    if (!target || !this.mayOpen(viewer, memberId)) return fail(404, 'member.not-found');
     return this.visibleTo(viewer, target);
   }
 
@@ -561,6 +567,20 @@ export class MockDirectory {
   private static membershipType(value: unknown): MembershipType | null {
     if (value == null) return null;
     return value === 'ORDINARY' || value === 'EXTRAORDINARY' ? value : fail(400, 'request.invalid');
+  }
+
+  /** server: MemberHandlers.family (who may open the profile) */
+  family(viewer: Member, memberId: string): { guardians: Relative[]; wards: Relative[] } {
+    this.get(viewer, memberId);
+    const relatives = (ids: readonly string[]): Relative[] => this.members.data
+      .filter((m) => m.active && ids.includes(m.id))
+      .map((m) => ({ memberId: m.id, name: `${m.firstName} ${m.lastName}`, canOpen: this.mayOpen(viewer, m.id) }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return { guardians: relatives(this.guardiansOf([memberId])), wards: relatives(this.wardsOf(memberId)) };
+  }
+
+  private mayOpen(viewer: Member, memberId: string): boolean {
+    return viewer.id === memberId || this.isManager(viewer) || this.wardsOf(viewer.id).includes(memberId) || this.isCoachOf(viewer.id, memberId);
   }
 
   /** server: MemberHandlers.listGuardians (admin/board) */

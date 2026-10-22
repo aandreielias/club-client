@@ -10,6 +10,7 @@
   import Detail from '../../ui/Detail.svelte';
   import Tag from '../../ui/Tag.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
+  import FamilySection from './FamilySection.svelte';
   import GuardianLinker from './GuardianLinker.svelte';
   import HeldItems from './HeldItems.svelte';
   import MembershipEditor from './MembershipEditor.svelte';
@@ -124,6 +125,7 @@
             <dd>{session.format.date(member.memberSince)}</dd>
           {/if}
         </dl>
+        {#key member.id}<FamilySection memberId={member.id} firstName={member.firstName} self={policy.isSelf(member)} />{/key}
         <HeldItems memberId={member.id} />
       {/if}
 

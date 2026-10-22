@@ -106,3 +106,11 @@ describe('mock teams admin', () => {
     expect(() => directory.removeTeamMember(member('trainer'), 't-u16', 'trainer')).toThrow(expect.objectContaining({ code: 'access.denied' }));
   });
 });
+
+describe('mock family', () => {
+  it('shows the guardian link on both profiles, for who may open them', () => {
+    expect(directory.family(member('eltern'), 'spieler').guardians).toEqual([{ memberId: 'eltern', name: 'Eva Eltern', canOpen: true }]);
+    expect(directory.family(member('eltern'), 'eltern').wards.map((w) => w.memberId)).toContain('spieler');
+    expect(() => directory.family(member('spieler'), 'eltern')).toThrow(expect.objectContaining({ code: 'member.not-found' }));
+  });
+});

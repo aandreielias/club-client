@@ -13,6 +13,7 @@
   import type { ChangeField } from '../members/MembersApi';
   import { membersApi } from '../members/services';
   import ChangeRequestDialog from './ChangeRequestDialog.svelte';
+  import FamilySection from '../members/FamilySection.svelte';
   import { OwnChangeRequests } from './OwnChangeRequests.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import { inventoryApi } from '../inventory/services';
@@ -68,6 +69,7 @@
     <dt>Teams</dt>
     <dd>{#each session.teams as team (team.id)}<Tag tone="blue">{team.name}</Tag>{:else}–{/each}</dd>
   </dl>
+  <FamilySection memberId={member.id} firstName={member.firstName} self />
 
   {#if held.value?.length}
     <h2>Bei mir</h2>

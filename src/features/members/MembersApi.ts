@@ -88,6 +88,19 @@ export interface ChangeRequest {
 export type ProfilePatch = Partial<Pick<Member, 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'photoConsent'>>;
 
 /** Typed access to the member administration endpoints. Every write needs a step-up. */
+/** A guardian or ward on a member's profile; `canOpen`: the viewer may open that profile too (server: MembersApi.Relative). */
+export interface Relative {
+  memberId: string;
+  name: string;
+  canOpen: boolean;
+}
+
+/** server: MembersApi.Family */
+export interface Family {
+  guardians: Relative[];
+  wards: Relative[];
+}
+
 /** A linked guardian of a member (server: MembersApi.GuardianRef). */
 export interface GuardianRef {
   memberId: string;
@@ -148,6 +161,11 @@ export class MembersApi {
   /** GDPR erasure of a deactivated member (admin): personal data overwritten, login deleted. */
   erase(id: string): Promise<void> {
     return this.api.post(`${this.path(id)}/erase`);
+  }
+
+  /** Guardians and wards, for who may open the member's profile. */
+  family(id: string): Promise<Family> {
+    return this.api.get<Family>(`${this.path(id)}/family`);
   }
 
   async guardians(minorId: string): Promise<GuardianRef[]> {

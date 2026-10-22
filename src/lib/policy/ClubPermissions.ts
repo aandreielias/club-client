@@ -24,10 +24,10 @@ export class ClubPermissions {
 
   /**
    * Whose profile the member may open (server: requireMaySee): admin/board everyone, coaches the
-   * members of their teams (exact once those rosters are loaded), everyone themselves.
+   * members of their teams (exact once those rosters are loaded), guardians their wards, everyone themselves.
    */
   canSeeMember(memberId: string): boolean {
-    if (this.isManager || memberId === this.session.member.id) return true;
+    if (this.isManager || memberId === this.session.member.id || this.session.wardIds.includes(memberId)) return true;
     return this.session.teams.some((t) => this.isCoachOf(t.id) && this.directory.teamRole(t.id, memberId) !== null);
   }
 
