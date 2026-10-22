@@ -1,4 +1,6 @@
 <script lang="ts">
+  /** Board size against § 9 Abs. 1 (at least three, an odd number): shown in red. */
+  const SIZE_WARNINGS = ['board.too-small', 'board.even'];
   import { bus, directory, permissions, session } from '../../lib/container';
   import RecordLink from '../../ui/RecordLink.svelte';
   import { CONFIRM, TOAST } from '../../channels';
@@ -85,7 +87,7 @@
     {#snippet children(board)}
       {#if board.warnings.length}
         <ul class="warnings">
-          {#each board.warnings as code (code)}<li><Icon name="alert" small /> {BOARD_WARNINGS[code] ?? code}</li>{/each}
+          {#each board.warnings as code (code)}<li class:danger={SIZE_WARNINGS.includes(code)}><Icon name="alert" small /> {BOARD_WARNINGS[code] ?? code}</li>{/each}
         </ul>
       {/if}
       {@render list(board.offices.filter((o) => o.office !== 'AUDITOR'), 'Noch keine Funktionen eingetragen.')}
@@ -144,6 +146,9 @@
     padding: 0;
     list-style: none;
     color: var(--color-text-muted);
+  }
+  .warnings .danger {
+    color: var(--color-danger);
   }
   .grid {
     display: grid;
