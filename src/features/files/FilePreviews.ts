@@ -6,6 +6,7 @@ export type PreviewKind = 'pdf' | 'docx' | 'xlsx' | 'pptx';
 const KINDS: Readonly<Record<string, PreviewKind>> = {
   'application/pdf': 'pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.template': 'docx',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
 };

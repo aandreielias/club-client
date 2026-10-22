@@ -4,6 +4,7 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import { resolveRef } from '../../lib/mock/recordRefs';
 import { files } from '../files/mock';
+import { defaultTemplate, fill, TEMPLATE_NAME } from './invitationDocument';
 import type { RefKind } from '../../lib/records/refs';
 import { ADMIN_BOARD, type Member } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
@@ -208,24 +209,38 @@ export class MockMeetings {
     return this.dto(viewer, meeting);
   }
 
-  /** server: MeetingHandlers.generateInvitation + InvitationDocuments — a real (simple) Word file through the files mock. */
+  /** server: MeetingHandlers.generateInvitation + InvitationDocuments — the template in "Vorlagen" filled through the files mock. */
   async generateInvitation(viewer: Member, id: string): Promise<Meeting> {
     const meeting = this.managed(viewer, id);
     const { default: JSZip } = await import('jszip');
-    const zip = new JSZip();
-    const p = (text: string, bold = false) =>
-      `<w:p><w:r>${bold ? '<w:rPr><w:b/></w:rPr>' : ''}<w:t xml:space="preserve">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</w:t></w:r></w:p>`;
-    const body = [p(this.people.club.name, true), p(`Einladung: ${meeting.title}`, true), p(`Wann: ${new Date(meeting.startsAt).toLocaleString('de-AT')}`),
-      ...(meeting.location ? [p(`Wo: ${meeting.location}`)] : []), p('Tagesordnung', true), ...(meeting.agenda ?? '').split('\n').filter(Boolean).map((l) => p(l))];
-    zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-      + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
-      + '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
-    zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-      + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
-    zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body.join('')}</w:body></w:document>`);
-    const content = await zip.generateAsync({ type: 'blob' });
-
     const request = (params: Record<string, string>, form: FormData) => ({ params, query: new URLSearchParams(), body: form, email: viewer.email });
+    const top = (name: string, scope: 'CLUB' | 'BOARD') => files.listFolders(viewer).find((f) => !f.parentId && f.name === name && f.scope === scope)
+      ?? files.createFolder(viewer, { name, kind: 'DOCUMENTS', scope, teamIds: [] });
+
+    const templates = top('Vorlagen', 'BOARD');
+    let template = files.listFiles(viewer, templates.id).find((f) => f.name.toLowerCase() === TEMPLATE_NAME.toLowerCase());
+    if (!template) {
+      const form = new FormData();
+      form.append('file', new File([await defaultTemplate(JSZip)], TEMPLATE_NAME));
+      template = await files.upload(request({ folderId: templates.id }, form));
+    }
+    // Mock blobs live only for the session; after a reload the built-in template stands in.
+    const templateBytes = files.blob(template.id) ?? (await defaultTemplate(JSZip));
+    const KIND = { ASSEMBLY: 'ordentlichen Mitgliederversammlung', EXTRA_ASSEMBLY: 'außerordentlichen Mitgliederversammlung',
+      BOARD: 'ordentlichen Vorstandssitzung', EXTRA_BOARD: 'außerordentlichen Vorstandssitzung', SIMPLE_BOARD: 'einfachen Vorstandssitzung',
+      CONSTITUENT_BOARD: 'konstituierenden Vorstandssitzung' } as const;
+    const STATUTE = { ASSEMBLY: '§ 8 Abs. 4', EXTRA_ASSEMBLY: '§ 8 Abs. 4', BOARD: '§ 10 Abs. 6', CONSTITUENT_BOARD: '§ 10 Abs. 6',
+      SIMPLE_BOARD: '§ 10 Abs. 7', EXTRA_BOARD: '§ 10 Abs. 3' } as const;
+    const kindTitle = KIND[meeting.kind].replace('en ', 'e ');
+    const fmt = (iso: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('de-AT', { timeZone: this.people.club.timeZone, ...options }).format(new Date(iso));
+    const content = await fill(JSZip, templateBytes, {
+      Verein: this.people.club.name, Art: KIND[meeting.kind],
+      Titel: meeting.title.toLowerCase() === kindTitle.toLowerCase() ? null : meeting.title,
+      Wann: `${fmt(meeting.startsAt, { dateStyle: 'full', timeStyle: 'short' })} bis ${fmt(meeting.endsAt, { timeStyle: 'short' })} Uhr`,
+      Ort: meeting.location, Video: meeting.videoUrl, Dringlichkeit: meeting.urgency, Statuten: STATUTE[meeting.kind],
+      Versandt: fmt(meeting.invitedAt ?? new Date().toISOString(), { dateStyle: 'long' }),
+    }, (meeting.agenda ?? '').split('\n').map((l) => l.trim()).filter(Boolean).concat(meeting.agenda?.trim() ? [] : ['Keine Tagesordnung eingetragen.']));
+
     const stored = this.documents.data[id];
     const day = meeting.startsAt.slice(0, 10);
     let fileId: string;
@@ -239,12 +254,9 @@ export class MockMeetings {
       ({ fileId, folderId } = stored);
     } else {
       const assembly = isAssembly(meeting.kind);
-      const topName = assembly ? 'Mitgliederversammlungen' : 'Vorstandssitzungen';
-      const scope = assembly ? 'CLUB' : 'BOARD';
-      const top = files.listFolders(viewer).find((f) => !f.parentId && f.name === topName && f.scope === scope)
-        ?? files.createFolder(viewer, { name: topName, kind: 'DOCUMENTS', scope, teamIds: [] });
+      const parent = top(assembly ? 'Mitgliederversammlungen' : 'Vorstandssitzungen', assembly ? 'CLUB' : 'BOARD');
       folderId = stored && files.listFolders(viewer).some((f) => f.id === stored.folderId) ? stored.folderId
-        : files.createFolder(viewer, { parentId: top.id, name: `${day} ${meeting.title}`.slice(0, 100), kind: 'DOCUMENTS' }).id;
+        : files.createFolder(viewer, { parentId: parent.id, name: `${day} ${meeting.title}`.slice(0, 100), kind: 'DOCUMENTS' }).id;
       const form = new FormData();
       form.append('file', new File([content], `Einladung ${day} ${meeting.title}.docx`));
       fileId = (await files.upload(request({ folderId }, form))).id;

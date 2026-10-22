@@ -144,6 +144,16 @@ describe('invitation document', () => {
     const folder = files.listFolders(member('spielerin')).find((f) => f.id === first.links[0].parentId)!;
     expect(files.listFolders(member('spielerin')).find((f) => f.id === folder.parentId)).toMatchObject({ name: 'Mitgliederversammlungen', scope: 'CLUB' });
 
+    const templates = files.listFolders(member('vorstand')).find((f) => f.name === 'Vorlagen')!;
+    expect(templates.scope).toBe('BOARD');
+    expect(files.listFiles(member('vorstand'), templates.id).map((f) => f.name)).toEqual(['Einladung Sitzung.dotx']);
+    const { default: JSZip } = await import('jszip');
+    const xml = await (await JSZip.loadAsync(files.blob(first.links[0].id)!)).file('word/document.xml')!.async('string');
+    expect(xml).toContain('w:w="11906" w:h="16838"'); // A4
+    expect(xml).toContain('Einladung zur ordentlichen Mitgliederversammlung');
+    expect(xml).toContain('MV Test');
+    expect(xml).not.toContain('{{');
+
     const again = await meetings.generateInvitation(member('vorstand'), mv.id);
     expect(again.links.filter((l) => l.kind === 'FILE')).toHaveLength(1);
     expect(files.listVersions(member('vorstand'), first.links[0].id).items).toHaveLength(2);

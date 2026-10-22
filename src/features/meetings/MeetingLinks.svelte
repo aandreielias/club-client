@@ -15,6 +15,9 @@
   /** Files, people, appointments and other records belonging to a meeting; who runs it edits the list. */
   let { meeting, model }: { meeting: Meeting; model: MeetingModel } = $props();
 
+  /** server: AgendaDocument.PLACEHOLDERS */
+  const PLACEHOLDERS = ['Verein', 'Art', 'Titel', 'Wann', 'Ort', 'Video', 'Dringlichkeit', 'Tagesordnung', 'Statuten', 'Versandt']
+    .map((name) => `{{${name}}}`).join(', ');
   /** server: MeetingHandlers.MAX_LINKS */
   const MAX_LINKS = 30;
   let draft = $state<RefList | null>(null);
@@ -68,6 +71,10 @@
       <Button size="sm" icon="document" busy={model.action.busy} onclick={invitation}>Einladung als Word-Dokument</Button>
       <Button size="sm" icon="link" onclick={() => (draft = new RefList(MAX_LINKS, meeting.links))}>Verknüpfungen bearbeiten</Button>
     </div>
+    <p class="muted small">
+      Das Layout kommt aus der Vorlage „Einladung Sitzung.dotx“ im Ordner „Vorlagen“; zum Ändern eine neue Version hochladen.
+      Platzhalter: {PLACEHOLDERS}. Absätze mit leerem Platzhalter entfallen, der Absatz mit {'{{Tagesordnung}}'} wiederholt sich pro Punkt.
+    </p>
   {/if}
 {/if}
 

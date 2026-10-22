@@ -11,6 +11,7 @@ const TYPES: Readonly<Record<string, FileTypeInfo>> = {
   'image/png': { label: 'PNG', image: true },
   'application/pdf': { label: 'PDF', image: false },
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { label: 'Word', image: false },
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.template': { label: 'Word-Vorlage', image: false },
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { label: 'Excel', image: false },
   'application/vnd.openxmlformats-officedocument.presentationml.presentation': { label: 'PowerPoint', image: false },
 };

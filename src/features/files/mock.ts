@@ -19,6 +19,7 @@ const LINK_LIFETIME_MS = 5 * 60_000;
 const EICAR = 'EICAR-STANDARD-ANTIVIRUS-TEST-FILE';
 const OFFICE: Readonly<Record<string, string>> = {
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  dotx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 };
@@ -461,6 +462,11 @@ export class MockFiles {
     const audience: MockAudience =
       folder.scope === 'CLUB' ? { everyone: true } : folder.scope === 'BOARD' ? { roles: ['ADMIN', 'BOARD'] } : this.teamsAudience(folder.teamIds);
     mockServer.events.publish({ type: 'files.files-changed', data: { folderId: folder.id, fileId, change }, audience });
+  }
+
+  /** The bytes uploaded in this session (blobs are not stored across reloads). */
+  blob(fileId: string): Blob | undefined {
+    return this.#blobs.get(fileId);
   }
 
   private objectUrl(file: StoredFile): string {

@@ -462,7 +462,7 @@ export const settings = {
     linkReuseMarginMs: 30_000,
     /** File pickers offer these; the server checks the real type by content. */
     imageExtensions: ['.jpg', '.jpeg', '.png', '.heic', '.heif'],
-    documentExtensions: ['.pdf', '.docx', '.xlsx', '.pptx'],
+    documentExtensions: ['.pdf', '.docx', '.dotx', '.xlsx', '.pptx'],
     /** Simulated upload duration per MB in mock mode. */
     mockUploadMsPerMb: 400,
   },
