@@ -10,6 +10,8 @@
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
   import MemberChips from './MemberChips.svelte';
+  import { Resource } from '../../lib/state/Resource.svelte';
+  import { membersApi } from '../members/services';
   import { ACTION_LABELS, actions, CIRCULAR_MIN_MS, type ResolutionAction } from './model';
   import { meetingsApi } from './services';
 
@@ -26,6 +28,12 @@
   let action = $state<ResolutionAction>('GENERAL');
   let assignees = $state<string[]>([]);
   const actionOptions = actions(null).map((a) => ({ value: a, label: ACTION_LABELS[a] }));
+  // server: circular votes run among the board, which also carries them out.
+  const board = new Resource(async () => {
+    const people = new Map((await membersApi.board()).offices.filter((o) => o.office !== 'AUDITOR').map((o) => [o.memberId, o.name]));
+    return [...people].map(([memberId, name]) => ({ memberId, name })).sort((a, b) => a.name.localeCompare(b.name));
+  });
+  void board.load();
   const tooSoon = $derived(deadline < earliest);
 
   async function submit(event: SubmitEvent) {
@@ -53,7 +61,7 @@
     <Field label="Art des Beschlusses" hint="Bestimmt die Aufgabe, die nach der Annahme entsteht.">
       <Select bind:value={action} options={actionOptions} />
     </Field>
-    <MemberChips bind:value={assignees} label="Verantwortlich für die Umsetzung" placeholder="Verantwortlich (leer = Vorstand)" />
+    <MemberChips bind:value={assignees} candidates={board.value ?? []} label="Verantwortlich für die Umsetzung" placeholder="Verantwortlich (leer = Vorstand)" />
     <ErrorNote error={create.save.error} />
     <div class="row">
       <Button type="submit" variant="primary" busy={create.save.busy}>An den Vorstand schicken</Button>

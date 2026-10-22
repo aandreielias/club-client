@@ -1,22 +1,32 @@
 <script lang="ts">
-  import { directory } from '../../lib/container';
-  import { Resource } from '../../lib/state/Resource.svelte';
   import Button from '../../ui/Button.svelte';
   import Select from '../../ui/Select.svelte';
+  import type { Person } from './model';
 
-  /** Choosing a few people as removable chips (who carries out a resolution or a task); for admin and board. */
+  /**
+   * Choosing a few people as removable chips (who carries out a resolution or a task). `candidates`: who may be chosen (those present
+   * who can do it); `known` names people chosen earlier who are no candidates any more.
+   */
   let {
     value = $bindable(),
+    candidates,
+    known = [],
     label,
     placeholder = 'Person hinzufügen',
     disabled = false,
     onchange,
-  }: { value: string[]; label: string; placeholder?: string; disabled?: boolean; onchange?: (ids: string[]) => void } = $props();
+  }: {
+    value: string[];
+    candidates: readonly Person[];
+    known?: readonly Person[];
+    label: string;
+    placeholder?: string;
+    disabled?: boolean;
+    onchange?: (ids: string[]) => void;
+  } = $props();
 
-  const members = new Resource(() => directory.allMembers());
-  void members.load();
-  const options = $derived((members.value ?? []).filter((m) => m.active && !value.includes(m.id))
-    .map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` })));
+  const options = $derived(candidates.filter((p) => !value.includes(p.memberId)).map((p) => ({ value: p.memberId, label: p.name })));
+  const nameOf = (id: string) => [...candidates, ...known].find((p) => p.memberId === id)?.name ?? 'Mitglied';
 
   let pick = $state('');
 
@@ -33,10 +43,14 @@
 
 <div class="chips-field" role="group" aria-label={label}>
   {#each value as id (id)}
-    <span class="chip">{directory.nameOf(id)}{#if !disabled}<Button size="sm" variant="ghost" icon="close" tooltip="Entfernen" onclick={() => set(value.filter((v) => v !== id))} />{/if}</span>
+    <span class="chip">{nameOf(id)}{#if !disabled}<Button size="sm" variant="ghost" icon="close" tooltip="Entfernen" onclick={() => set(value.filter((v) => v !== id))} />{/if}</span>
   {/each}
   {#if !disabled}
-    <Select bind:value={pick} {placeholder} {options} aria-label={label} onchange={add} />
+    {#if candidates.length}
+      <Select bind:value={pick} {placeholder} {options} aria-label={label} onchange={add} />
+    {:else}
+      <span class="muted small">Niemand anwesend, der das übernehmen kann; ohne Auswahl übernimmt der Vorstand.</span>
+    {/if}
   {/if}
 </div>
 

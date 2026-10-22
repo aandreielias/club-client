@@ -5,7 +5,7 @@ import { MockTable } from '../../lib/mock/MockTable';
 import { resolveRef } from '../../lib/mock/recordRefs';
 import { files } from '../files/mock';
 import { defaultTemplate, fill, TEMPLATE_NAME } from './invitationDocument';
-import type { RefKind } from '../../lib/records/refs';
+import type { LinkedRef, RefKind } from '../../lib/records/refs';
 import { ADMIN_BOARD, type Member } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
 import { tasks } from '../tasks/mock';
@@ -19,15 +19,16 @@ const KINDS: readonly MeetingKind[] = ['ASSEMBLY', 'EXTRA_ASSEMBLY', 'BOARD', 'E
 const DAY = 86_400_000;
 const GRACE = 30 * 60_000;
 
-type StoredMeeting = Omit<Meeting, 'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage' | 'autoTasks' | 'followUps'>
-  & { presence: Record<string, PresenceMode>; autoTasks?: boolean };
+type StoredMeeting = Omit<Meeting, 'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage' | 'autoTasks' | 'followUps' | 'assignable'>
+  & { presence: Record<string, PresenceMode>; autoTasks?: boolean; frozenElectorate?: string[] };
 /** server: meetings_follow_up */
 type StoredFollowUp = { id: string; meetingId: string | null; resolutionId: string | null; kind: FollowUpKind; memberId: string | null;
   office: OfficeKind | null; title: string; dueAt: string | null; doneAt: string | null };
 /** Counters hold what was voted, `ballots` only who voted (server: meetings_resolution, meetings_ballot). */
 type StoredResolution = Pick<Resolution, 'id' | 'meetingId' | 'title' | 'text' | 'majority' | 'status' | 'deadline' | 'voters' | 'analogYes'
   | 'analogNo' | 'analogAbstain' | 'result' | 'openedAt' | 'closedAt'> & { yes: number; no: number; abstain: number; ballots: string[];
-  action?: ResolutionAction; actionMemberId?: string | null; actionOffice?: OfficeKind | null; assigneeIds?: string[] };
+  action?: ResolutionAction; actionMemberId?: string | null; actionOffice?: OfficeKind | null; assigneeIds?: string[]; frozenVoters?: string[];
+  links?: LinkedRef[] };
 
 const DAY_MS = 86_400_000;
 const OFFICE_NAMES: Readonly<Record<OfficeKind, string>> = { CHAIR: 'Vorsitz', VICE_CHAIR: 'Stellvertretung', TREASURER: 'Kassier:in',
@@ -105,7 +106,8 @@ export class MockMeetings {
     const context = `${r.text ? `${r.text}\n\n` : ''}Beschlossen ${meeting ? `in „${meeting.title}“` : 'im Umlaufverfahren'}: „${r.title}“.`;
     for (const [kind, title, dueAt, aboutMember] of plan) {
       this.createFollowUp({ id: crypto.randomUUID(), meetingId: null, resolutionId: r.id, kind, memberId: aboutMember ? r.actionMemberId ?? null : null,
-        office: kind === 'ENTER_OFFICE' ? r.actionOffice ?? null : null, title: title.slice(0, 150), dueAt, doneAt: null }, context, r.assigneeIds ?? [], null);
+        office: kind === 'ENTER_OFFICE' ? r.actionOffice ?? null : null, title: title.slice(0, 150), dueAt, doneAt: null }, context,
+        r.assigneeIds?.length ? r.assigneeIds : meeting ? this.assignable(r, meeting, true) : [], null);
     }
   }
 
@@ -126,29 +128,55 @@ export class MockMeetings {
   addFollowUp(viewer: Member, target: { meetingId?: string; resolutionId?: string }, body: Record<string, any>): FollowUp {
     let meetingId: string | null = null;
     let resolutionId: string | null = null;
-    if (target.resolutionId) resolutionId = this.managedResolution(viewer, target.resolutionId).id;
-    else meetingId = this.managed(viewer, target.meetingId!).id;
+    let allowed: string[];
+    if (target.resolutionId) {
+      const r = this.managedResolution(viewer, target.resolutionId);
+      resolutionId = r.id;
+      allowed = this.assignable(r, r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null, false);
+    } else {
+      const meeting = this.managed(viewer, target.meetingId!);
+      meetingId = meeting.id;
+      allowed = this.assignable(null, meeting, false);
+    }
     const title = text(body.title, 150, 'meeting.follow-up-title-invalid') ?? fail(400, 'meeting.follow-up-title-invalid');
-    const assignees = this.checkedAssignees(body.assigneeIds);
+    const chosen = this.checkedAssignees(body.assigneeIds, allowed);
+    const managers = this.people.audienceIds({ roles: ADMIN_BOARD });
+    const assignees = chosen.length ? chosen : allowed.filter((id) => managers.includes(id));
     const f: StoredFollowUp = { id: crypto.randomUUID(), meetingId, resolutionId, kind: 'MANUAL', memberId: null, office: null, title,
       dueAt: typeof body.dueAt === 'string' && body.dueAt ? body.dueAt : null, doneAt: null };
     this.createFollowUp(f, text(body.description, 2000, 'request.invalid'), assignees, viewer.id);
     return this.followUpDtos([f])[0];
   }
 
-  /** server: ResolutionHandlers.setAssignees */
-  setResolutionAssignees(viewer: Member, id: string, body: Record<string, any>): Resolution {
+  /** server: ResolutionHandlers.setLinks */
+  setResolutionLinks(viewer: Member, id: string, refs: unknown): Resolution {
     const r = this.managedResolution(viewer, id);
-    if (r.status === 'CLOSED') fail(409, 'resolution.closed');
-    r.assigneeIds = this.checkedAssignees(body.assigneeIds);
+    if (!Array.isArray(refs) || refs.length > 30) return fail(400, 'resolution.too-many-refs');
+    const kept = r.links ?? [];
+    r.links = (refs as { kind: RefKind; id: string }[]).map((ref) => kept.find((k) => k.kind === ref.kind && k.id === ref.id)
+      ?? resolveRef(viewer, ref, 'resolution', (other) => {
+        const m = this.meetings.data.find((x) => x.id === other);
+        return m && this.maySee(viewer, m) ? m.title : null;
+      }));
     this.resolutionChanged(r, 'UPDATED');
     return this.resolutionDto(viewer, r);
   }
 
-  private checkedAssignees(value: unknown): string[] {
+  /** server: ResolutionHandlers.setAssignees */
+  setResolutionAssignees(viewer: Member, id: string, body: Record<string, any>): Resolution {
+    const r = this.managedResolution(viewer, id);
+    if (r.status === 'CLOSED') fail(409, 'resolution.closed');
+    const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null;
+    r.assigneeIds = this.checkedAssignees(body.assigneeIds, this.assignable(r, meeting, (r.action ?? 'GENERAL') !== 'GENERAL'));
+    this.resolutionChanged(r, 'UPDATED');
+    return this.resolutionDto(viewer, r);
+  }
+
+  private checkedAssignees(value: unknown, allowed: readonly string[]): string[] {
     const ids = Array.isArray(value) ? [...new Set(value.map(String))] : [];
     if (ids.length > 30) fail(400, 'meeting.too-many-assignees');
     if (ids.some((id) => !this.people.members.data.some((m) => m.id === id && m.active))) fail(400, 'meeting.assignee-unknown');
+    if (ids.some((id) => !allowed.includes(id))) fail(400, 'meeting.assignee-not-allowed');
     return ids;
   }
 
@@ -279,7 +307,7 @@ export class MockMeetings {
   open(viewer: Member, id: string): Meeting {
     const meeting = this.managed(viewer, id);
     if (meeting.status !== 'INVITED') fail(409, 'meeting.not-invited');
-    Object.assign(meeting, { status: 'OPEN', openedAt: new Date().toISOString() });
+    Object.assign(meeting, { status: 'OPEN', openedAt: new Date().toISOString(), frozenElectorate: this.electorate(meeting.kind) });
     this.changed(meeting, 'OPENED');
     return this.dto(viewer, meeting);
   }
@@ -298,7 +326,7 @@ export class MockMeetings {
     const meeting = this.managed(viewer, id);
     if (meeting.status === 'DRAFT') fail(409, 'meeting.not-invited');
     if (meeting.status === 'CLOSED') fail(409, 'meeting.closed');
-    if (!this.electorate(meeting.kind).includes(memberId)) fail(400, 'meeting.not-voter');
+    if (!this.meetingVoters(meeting).includes(memberId)) fail(400, 'meeting.not-voter');
     if (mode === 'APP' || mode === 'ANALOG') meeting.presence[memberId] = mode;
     else delete meeting.presence[memberId];
     this.changed(meeting, 'PRESENCE');
@@ -411,7 +439,7 @@ export class MockMeetings {
     const implied = IMPLIED_MAJORITY[action] ?? requested;
     if (requested && implied !== requested) fail(400, 'resolution.majority-mismatch');
     const majority = implied && majorities(meeting?.kind ?? null).includes(implied) ? implied : fail(400, 'resolution.majority-invalid');
-    const assigneeIds = this.checkedAssignees(body.assigneeIds);
+    const assigneeIds = this.checkedAssignees(body.assigneeIds, this.assignable(null, meeting, action !== 'GENERAL'));
     const title = text(body.title, 200, 'resolution.title-invalid') ?? fail(400, 'resolution.title-invalid');
     const deadline = meeting ? null : typeof body.deadline === 'string' ? new Date(body.deadline).toISOString() : fail(400, 'resolution.deadline-invalid');
     const r: StoredResolution = {
@@ -436,10 +464,10 @@ export class MockMeetings {
     if (r.status !== 'DRAFT') fail(409, 'resolution.not-draft');
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null;
     if (meeting && meeting.status !== 'OPEN') fail(409, 'meeting.not-open');
-    if (meeting && !this.quorate(meeting, this.electorate(meeting.kind))) fail(409, 'resolution.not-quorate');
+    if (meeting && !this.quorate(meeting, this.meetingVoters(meeting))) fail(409, 'resolution.not-quorate');
     if (!meeting && Date.parse(r.deadline!) < Date.now() + CIRCULAR_MIN_MS) fail(400, 'resolution.deadline-too-short');
     const voters = this.voters(r);
-    Object.assign(r, { status: 'OPEN', openedAt: new Date().toISOString(), voters: voters.length });
+    Object.assign(r, { status: 'OPEN', openedAt: new Date().toISOString(), voters: voters.length, frozenVoters: meeting ? undefined : voters });
     this.resolutionChanged(r, 'OPENED');
     if (!meeting) {
       mockServer.events.publish({ type: 'meetings.circular-opened', data: { resolutionId: r.id, recipients: voters, title: r.title, text: r.text, deadline: r.deadline } });
@@ -506,13 +534,14 @@ export class MockMeetings {
   }
 
   private voters(r: StoredResolution): string[] {
-    return r.meetingId ? this.electorate(this.meetings.data.find((m) => m.id === r.meetingId)!.kind) : this.people.electorate('BOARD');
+    if (r.meetingId) return this.meetingVoters(this.meetings.data.find((m) => m.id === r.meetingId)!);
+    return r.status !== 'DRAFT' && r.frozenVoters?.length ? r.frozenVoters : this.people.electorate('BOARD');
   }
 
   private analogPresent(r: StoredResolution): number {
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId) : null;
     if (!meeting) return 0;
-    const voters = this.electorate(meeting.kind);
+    const voters = this.meetingVoters(meeting);
     return Object.entries(meeting.presence).filter(([id, mode]) => mode === 'ANALOG' && voters.includes(id)).length;
   }
 
@@ -543,7 +572,7 @@ export class MockMeetings {
   }
 
   private resolutionDto(viewer: Member, r: StoredResolution): Resolution {
-    const { yes, no, abstain, ballots, action: _a, actionMemberId: _m, actionOffice: _o, assigneeIds: _as, ...rest } = r;
+    const { yes, no, abstain, ballots, action: _a, actionMemberId: _m, actionOffice: _o, assigneeIds: _as, frozenVoters: _f, links: _l, ...rest } = r;
     const closed = r.status === 'CLOSED';
     const voters = this.voters(r);
     const manages = this.managesResolution(viewer, r);
@@ -566,6 +595,11 @@ export class MockMeetings {
       actionOffice: r.actionOffice ?? null,
       assignees: (r.assigneeIds ?? []).map((id) => ({ memberId: id, name: name(id) })),
       followUps: this.followUpDtos(this.followUps.data.filter((f) => f.resolutionId === r.id)),
+      assignable: manages
+        ? this.assignable(r, r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null, r.status !== 'CLOSED' && (r.action ?? 'GENERAL') !== 'GENERAL')
+          .map((id) => ({ memberId: id, name: name(id) })).sort((a, b) => a.name.localeCompare(b.name))
+        : [],
+      links: r.links ?? [],
     };
   }
 
@@ -595,6 +629,19 @@ export class MockMeetings {
 
   private electorate(kind: MeetingKind): string[] {
     return this.people.electorate(isAssembly(kind) ? 'ASSEMBLY' : 'BOARD');
+  }
+
+  /** server: MeetingAccess.electorate — fixed when the meeting opened. */
+  private meetingVoters(m: StoredMeeting): string[] {
+    return (m.status === 'OPEN' || m.status === 'CLOSED') && m.frozenElectorate?.length ? m.frozenElectorate : this.electorate(m.kind);
+  }
+
+  /** server: ResolutionHandlers.assignable — those present (the board for circular votes); admins and board members if needed. */
+  private assignable(r: StoredResolution | null, meeting: StoredMeeting | null, managersOnly: boolean): string[] {
+    const voters = meeting ? this.meetingVoters(meeting) : r ? this.voters(r) : this.people.electorate('BOARD');
+    const base = meeting ? Object.keys(meeting.presence).filter((id) => voters.includes(id)) : voters;
+    if (!managersOnly) return base;
+    return base.filter((id) => this.people.members.data.some((m) => m.id === id && m.active && this.people.hasRole(m, ADMIN_BOARD)));
   }
 
   private offices(viewer: Member): OfficeKind[] {
@@ -637,8 +684,8 @@ export class MockMeetings {
   }
 
   private dto(viewer: Member, m: StoredMeeting): Meeting {
-    const { presence, ...rest } = m;
-    const voters = this.electorate(m.kind);
+    const { presence, frozenElectorate: _frozen, ...rest } = m;
+    const voters = this.meetingVoters(m);
     const name = (id: string) => {
       const p = this.people.members.data.find((x) => x.id === id);
       return p ? `${p.firstName} ${p.lastName}` : '–';
@@ -654,6 +701,9 @@ export class MockMeetings {
       present: Object.entries(presence).map(([id, mode]) => ({ memberId: id, name: name(id), mode })).sort(byName),
       quorate: this.quorate(m, voters),
       canManage: this.mayConvene(viewer, m.kind) || this.offices(viewer).includes('SECRETARY'),
+      assignable: this.mayConvene(viewer, m.kind) || this.offices(viewer).includes('SECRETARY')
+        ? this.assignable(null, m, false).map((id) => ({ memberId: id, name: name(id), manager: this.assignable(null, m, true).includes(id) })).sort(byName)
+        : [],
     };
   }
 
@@ -691,6 +741,7 @@ mockServer
   .on('PUT', '/api/v1/meetings/:id/auto-tasks', (req) => meetings.setAutoTasks(actor(req), req.params.id, req.body?.on))
   .on('POST', '/api/v1/meetings/:id/follow-ups', (req) => meetings.addFollowUp(actor(req), { meetingId: req.params.id }, req.body ?? {}))
   .on('POST', '/api/v1/resolutions/:id/follow-ups', (req) => meetings.addFollowUp(actor(req), { resolutionId: req.params.id }, req.body ?? {}))
+  .on('PUT', '/api/v1/resolutions/:id/links', (req) => meetings.setResolutionLinks(actor(req), req.params.id, req.body?.refs))
   .on('PUT', '/api/v1/resolutions/:id/assignees', (req) => meetings.setResolutionAssignees(actor(req), req.params.id, req.body ?? {}))
   .on('PUT', '/api/v1/meetings/:id/links', (req) => meetings.setLinks(actor(req), req.params.id, req.body?.refs))
   .on('PUT', '/api/v1/meetings/:id/presence/:memberId', (req) => meetings.setPresence(actor(req), req.params.id, req.params.memberId, req.body?.mode));

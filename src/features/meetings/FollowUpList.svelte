@@ -7,10 +7,16 @@
   import RecordLink from '../../ui/RecordLink.svelte';
   import Tag from '../../ui/Tag.svelte';
   import MemberChips from './MemberChips.svelte';
-  import type { FollowUp, NewFollowUp } from './model';
+  import type { FollowUp, NewFollowUp, Person } from './model';
 
   /** The tasks of a meeting or resolution, each opening its task; who runs the meeting adds more by hand. */
-  let { followUps, canAdd, add }: { followUps: readonly FollowUp[]; canAdd: boolean; add: (f: NewFollowUp) => Promise<boolean> } = $props();
+  let { followUps, canAdd, candidates, add }: {
+    followUps: readonly FollowUp[];
+    canAdd: boolean;
+    /** Who may take the task: those present. */
+    candidates: readonly Person[];
+    add: (f: NewFollowUp) => Promise<boolean>;
+  } = $props();
 
   const action = new Action();
   let open = $state(false);
@@ -50,7 +56,7 @@
       <Field label="Aufgabe">
         <input bind:value={title} maxlength="150" required />
       </Field>
-      <MemberChips bind:value={assignees} label="Verantwortlich" placeholder="Verantwortlich (leer = Vorstand)" />
+      <MemberChips bind:value={assignees} {candidates} label="Verantwortlich" placeholder="Verantwortlich (leer = Vorstand)" />
       <Field label="Fällig (optional)">
         <input type="date" bind:value={due} />
       </Field>

@@ -167,7 +167,7 @@
               Angenommene Beschlüsse erzeugen automatisch Aufgaben
             </label>
           {/if}
-          <FollowUpList followUps={m.followUps} canAdd={m.canManage} add={addFollowUp} />
+          <FollowUpList followUps={m.followUps} canAdd={m.canManage} candidates={m.assignable} add={addFollowUp} />
         </div>
       {/if}
 

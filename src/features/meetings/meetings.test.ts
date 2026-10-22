@@ -183,8 +183,9 @@ describe('follow-up tasks', () => {
     directory.setMembership(member('vorstand'), 'spielerin', { membershipType: 'ORDINARY', honorary: true });
     expect(tasks.get(member('schrift'), task.id).status).toBe('DONE');
 
-    // Lena now votes too (13): one more must be there for the quorum.
-    meetings.setPresence(member('vorstand'), mv.id, 'helfer', 'APP');
+    // Lena votes from the next meeting on: this one keeps the electorate it opened with.
+    expect(meetings.get(member('vorstand'), mv.id).electorate.map((p) => p.memberId)).not.toContain('spielerin');
+    expect(() => meetings.setPresence(member('vorstand'), mv.id, 'spielerin', 'APP')).toThrow(expect.objectContaining({ code: 'meeting.not-voter' }));
     meetings.setAutoTasks(member('vorstand'), mv.id, false);
     const quiet = meetings.createResolution(member('vorstand'), mv.id, { title: 'Sonstiges', majority: 'SIMPLE' });
     meetings.openResolution(member('vorstand'), quiet.id);
@@ -192,5 +193,16 @@ describe('follow-up tasks', () => {
     expect(meetings.closeResolution(member('vorstand'), quiet.id).followUps).toEqual([]);
     const manual = meetings.addFollowUp(member('vorstand'), { meetingId: mv.id }, { title: 'Protokoll verteilen' });
     expect(manual).toMatchObject({ kind: 'MANUAL', taskId: expect.any(String) });
+    // only those present, and for tasks that need admin or board rights only admins and board members
+    expect(() => meetings.addFollowUp(member('vorstand'), { meetingId: mv.id }, { title: 'X', assigneeIds: ['spieler'] }))
+      .toThrow(expect.objectContaining({ code: 'meeting.assignee-not-allowed' }));
+    expect(() => meetings.createResolution(member('vorstand'), mv.id,
+      { title: 'Ehrenmitglied', majority: 'SIMPLE', action: 'HONORARY_GRANT', actionMemberId: 'neu', assigneeIds: ['trainer'] }))
+      .toThrow(expect.objectContaining({ code: 'meeting.assignee-not-allowed' }));
+    const meetingNow = meetings.get(member('vorstand'), mv.id);
+    expect(meetingNow.assignable.find((a) => a.memberId === 'admin')).toMatchObject({ manager: true });
+
+    const linked = meetings.setResolutionLinks(member('vorstand'), r.id, [{ kind: 'MEMBER', id: 'spielerin' }, { kind: 'MEETING', id: 'mt-past' }]);
+    expect(linked.links.map((l) => l.title)).toEqual(['Lena Spielerin', 'Ordentliche Vorstandssitzung']);
   });
 });

@@ -10,6 +10,7 @@
   import Tag from '../../ui/Tag.svelte';
   import { OFFICE_LABELS } from '../members/MembersApi';
   import FollowUpList from './FollowUpList.svelte';
+  import LinkList from './LinkList.svelte';
   import MemberChips from './MemberChips.svelte';
   import { ACTION_LABELS, CHOICE_LABELS, MAJORITY_LABELS, RESULT_LABELS, RESULT_TONES, type Choice, type NewFollowUp, type Resolution } from './model';
   import { meetingsApi } from './services';
@@ -86,8 +87,8 @@
     <p class="small">{ACTION_LABELS[r.action]}{#if r.actionMember}: {r.actionMember.name}{/if}{#if r.actionOffice} als {OFFICE_LABELS[r.actionOffice]}{/if}</p>
   {/if}
   {#if r.canManage && r.status !== 'CLOSED'}
-    <MemberChips value={r.assignees.map((a) => a.memberId)} label="Verantwortlich für die Umsetzung" placeholder="Verantwortlich (leer = Vorstand)"
-      onchange={setAssignees} />
+    <MemberChips value={r.assignees.map((a) => a.memberId)} candidates={r.assignable} known={r.assignees} label="Verantwortlich für die Umsetzung"
+      placeholder="Verantwortlich (leer = Vorstand)" onchange={setAssignees} />
   {:else if r.assignees.length}
     <p class="muted small">Verantwortlich: {r.assignees.map((a) => a.name).join(', ')}</p>
   {/if}
@@ -130,7 +131,12 @@
   {/if}
 
   {#if r.status === 'CLOSED' && (r.followUps.length || r.canManage)}
-    <FollowUpList followUps={r.followUps} canAdd={r.canManage} add={addFollowUp} />
+    <FollowUpList followUps={r.followUps} canAdd={r.canManage} candidates={r.assignable} add={addFollowUp} />
+  {/if}
+
+  {#if r.links.length || r.canManage}
+    <LinkList links={r.links} canEdit={r.canManage} busy={action.busy} self={{ kind: 'resolution', id: r.id }}
+      save={(refs) => action.run(() => meetingsApi.setResolutionLinks(r.id, refs).then(onchanged))} />
   {/if}
 
   {#if r.canManage && r.status !== 'CLOSED'}

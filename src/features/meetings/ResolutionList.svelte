@@ -48,6 +48,13 @@
   const memberOptions = $derived((members.value ?? []).filter((m) => (action === 'ELECTION' ? canVote(m) : m.active))
     .map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` })));
   const implied = $derived(IMPLIED_MAJORITY[action]);
+  // server: ResolutionHandlers.assignable — those present; admins and board members only when its tasks need their rights.
+  const candidates = $derived(meeting.assignable.filter((p) => action === 'GENERAL' || p.manager));
+  $effect(() => {
+    // Changing the action may drop chosen people who cannot do its tasks.
+    const allowed = candidates.map((c) => c.memberId);
+    if (assignees.some((id) => !allowed.includes(id))) assignees = assignees.filter((id) => allowed.includes(id));
+  });
   const ready = $derived(!!title.trim() && (!actionNeedsMember(action) || !!actionMemberId) && (action !== 'ELECTION' || !!actionOffice));
 
   async function create(event: SubmitEvent) {
@@ -114,7 +121,7 @@
         <Select bind:value={majority} options={majorityOptions} />
       </Field>
     {/if}
-    <MemberChips bind:value={assignees} label="Verantwortlich für die Umsetzung" placeholder="Verantwortlich (leer = Vorstand)" />
+    <MemberChips bind:value={assignees} candidates={candidates} label="Verantwortlich für die Umsetzung" placeholder="Verantwortlich (leer = Vorstand)" />
     <ErrorNote error={add.error} />
     <div><Button type="submit" busy={add.busy} disabled={!ready}>Antrag hinzufügen</Button></div>
   </form>

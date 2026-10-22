@@ -86,6 +86,12 @@ export interface Meeting {
   autoTasks: boolean;
   /** The meeting's own tasks (those of its resolutions are on the resolutions). */
   followUps: FollowUp[];
+  /** Who runs it: those present; `manager` (admin, board) for tasks that need those rights. */
+  assignable: Assignable[];
+}
+
+export interface Assignable extends Person {
+  manager: boolean;
 }
 
 // --- follow-up tasks (server: MeetingsApi.FollowUpDto, FollowUpPlanner) ---
@@ -230,6 +236,9 @@ export interface Resolution {
   /** Who carries it out; empty = the board. */
   assignees: Person[];
   followUps: FollowUp[];
+  /** Who runs it: possible assignees (before closing: of its plan; afterwards: everyone present). */
+  assignable: Person[];
+  links: LinkedRef[];
 }
 
 export interface NewResolution {

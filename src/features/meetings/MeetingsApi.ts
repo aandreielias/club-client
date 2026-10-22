@@ -82,6 +82,11 @@ export class MeetingsApi {
     return this.api.post<Resolution>(MeetingsApi.RESOLUTIONS, { title, text, deadline, action, assigneeIds });
   }
 
+  /** Replaces the records linked to a resolution. */
+  setResolutionLinks(id: string, refs: readonly { kind: RefKind; id: string }[]): Promise<Resolution> {
+    return this.api.put<Resolution>(`${this.resolutionPath(id)}/links`, { refs: refs.map(({ kind, id: refId }) => ({ kind, id: refId })) });
+  }
+
   /** Who carries the resolution out; until it closes. */
   setResolutionAssignees(id: string, assigneeIds: readonly string[]): Promise<Resolution> {
     return this.api.put<Resolution>(`${this.resolutionPath(id)}/assignees`, { assigneeIds });
