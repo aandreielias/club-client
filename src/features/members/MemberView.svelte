@@ -125,7 +125,7 @@
             <dd>{session.format.date(member.memberSince)}</dd>
           {/if}
         </dl>
-        {#key member.id}<FamilySection memberId={member.id} firstName={member.firstName} self={policy.isSelf(member)} />{/key}
+        {#key member.id}<FamilySection memberId={member.id} firstName={member.firstName} self={policy.isSelf(member)} parent={member.roles.includes('PARENT')} />{/key}
         <HeldItems memberId={member.id} />
       {/if}
 

@@ -39,8 +39,18 @@ export class MemberPolicy {
     return this.isAdmin ? ALL_ROLES : ALL_ROLES.filter((r) => r !== 'ADMIN');
   }
 
+  /** server: MemberHandlers.updateProfile — admin/board, and guardians for their wards (phone, photo consent, a missing birth date). */
   canEditProfile(member: Member): boolean {
-    return this.isManager && member.active;
+    return member.active && (this.isManager || this.isGuardianOf(member));
+  }
+
+  /** Names and a set birth date: admin/board only; everyone else through a change request (member.change-needs-request). */
+  canEditNames(): boolean {
+    return this.isManager;
+  }
+
+  isGuardianOf(member: Member): boolean {
+    return this.session.wardIds.includes(member.id);
   }
 
   canSetRoles(member: Member): boolean {

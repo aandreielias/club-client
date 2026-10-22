@@ -7,7 +7,13 @@
   import { membersApi } from './services';
 
   /** Who is guardian of whom, on both profiles, with what a guardian may do (server: every module's ward checks). */
-  let { memberId, firstName, self = false }: { memberId: string; firstName: string; self?: boolean } = $props();
+  let { memberId, firstName, self = false, parent = false }: {
+    memberId: string;
+    firstName: string;
+    self?: boolean;
+    /** Has the role PARENT: without a link that is worth pointing out, since the role alone grants nothing. */
+    parent?: boolean;
+  } = $props();
 
   // svelte-ignore state_referenced_locally
   const family = new Resource(() => membersApi.family(memberId));
@@ -29,7 +35,13 @@
   {/each}
 {/snippet}
 
-{#if family.value && (family.value.guardians.length || family.value.wards.length)}
+{#if family.value && parent && !family.value.guardians.length && !family.value.wards.length}
+  <h2>Familie</h2>
+  <p class="muted small">
+    {self ? 'Mit dir ist' : `Mit ${firstName} ist`} noch kein Kind verknüpft. Admin oder Vorstand ordnen Erziehungsberechtigte im Profil des Kindes zu;
+    erst dann {self ? 'siehst du' : 'sieht'} Termine und Aufgaben des Kindes und {self ? 'kannst' : 'kann'} für es antworten.
+  </p>
+{:else if family.value && (family.value.guardians.length || family.value.wards.length)}
   {@const { guardians, wards } = family.value}
   <h2>Familie</h2>
   <dl class="props">

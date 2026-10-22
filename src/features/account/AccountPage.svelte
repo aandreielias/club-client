@@ -69,7 +69,7 @@
     <dt>Teams</dt>
     <dd>{#each session.teams as team (team.id)}<Tag tone="blue">{team.name}</Tag>{:else}–{/each}</dd>
   </dl>
-  <FamilySection memberId={member.id} firstName={member.firstName} self />
+  <FamilySection memberId={member.id} firstName={member.firstName} self parent={member.roles.includes('PARENT')} />
 
   {#if held.value?.length}
     <h2>Bei mir</h2>

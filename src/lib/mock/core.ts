@@ -56,7 +56,9 @@ const seedOffice = (id: string, memberId: string, office: OfficeRow['office']): 
   ({ id, memberId, office, startsOn: '2024-09-01', termEndsOn: '2027-09-01', endedOn: null, coopted: false });
 
 /** Bump when the seed changes in a way stored mock data should pick up (see MockDirectory.upgradeSeed). */
-const SEED_VERSION = 2;
+const SEED_VERSION = 3;
+/** guardian → minors (server: members_guardian) */
+const SEED_WARDS: Readonly<Record<string, readonly string[]>> = { eltern: ['spieler'], helfer2: ['sara'] };
 
 /** server: members_office; mirrors BoardRules (one per function, two auditors outside the board, deputy combines). */
 interface OfficeRow {
@@ -154,6 +156,8 @@ export class MockDirectory {
       if (!this.offices.data.some((o) => o.id === office.id) && !this.officesOf(office.memberId).includes(office.office) && !taken) this.offices.data.push(office);
     }
     for (const [memberId, teams] of Object.entries(MockDirectory.seedMemberships())) this.memberships.data[memberId] ??= teams;
+    for (const [guardian, minors] of Object.entries(SEED_WARDS)) this.wards.data[guardian] ??= [...minors];
+    this.wards.save();
     for (const member of this.members.data) this.syncBoardRole(member);
     this.members.save();
     this.offices.save();
@@ -204,7 +208,7 @@ export class MockDirectory {
   }
 
   /** guardianId → minor ids */
-  readonly wards = new MockTable<Record<string, string[]>>('wards', () => ({ eltern: ['spieler'] }));
+  readonly wards = new MockTable<Record<string, string[]>>('wards', () => Object.fromEntries(Object.entries(SEED_WARDS).map(([g, m]) => [g, [...m]])));
 
   readonly security = new MockTable<Record<string, PinState>>('security', () => ({}));
 
