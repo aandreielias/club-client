@@ -189,6 +189,10 @@ export class MockNotifications {
           `${this.#dateTime.format(new Date(data.startsAt))}${where}.${video}${agenda}`, `/meetings/${data.meetingId}`);
         break;
       }
+      case 'meetings.circular-opened':
+        this.notify(data.recipients, 'MEETING', `Umlaufbeschluss: ${data.title}`,
+          `${data.text ? `${data.text} ` : ''}Abstimmen bis ${this.#dateTime.format(new Date(data.deadline))}.`, `/resolutions/${data.resolutionId}`);
+        break;
       case 'members.change-decided':
         this.notify([data.memberId], 'CHANGE_DECIDED', `${data.approved ? 'Änderung übernommen' : 'Änderung abgelehnt'}: ${CHANGE_FIELD_LABELS[data.field as ChangeField]}`,
           data.approved ? 'Deine Kontodaten wurden geändert.' : 'Melde dich beim Vorstand, wenn du Fragen dazu hast.', '/account');

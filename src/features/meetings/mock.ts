@@ -4,7 +4,10 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import { ADMIN_BOARD, type Member } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
-import { isAssembly, latestInvite, type Meeting, type MeetingKind, type MeetingSummary, type PresenceMode } from './model';
+import {
+  CIRCULAR_MIN_MS, isAssembly, latestInvite, majorities, type Choice, type Majority, type Meeting, type MeetingKind, type MeetingSummary,
+  type PresenceMode, type Resolution,
+} from './model';
 
 const fail = MockServer.fail;
 const KINDS: readonly MeetingKind[] = ['ASSEMBLY', 'EXTRA_ASSEMBLY', 'BOARD', 'EXTRA_BOARD', 'SIMPLE_BOARD', 'CONSTITUENT_BOARD'];
@@ -12,6 +15,9 @@ const DAY = 86_400_000;
 const GRACE = 30 * 60_000;
 
 type StoredMeeting = Omit<Meeting, 'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage'> & { presence: Record<string, PresenceMode> };
+/** Counters hold what was voted, `ballots` only who voted (server: meetings_resolution, meetings_ballot). */
+type StoredResolution = Pick<Resolution, 'id' | 'meetingId' | 'title' | 'text' | 'majority' | 'status' | 'deadline' | 'voters' | 'analogYes'
+  | 'analogNo' | 'analogAbstain' | 'result' | 'openedAt' | 'closedAt'> & { yes: number; no: number; abstain: number; ballots: string[] };
 
 const text = (value: unknown, max: number, code: string): string | null => {
   if (value == null) return null;
@@ -22,6 +28,7 @@ const text = (value: unknown, max: number, code: string): string | null => {
 
 export class MockMeetings {
   readonly meetings = new MockTable<StoredMeeting[]>('meetings', () => MockMeetings.seed());
+  readonly resolutions = new MockTable<StoredResolution[]>('resolutions', () => []);
 
   constructor(private readonly people: MockDirectory) {}
 
@@ -113,6 +120,7 @@ export class MockMeetings {
   close(viewer: Member, id: string, protocol: unknown): Meeting {
     const meeting = this.managed(viewer, id);
     if (meeting.status !== 'OPEN') fail(409, 'meeting.not-open');
+    if (this.resolutions.data.some((r) => r.meetingId === id && r.status === 'OPEN')) fail(409, 'meeting.votes-open');
     const text = typeof protocol === 'string' ? protocol.trim() || null : null;
     Object.assign(meeting, { status: 'CLOSED', closedAt: new Date().toISOString(), protocol: text ?? meeting.protocol });
     this.changed(meeting, 'CLOSED');
@@ -128,6 +136,184 @@ export class MockMeetings {
     else delete meeting.presence[memberId];
     this.changed(meeting, 'PRESENCE');
     return this.dto(viewer, meeting);
+  }
+
+  // --- resolutions (server: ResolutionHandlers) ---
+
+  listResolutions(viewer: Member, meetingId: string | null): { items: Resolution[] } {
+    if (meetingId === null) {
+      if (!this.people.hasRole(viewer, ADMIN_BOARD)) fail(403, 'access.denied');
+      return { items: this.resolutions.data.filter((r) => r.meetingId === null).reverse().map((r) => this.resolutionDto(viewer, r)) };
+    }
+    this.visible(viewer, meetingId);
+    return { items: this.resolutions.data.filter((r) => r.meetingId === meetingId).map((r) => this.resolutionDto(viewer, r)) };
+  }
+
+  getResolution(viewer: Member, id: string): Resolution {
+    return this.resolutionDto(viewer, this.resolution(viewer, id));
+  }
+
+  createResolution(viewer: Member, meetingId: string | null, body: Record<string, any>): Resolution {
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    const meeting = meetingId ? this.managed(viewer, meetingId) : null;
+    if (!meeting && !this.runsCircular(viewer)) fail(403, 'access.denied');
+    if (meeting?.status === 'CLOSED') fail(409, 'meeting.closed');
+    const majority = (meeting ? body.majority : 'SIMPLE') as Majority;
+    if (!majorities(meeting?.kind ?? null).includes(majority)) fail(400, 'resolution.majority-invalid');
+    const title = text(body.title, 200, 'resolution.title-invalid') ?? fail(400, 'resolution.title-invalid');
+    const deadline = meeting ? null : typeof body.deadline === 'string' ? new Date(body.deadline).toISOString() : fail(400, 'resolution.deadline-invalid');
+    const r: StoredResolution = {
+      id: crypto.randomUUID(), meetingId, title, text: text(body.text, 4000, 'resolution.text-too-long'), majority, status: 'DRAFT', deadline,
+      voters: null, analogYes: null, analogNo: null, analogAbstain: null, result: null, openedAt: null, closedAt: null, yes: 0, no: 0, abstain: 0, ballots: [],
+    };
+    this.resolutions.data.push(r);
+    this.resolutionChanged(r, 'CREATED');
+    return this.resolutionDto(viewer, r);
+  }
+
+  deleteResolution(viewer: Member, id: string): void {
+    const r = this.managedResolution(viewer, id);
+    if (r.status !== 'DRAFT') fail(409, 'resolution.not-draft');
+    this.resolutions.data.splice(this.resolutions.data.indexOf(r), 1);
+    this.resolutionChanged(r, 'DELETED');
+  }
+
+  openResolution(viewer: Member, id: string): Resolution {
+    const r = this.managedResolution(viewer, id);
+    if (r.status !== 'DRAFT') fail(409, 'resolution.not-draft');
+    const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null;
+    if (meeting && meeting.status !== 'OPEN') fail(409, 'meeting.not-open');
+    if (meeting && !this.quorate(meeting, this.electorate(meeting.kind))) fail(409, 'resolution.not-quorate');
+    if (!meeting && Date.parse(r.deadline!) < Date.now() + CIRCULAR_MIN_MS) fail(400, 'resolution.deadline-too-short');
+    const voters = this.voters(r);
+    Object.assign(r, { status: 'OPEN', openedAt: new Date().toISOString(), voters: voters.length });
+    this.resolutionChanged(r, 'OPENED');
+    if (!meeting) {
+      mockServer.events.publish({ type: 'meetings.circular-opened', data: { resolutionId: r.id, recipients: voters, title: r.title, text: r.text, deadline: r.deadline } });
+    }
+    return this.resolutionDto(viewer, r);
+  }
+
+  closeResolution(viewer: Member, id: string): Resolution {
+    return this.resolutionDto(viewer, this.closeNow(this.managedResolution(viewer, id)));
+  }
+
+  vote(viewer: Member, id: string, choice: Choice): Resolution {
+    const r = this.resolution(viewer, id);
+    if (!this.voters(r).includes(viewer.id)) fail(403, 'resolution.not-voter');
+    if (r.meetingId) {
+      const mode = this.meetings.data.find((m) => m.id === r.meetingId)!.presence[viewer.id];
+      if (!mode) fail(409, 'resolution.not-present');
+      if (mode === 'ANALOG') fail(409, 'resolution.vote-analog');
+    }
+    return this.resolutionDto(viewer, this.cast(r, viewer.id, choice));
+  }
+
+  recordVote(viewer: Member, id: string, memberId: string, choice: Choice): Resolution {
+    const r = this.managedResolution(viewer, id);
+    if (r.meetingId) fail(409, 'resolution.not-circular');
+    if (!this.voters(r).includes(memberId)) fail(400, 'resolution.not-voter');
+    return this.resolutionDto(viewer, this.cast(r, memberId, choice));
+  }
+
+  analogVotes(viewer: Member, id: string, body: Record<string, any>): Resolution {
+    const r = this.managedResolution(viewer, id);
+    if (!r.meetingId) fail(409, 'resolution.circular');
+    if (r.status !== 'OPEN') fail(409, 'resolution.not-open');
+    if (r.analogYes !== null) fail(409, 'resolution.analog-already-entered');
+    const [yes, no, abstain] = [body.yes, body.no, body.abstain].map((v) => (Number.isInteger(v) && v >= 0 ? (v as number) : fail(400, 'resolution.analog-invalid')));
+    if (yes + no + abstain > this.analogPresent(r)) fail(409, 'resolution.analog-exceeds-present');
+    Object.assign(r, { analogYes: yes, analogNo: no, analogAbstain: abstain });
+    this.resolutionChanged(r, 'VOTED');
+    return this.resolutionDto(viewer, r);
+  }
+
+  private cast(r: StoredResolution, voter: string, choice: Choice): StoredResolution {
+    if (!['YES', 'NO', 'ABSTAIN'].includes(choice)) fail(400, 'resolution.choice-missing');
+    if (r.status !== 'OPEN') fail(409, 'resolution.not-open');
+    if (r.ballots.includes(voter)) fail(409, 'resolution.already-voted');
+    r.ballots.push(voter);
+    r[choice === 'YES' ? 'yes' : choice === 'NO' ? 'no' : 'abstain'] += 1;
+    this.resolutionChanged(r, 'VOTED');
+    return !r.meetingId && r.ballots.length >= (r.voters ?? 0) ? this.closeNow(r) : r;
+  }
+
+  /** server: Resolution.closed */
+  private closeNow(r: StoredResolution): StoredResolution {
+    if (r.status !== 'OPEN') fail(409, 'resolution.not-open');
+    const yes = r.yes + (r.analogYes ?? 0);
+    const valid = yes + r.no + (r.analogNo ?? 0);
+    const passes = valid > 0 && (r.majority === 'SIMPLE' ? yes * 2 > valid : r.majority === 'TWO_THIRDS' ? yes * 3 >= valid * 2 : yes * 4 >= valid * 3);
+    const result = !r.meetingId && r.ballots.length * 2 <= (r.voters ?? 0) ? 'NOT_QUORATE' : passes ? 'PASSED' : 'FAILED';
+    Object.assign(r, { status: 'CLOSED', closedAt: new Date().toISOString(), result });
+    this.resolutionChanged(r, 'CLOSED');
+    return r;
+  }
+
+  private voters(r: StoredResolution): string[] {
+    return r.meetingId ? this.electorate(this.meetings.data.find((m) => m.id === r.meetingId)!.kind) : this.people.electorate('BOARD');
+  }
+
+  private analogPresent(r: StoredResolution): number {
+    const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId) : null;
+    if (!meeting) return 0;
+    const voters = this.electorate(meeting.kind);
+    return Object.entries(meeting.presence).filter(([id, mode]) => mode === 'ANALOG' && voters.includes(id)).length;
+  }
+
+  private runsCircular(viewer: Member): boolean {
+    return this.mayConvene(viewer, 'SIMPLE_BOARD') || this.offices(viewer).includes('SECRETARY');
+  }
+
+  private resolution(viewer: Member, id: string): StoredResolution {
+    const r = this.resolutions.data.find((x) => x.id === id) ?? fail(404, 'resolution.not-found');
+    if (r.meetingId) {
+      const meeting = this.meetings.data.find((m) => m.id === r.meetingId);
+      if (!meeting || !this.maySee(viewer, meeting)) fail(404, 'resolution.not-found');
+    } else if (!this.people.hasRole(viewer, ADMIN_BOARD)) fail(404, 'resolution.not-found');
+    return r;
+  }
+
+  private managesResolution(viewer: Member, r: StoredResolution): boolean {
+    if (!r.meetingId) return this.runsCircular(viewer);
+    const kind = this.meetings.data.find((m) => m.id === r.meetingId)!.kind;
+    return this.mayConvene(viewer, kind) || this.offices(viewer).includes('SECRETARY');
+  }
+
+  private managedResolution(viewer: Member, id: string): StoredResolution {
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    const r = this.resolution(viewer, id);
+    if (!this.managesResolution(viewer, r)) fail(403, 'access.denied');
+    return r;
+  }
+
+  private resolutionDto(viewer: Member, r: StoredResolution): Resolution {
+    const { yes, no, abstain, ballots, ...rest } = r;
+    const closed = r.status === 'CLOSED';
+    const voters = this.voters(r);
+    const manages = this.managesResolution(viewer, r);
+    const mode = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)!.presence[viewer.id] : 'APP';
+    const name = (id: string) => {
+      const p = this.people.members.data.find((x) => x.id === id);
+      return p ? `${p.firstName} ${p.lastName}` : '–';
+    };
+    return {
+      ...rest,
+      yes: closed ? yes : null, no: closed ? no : null, abstain: closed ? abstain : null,
+      analogYes: closed ? r.analogYes : null, analogNo: closed ? r.analogNo : null, analogAbstain: closed ? r.analogAbstain : null,
+      analogEntered: r.analogYes !== null, analogPresent: this.analogPresent(r), ballots: ballots.length,
+      voted: ballots.includes(viewer.id),
+      canVote: r.status === 'OPEN' && !ballots.includes(viewer.id) && voters.includes(viewer.id) && mode === 'APP',
+      canManage: manages,
+      pending: !r.meetingId && r.status === 'OPEN' && manages ? voters.filter((id) => !ballots.includes(id)).map((id) => ({ memberId: id, name: name(id) })) : [],
+    };
+  }
+
+  private resolutionChanged(r: StoredResolution, change: string): void {
+    this.resolutions.save();
+    const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId) : null;
+    mockServer.events.publish({ type: 'meetings.resolution-changed', data: { resolutionId: r.id, meetingId: r.meetingId, change },
+      audience: meeting && isAssembly(meeting.kind) ? { everyone: true } : { roles: ADMIN_BOARD } });
   }
 
   /** server: Meeting record validation */
@@ -227,4 +413,15 @@ mockServer
   .on('POST', '/api/v1/meetings/:id/invite', (req) => meetings.invite(actor(req), req.params.id))
   .on('POST', '/api/v1/meetings/:id/open', (req) => meetings.open(actor(req), req.params.id))
   .on('POST', '/api/v1/meetings/:id/close', (req) => meetings.close(actor(req), req.params.id, req.body?.protocol))
+  .on('GET', '/api/v1/meetings/:id/resolutions', (req) => meetings.listResolutions(actor(req), req.params.id))
+  .on('POST', '/api/v1/meetings/:id/resolutions', (req) => meetings.createResolution(actor(req), req.params.id, req.body ?? {}))
+  .on('GET', '/api/v1/resolutions', (req) => meetings.listResolutions(actor(req), null))
+  .on('POST', '/api/v1/resolutions', (req) => meetings.createResolution(actor(req), null, req.body ?? {}))
+  .on('GET', '/api/v1/resolutions/:id', (req) => meetings.getResolution(actor(req), req.params.id))
+  .on('DELETE', '/api/v1/resolutions/:id', (req) => meetings.deleteResolution(actor(req), req.params.id))
+  .on('POST', '/api/v1/resolutions/:id/open', (req) => meetings.openResolution(actor(req), req.params.id))
+  .on('POST', '/api/v1/resolutions/:id/close', (req) => meetings.closeResolution(actor(req), req.params.id))
+  .on('POST', '/api/v1/resolutions/:id/vote', (req) => meetings.vote(actor(req), req.params.id, req.body?.choice))
+  .on('POST', '/api/v1/resolutions/:id/recorded-vote', (req) => meetings.recordVote(actor(req), req.params.id, req.body?.memberId, req.body?.choice))
+  .on('POST', '/api/v1/resolutions/:id/analog-votes', (req) => meetings.analogVotes(actor(req), req.params.id, req.body ?? {}))
   .on('PUT', '/api/v1/meetings/:id/presence/:memberId', (req) => meetings.setPresence(actor(req), req.params.id, req.params.memberId, req.body?.mode));

@@ -10,6 +10,7 @@
   import Tag from '../../ui/Tag.svelte';
   import { MEETING_CHANGED } from './events';
   import { MeetingModel } from './MeetingModel.svelte';
+  import ResolutionList from './ResolutionList.svelte';
   import { isAssembly, KIND_LABELS, QUORUM_TEXT, STATUS_LABELS, STATUS_TONES, type Meeting, type PresenceMode } from './model';
   import { meetingsApi } from './services';
 
@@ -135,6 +136,11 @@
             <li class="muted">Niemand ist stimmberechtigt.</li>
           {/each}
         </ul>
+      {/if}
+
+      {#if m.status !== 'DRAFT'}
+        <h2>Beschlüsse</h2>
+        <ResolutionList meeting={m} />
       {/if}
 
       {#if m.status === 'OPEN' && m.canManage}

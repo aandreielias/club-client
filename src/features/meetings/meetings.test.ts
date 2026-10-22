@@ -76,3 +76,40 @@ describe('mock meetings', () => {
     expect(meetings.list(member('spielerin'), null, null).items.some((m) => m.kind === 'SIMPLE_BOARD')).toBe(false);
   });
 });
+
+describe('mock resolutions', () => {
+  it('count app votes and room sums, secret until closed', () => {
+    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(15), endsAt: inDays(15.1) });
+    meetings.invite(member('vorstand'), mv.id);
+    meetings.setPresence(member('vorstand'), mv.id, 'vorstand', 'APP');
+    meetings.setPresence(member('vorstand'), mv.id, 'trainer', 'ANALOG');
+    const draft = meetings.createResolution(member('vorstand'), mv.id, { title: 'Statutenänderung', majority: 'TWO_THIRDS' });
+    expect(() => meetings.openResolution(member('vorstand'), draft.id)).toThrow(expect.objectContaining({ code: 'meeting.not-open' }));
+    meetings.open(member('vorstand'), mv.id);
+    expect(meetings.openResolution(member('vorstand'), draft.id).analogPresent).toBe(1);
+
+    expect(() => meetings.vote(member('trainer'), draft.id, 'YES')).toThrow(expect.objectContaining({ code: 'resolution.vote-analog' }));
+    const voted = meetings.vote(member('vorstand'), draft.id, 'YES');
+    expect(voted).toMatchObject({ voted: true, ballots: 1, yes: null });
+    expect(() => meetings.vote(member('vorstand'), draft.id, 'NO')).toThrow(expect.objectContaining({ code: 'resolution.already-voted' }));
+    expect(() => meetings.analogVotes(member('vorstand'), draft.id, { yes: 1, no: 1, abstain: 0 }))
+      .toThrow(expect.objectContaining({ code: 'resolution.analog-exceeds-present' }));
+    meetings.analogVotes(member('vorstand'), draft.id, { yes: 0, no: 1, abstain: 0 });
+    expect(() => meetings.close(member('vorstand'), mv.id, null)).toThrow(expect.objectContaining({ code: 'meeting.votes-open' }));
+    // 1:1 misses two thirds
+    expect(meetings.closeResolution(member('vorstand'), draft.id)).toMatchObject({ result: 'FAILED', yes: 1, analogNo: 1 });
+  });
+
+  it('run circular votes among the board with written votes', () => {
+    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    const soon = meetings.createResolution(member('vorstand'), null, { title: 'Bälle', deadline: inDays(2) });
+    expect(() => meetings.openResolution(member('vorstand'), soon.id)).toThrow(expect.objectContaining({ code: 'resolution.deadline-too-short' }));
+    const r = meetings.createResolution(member('vorstand'), null, { title: 'Bälle', deadline: inDays(4) });
+    const opened = meetings.openResolution(member('vorstand'), r.id);
+    expect(opened.voters).toBe(1); // the seeded board: Bernd
+    expect(opened.pending.map((p) => p.memberId)).toEqual(['vorstand']);
+    expect(() => meetings.getResolution(member('spielerin'), r.id)).toThrow(expect.objectContaining({ code: 'resolution.not-found' }));
+    expect(meetings.recordVote(member('vorstand'), r.id, 'vorstand', 'YES')).toMatchObject({ status: 'CLOSED', result: 'PASSED' });
+  });
+});

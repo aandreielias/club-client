@@ -95,3 +95,71 @@ export interface NewMeeting {
 
 /** Omitted fields stay, '' clears a text. Times only before the invitation, the protocol only while open. */
 export type MeetingPatch = Partial<Omit<NewMeeting, 'kind'>> & { protocol?: string };
+
+// --- resolutions (server: MeetingsApi.ResolutionDto) ---
+
+/** Of the valid votes (yes + no; abstentions don't count). */
+export type Majority = 'SIMPLE' | 'TWO_THIRDS' | 'THREE_QUARTERS';
+export type ResolutionStatus = 'DRAFT' | 'OPEN' | 'CLOSED';
+export type Choice = 'YES' | 'NO' | 'ABSTAIN';
+/** NOT_QUORATE: a circular vote in which no more than half of the board took part. */
+export type Result = 'PASSED' | 'FAILED' | 'NOT_QUORATE';
+
+export const MAJORITY_LABELS: Readonly<Record<Majority, string>> = {
+  SIMPLE: 'Mehr als die Hälfte',
+  TWO_THIRDS: 'Zwei Drittel (Statutenänderung)',
+  THREE_QUARTERS: 'Drei Viertel',
+};
+
+export const CHOICE_LABELS: Readonly<Record<Choice, string>> = { YES: 'Ja', NO: 'Nein', ABSTAIN: 'Enthaltung' };
+
+export const RESULT_LABELS: Readonly<Record<Result, string>> = { PASSED: 'Angenommen', FAILED: 'Abgelehnt', NOT_QUORATE: 'Zu wenig Beteiligung' };
+export const RESULT_TONES: Readonly<Record<Result, Hue>> = { PASSED: 'green', FAILED: 'red', NOT_QUORATE: 'orange' };
+
+/** server: MeetingRules.majorities — `null` = circular vote. */
+export function majorities(kind: MeetingKind | null): Majority[] {
+  if (kind === 'ASSEMBLY' || kind === 'EXTRA_ASSEMBLY') return ['SIMPLE', 'TWO_THIRDS', 'THREE_QUARTERS'];
+  return kind === 'EXTRA_BOARD' ? ['THREE_QUARTERS'] : ['SIMPLE'];
+}
+
+/** server: Resolution.CIRCULAR_MIN (§10 Abs 15). */
+export const CIRCULAR_MIN_MS = 3 * 24 * HOUR;
+
+export interface Resolution {
+  id: string;
+  /** null = circular vote of the board. */
+  meetingId: string | null;
+  title: string;
+  text: string | null;
+  majority: Majority;
+  status: ResolutionStatus;
+  deadline: string | null;
+  /** Electorate when the vote opened. */
+  voters: number | null;
+  /** How many voted (in the app or in writing). */
+  ballots: number;
+  /** The split, only once closed. */
+  yes: number | null;
+  no: number | null;
+  abstain: number | null;
+  analogYes: number | null;
+  analogNo: number | null;
+  analogAbstain: number | null;
+  analogEntered: boolean;
+  /** Members present without the app: the most the room may add. */
+  analogPresent: number;
+  result: Result | null;
+  openedAt: string | null;
+  closedAt: string | null;
+  voted: boolean;
+  canVote: boolean;
+  canManage: boolean;
+  /** Circular votes: board members who have not voted yet (for who runs it). */
+  pending: Person[];
+}
+
+export interface NewResolution {
+  title: string;
+  text: string | null;
+  majority: Majority;
+}

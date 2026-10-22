@@ -8,3 +8,12 @@ export interface MeetingChanged {
   meetingId: string;
   change: 'CREATED' | 'UPDATED' | 'INVITED' | 'PRESENCE' | 'OPENED' | 'CLOSED' | 'DELETED';
 }
+
+/** Carries no votes; viewers reload the resolution. */
+export const RESOLUTION_CHANGED = liveEvent<ResolutionChanged>('meetings.resolution-changed');
+
+export interface ResolutionChanged {
+  resolutionId: string;
+  meetingId: string | null;
+  change: 'CREATED' | 'OPENED' | 'VOTED' | 'CLOSED' | 'DELETED';
+}

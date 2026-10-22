@@ -10,6 +10,7 @@
   import Icon from '../../ui/Icon.svelte';
   import Page from '../../ui/Page.svelte';
   import Tag from '../../ui/Tag.svelte';
+  import CircularVotes from './CircularVotes.svelte';
   import { MEETING_CHANGED } from './events';
   import { isAssembly, KIND_LABELS, STATUS_LABELS, STATUS_TONES, type MeetingSummary } from './model';
   import { meetingPolicy as policy, meetingsApi } from './services';
@@ -60,6 +61,8 @@
       {/if}
     {/snippet}
   </AsyncView>
+
+  {#if policy.canCreate()}<CircularVotes />{/if}
 </Page>
 
 <style>

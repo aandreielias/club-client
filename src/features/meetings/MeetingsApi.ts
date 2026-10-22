@@ -1,9 +1,10 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
-import type { Meeting, MeetingPatch, MeetingSummary, NewMeeting, PresenceMode } from './model';
+import type { Choice, Meeting, MeetingPatch, MeetingSummary, NewMeeting, NewResolution, PresenceMode, Resolution } from './model';
 
 /** Typed access to the meetings endpoints. Every write needs a step-up and answers with the meeting. */
 export class MeetingsApi {
   static readonly BASE = '/api/v1/meetings';
+  static readonly RESOLUTIONS = '/api/v1/resolutions';
 
   constructor(private readonly api: ApiClient) {}
 
@@ -45,6 +46,59 @@ export class MeetingsApi {
   /** null = not there. */
   setPresence(id: string, memberId: string, mode: PresenceMode | null): Promise<Meeting> {
     return this.api.put<Meeting>(`${this.path(id)}/presence/${encodeURIComponent(memberId)}`, { mode });
+  }
+
+  // --- resolutions ---
+
+  async resolutions(meetingId: string): Promise<Resolution[]> {
+    return (await this.api.get<{ items: Resolution[] }>(`${this.path(meetingId)}/resolutions`)).items;
+  }
+
+  /** Circular votes of the board, newest first. */
+  async circular(): Promise<Resolution[]> {
+    return (await this.api.get<{ items: Resolution[] }>(MeetingsApi.RESOLUTIONS)).items;
+  }
+
+  resolution(id: string): Promise<Resolution> {
+    return this.api.get<Resolution>(this.resolutionPath(id));
+  }
+
+  createResolution(meetingId: string, resolution: NewResolution): Promise<Resolution> {
+    return this.api.post<Resolution>(`${this.path(meetingId)}/resolutions`, resolution);
+  }
+
+  createCircular(title: string, text: string | null, deadline: string): Promise<Resolution> {
+    return this.api.post<Resolution>(MeetingsApi.RESOLUTIONS, { title, text, deadline });
+  }
+
+  deleteResolution(id: string): Promise<void> {
+    return this.api.delete(this.resolutionPath(id));
+  }
+
+  openResolution(id: string): Promise<Resolution> {
+    return this.api.post<Resolution>(`${this.resolutionPath(id)}/open`);
+  }
+
+  closeResolution(id: string): Promise<Resolution> {
+    return this.api.post<Resolution>(`${this.resolutionPath(id)}/close`);
+  }
+
+  vote(id: string, choice: Choice): Promise<Resolution> {
+    return this.api.post<Resolution>(`${this.resolutionPath(id)}/vote`, { choice });
+  }
+
+  /** Circular votes: a written vote of a board member. */
+  recordVote(id: string, memberId: string, choice: Choice): Promise<Resolution> {
+    return this.api.post<Resolution>(`${this.resolutionPath(id)}/recorded-vote`, { memberId, choice });
+  }
+
+  /** Meetings: the room's sums for members without the app, once. */
+  analogVotes(id: string, yes: number, no: number, abstain: number): Promise<Resolution> {
+    return this.api.post<Resolution>(`${this.resolutionPath(id)}/analog-votes`, { yes, no, abstain });
+  }
+
+  private resolutionPath(id: string): string {
+    return `${MeetingsApi.RESOLUTIONS}/${encodeURIComponent(id)}`;
   }
 
   private path(id: string): string {
