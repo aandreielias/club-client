@@ -58,7 +58,7 @@
   const late = (m: Meeting) => m.latestInvite < new Date().toISOString();
 
   async function invite(m: Meeting) {
-    const who = isAssembly(m.kind) ? 'alle Vereinsmitglieder' : 'den Vorstand';
+    const who = isAssembly(m.kind) ? 'alle stimmberechtigten Mitglieder' : 'den Vorstand';
     await view.confirm({
       title: 'Einladung verschicken',
       message: `Die Einladung mit Tagesordnung geht per E-Mail und App an ${who}. Danach steht der Termin fest.`,

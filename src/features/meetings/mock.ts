@@ -6,7 +6,7 @@ import { resolveRef } from '../../lib/mock/recordRefs';
 import { files } from '../files/mock';
 import { defaultTemplate, fill, TEMPLATE_NAME } from './invitationDocument';
 import type { LinkedRef, RefKind } from '../../lib/records/refs';
-import { ADMIN_BOARD, type Member } from '../../lib/types';
+import { ADMIN_BOARD, canVote, type Member } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
 import { tasks } from '../tasks/mock';
 import {
@@ -309,7 +309,7 @@ export class MockMeetings {
     if (meeting.kind === 'EXTRA_ASSEMBLY') this.complete((f) => f.kind === 'CONVENE_ASSEMBLY');
     mockServer.events.publish({
       type: 'meetings.meeting-invited',
-      data: { meetingId: meeting.id, recipients: this.people.electorate(isAssembly(meeting.kind) ? 'CLUB' : 'BOARD'), kind: meeting.kind,
+      data: { meetingId: meeting.id, recipients: this.people.electorate(isAssembly(meeting.kind) ? 'ASSEMBLY' : 'BOARD'), kind: meeting.kind,
         title: meeting.title, agenda: meeting.agenda, startsAt: meeting.startsAt, location: meeting.location, videoUrl: meeting.videoUrl },
     });
     return this.dto(viewer, meeting);
@@ -670,7 +670,7 @@ export class MockMeetings {
 
   private maySee(viewer: Member, m: StoredMeeting): boolean {
     if (this.people.hasRole(viewer, ADMIN_BOARD)) return true;
-    return isAssembly(m.kind) && (!!viewer.membershipType || viewer.honorary);
+    return isAssembly(m.kind) && canVote(viewer);
   }
 
   private visible(viewer: Member, id: string): StoredMeeting {

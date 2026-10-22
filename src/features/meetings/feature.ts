@@ -13,7 +13,7 @@ import { MEETING_MESSAGES } from './messages';
 export const meetingsFeature: Feature = {
   id: 'meetings',
   routes: [
-    // Club members see general meetings, the board its own meetings too (server: MeetingHandlers.maySee).
+    // Voters (extraordinary and honorary members) see general meetings, the board its own meetings too (server: MeetingAccess.maySee).
     { path: '/meetings', component: MeetingsPage, nav: 'Sitzungen', icon: 'meetings' },
     { path: '/meetings/:id', component: MeetingPage },
     { path: '/resolutions/:id', component: ResolutionPage },

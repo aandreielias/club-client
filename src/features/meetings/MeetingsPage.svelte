@@ -57,7 +57,7 @@
           {@render cards(past(all))}
         {/if}
       {:else}
-        <Empty text="Noch keine Sitzung. Mitgliederversammlungen sehen alle Vereinsmitglieder, Vorstandssitzungen nur der Vorstand."
+        <Empty text="Noch keine Sitzung. Mitgliederversammlungen sehen die stimmberechtigten Mitglieder, Vorstandssitzungen nur der Vorstand."
           action={policy.canCreate() ? { label: 'Neue Sitzung', icon: 'add', run: create } : null} />
       {/if}
     {/snippet}

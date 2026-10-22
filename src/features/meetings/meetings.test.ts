@@ -77,8 +77,10 @@ describe('mock meetings', () => {
     expect(meetings.setPresence(member('vorstand'), mv.id, 'trainer', 'ANALOG').quorate).toBe(true); // 6 of 12
 
     expect(() => meetings.get(member('gast'), mv.id)).toThrow(expect.objectContaining({ code: 'meeting.not-found' }));
-    expect(meetings.get(member('spielerin'), mv.id).canManage).toBe(false);
-    expect(meetings.list(member('spielerin'), null, null).items.some((m) => m.kind === 'SIMPLE_BOARD')).toBe(false);
+    expect(meetings.get(member('helfer'), mv.id).canManage).toBe(false);
+    expect(meetings.list(member('helfer'), null, null).items.some((m) => m.kind === 'SIMPLE_BOARD')).toBe(false);
+    // ordinary members do not vote, so they neither see nor get invited to general meetings
+    expect(() => meetings.get(member('spielerin'), mv.id)).toThrow(expect.objectContaining({ code: 'meeting.not-found' }));
   });
 });
 
@@ -130,7 +132,7 @@ describe('meeting links', () => {
     expect(linked.links.map((l) => l.title)).toEqual(['Karin Kassier', 'Ordentliche Vorstandssitzung']);
     expect(() => meetings.setLinks(member('vorstand'), mv.id, [{ kind: 'MEETING', id: mv.id }])).toThrow(expect.objectContaining({ code: 'meeting.ref-unknown' }));
     expect(() => meetings.setLinks(member('vorstand'), mv.id, [{ kind: 'TASK', id: 'nope' }])).toThrow(expect.objectContaining({ code: 'meeting.ref-unknown' }));
-    expect(meetings.get(member('spielerin'), mv.id).links).toHaveLength(2);
+    expect(meetings.get(member('helfer'), mv.id).links).toHaveLength(2);
   });
 });
 
