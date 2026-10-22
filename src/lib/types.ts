@@ -71,6 +71,12 @@ export const canVote = (m: Member): boolean => m.active && (m.membershipType ===
 
 export interface MemberList {
   items: Member[];
+  /** Under 18 today (also when the birth date is hidden). */
+  minorIds: string[];
+  /** Members with a linked guardian. */
+  wardIds: string[];
+  /** Members linked as guardian. */
+  guardianIds: string[];
 }
 
 export interface Team {

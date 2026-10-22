@@ -112,8 +112,8 @@ export class MembersApi {
 
   constructor(private readonly api: ApiClient) {}
 
-  async list(): Promise<Member[]> {
-    return (await this.api.get<MemberList>(MembersApi.BASE)).items;
+  list(): Promise<MemberList> {
+    return this.api.get<MemberList>(MembersApi.BASE);
   }
 
   get(id: string): Promise<Member> {

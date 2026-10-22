@@ -327,7 +327,15 @@ export class MockDirectory {
     const items = [...this.members.data]
       .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName))
       .map((m) => (this.hasRole(viewer, ['ADMIN']) || m.id === viewer.id ? m : { ...m, birthDate: null }));
-    return { items };
+    const today = this.clock.today();
+    const adultBornBy = `${Number(today.slice(0, 4)) - 18}${today.slice(4)}`;
+    const links = Object.entries(this.wards.data).filter(([g]) => this.members.data.some((m) => m.id === g && m.active));
+    return {
+      items,
+      minorIds: this.members.data.filter((m) => m.birthDate && m.birthDate > adultBornBy).map((m) => m.id),
+      wardIds: [...new Set(links.flatMap(([, minors]) => minors))].filter((id) => this.members.data.some((m) => m.id === id && m.active)),
+      guardianIds: links.filter(([, minors]) => minors.length).map(([g]) => g),
+    };
   }
 
   hasPhotoConsent(memberId: string): boolean {

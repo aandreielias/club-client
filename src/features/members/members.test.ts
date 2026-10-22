@@ -56,7 +56,8 @@ describe('ProfileForm', () => {
 
 describe('MemberListModel', () => {
   it('filters by search, role and activity', async () => {
-    const api = { list: async () => [member('anna', ['ADMIN']), member('bert', ['PLAYER']), member('carl', ['PLAYER'], { active: false })] };
+    const api = { list: async () => ({ items: [member('anna', ['ADMIN']), member('bert', ['PLAYER']), member('carl', ['PLAYER'], { active: false })],
+      minorIds: ['bert'], wardIds: ['bert'], guardianIds: ['anna'] }) };
     const list = new MemberListModel(api as unknown as MembersApi);
     await list.load();
     expect(list.rows.map((m) => m.id)).toEqual(['anna', 'bert']);
@@ -66,6 +67,12 @@ describe('MemberListModel', () => {
     list.search = 'CARL@';
     expect(list.rows.map((m) => m.id)).toEqual(['carl']);
     expect(list.activeCount).toBe(2);
+    list.search = '';
+    list.setFilter('role', '');
+    list.setFilter('family', 'minor');
+    expect(list.rows.map((m) => m.id)).toEqual(['bert']);
+    list.setFilter('family', 'guardian');
+    expect(list.rows.map((m) => m.id)).toEqual(['anna']);
   });
 });
 
