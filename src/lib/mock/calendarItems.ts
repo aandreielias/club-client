@@ -88,9 +88,8 @@ export function items(viewer: Member, from: string, to: string): CalendarItem[] 
     }
   }
 
-  // Birthdays of those whose birth date the viewer sees: self, minors, coached team members, everyone for admins.
-  const admin = viewer.roles.includes('ADMIN');
-  for (const m of directory.members.data.filter((x) => x.active && x.birthDate && !x.roles.includes('GUEST') && (admin || seen.has(x.id)))) {
+  // Birthdays of those whose birth date the viewer sees: self, minors, coached team members, everyone for admin and board.
+  for (const m of directory.members.data.filter((x) => x.active && x.birthDate && !x.roles.includes('GUEST') && (board || seen.has(x.id)))) {
     for (let year = Number(fromDay.slice(0, 4)); year <= Number(toDay.slice(0, 4)); year++) {
       const day = `${year}${m.birthDate!.slice(4)}`;
       if (day >= fromDay && day <= toDay) {

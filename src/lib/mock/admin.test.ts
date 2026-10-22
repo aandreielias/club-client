@@ -51,8 +51,8 @@ describe('mock members admin', () => {
     expect(member('trainer').roles).not.toContain('BOARD');
   });
 
-  it('shows birth dates only to self, admins, guardians and coaches', () => {
-    expect(directory.get(member('vorstand'), 'spieler').birthDate).toBeNull();
+  it('shows birth dates only to self, admin, board, guardians and coaches', () => {
+    expect(directory.get(member('vorstand'), 'spieler').birthDate).toBe('2010-01-20');
     expect(directory.get(member('trainer'), 'spieler').birthDate).toBe('2010-01-20');
     expect(directory.get(member('eltern'), 'spieler').birthDate).toBe('2010-01-20');
     expect(() => directory.get(member('spielerin'), 'spieler')).toThrow(expect.objectContaining({ code: 'member.not-found' }));

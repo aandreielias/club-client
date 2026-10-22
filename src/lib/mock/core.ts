@@ -326,7 +326,7 @@ export class MockDirectory {
     this.requirePrivileged(viewer, ADMIN_BOARD);
     const items = [...this.members.data]
       .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName))
-      .map((m) => (this.hasRole(viewer, ['ADMIN']) || m.id === viewer.id ? m : { ...m, birthDate: null }));
+      .map((m) => ({ ...m }));
     const today = this.clock.today();
     const adultBornBy = `${Number(today.slice(0, 4)) - 18}${today.slice(4)}`;
     const links = Object.entries(this.wards.data).filter(([g]) => this.members.data.some((m) => m.id === g && m.active));
@@ -729,7 +729,7 @@ export class MockDirectory {
 
   /** Birth date only for self, admins, guardians and coaches of the member's teams. */
   private visibleTo(viewer: Member, member: Member): Member {
-    const sees = viewer.id === member.id || this.hasRole(viewer, ['ADMIN']) || this.wardsOf(viewer.id).includes(member.id) || this.isCoachOf(viewer.id, member.id);
+    const sees = viewer.id === member.id || this.hasRole(viewer, ADMIN_BOARD) || this.wardsOf(viewer.id).includes(member.id) || this.isCoachOf(viewer.id, member.id);
     return sees ? member : { ...member, birthDate: null };
   }
 
