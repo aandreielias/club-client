@@ -22,6 +22,7 @@
 
   const { weekStartHour: startHour, weekEndHour: endHour } = settings.calendar;
   const hours = Array.from({ length: endHour - startHour }, (_, i) => startHour + i);
+  const bars = $derived(model.spans(model.days));
 
   function create(date: string) {
     if (!policy.canCreate()) return;
@@ -47,16 +48,26 @@
   {/each}
 
   <div class="lane-label muted">Ganztägig</div>
+  <div class="all-day-row" style:--lanes={bars.lanes}>
   {#each model.days as day (day)}
     <div class="all-day" role="group" aria-label="Ganztägig {session.format.date(day)}" {@attach menu(() => dayMenu(day))} class:drop-target={hover === `all:${day}`}
       ondragover={(e) => drag?.over(e) && (hover = `all:${day}`)}
       ondragleave={() => hover === `all:${day}` && (hover = null)}
       ondrop={(e) => ((hover = null), drag?.drop(e, model.entries.value ?? [], (entry) => drag.toDay(entry, day), () => void model.load()))}>
-      {#each model.entriesOn(day).filter((e) => e.allDay) as entry (entry.key)}
+      {#each model.singleOn(day).filter((e) => e.allDay) as entry (entry.key)}
         <EntryChip {entry} {drag} />
       {/each}
     </div>
   {/each}
+    <!-- Entries across several days (also timed ones, e.g. a circular vote): one bar each. -->
+    <div class="bars">
+      {#each bars.spans as bar (bar.entry.key)}
+        <div class="bar" class:before={bar.before} class:after={bar.after} style:grid-column="{bar.from + 1} / {bar.to + 2}" style:grid-row={bar.lane + 1}>
+          <EntryChip entry={bar.entry} showTime={!bar.entry.allDay && !bar.before} before={bar.before} after={bar.after} {drag} />
+        </div>
+      {/each}
+    </div>
+  </div>
 
   <div class="hours">
     {#each hours as hour (hour)}<div class="hour muted">{String(hour).padStart(2, '0')}:00</div>{/each}
@@ -97,8 +108,7 @@
   }
   .corner,
   .day-head,
-  .lane-label,
-  .all-day {
+  .lane-label {
     border-bottom: 1px solid var(--color-border);
   }
   .day-head {
@@ -126,13 +136,46 @@
     font-size: 11px;
     text-align: right;
   }
+  .all-day-row {
+    --bar-height: 22px;
+    position: relative;
+    display: grid;
+    grid-column: 2 / -1;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    border-bottom: 1px solid var(--color-border);
+  }
   .all-day {
     display: grid;
     align-content: start;
     gap: 2px;
     min-height: 28px;
-    padding: 2px;
+    padding: calc(2px + var(--lanes) * var(--bar-height)) 2px 2px;
     border-left: 1px solid var(--color-border);
+  }
+  .bars {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-auto-rows: calc(var(--bar-height) - 2px);
+    row-gap: 2px;
+    pointer-events: none;
+  }
+  .bar {
+    min-width: 0;
+    padding: 0 2px;
+    pointer-events: auto;
+  }
+  .bar.before {
+    padding-left: 0;
+  }
+  .bar.after {
+    padding-right: 0;
+  }
+  .bar :global(.chip) {
+    height: 100%;
   }
   .hours {
     display: grid;

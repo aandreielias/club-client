@@ -17,19 +17,22 @@
   import Page from '../../ui/Page.svelte';
   import Select from '../../ui/Select.svelte';
   import Toolbar from '../../ui/Toolbar.svelte';
+  import { openMenuAt } from '../../ui/contextMenu';
   import AsyncView from '../../ui/AsyncView.svelte';
   import { CALENDAR_VIEWS, CalendarModel, type CalendarView } from './CalendarModel.svelte';
   import { TASK_CHANGED } from '../tasks/events';
+  import { MEETING_CHANGED, RESOLUTION_CHANGED } from '../meetings/events';
+  import { TOURNAMENT_CHANGED } from '../tournaments/events';
   import { APPOINTMENTS_CHANGED } from './events';
   import FeedDialog from './FeedDialog.svelte';
   import MonthView from './MonthView.svelte';
   import { appointmentPolicy as policy, calendarExport } from './services';
   import WeekView from './WeekView.svelte';
 
-  // Every live event that can touch the calendar (appointments, task due dates) reloads it.
+  // Every live event that can touch the calendar (appointments, task due dates, meetings, votes, tournaments) reloads it.
   // Its own pane of the split view, or the main page.
   const pane = usePane();
-  const RELOAD_ON = [APPOINTMENTS_CHANGED, TASK_CHANGED];
+  const RELOAD_ON = [APPOINTMENTS_CHANGED, TASK_CHANGED, MEETING_CHANGED, RESOLUTION_CHANGED, TOURNAMENT_CHANGED];
 
   const model = new CalendarModel(calendarSources, session.clock, store, {
     view: (pane.query.get('view') as CalendarView | null) ?? preferences.values.calendarView,
@@ -104,27 +107,31 @@
   {/if}
 {/snippet}
 
+{#snippet navigation()}
+  <Button size="sm" icon="back" onclick={() => model.previous()} tooltip="Vorheriger Zeitraum" command="calendar.previous" />
+  <Button size="sm" icon="calendar" onclick={() => model.goToday()} tooltip="Heute" command="calendar.today" />
+  <Button size="sm" icon="next" onclick={() => model.next()} tooltip="Nächster Zeitraum" command="calendar.next" />
+{/snippet}
+
 <Page title="Kalender">
   {#snippet actions()}
     <ChoiceGroup name="calendar-view" label="Ansicht" options={CALENDAR_VIEWS}
       bind:value={() => model.view, (view) => view && model.setView(view)} />
-    <Button icon="download" busy={exporting.busy} onclick={exportIcs} tooltip="Alle kommenden Termine als .ics-Datei für deine Kalender-App herunterladen">Exportieren</Button>
     <LinkButton href="#/calendar/absences" tooltip="Urlaub oder Verletzung eintragen: Termine an diesen Tagen zählen als „Nein“">Abwesend melden</LinkButton>
-    <Button onclick={() => (subscribing = true)}>Abonnieren</Button>
+    <Button icon="download" busy={exporting.busy} tooltip="Termine exportieren oder den Kalender in einer Kalender-App abonnieren"
+      onclick={(e) => openMenuAt(e.currentTarget as Element, [
+        { label: 'Kommende Termine herunterladen (.ics)', icon: 'download', run: () => void exportIcs() },
+        { label: 'In Kalender-App abonnieren …', icon: 'link', run: () => (subscribing = true) },
+      ])}>Exportieren</Button>
     {#if policy.canCreate()}<Button variant="primary" icon="add" onclick={newAppointment}>Neuer Termin</Button>{/if}
   {/snippet}
   {#snippet context()}
     <h2 class="period" aria-live="polite">{title}</h2>
   {/snippet}
-  {#snippet contextEnd()}
-    <Button size="sm" onclick={() => model.previous()} tooltip="Vorheriger Zeitraum" command="calendar.previous">Zurück</Button>
-    <Button size="sm" onclick={() => model.goToday()}>Heute</Button>
-    <Button size="sm" onclick={() => model.next()} tooltip="Nächster Zeitraum" command="calendar.next">Weiter</Button>
-  {/snippet}
 
 
   <div class="view" aria-busy={model.entries.loading}>
-    <Toolbar start={filters} label="Filtern" />
+    <Toolbar start={filters} end={navigation} label="Filtern und blättern" />
     <AsyncView resource={model.entries}>
       {#snippet children()}
         <div class="grid-view">{#if model.view === 'month'}<MonthView {model} {drag} />{:else}<WeekView {model} {drag} />{/if}</div>

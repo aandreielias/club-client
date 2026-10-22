@@ -9,7 +9,7 @@ import CircularCreateView from './CircularCreateView.svelte';
 import ResolutionPage from './ResolutionPage.svelte';
 import ResolutionView from './ResolutionView.svelte';
 import { MEETING_MESSAGES } from './messages';
-import { meetingsApi } from './services';
+import { meetingPolicy, meetingsApi } from './services';
 
 export const meetingsFeature: Feature = {
   id: 'meetings',
@@ -25,7 +25,7 @@ export const meetingsFeature: Feature = {
     resolution: { component: ResolutionView, page: (id) => `/resolutions/${encodeURIComponent(id)}` },
     'resolution-new': { component: CircularCreateView, roles: ADMIN_BOARD },
   },
-  calendar: new MeetingCalendarSource(meetingsApi),
+  calendar: new MeetingCalendarSource(meetingsApi, meetingPolicy),
   messages: MEETING_MESSAGES,
   links: [
     { server: '/meetings/:id', to: ({ id }) => ({ window: { kind: 'meeting', id } }) },

@@ -39,6 +39,16 @@ const HIDDEN_KEY = 'calendar.hidden-sources';
  * The calendar page: one view (month or week) around an anchor date, entries of all
  * registered sources for the visible range, filtered by source and team. Days are club-local.
  */
+/** A multi-day entry within one week: columns `from`..`to`, its lane, and whether it runs on before/after the week. */
+export interface Span {
+  entry: CalendarEntry;
+  from: number;
+  to: number;
+  lane: number;
+  before: boolean;
+  after: boolean;
+}
+
 export class CalendarModel {
   view = $state<CalendarView>('month');
   anchor = $state<LocalDate>('');
@@ -125,13 +135,55 @@ export class CalendarModel {
     return date.slice(0, 7) === this.anchor.slice(0, 7);
   }
 
-  /** Timed entries of one day placed on the week grid between `startHour` and `endHour`. */
+  /** Entries of one day that do not run across several days (those are bars, see `spans`). */
+  singleOn(date: LocalDate): CalendarEntry[] {
+    return this.entriesOn(date).filter((e) => !CalendarModel.multiDay(e, this.clock));
+  }
+
+  /** Entries running across several days within `days` (one week), as bars in lanes. */
+  spans(days: readonly LocalDate[]): { spans: Span[]; lanes: number } {
+    return CalendarModel.layoutSpans(this.visible.filter((e) => CalendarModel.multiDay(e, this.clock)), days, this.clock);
+  }
+
+  /** Timed single-day entries of one day placed on the week grid between `startHour` and `endHour`. */
   placeOn(date: LocalDate, startHour: number, endHour: number): PlacedEntry[] {
-    const timed = this.entriesOn(date).filter((e) => !e.allDay && e.end);
+    const timed = this.singleOn(date).filter((e) => !e.allDay && e.end);
     return CalendarModel.place(timed, date, startHour, endHour, this.clock);
   }
 
   // ---- pure helpers (unit-tested) ----
+
+  /** First and last club-local day an entry touches. */
+  static spanOf(entry: CalendarEntry, clock: ZonedClock): [LocalDate, LocalDate] {
+    const first = clock.localDate(entry.start);
+    const last = entry.end ? clock.localDate(new Date(Date.parse(entry.end) - 1)) : first;
+    return [first, last < first ? first : last];
+  }
+
+  static multiDay(entry: CalendarEntry, clock: ZonedClock): boolean {
+    const [first, last] = CalendarModel.spanOf(entry, clock);
+    return last > first;
+  }
+
+  /** Bars for one week: columns 0..6, greedy lanes, and whether a bar runs on before or after this week. */
+  static layoutSpans(entries: readonly CalendarEntry[], days: readonly LocalDate[], clock: ZonedClock): { spans: Span[]; lanes: number } {
+    const weekStart = days[0];
+    const weekEnd = days[days.length - 1];
+    const items = entries
+      .map((entry) => ({ entry, days: CalendarModel.spanOf(entry, clock) }))
+      .filter((i) => i.days[0] <= weekEnd && i.days[1] >= weekStart)
+      .sort((a, b) => a.days[0].localeCompare(b.days[0]) || b.days[1].localeCompare(a.days[1]) || a.entry.title.localeCompare(b.entry.title));
+    const laneEnds: number[] = [];
+    const spans = items.map(({ entry, days: [first, last] }) => {
+      const from = first < weekStart ? 0 : days.indexOf(first);
+      const to = last > weekEnd ? days.length - 1 : days.indexOf(last);
+      let lane = laneEnds.findIndex((end) => end < from);
+      if (lane < 0) lane = laneEnds.push(-1) - 1;
+      laneEnds[lane] = to;
+      return { entry, from, to, lane, before: first < weekStart, after: last > weekEnd };
+    });
+    return { spans, lanes: laneEnds.length };
+  }
 
   static rangeOf(view: CalendarView, anchor: LocalDate): DayRange {
     if (view === 'week') {
@@ -190,7 +242,7 @@ export class CalendarModel {
     return new Set(this.sources.all.map((s) => s.id).filter((id) => this.isShown(id)));
   }
 
-  /** Multi-day entries appear on every club-local day they touch. */
+  /** Multi-day entries appear on every club-local day they touch (the views draw them as one bar). */
   private bucket(entries: readonly CalendarEntry[]): Map<LocalDate, CalendarEntry[]> {
     const map = new Map<LocalDate, CalendarEntry[]>();
     for (const entry of entries) {

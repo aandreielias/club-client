@@ -85,3 +85,27 @@ describe('EventListModel', () => {
     expect(EventListModel.range('2026-10-19', true)).toEqual({ from: '2025-10-19', to: '2026-10-19' });
   });
 });
+
+describe('CalendarModel spans', () => {
+  const week = CalendarModel.daysOf({ from: '2026-10-19', to: '2026-10-26' });
+
+  it('draws entries across several days as one bar per week, in lanes', () => {
+    const vote = entry('vote', '2026-10-20T08:00:00Z', '2026-10-24T18:00:00Z'); // Tue–Sat
+    const cup = entry('cup', vienna.startOfDay('2026-10-17'), vienna.startOfDay('2026-10-22'), { allDay: true }); // Sat (before) – Wed
+    const short = entry('short', '2026-10-21T16:00:00Z', '2026-10-21T18:00:00Z');
+    expect(CalendarModel.multiDay(short, vienna)).toBe(false);
+    expect(CalendarModel.multiDay(cup, vienna)).toBe(true);
+    const { spans, lanes } = CalendarModel.layoutSpans([vote, cup], week, vienna);
+    expect(lanes).toBe(2);
+    expect(spans.find((s) => s.entry.key === 'cup')).toMatchObject({ from: 0, to: 2, lane: 0, before: true, after: false });
+    expect(spans.find((s) => s.entry.key === 'vote')).toMatchObject({ from: 1, to: 5, lane: 1, before: false, after: false });
+  });
+
+  it('reuses a lane once the bar before it ended', () => {
+    const a = entry('a', vienna.startOfDay('2026-10-19'), vienna.startOfDay('2026-10-21'), { allDay: true }); // Mon–Tue
+    const b = entry('b', vienna.startOfDay('2026-10-22'), vienna.startOfDay('2026-10-28'), { allDay: true }); // Thu – next Tue
+    const { spans, lanes } = CalendarModel.layoutSpans([a, b], week, vienna);
+    expect(lanes).toBe(1);
+    expect(spans.find((s) => s.entry.key === 'b')).toMatchObject({ from: 3, to: 6, lane: 0, after: true });
+  });
+});

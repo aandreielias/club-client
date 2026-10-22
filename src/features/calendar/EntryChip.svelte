@@ -9,18 +9,45 @@
   import { RecordDrag } from '../../lib/records/RecordDrag';
 
   /** One calendar entry as a compact, clickable chip in the entry's hue. */
-  let { entry, showTime = true, fill = false, drag }: { entry: CalendarEntry; showTime?: boolean; fill?: boolean; drag?: CalendarDrag } = $props();
+  let {
+    entry,
+    showTime = true,
+    fill = false,
+    before = false,
+    after = false,
+    drag,
+  }: {
+    entry: CalendarEntry;
+    showTime?: boolean;
+    fill?: boolean;
+    /** A bar across days that started before / goes on after the shown week: its edge stays open. */
+    before?: boolean;
+    after?: boolean;
+    drag?: CalendarDrag;
+  } = $props();
 
   const time = $derived(showTime ? session.format.time(entry.start) : '');
   const hint = $derived(
-    `${entry.label}: ${entry.title}\n${entry.allDay ? session.format.date(session.clock.localDate(entry.start)) : entry.end ? session.format.range(entry.start, entry.end, true) : session.format.dateTime(entry.start)}`,
+    `${entry.label}: ${entry.title}\n${when()}`,
   );
+  function when(): string {
+    const { format, clock } = session;
+    if (!entry.end) return entry.allDay ? format.date(clock.localDate(entry.start)) : format.dateTime(entry.start);
+    if (entry.allDay) {
+      const first = clock.localDate(entry.start);
+      const last = clock.localDate(new Date(Date.parse(entry.end) - 1));
+      return first === last ? format.date(first) : `${format.date(first)} – ${format.date(last)}`;
+    }
+    return format.range(entry.start, entry.end, clock.localDate(entry.start) === clock.localDate(entry.end));
+  }
 </script>
 
 <button
   class="chip"
   class:inactive={entry.inactive}
   class:fill
+  class:before
+  class:after
   draggable="true"
   ondragstart={(e) => (drag?.start(entry, e), RecordDrag.set(e, { ...entry.window, title: entry.title }))}
   style:--chip-bg="var(--color-tag-{entry.hue}-bg)"
@@ -50,6 +77,14 @@
     line-height: 1.5;
     text-align: left;
     cursor: pointer;
+  }
+  .before {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+  .after {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
   }
   .chip:hover {
     filter: brightness(0.96);
