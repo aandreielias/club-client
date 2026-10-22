@@ -42,7 +42,7 @@
   });
   let subscribing = $state(false);
   const drag = new CalendarDrag(calendarSources, session.clock, settings.calendar.snapMinutes, bus);
-  const resizer = new CalendarResize(drag, calendarSources, (preview) => (model.preview = preview), () => void model.load(), bus);
+  const resizer = new CalendarResize(drag, calendarSources, (preview) => { model.preview = preview; }, () => void model.load(), bus);
   const exporting = new Action();
 
   /** Every upcoming appointment the member sees, as a file for any calendar app. */

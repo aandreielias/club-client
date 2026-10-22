@@ -195,7 +195,6 @@
   }
   .row-item.grabbed {
     background: var(--color-selected);
-    box-shadow: inset 2px 0 0 var(--color-accent);
   }
   /* Grip: two columns of dots drawn with a gradient (no icon asset). */
   .grip {

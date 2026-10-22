@@ -32,7 +32,10 @@
     resizer?: CalendarResize;
   } = $props();
 
-  const handles = $derived(!!resizer && !!resize && entry.resizable && !!entry.end);
+  // Day edges only where days are the length (all-day or across days): on a timed one-day chip they would catch the grab for moving.
+  const spansDays = $derived(!!entry.end && (entry.allDay || before || after
+    || session.clock.localDate(entry.start) !== session.clock.localDate(new Date(Date.parse(entry.end) - 1))));
+  const handles = $derived(!!resizer && !!resize && entry.resizable && !!entry.end && (resize === 'time' || spansDays));
   // A bar that runs on beyond the week has no edge there to pull.
   const edges = $derived<ResizeEdge[]>(resize === 'time' ? ['start', 'end'] : [...(before ? [] : ['start' as const]), ...(after ? [] : ['end' as const])]);
 
@@ -179,7 +182,6 @@
     gap: 0;
     height: 100%;
     overflow: hidden;
-    border-left: 3px solid var(--chip-text);
   }
   .time {
     flex-shrink: 0;

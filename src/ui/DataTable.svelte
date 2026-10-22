@@ -286,9 +286,6 @@
   tr.cursor td {
     background: var(--color-hover);
   }
-  tr.cursor td:first-child {
-    box-shadow: inset 2px 0 0 var(--color-accent);
-  }
   td:first-child {
     border-radius: var(--radius-md) 0 0 var(--radius-md);
   }

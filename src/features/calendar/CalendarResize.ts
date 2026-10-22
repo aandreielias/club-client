@@ -15,6 +15,9 @@ export interface ResizePreview {
  * range in the views; releasing saves it, Escape or a cancelled pointer drops it.
  */
 export class CalendarResize {
+  /** Pixels the pointer must travel before pulling starts. */
+  static readonly THRESHOLD = 4;
+
   constructor(
     private readonly drag: CalendarDrag,
     private readonly sources: CalendarSources,
@@ -30,8 +33,12 @@ export class CalendarResize {
     const handle = event.currentTarget as HTMLElement;
     handle.setPointerCapture(event.pointerId);
     let next: { start: string; end: string } | null = null;
+    let pulling = false;
 
     const move = (e: PointerEvent) => {
+      // A click or a small jitter is no resize.
+      pulling ||= Math.hypot(e.clientX - event.clientX, e.clientY - event.clientY) >= CalendarResize.THRESHOLD;
+      if (!pulling) return;
       const spot = CalendarDrag.spotAt(e.clientX, e.clientY);
       if (!spot) return;
       next = this.drag.resized(entry, edge, mode, spot);
