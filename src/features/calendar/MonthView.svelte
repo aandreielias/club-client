@@ -5,6 +5,7 @@
   import { WINDOW_OPEN } from '../../channels';
   import type { CalendarModel } from './CalendarModel.svelte';
   import type { CalendarDrag } from './CalendarDrag';
+  import type { CalendarResize } from './CalendarResize';
   import { menu } from '../../ui/contextMenu';
   import { tooltip } from '../../ui/tooltip';
   import EntryChip from './EntryChip.svelte';
@@ -12,7 +13,13 @@
 
   /** Six-week month grid starting Monday; empty space in a day creates an appointment there (managers, coaches). */
   let hoverDay = $state<string | null>(null);
-  let { model, drag }: { model: CalendarModel; /** Moving entries by drag and drop (where allowed). */ drag?: CalendarDrag } = $props();
+  let { model, drag, resizer }: {
+    model: CalendarModel;
+    /** Moving entries by drag and drop (where allowed). */
+    drag?: CalendarDrag;
+    /** Changing their length by pulling an edge. */
+    resizer?: CalendarResize;
+  } = $props();
 
   const max = settings.calendar.maxChipsPerDay;
   const weekdays = $derived(model.days.slice(0, 7));
@@ -44,7 +51,7 @@
     <div class="bars">
       {#each bars.spans as bar (bar.entry.key)}
         <div class="bar" class:before={bar.before} class:after={bar.after} style:grid-column="{bar.from + 1} / {bar.to + 2}" style:grid-row={bar.lane + 1}>
-          <EntryChip entry={bar.entry} showTime={!bar.entry.allDay && !bar.before} before={bar.before} after={bar.after} {drag} />
+          <EntryChip entry={bar.entry} showTime={!bar.entry.allDay && !bar.before} before={bar.before} after={bar.after} {drag} resize="days" {resizer} />
         </div>
       {/each}
     </div>
@@ -52,7 +59,7 @@
       {@const entries = model.singleOn(day)}
       {@const room = Math.max(max - bars.lanes, 1)}
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-      <div class="cell" class:outside={!model.inAnchorMonth(day)} class:today={day === model.today} class:creatable={policy.canCreate()}
+      <div class="cell" data-day={day} class:outside={!model.inAnchorMonth(day)} class:today={day === model.today} class:creatable={policy.canCreate()}
         role="group" aria-label={session.format.dayHeading(day)} ondblclick={() => create(day)} {@attach menu(() => dayMenu(day))}
         class:drop-target={hoverDay === day}
         ondragover={(e) => drag?.over(e) && (hoverDay = day)}
@@ -67,7 +74,7 @@
         </div>
         <div class="entries">
           {#each entries.slice(0, room) as entry (entry.key)}
-            <EntryChip {entry} showTime={!entry.allDay} {drag} />
+            <EntryChip {entry} showTime={!entry.allDay} {drag} resize="days" {resizer} />
           {/each}
           {#if entries.length > room}
             <button class="more" onclick={() => model.goTo(day, 'week')} {@attach tooltip('Alle Einträge dieser Woche anzeigen')}>+{entries.length - room} weitere</button>

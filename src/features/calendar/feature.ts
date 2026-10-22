@@ -24,6 +24,8 @@ export const calendarFeature: Feature = {
     'appointment-new': { component: AppointmentCreateView, roles: PRIVILEGED },
   },
   calendar: {
+    // The reason comes only for who may see it (self, guardians, coaches, admin, board).
+    ABSENCE: (item) => ({ title: item.detail ? `${item.title} – ${item.detail}` : item.title, label: 'Abwesend' }),
     APPOINTMENT: (item) => ({ hue: typeHue(item.detail as AppointmentType), label: item.inactive ? 'Abgesagt' : typeLabel(item.detail as AppointmentType) }),
   },
   messages: CALENDAR_MESSAGES,

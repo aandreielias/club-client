@@ -5,7 +5,8 @@
   import { windowMenu } from '../../lib/window/windowMenu';
   import { menu } from '../../ui/contextMenu';
   import { tooltip } from '../../ui/tooltip';
-  import type { CalendarDrag } from './CalendarDrag';
+  import type { CalendarDrag, ResizeEdge, ResizeMode } from './CalendarDrag';
+  import type { CalendarResize } from './CalendarResize';
   import { RecordDrag } from '../../lib/records/RecordDrag';
 
   /** One calendar entry as a compact, clickable chip in the entry's hue. */
@@ -16,6 +17,8 @@
     before = false,
     after = false,
     drag,
+    resize = null,
+    resizer,
   }: {
     entry: CalendarEntry;
     showTime?: boolean;
@@ -24,7 +27,14 @@
     before?: boolean;
     after?: boolean;
     drag?: CalendarDrag;
+    /** Edges that change the length: days (left/right) or time (top/bottom); null = none. */
+    resize?: ResizeMode | null;
+    resizer?: CalendarResize;
   } = $props();
+
+  const handles = $derived(!!resizer && !!resize && entry.resizable && !!entry.end);
+  // A bar that runs on beyond the week has no edge there to pull.
+  const edges = $derived<ResizeEdge[]>(resize === 'time' ? ['start', 'end'] : [...(before ? [] : ['start' as const]), ...(after ? [] : ['end' as const])]);
 
   const time = $derived(showTime ? session.format.time(entry.start) : '');
   const hint = $derived(
@@ -54,6 +64,7 @@
   class:fill
   class:before
   class:after
+  class:inert={!entry.window && !entry.path}
   draggable="true"
   ondragstart={(e) => (drag?.start(entry, e), entry.window && RecordDrag.set(e, { ...entry.window, title: entry.title }))}
   style:--chip-bg="var(--color-tag-{entry.hue}-bg)"
@@ -64,6 +75,15 @@
   onclick={(e) => (e.stopPropagation(), open())}
 >
   {#if time}<span class="time">{time}</span>{/if}
+  {#if handles}
+    {#each edges as edge (edge)}
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <span class="handle {resize} {edge}" aria-hidden="true" title={edge === 'start' ? 'Beginn ziehen' : 'Ende ziehen'}
+        onmousedown={(e) => e.stopPropagation()} ondragstart={(e) => e.preventDefault()}
+        onclick={(e) => e.stopPropagation()}
+        onpointerdown={(e) => resizer!.begin(e, entry, edge, resize!)}></span>
+    {/each}
+  {/if}
   <span class="title">{entry.title}</span>
 </button>
 
@@ -83,6 +103,65 @@
     line-height: 1.5;
     text-align: left;
     cursor: pointer;
+  }
+  .chip {
+    position: relative;
+  }
+  /* Nothing to open (absences): no pointer, hover stays plain. */
+  .chip.inert {
+    cursor: default;
+  }
+  .handle {
+    position: absolute;
+    z-index: 1;
+    opacity: 0;
+    touch-action: none;
+    transition: opacity var(--motion-fast);
+  }
+  .chip:hover .handle {
+    opacity: 1;
+  }
+  .handle::after {
+    content: '';
+    position: absolute;
+    border-radius: 2px;
+    background: var(--chip-text);
+  }
+  .handle.days {
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: ew-resize;
+  }
+  .handle.days.start {
+    left: 0;
+  }
+  .handle.days.end {
+    right: 0;
+  }
+  .handle.days::after {
+    top: 25%;
+    bottom: 25%;
+    left: 3px;
+    width: 2px;
+  }
+  .handle.time {
+    right: 0;
+    left: 0;
+    height: 8px;
+    cursor: ns-resize;
+  }
+  .handle.time.start {
+    top: 0;
+  }
+  .handle.time.end {
+    bottom: 0;
+  }
+  .handle.time::after {
+    right: 35%;
+    left: 35%;
+    top: 3px;
+    height: 2px;
   }
   .before {
     border-top-left-radius: 0;

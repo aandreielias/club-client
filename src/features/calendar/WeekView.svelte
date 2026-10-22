@@ -4,6 +4,7 @@
   import { WINDOW_OPEN } from '../../channels';
   import type { CalendarModel } from './CalendarModel.svelte';
   import type { CalendarDrag } from './CalendarDrag';
+  import type { CalendarResize } from './CalendarResize';
   import { menu } from '../../ui/contextMenu';
   import EntryChip from './EntryChip.svelte';
   import { appointmentPolicy as policy } from './services';
@@ -18,7 +19,13 @@
     return startHour * 60 + share * (endHour - startHour) * 60;
   }
 
-  let { model, drag }: { model: CalendarModel; /** Moving entries by drag and drop (where allowed). */ drag?: CalendarDrag } = $props();
+  let { model, drag, resizer }: {
+    model: CalendarModel;
+    /** Moving entries by drag and drop (where allowed). */
+    drag?: CalendarDrag;
+    /** Changing their length: whole days in the all-day lane, the time in the grid. */
+    resizer?: CalendarResize;
+  } = $props();
 
   const { weekStartHour: startHour, weekEndHour: endHour } = settings.calendar;
   const hours = Array.from({ length: endHour - startHour }, (_, i) => startHour + i);
@@ -50,12 +57,12 @@
   <div class="lane-label muted">Ganztägig</div>
   <div class="all-day-row" style:--lanes={bars.lanes}>
   {#each model.days as day (day)}
-    <div class="all-day" role="group" aria-label="Ganztägig {session.format.date(day)}" {@attach menu(() => dayMenu(day))} class:drop-target={hover === `all:${day}`}
+    <div class="all-day" data-day={day} role="group" aria-label="Ganztägig {session.format.date(day)}" {@attach menu(() => dayMenu(day))} class:drop-target={hover === `all:${day}`}
       ondragover={(e) => drag?.over(e) && (hover = `all:${day}`)}
       ondragleave={() => hover === `all:${day}` && (hover = null)}
       ondrop={(e) => ((hover = null), drag?.drop(e, model.entries.value ?? [], (entry) => drag.toDay(entry, day), () => void model.load()))}>
       {#each model.singleOn(day).filter((e) => e.allDay) as entry (entry.key)}
-        <EntryChip {entry} {drag} />
+        <EntryChip {entry} {drag} resize="days" {resizer} />
       {/each}
     </div>
   {/each}
@@ -63,7 +70,7 @@
     <div class="bars">
       {#each bars.spans as bar (bar.entry.key)}
         <div class="bar" class:before={bar.before} class:after={bar.after} style:grid-column="{bar.from + 1} / {bar.to + 2}" style:grid-row={bar.lane + 1}>
-          <EntryChip entry={bar.entry} showTime={!bar.entry.allDay && !bar.before} before={bar.before} after={bar.after} {drag} />
+          <EntryChip entry={bar.entry} showTime={!bar.entry.allDay && !bar.before} before={bar.before} after={bar.after} {drag} resize="days" {resizer} />
         </div>
       {/each}
     </div>
@@ -74,7 +81,7 @@
   </div>
   {#each model.days as day (day)}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="column" class:today={day === model.today} ondblclick={() => create(day)} {@attach menu(() => dayMenu(day))}
+    <div class="column" data-day={day} data-start-hour={startHour} data-end-hour={endHour} class:today={day === model.today} ondblclick={() => create(day)} {@attach menu(() => dayMenu(day))}
       class:drop-target={hover === day}
       ondragover={(e) => drag?.over(e) && (hover = day)}
       ondragleave={() => hover === day && (hover = null)}
@@ -88,7 +95,7 @@
       {#each model.placeOn(day, startHour, endHour) as placed (placed.entry.key)}
         <div class="event" style:top="{placed.top}%" style:height="{placed.height}%"
           style:left="{(placed.lane / placed.lanes) * 100}%" style:width="{100 / placed.lanes}%">
-          <EntryChip entry={placed.entry} fill {drag} />
+          <EntryChip entry={placed.entry} fill {drag} resize="time" {resizer} />
         </div>
       {/each}
     </div>

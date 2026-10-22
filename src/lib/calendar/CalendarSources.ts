@@ -48,10 +48,10 @@ export interface CalendarEntry {
 }
 
 /** A feature's look of its items: hue and label from the item's detail (e.g. appointment type). */
-export type CalendarStyle = (item: CalendarItem) => Partial<Pick<CalendarEntry, 'hue' | 'label'>>;
+export type CalendarStyle = (item: CalendarItem) => Partial<Pick<CalendarEntry, 'hue' | 'label' | 'title'>>;
 
-/** Kinds that open as a window; the others go to a page. */
-const PAGES: Readonly<Record<string, string>> = { absence: '/calendar/absences', office: '/board' };
+/** Kinds without a window: offices go to their page, absences open nothing (they say all there is). */
+const PAGES: Readonly<Record<string, string | null>> = { absence: null, office: '/board' };
 
 /**
  * The calendar's one source: everything with a date the member sees, collected by the server from every module
@@ -80,7 +80,7 @@ export class CalendarSources {
     return entry.resizable;
   }
 
-  /** Saves the new time; the server checks rights and rules. */
+  /** Saves the new time (moved or resized); the server checks rights and rules. */
   async move(entry: CalendarEntry, start: string, end: string | null): Promise<void> {
     if (!entry.movable && !entry.resizable) throw new Error('Dieser Eintrag lässt sich nicht verschieben.');
     await this.api.put(`/api/v1/calendar/items/${encodeURIComponent(entry.item.kind)}/${encodeURIComponent(entry.item.id)}`, { start, end });
@@ -95,7 +95,7 @@ export class CalendarSources {
 
   entry(item: CalendarItem): CalendarEntry {
     const info = categoryInfo(item.category);
-    const page = PAGES[item.kind] ?? null;
+    const page = item.kind in PAGES ? PAGES[item.kind] : undefined;
     return {
       key: `${item.category}:${item.kind}:${item.id}:${item.start}`,
       source: item.category,
@@ -107,8 +107,8 @@ export class CalendarSources {
       teamId: item.teamId,
       inactive: item.inactive,
       label: info.label,
-      window: page ? null : { kind: item.kind, id: item.id },
-      path: page,
+      window: page === undefined ? { kind: item.kind, id: item.id } : null,
+      path: page ?? null,
       item: { kind: item.kind, id: item.id },
       movable: item.movable,
       resizable: item.resizable,
