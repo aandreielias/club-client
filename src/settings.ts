@@ -517,6 +517,8 @@ export const settings = {
     offsetPx: 6,
     /** A sidebar group's flyout stays this long after the pointer leaves, so it can move into it. */
     flyoutCloseDelayMs: 180,
+    /** While the pointer heads for an open flyout (SafeTriangle), a pause this long ends the aim: the flyout closes or the row below opens. */
+    flyoutAimMs: 400,
   },
 
   /** "Benötigt" lists and attached files of appointments and tasks (server: platform.LinkResolver). */

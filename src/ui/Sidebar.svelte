@@ -10,6 +10,7 @@
   import { menu } from './contextMenu';
   import Icon from './Icon.svelte';
   import { KeySpec } from '../lib/keyboard/KeySpec';
+  import { SafeTriangle } from '../lib/navigation/SafeTriangle';
   import GlobalSearch from './GlobalSearch.svelte';
   import Kbd from './Kbd.svelte';
   import { tooltip, withKeys } from './tooltip';
@@ -72,14 +73,51 @@
   // Group flyout: opens on hover/focus, closes shortly after the pointer leaves (so it can move into it).
   let flyout = $state<string | null>(null);
   let closing: ReturnType<typeof setTimeout> | undefined;
+  // Menu aim: heading diagonally for the open flyout, the pointer crosses other rows; they wait (`aimNext`) until it stops or turns away.
+  let aim: SafeTriangle | null = null;
+  let aimNext: string | null = null;
   function openFlyout(key: string) {
+    if (aim && key !== flyout) {
+      aimNext = key;
+      return;
+    }
+    stopAim();
     clearTimeout(closing);
     flyout = key;
   }
   function closeFlyout(delay: number = settings.overlay.flyoutCloseDelayMs) {
     clearTimeout(closing);
-    closing = setTimeout(() => (flyout = null), delay);
+    closing = setTimeout(() => {
+      const next = aimNext;
+      stopAim();
+      flyout = next;
+    }, delay);
   }
+  function leaveGroup(event: PointerEvent, key: string) {
+    if (key !== flyout) {
+      if (aimNext === key) aimNext = null;
+      return;
+    }
+    const box = document.querySelector(`[data-flyout="${key}"]`)?.getBoundingClientRect();
+    if (!box || compact.current) return closeFlyout();
+    aim = new SafeTriangle({ x: event.clientX, y: event.clientY }, box);
+    window.addEventListener('pointermove', aiming);
+    closeFlyout(settings.overlay.flyoutAimMs);
+  }
+  function aiming(event: PointerEvent) {
+    // Still heading there: keep it open, a pause of flyoutAimMs from now ends the aim.
+    if (aim?.contains({ x: event.clientX, y: event.clientY })) return closeFlyout(settings.overlay.flyoutAimMs);
+    const next = aimNext;
+    stopAim();
+    if (next) openFlyout(next);
+    else closeFlyout(0);
+  }
+  function stopAim() {
+    aim = null;
+    aimNext = null;
+    window.removeEventListener('pointermove', aiming);
+  }
+  $effect(() => () => (clearTimeout(closing), stopAim()));
   function groupKeys(event: KeyboardEvent, item: NavItem) {
     if (event.key === 'ArrowRight' || event.key === ' ') {
       event.preventDefault();
@@ -154,7 +192,7 @@
     {/if}
     {#each items.filter((i) => !i.footer) as item (item.key)}
       {#if item.children}
-        <li class="group" onpointerenter={() => openFlyout(item.key)} onpointerleave={() => closeFlyout()} onfocusout={leaveFlyout}>
+        <li class="group" onpointerenter={() => openFlyout(item.key)} onpointerleave={(e) => leaveGroup(e, item.key)} onfocusout={leaveFlyout}>
           <a href="#{item.path}" data-group={item.key} class:active={isRowActive(item)} aria-haspopup="true" aria-expanded={flyout === item.key}
             onclick={(e) => go(e, item.path)} onkeydown={(e) => groupKeys(e, item)}>
             {#if item.icon}<Icon name={item.icon} />{/if}
