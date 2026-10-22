@@ -1,7 +1,7 @@
 import { Action } from '../../lib/state/Action.svelte';
 import { Resource } from '../../lib/state/Resource.svelte';
 import type { NotificationsApi } from './NotificationsApi';
-import { isLockedEmail, type NotificationKind, type Preference } from './model';
+import { isImportant, type NotificationKind, type Preference } from './model';
 
 /** Editable copy of the notification preferences; saved as a whole. */
 export class PreferencesModel {
@@ -26,7 +26,7 @@ export class PreferencesModel {
 
   set(kind: NotificationKind, channel: 'push' | 'email', on: boolean): void {
     const preference = this.preference(kind);
-    if (!preference || (channel === 'email' && isLockedEmail(kind))) return;
+    if (!preference || isImportant(kind)) return;
     preference[channel] = on;
   }
 

@@ -5,7 +5,7 @@
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Page from '../../ui/Page.svelte';
-  import { isLockedEmail, NOTIFICATION_KINDS } from './model';
+  import { isImportant, NOTIFICATION_KINDS } from './model';
   import { PreferencesModel } from './PreferencesModel.svelte';
   import { notificationsApi } from './services';
 
@@ -41,11 +41,11 @@
                 </th>
                 <td>
                   <input type="checkbox" aria-label="{kind.label}: Push" checked={preference.push}
-                    onchange={(e) => model.set(kind.value, 'push', e.currentTarget.checked)} />
+                    disabled={isImportant(kind.value)} onchange={(e) => model.set(kind.value, 'push', e.currentTarget.checked)} />
                 </td>
                 <td>
                   <input type="checkbox" aria-label="{kind.label}: E-Mail" checked={preference.email}
-                    disabled={isLockedEmail(kind.value)} onchange={(e) => model.set(kind.value, 'email', e.currentTarget.checked)} />
+                    disabled={isImportant(kind.value)} onchange={(e) => model.set(kind.value, 'email', e.currentTarget.checked)} />
                 </td>
               </tr>
             {/if}

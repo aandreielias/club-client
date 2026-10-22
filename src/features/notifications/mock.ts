@@ -4,7 +4,7 @@ import { directory, type MockDirectory } from '../../lib/mock/core';
 import type { MockEvent } from '../../lib/mock/MockEventBus';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
-import type { MessageRef, Notification, NotificationKind, Preference, RefKind } from './model';
+import { isImportant, type MessageRef, type Notification, type NotificationKind, type Preference, type RefKind } from './model';
 import { PRIVILEGED, type Member } from '../../lib/types';
 import { settings } from '../../settings';
 import { calendar } from '../calendar/mock';
@@ -16,7 +16,7 @@ import { tasks } from '../tasks/mock';
 import { CHANGE_FIELD_LABELS, type ChangeField } from '../members/MembersApi';
 
 const fail = MockServer.fail;
-const KINDS: readonly NotificationKind[] = ['TASK_ASSIGNED', 'TASK_DUE', 'APPOINTMENT_CANCELLED', 'SECURITY', 'CHANGE_DECIDED', 'MESSAGE', 'ITEM_REMINDER'];
+const KINDS: readonly NotificationKind[] = ['TASK_ASSIGNED', 'TASK_DUE', 'APPOINTMENT_CANCELLED', 'SECURITY', 'CHANGE_DECIDED', 'MESSAGE', 'ITEM_REMINDER', 'MEETING'];
 const MAX_LISTED = 100;
 const limits = settings.notifications.message;
 
@@ -68,7 +68,7 @@ export class MockNotifications {
     const stored = this.preferences.data[memberId] ?? [];
     return KINDS.map((kind) => {
       const pref = stored.find((p) => p.kind === kind);
-      return { kind, push: pref?.push ?? true, email: kind === 'SECURITY' || (pref?.email ?? true) };
+      return { kind, push: isImportant(kind) || (pref?.push ?? true), email: isImportant(kind) || (pref?.email ?? true) };
     });
   }
 
@@ -179,6 +179,14 @@ export class MockNotifications {
         const items = (data.items as { name: string; quantity: number }[]).map((i) => `${i.quantity}× ${i.name}`).join(', ');
         this.notify(data.recipients, 'ITEM_REMINDER', `Mitbringen: ${items}`,
           `Zu „${data.title}“ am ${this.#dateTime.format(new Date(data.startsAt))}. Die Sachen sind bei dir.`, `/appointments/${data.appointmentId}`);
+        break;
+      }
+      case 'meetings.meeting-invited': {
+        const where = data.location ? ` in ${data.location}` : '';
+        const video = data.videoUrl ? ` Videokonferenz: ${data.videoUrl}.` : '';
+        const agenda = data.agenda ? ` Tagesordnung: ${data.agenda}` : '';
+        this.notify(data.recipients, 'MEETING', `Einladung: ${data.title}`,
+          `${this.#dateTime.format(new Date(data.startsAt))}${where}.${video}${agenda}`, `/meetings/${data.meetingId}`);
         break;
       }
       case 'members.change-decided':

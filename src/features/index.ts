@@ -7,6 +7,7 @@ import { filesFeature } from './files/feature';
 import { homeFeature } from './home/feature';
 import { inventoryFeature } from './inventory/feature';
 import { locationsFeature } from './locations/feature';
+import { meetingsFeature } from './meetings/feature';
 import { membersFeature } from './members/feature';
 import { notificationsFeature } from './notifications/feature';
 import { searchFeature } from './search/feature';
@@ -19,7 +20,7 @@ import { tournamentsFeature } from './tournaments/feature';
 const navLayout = new NavLayout(
   [
     { id: 'events', label: 'Events', icon: 'eventGroup', paths: ['/events', '/tournaments'] },
-    { id: 'verein', label: 'Verein', icon: 'club', paths: ['/teams', '/members', '/board', '/locations'] },
+    { id: 'verein', label: 'Verein', icon: 'club', paths: ['/teams', '/members', '/board', '/meetings', '/locations'] },
     { id: 'ablage', label: 'Ablage', icon: 'archive', paths: ['/files', '/inventory'] },
   ],
   ['/', '/notifications', '/tasks', '/calendar', 'group:events', 'group:verein', 'group:ablage', '/activity'],
@@ -37,6 +38,7 @@ export const features = new FeatureRegistry([
   inventoryFeature,
   locationsFeature,
   tournamentsFeature,
+  meetingsFeature,
   teamsFeature,
   notificationsFeature,
   membersFeature,

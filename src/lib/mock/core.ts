@@ -459,6 +459,19 @@ export class MockDirectory {
     return { ...row, name: this.displayName(row.memberId) };
   }
 
+  /** server: MembersApi.ELECTORATE — voters of a general meeting, the board, or every club member. */
+  electorate(body: 'ASSEMBLY' | 'BOARD' | 'CLUB'): string[] {
+    if (body === 'BOARD') {
+      const board = new Set(this.running().filter((o) => o.office !== 'AUDITOR').map((o) => o.memberId));
+      return this.members.data.filter((m) => m.active && board.has(m.id)).map((m) => m.id);
+    }
+    return this.members.data.filter((m) => (body === 'ASSEMBLY' ? canVote(m) : m.active && (!!m.membershipType || m.honorary))).map((m) => m.id);
+  }
+
+  officesOf(memberId: string): OfficeRow['office'][] {
+    return this.running().filter((o) => o.memberId === memberId).map((o) => o.office);
+  }
+
   private running(): OfficeRow[] {
     return this.offices.data.filter((o) => !o.endedOn);
   }

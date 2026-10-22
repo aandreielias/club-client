@@ -1,6 +1,6 @@
 // Mirrors of the club-server notifications DTOs.
 
-export type NotificationKind = 'TASK_ASSIGNED' | 'TASK_DUE' | 'APPOINTMENT_CANCELLED' | 'SECURITY' | 'CHANGE_DECIDED' | 'MESSAGE' | 'ITEM_REMINDER';
+export type NotificationKind = 'TASK_ASSIGNED' | 'TASK_DUE' | 'APPOINTMENT_CANCELLED' | 'SECURITY' | 'CHANGE_DECIDED' | 'MESSAGE' | 'ITEM_REMINDER' | 'MEETING';
 
 /** Records a message can link (server: NotificationsApi.RefKind). */
 export type RefKind = 'TASK' | 'APPOINTMENT' | 'ITEM' | 'FILE' | 'MEMBER' | 'TEAM' | 'LOCATION' | 'TOURNAMENT';
@@ -86,8 +86,9 @@ export const NOTIFICATION_KINDS: readonly { value: NotificationKind; label: stri
   { value: 'ITEM_REMINDER', label: 'Gegenstände mitbringen', hint: 'Etwa einen Tag vor einem Termin, für den du etwas aus dem Inventar hast.' },
   { value: 'CHANGE_DECIDED', label: 'Kontoänderungen', hint: 'Wenn der Vorstand über deine Änderungsanfrage entschieden hat.' },
   { value: 'MESSAGE', label: 'Nachrichten vom Verein', hint: 'Nachrichten von Vorstand und Trainer:innen an dich oder dein Team.' },
-  { value: 'SECURITY', label: 'Sicherheit', hint: 'Vereins-PIN, Sperren und neue Geräte. E-Mails dazu werden immer gesendet.' },
+  { value: 'MEETING', label: 'Sitzungen', hint: 'Einladungen zu Mitgliederversammlungen und Vorstandssitzungen. Werden immer gesendet.' },
+  { value: 'SECURITY', label: 'Sicherheit', hint: 'Vereins-PIN, Sperren und neue Geräte. Werden immer gesendet.' },
 ];
 
-/** Security e-mails cannot be switched off (server rule). */
-export const isLockedEmail = (kind: NotificationKind): boolean => kind === 'SECURITY';
+/** Important kinds always go out by push and e-mail (server: NotificationsApi.IMPORTANT). */
+export const isImportant = (kind: NotificationKind): boolean => kind === 'SECURITY' || kind === 'MEETING';

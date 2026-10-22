@@ -1,0 +1,78 @@
+import { describe, expect, it, vi } from 'vitest';
+import { ApiClient } from '../../lib/http/ApiClient';
+import { directory, MockDirectory } from '../../lib/mock/core';
+import { SessionStore } from '../../lib/session/SessionStore.svelte';
+import { ZonedClock } from '../../lib/time/ZonedClock';
+import type { Member, Role } from '../../lib/types';
+import { MeetingForm } from './MeetingForm.svelte';
+import { MeetingPolicy } from './MeetingPolicy';
+import { meetings } from './mock';
+import { latestInvite } from './model';
+
+const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
+const DAY = 86_400_000;
+const inDays = (days: number) => new Date(Date.now() + days * DAY).toISOString();
+
+function policyFor(roles: Role[]): MeetingPolicy {
+  const session = new SessionStore(new ApiClient({ send: vi.fn(), upload: vi.fn(), url: (p) => p }, async () => false));
+  session.me = { member: { ...member('spielerin'), roles }, teams: [], missing: [], wardIds: [], wardNames: {} };
+  return new MeetingPolicy(session);
+}
+
+describe('meeting rules', () => {
+  it('mirror the notice periods of the statutes', () => {
+    const start = '2026-12-01T18:00:00.000Z';
+    expect(latestInvite('ASSEMBLY', start)).toBe('2026-11-17T18:00:00.000Z');
+    expect(latestInvite('SIMPLE_BOARD', start)).toBe('2026-11-24T18:00:00.000Z');
+    expect(latestInvite('EXTRA_BOARD', start)).toBe('2026-11-29T18:00:00.000Z');
+  });
+
+  it('let the chair convene ordinary board meetings and any board member a simple one', () => {
+    const board = policyFor(['BOARD']);
+    expect(board.mayConvene('BOARD', ['TREASURER'])).toBe(false);
+    expect(board.mayConvene('BOARD', ['VICE_CHAIR', 'SECRETARY'])).toBe(true);
+    expect(board.mayConvene('SIMPLE_BOARD', ['TREASURER'])).toBe(true);
+    expect(board.mayConvene('ASSEMBLY', ['AUDITOR'])).toBe(false);
+    expect(policyFor(['ADMIN']).mayConvene('EXTRA_BOARD', [])).toBe(true);
+  });
+});
+
+describe('MeetingForm', () => {
+  it('follows the kind with its title and asks for the urgency of an extraordinary board meeting', () => {
+    const form = new MeetingForm(new ZonedClock('Europe/Vienna'), '2026-12-01T19:00');
+    expect(form.end).toBe('2026-12-01T21:00');
+    form.setKind('EXTRA_BOARD');
+    expect(form.title).toBe('Außerordentliche Vorstandssitzung');
+    expect(Object.keys(form.errors)).toEqual(['urgency']);
+    form.urgency = 'Halle gekündigt';
+    form.videoUrl = 'http://meet';
+    expect(Object.keys(form.errors)).toEqual(['videoUrl']);
+    form.videoUrl = '';
+    form.title = 'Krisensitzung';
+    form.setKind('SIMPLE_BOARD');
+    expect(form.title).toBe('Krisensitzung'); // typed titles stay
+    expect(form.toNew()).toMatchObject({ kind: 'SIMPLE_BOARD', urgency: null, startsAt: '2026-12-01T18:00:00.000Z', endsAt: '2026-12-01T20:00:00.000Z' });
+  });
+});
+
+describe('mock meetings', () => {
+  it('invite within the notice period, take presence and decide the quorum', () => {
+    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    const body = (days: number) => ({ kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(days), endsAt: inDays(days + 0.1) });
+    const late = meetings.create(member('vorstand'), body(10));
+    expect(() => meetings.invite(member('vorstand'), late.id)).toThrow(expect.objectContaining({ code: 'meeting.notice-too-short' }));
+
+    const mv = meetings.create(member('vorstand'), body(20));
+    expect(() => meetings.setPresence(member('vorstand'), mv.id, 'admin', 'APP')).toThrow(expect.objectContaining({ code: 'meeting.not-invited' }));
+    meetings.invite(member('vorstand'), mv.id);
+    // extraordinary members vote: Anna, Bernd, Clara
+    expect(meetings.get(member('vorstand'), mv.id).electorate.map((p) => p.memberId).sort()).toEqual(['admin', 'trainer', 'vorstand']);
+    expect(() => meetings.setPresence(member('vorstand'), mv.id, 'spielerin', 'APP')).toThrow(expect.objectContaining({ code: 'meeting.not-voter' }));
+    expect(meetings.setPresence(member('vorstand'), mv.id, 'vorstand', 'APP').quorate).toBe(false);
+    expect(meetings.setPresence(member('vorstand'), mv.id, 'trainer', 'ANALOG').quorate).toBe(true);
+
+    expect(() => meetings.get(member('eltern'), mv.id)).toThrow(expect.objectContaining({ code: 'meeting.not-found' }));
+    expect(meetings.get(member('spielerin'), mv.id).canManage).toBe(false);
+    expect(meetings.list(member('spielerin'), null, null).items.some((m) => m.kind === 'SIMPLE_BOARD')).toBe(false);
+  });
+});

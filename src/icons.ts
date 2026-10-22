@@ -10,6 +10,7 @@ import BookUser from '@lucide/svelte/icons/book-user';
 import Calendar from '@lucide/svelte/icons/calendar';
 import CalendarDays from '@lucide/svelte/icons/calendar-days';
 import Check from '@lucide/svelte/icons/check';
+import Gavel from '@lucide/svelte/icons/gavel';
 import History from '@lucide/svelte/icons/history';
 import ChevronDown from '@lucide/svelte/icons/chevron-down';
 import ChevronLeft from '@lucide/svelte/icons/chevron-left';
@@ -71,6 +72,7 @@ export const ICONS = {
   split: Columns2,
   upload: Upload,
   trophy: Trophy,
+  meetings: Gavel,
   commands: Command,
   logout: LogOut,
   menu: Menu,

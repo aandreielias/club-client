@@ -51,7 +51,7 @@ describe('mock notifications', () => {
     expect(await closed).toBe(4403);
   });
 
-  it('tells the other privileged members when the club PIN changes and keeps security e-mails on', () => {
+  it('tells the other privileged members when the club PIN changes and keeps security messages on', () => {
     directory.stepUp(member('admin'), MockDirectory.PIN);
     directory.setClubPin(member('admin'), 'k7m2q');
     directory.setClubPin(member('admin'), MockDirectory.PIN);
@@ -64,7 +64,7 @@ describe('mock notifications', () => {
     expect(changed('admin')).toEqual([]);
     expect(changed('spielerin')).toEqual([]);
     const prefs = notifications.setPreferences('vorstand', [{ kind: 'SECURITY', push: false, email: false }]);
-    expect(prefs.find((p) => p.kind === 'SECURITY')).toEqual({ kind: 'SECURITY', push: false, email: true });
+    expect(prefs.find((p) => p.kind === 'SECURITY')).toEqual({ kind: 'SECURITY', push: true, email: true }); // important: always sent
   });
 
   it('tells everyone affected when an admin cancels a team appointment, admin and board included, but not the admin', () => {
