@@ -1,7 +1,7 @@
 import type { ApiClient } from '../http/ApiClient';
 import { Formatter } from '../time/Formatter';
 import { ZonedClock } from '../time/ZonedClock';
-import { PRIVILEGED, type Club, type Me, type Member, type Role, type SecurityStatus, type Team } from '../types';
+import { PRIVILEGED, type Club, type ClubEdit, type Me, type Member, type Role, type SecurityStatus, type Team } from '../types';
 
 export type ProfilePatch = Partial<Pick<Member, 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'photoConsent'>>;
 
@@ -79,6 +79,11 @@ export class SessionStore {
   async updateProfile(patch: ProfilePatch): Promise<void> {
     await this.api.patch<Member>(`/api/v1/members/${this.member.id}`, patch);
     await this.loadMe();
+  }
+
+  /** Admin/board with step-up; time zone and locale stay as loaded (server: club.yml only). */
+  async updateClub(edit: ClubEdit): Promise<void> {
+    this.club = await this.api.put<Club>('/api/v1/club', edit);
   }
 
   /** Admin/board; once a club PIN exists the server asks for a step-up first. */

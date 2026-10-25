@@ -290,6 +290,16 @@ export const settings = {
     passwordMinLength: 12,
   },
 
+  /** Club facts admins and the board edit (server: ClubController.ClubBody). */
+  club: {
+    nameMaxLength: 100,
+    shortNameMaxLength: 20,
+    addressMaxLength: 300,
+    linkMaxLength: 200,
+    /** ZVR-Zahl: digits only. */
+    registerNumberPattern: '^\\d{1,15}$',
+  },
+
   /** server: members module */
   security: {
     pinLength: 5,
@@ -317,8 +327,6 @@ export const settings = {
     nameMaxLength: 80,
     /** Season format, e.g. 2026/27. */
     seasonPattern: '^\\d{4}/\\d{2}$',
-    /** Month (1-12) in which a new season starts, for the default in the team form. */
-    seasonStartMonth: 7,
   },
 
   calendar: {

@@ -10,7 +10,7 @@ describe('TeamForm', () => {
   });
 
   it('validates name and season format', () => {
-    const form = new TeamForm(new ZonedClock('Europe/Vienna'));
+    const form = new TeamForm(new ZonedClock('Europe/Vienna'), 7);
     expect(Object.keys(form.errors)).toEqual(['name']);
     form.name = 'Herren 2';
     form.season = '2026-27';

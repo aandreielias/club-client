@@ -9,9 +9,9 @@ export class TeamForm extends FormState<TeamFormErrors> {
   name = $state('');
   season = $state('');
 
-  constructor(clock: ZonedClock) {
+  constructor(clock: ZonedClock, seasonStartMonth: number) {
     super();
-    this.season = TeamForm.currentSeason(clock.today(), settings.teams.seasonStartMonth);
+    this.season = TeamForm.currentSeason(clock.today(), seasonStartMonth);
   }
 
   /** '2026-10-15' with start month 7 → '2026/27'; '2027-03-01' → '2026/27'. */

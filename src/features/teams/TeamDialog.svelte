@@ -13,7 +13,7 @@
   /** New team, or rename `team` (name and season). */
   let { team = null, onsaved, onclose }: { team?: Team | null; onsaved: (team: Team) => void; onclose: () => void } = $props();
 
-  const form = new TeamForm(session.clock);
+  const form = new TeamForm(session.clock, session.club?.seasonStartMonth ?? 7);
   // svelte-ignore state_referenced_locally
   if (team) Object.assign(form, { name: team.name, season: team.season });
   const action = new Action();

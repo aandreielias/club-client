@@ -9,19 +9,25 @@
   import ShortcutsSection from './ShortcutsSection.svelte';
   import SidebarSection from './SidebarSection.svelte';
   import HomeSettingsSection from './HomeSettingsSection.svelte';
+  import ClubSection from './ClubSection.svelte';
+  import { session } from '../../lib/container';
+  import { ADMIN_BOARD, type Role } from '../../lib/types';
 
   /** Settings in the window or on a page; `id` is the section shown first. */
   let { id, handle }: { id: string; handle?: WindowHandle } = $props();
 
-  type SectionId = 'appearance' | 'home' | 'sidebar' | 'shortcuts' | 'security' | 'general';
-  const SECTIONS: readonly { id: SectionId; label: string; component: Component }[] = [
+  type SectionId = 'appearance' | 'home' | 'sidebar' | 'shortcuts' | 'security' | 'general' | 'club';
+  /** `roles`: only shown to these (club-wide settings). */
+  const ALL: readonly { id: SectionId; label: string; component: Component; roles?: readonly Role[] }[] = [
     { id: 'appearance', label: 'Darstellung', component: AppearanceSection },
     { id: 'home', label: 'Startseite', component: HomeSettingsSection },
     { id: 'sidebar', label: 'Seitenleiste', component: SidebarSection },
     { id: 'shortcuts', label: 'Tastenkürzel', component: ShortcutsSection },
     { id: 'security', label: 'Sicherheit', component: SecuritySection },
     { id: 'general', label: 'Allgemein', component: GeneralSection },
+    { id: 'club', label: 'Verein', component: ClubSection, roles: ADMIN_BOARD },
   ];
+  const SECTIONS = ALL.filter((s) => !s.roles || session.hasRole(...s.roles));
 
   // svelte-ignore state_referenced_locally
   let current = $state<SectionId>(SECTIONS.some((s) => s.id === id) ? (id as SectionId) : 'appearance');

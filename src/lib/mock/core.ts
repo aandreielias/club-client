@@ -7,6 +7,7 @@ import {
   PRIVILEGED,
   guestOnly,
   type Club,
+  type ClubEdit,
   canVote,
   type Member,
   type MemberList,
@@ -89,7 +90,13 @@ export class MockDirectory {
     locale: 'de-AT',
     website: null,
     contactEmail: null,
+    address: null,
+    registerNumber: null,
+    seasonStartMonth: 7,
   };
+
+  /** server: platform_club - edited facts on top of club.yml (blank = file value). */
+  readonly clubEdits = new MockTable<Partial<ClubEdit>>('club', () => ({}));
 
   readonly clock = new ZonedClock(this.club.timeZone);
 
@@ -371,6 +378,40 @@ export class MockDirectory {
       stepUpUntil: active,
       devices: [],
     };
+  }
+
+  clubInfo(): Club {
+    const e = this.clubEdits.data;
+    return { ...this.club, name: e.name || this.club.name, shortName: e.shortName || this.club.shortName, website: e.website || null,
+      contactEmail: e.contactEmail || null, address: e.address || null, registerNumber: e.registerNumber || null,
+      seasonStartMonth: e.seasonStartMonth ?? this.club.seasonStartMonth };
+  }
+
+  /** server: ClubController PUT - admin/board with step-up; blank fields fall back to club.yml. */
+  updateClub(member: Member, body: Record<string, unknown>): Club {
+    this.requirePrivileged(member, ADMIN_BOARD);
+    const limits = settings.club;
+    const text = (key: string, max: number, pattern?: RegExp): string | null => {
+      const value = body[key];
+      if (value == null || value === '') return null;
+      if (typeof value !== 'string' || value.length > max || (pattern && !pattern.test(value))) return fail(400, 'request.invalid');
+      return value.trim() || null;
+    };
+    const month = body.seasonStartMonth;
+    if (month != null && (!Number.isInteger(month) || (month as number) < 1 || (month as number) > 12)) fail(400, 'request.invalid');
+    Object.assign(this.clubEdits.data, {
+      name: text('name', limits.nameMaxLength),
+      shortName: text('shortName', limits.shortNameMaxLength),
+      website: text('website', limits.linkMaxLength, /^https:\/\/\S+$/),
+      contactEmail: text('contactEmail', limits.linkMaxLength, /^[^@\s]+@[^@\s]+$/),
+      address: text('address', limits.addressMaxLength),
+      registerNumber: text('registerNumber', 15, new RegExp(limits.registerNumberPattern)),
+      seasonStartMonth: (month as number | null) ?? undefined,
+    });
+    this.clubEdits.save();
+    const club = this.clubInfo();
+    mockServer.events.publish({ type: 'platform.club-changed', data: { club } });
+    return club;
   }
 
   /** server: SecurityHandlers SET_CLUB_PIN - admin/board; the first PIN needs no step-up (there is none to confirm with). */
@@ -879,7 +920,8 @@ export class MockDirectory {
 export const directory = new MockDirectory();
 
 mockServer
-  .on('GET', '/api/v1/club', () => directory.club)
+  .on('GET', '/api/v1/club', () => directory.clubInfo())
+  .on('PUT', '/api/v1/club', (req) => directory.updateClub(directory.actor(req), req.body ?? {}))
   .on('GET', '/api/v1/me', (req) => {
     const member = directory.actor(req, true);
     const own = directory.teamRoles(member.id);
