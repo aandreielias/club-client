@@ -74,7 +74,7 @@ interface OfficeRow {
 }
 
 const OFFICES = ['CHAIR', 'VICE_CHAIR', 'TREASURER', 'SECRETARY', 'BOARD_MEMBER', 'AUDITOR'] as const;
-/** server: V53__office_settings.sql — the statutes' rules for the offices and the board. */
+/** server: V53__office_settings.sql — the seeded rules for the offices and the board. */
 const SEEDED_BOARD_SETTINGS: BoardSettings = {
   offices: [
     { office: 'CHAIR', label: 'Vorsitz', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3 },
@@ -136,7 +136,7 @@ export class MockDirectory {
       seedMember('beisitz', 'Maria', 'Beisitz', ['VOLUNTEER', 'BOARD'], '1975-07-03', 'EXTRAORDINARY'),
       seedMember('beisitz2', 'Oskar', 'Ott', ['PLAYER', 'BOARD'], '1995-12-24', 'EXTRAORDINARY'),
       seedMember('pruefer', 'Peter', 'Prüfer', ['VOLUNTEER'], '1969-05-30', 'EXTRAORDINARY'),
-      // Honorary member only (votes, §8 Abs 1).
+      // Honorary member only (votes).
       seedMember('ehren', 'Hans', 'Ehren', ['VOLUNTEER'], '1950-01-15', null, true),
       seedMember('helfer', 'Julia', 'Helfer', ['VOLUNTEER'], '1993-09-09', 'EXTRAORDINARY'),
       seedMember('helfer2', 'Tobias', 'Tausend', ['VOLUNTEER', 'PARENT'], '1982-03-03', 'EXTRAORDINARY'),
@@ -211,7 +211,7 @@ export class MockDirectory {
     };
   }
 
-  /** A complete board of five (odd, §9 Abs 1): Karin is deputy and treasurer (§9 Abs 4); Anna and Peter check the books. */
+  /** A complete board of five (odd): Karin is deputy and treasurer; Anna and Peter check the books. */
   readonly offices = new MockTable<OfficeRow[]>('offices', () => MockDirectory.seedOffices());
 
   private static seedOffices(): OfficeRow[] {

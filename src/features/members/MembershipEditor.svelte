@@ -10,7 +10,7 @@
   import type { MemberDetailModel } from './MemberDetailModel.svelte';
   import { MEMBERSHIP_CHOICES, type MembershipChoice } from './roles';
 
-  /** Membership per statutes §4: type, honorary membership, start date. Admin/board. */
+  /** Membership: type, honorary membership, start date. Admin/board. */
   let { member, model }: { member: Member; model: MemberDetailModel } = $props();
 
   // svelte-ignore state_referenced_locally
@@ -40,7 +40,7 @@
       <DateInput bind:value={since} max={today} />
     </Field>
   {/if}
-  <p class="muted small">Stimmrecht und Wählbarkeit haben nur außerordentliche und Ehrenmitglieder (Statuten § 8 Abs. 1).</p>
+  <p class="muted small">Stimmrecht und Wählbarkeit haben nur außerordentliche und Ehrenmitglieder.</p>
   <ErrorNote error={model.membershipAction.error} />
   <div><Button variant="primary" busy={model.membershipAction.busy} disabled={!changed} onclick={save}>Mitgliedschaft speichern</Button></div>
 </div>

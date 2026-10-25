@@ -1,5 +1,5 @@
 <script lang="ts">
-  /** Board size against § 9 Abs. 1 (at least three, an odd number): shown in red. */
+  /** Board size warnings (too few people, an even number): shown in red. */
   const SIZE_WARNINGS = ['board.too-small', 'board.even'];
   import { bus, directory, permissions, session } from '../../lib/container';
   import RecordLink from '../../ui/RecordLink.svelte';
@@ -20,7 +20,7 @@
   import type { Office, OfficeKind } from './MembersApi';
   import { boardSettings, memberPolicy as policy, membersApi } from './services';
 
-  /** Vorstand (statutes §9) and Rechnungsprüfer (§11): who holds which function, until when. */
+  /** Vorstand and Rechnungsprüfer: who holds which function, until when. */
   const model = new BoardModel(membersApi);
   void model.load();
 
@@ -35,7 +35,7 @@
   let termEndsOn = $state('');
   let coopted = $state(false);
 
-  /** server: canVote — only extraordinary and honorary members may be elected (§8 Abs 1). */
+  /** server: canVote — only extraordinary and honorary members may be elected. */
   const memberOptions = $derived(
     (candidates.value ?? []).filter(canVote).map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` })),
   );
@@ -115,7 +115,7 @@
           <DateInput bind:value={termEndsOn} min={startsOn} />
         </Field>
       </div>
-      <label class="check"><input type="checkbox" bind:checked={coopted} /> Kooptiert, bis die nächste Mitgliederversammlung bestätigt (§ 9 Abs. 6)</label>
+      <label class="check"><input type="checkbox" bind:checked={coopted} /> Kooptiert, bis die nächste Mitgliederversammlung bestätigt</label>
       <ErrorNote error={model.assignAction.error} />
       <div><Button type="submit" variant="primary" busy={model.assignAction.busy} disabled={!memberId || !office}>Funktion vergeben</Button></div>
     </form>

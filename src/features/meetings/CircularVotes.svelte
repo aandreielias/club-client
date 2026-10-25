@@ -10,7 +10,7 @@
   import ResolutionCard from './ResolutionCard.svelte';
   import { meetingsApi } from './services';
 
-  /** Umlaufbeschlüsse of the board (§10 Abs 15), newest first. Admin and board only. */
+  /** Umlaufbeschlüsse of the board, newest first. Admin and board only. */
   const list = new Resource(() => meetingsApi.circular());
   void list.load();
   useBus(bus, RESOLUTION_CHANGED, ({ data }) => data.meetingId === null && void list.load());

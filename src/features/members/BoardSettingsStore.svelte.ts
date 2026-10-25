@@ -23,7 +23,7 @@ export class BoardSettingsStore {
     return this.value;
   }
 
-  /** The statutes' name until the settings are loaded. */
+  /** The seeded name until the settings are loaded. */
   label(kind: OfficeKind): string {
     return this.value?.offices.find((o) => o.office === kind)?.label ?? OFFICE_LABELS[kind];
   }

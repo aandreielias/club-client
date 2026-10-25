@@ -45,7 +45,7 @@
   const officeOptions = boardSettings.enabled.map((o) => ({ value: o, label: boardSettings.label(o) }));
   const members = new Resource(() => directory.allMembers());
   void members.load();
-  // Elections need someone who may be elected (§8 Abs 1); the other actions any active member.
+  // Elections need someone who may be elected; the other actions any active member.
   const memberOptions = $derived((members.value ?? []).filter((m) => (action === 'ELECTION' ? canVote(m) : m.active))
     .map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` })));
   const implied = $derived(meetingTypes.fixedMajority(action));
@@ -118,7 +118,7 @@
     {#if implied}
       <p class="muted small">Nötige Mehrheit: {MAJORITY_LABELS[implied]}.</p>
     {:else if majorityOptions.length > 1}
-      <Field label="Nötige Mehrheit" hint="Statutenänderung: zwei Drittel; Auflösung: drei Viertel (§ 8 Abs. 9).">
+      <Field label="Nötige Mehrheit" hint="Manche Beschlüsse haben eine feste Mehrheit (Einstellungen › Beschlüsse).">
         <Select bind:value={majority} options={majorityOptions} />
       </Field>
     {/if}

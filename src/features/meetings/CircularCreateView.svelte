@@ -16,7 +16,7 @@
   import { ACTION_LABELS, actions, CIRCULAR_MIN_MS, type ResolutionAction } from './model';
   import { meetingsApi } from './services';
 
-  /** New circular vote: the motion goes to the whole board at once and runs at least three days (§10 Abs 15). */
+  /** New circular vote: the motion goes to the whole board at once and runs at least three days. */
   let { handle }: { id: string; handle: WindowHandle } = $props();
 
   // svelte-ignore state_referenced_locally

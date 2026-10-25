@@ -10,7 +10,7 @@ export const DEADLINE_CATEGORIES: readonly CalendarCategory[] = ['MEETING', 'DEA
 
 /** The server answers at most 366 days per request. */
 const CHUNK_DAYS = 365;
-/** Terms run three years at most (statutes §9), so their ends lie that far ahead. */
+/** Terms run three years at most, so their ends lie that far ahead. */
 const AHEAD_DAYS = 3 * CHUNK_DAYS;
 
 /** Fristen: everything dated around the Sitzungen as one list, from the same calendar items the calendar shows. */

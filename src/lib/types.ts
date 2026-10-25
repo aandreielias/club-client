@@ -32,7 +32,7 @@ export const ROLE_LABELS: Readonly<Record<Role, string>> = {
   GUEST: 'Gast',
 };
 
-/** Statutes §4: ordinary members take part, extraordinary members also help run the club and vote (§8 Abs 1). */
+/** Ordinary members take part, extraordinary members also help run the club and vote. */
 export type MembershipType = 'ORDINARY' | 'EXTRAORDINARY';
 
 export const MEMBERSHIP_LABELS: Readonly<Record<MembershipType, string>> = { ORDINARY: 'Ordentlich', EXTRAORDINARY: 'Außerordentlich' };

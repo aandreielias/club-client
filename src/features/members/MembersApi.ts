@@ -21,12 +21,12 @@ export interface Membership {
   memberSince: string | null;
 }
 
-/** Vorstand functions (statutes §9) and Rechnungsprüfer (§11, not part of the board). */
+/** Vorstand functions and Rechnungsprüfer. */
 export type OfficeKind = 'CHAIR' | 'VICE_CHAIR' | 'TREASURER' | 'SECRETARY' | 'BOARD_MEMBER' | 'AUDITOR';
 
 export const OFFICE_KINDS: readonly OfficeKind[] = ['CHAIR', 'VICE_CHAIR', 'TREASURER', 'SECRETARY', 'BOARD_MEMBER', 'AUDITOR'];
 
-/** The statutes' names; the club's own come with the board settings (`boardSettings.label`). */
+/** Seeded names; the club's own come with the board settings (`boardSettings.label`). */
 export const OFFICE_LABELS: Readonly<Record<OfficeKind, string>> = {
   CHAIR: 'Vorsitz',
   VICE_CHAIR: 'Stellvertretung',
@@ -44,7 +44,7 @@ export interface Office {
   startsOn: string;
   termEndsOn: string;
   endedOn: string | null;
-  /** Chosen by the board until the next general meeting confirms it (§9 Abs 6). */
+  /** Chosen by the board until the next general meeting confirms it. */
   coopted: boolean;
 }
 
@@ -68,7 +68,7 @@ export interface OfficeSetting {
   termYears: number;
 }
 
-/** server: MembersApi.BoardSettings — every office once, plus the board-wide rules (§9 Abs 1, 6). */
+/** server: MembersApi.BoardSettings — every office once, plus the board-wide rules. */
 export interface BoardSettings {
   offices: OfficeSetting[];
   minBoardSize: number;

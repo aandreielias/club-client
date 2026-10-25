@@ -14,7 +14,7 @@
 
   /**
    * Einstellungen › Beschlüsse (admin/board): per decision the majority it fixes and the tasks that follow when it passes; seeded with
-   * the statutes' (§8 Abs 9) and the Vereinsgesetz's (§14 Abs 2: report to the authority within four weeks).
+   * the statutes' and the Vereinsgesetz's.
    */
   const rules = new Resource(async () => structuredClone(await meetingTypes.loadRules()));
   void rules.load();

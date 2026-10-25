@@ -10,7 +10,7 @@
   let { meeting, model }: { meeting: Meeting; model: MeetingModel } = $props();
 
   /** server: AgendaDocument.PLACEHOLDERS */
-  const PLACEHOLDERS = ['Verein', 'Art', 'Titel', 'Wann', 'Ort', 'Video', 'Dringlichkeit', 'Tagesordnung', 'Statuten', 'Versandt']
+  const PLACEHOLDERS = ['Verein', 'Art', 'Titel', 'Wann', 'Ort', 'Video', 'Dringlichkeit', 'Tagesordnung', 'Versandt']
     .map((name) => `{{${name}}}`).join(', ');
 
   async function invitation() {

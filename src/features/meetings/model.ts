@@ -2,9 +2,9 @@ import type { LinkedRef } from '../../lib/records/refs';
 import type { Hue } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
 
-// Mirrors of the club-server meetings DTOs (statutes §8, §10). API times are UTC instants.
+// Mirrors of the club-server meetings DTOs. API times are UTC instants.
 
-/** Key of a club-defined meeting type (server: meetings_type); seeded with the statutes' kinds ASSEMBLY, BOARD, … */
+/** Key of a club-defined meeting type (server: meetings_type); seeded with ASSEMBLY, BOARD, … */
 export type MeetingKind = string;
 export type MeetingStatus = 'DRAFT' | 'INVITED' | 'OPEN' | 'CLOSED';
 /** APP votes in the app; ANALOG is there without the app (in the room or on video). */
@@ -58,7 +58,6 @@ export interface MeetingType {
   label: string;
   /** After "Einladung zur": "ordentlichen Mitgliederversammlung". */
   invitationLabel: string;
-  statuteRef: string | null;
   /** Who is invited, votes and counts for the quorum. */
   electorate: 'BOARD' | 'ASSEMBLY';
   noticeHours: number;
@@ -133,7 +132,7 @@ export interface Meeting {
   kind: MeetingKind;
   title: string;
   agenda: string | null;
-  /** Reason of the urgency, for types that need one (seeded: extraordinary board meeting, §10 Abs 3). */
+  /** Reason of the urgency, for types that need one (seeded: extraordinary board meeting). */
   urgency: string | null;
   startsAt: string;
   endsAt: string;
@@ -285,7 +284,7 @@ export function majorities(type: MeetingType | null): Majority[] {
   return type ? (['SIMPLE', 'TWO_THIRDS', 'THREE_QUARTERS'] as const).filter((m) => type.majorities.includes(m)) : ['SIMPLE'];
 }
 
-/** server: Resolution.CIRCULAR_MIN (§10 Abs 15). */
+/** server: Resolution.CIRCULAR_MIN. */
 export const CIRCULAR_MIN_MS = 3 * 24 * HOUR;
 
 export interface Resolution {

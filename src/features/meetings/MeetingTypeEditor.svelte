@@ -68,9 +68,6 @@
       <input bind:value={form.invitationLabel} maxlength="120" required />
     </Field>
   </div>
-  <Field label="Bestimmung der Statuten (optional)" hint="Steht in der Einladung, z. B. § 8 Abs. 4">
-    <input bind:value={form.statuteRef} maxlength="40" />
-  </Field>
   <Field label="Eingeladen und stimmberechtigt">
     <ChoiceGroup name="type-electorate" label="Eingeladen und stimmberechtigt" options={ELECTORATES}
       bind:value={() => form.electorate, (v) => v && (form.electorate = v)} />

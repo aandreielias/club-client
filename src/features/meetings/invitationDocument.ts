@@ -48,7 +48,7 @@ export async function defaultTemplate(Zip: typeof JSZip): Promise<Blob> {
   const zip = new Zip();
   const body = [p('Small', '{{Verein}}'), p('Title', 'Einladung zur {{Art}}'), p('Subtitle', '{{Titel}}'), p(null, 'Wann: {{Wann}}'), p(null, 'Wo: {{Ort}}'),
     p(null, 'Videokonferenz: {{Video}}'), p(null, 'Grund der Dringlichkeit: {{Dringlichkeit}}'), p('Heading1', 'Tagesordnung'),
-    p('ListParagraph', '{{Tagesordnung}}'), p('Small', 'Einladung gemäß {{Statuten}} der Statuten, versandt am {{Versandt}}.')].join('');
+    p('ListParagraph', '{{Tagesordnung}}'), p('Small', 'Einladung versandt am {{Versandt}}.')].join('');
   zip.file('[Content_Types].xml', CONTENT_TYPES);
   zip.file('_rels/.rels', RELS);
   zip.file('word/_rels/document.xml.rels', DOCUMENT_RELS);

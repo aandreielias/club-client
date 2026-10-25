@@ -10,7 +10,7 @@
   import type { BoardSettings } from './MembersApi';
   import { boardSettings, membersApi } from './services';
 
-  /** Einstellungen › Funktionen (admin/board): names, holders and terms of the offices, and the board-wide rules (statutes §9, §11). */
+  /** Einstellungen › Funktionen (admin/board): names, holders and terms of the offices, and the board-wide rules. */
   const settings = new Resource(async () => structuredClone(await boardSettings.load()));
   void settings.load();
   const action = new Action();
@@ -28,7 +28,7 @@
     <form class="stack section" onsubmit={(e) => save(e, value)}>
       <p class="muted">
         Wie die Funktionen im Verein heißen, wie viele sie innehaben und wie lange eine Funktionsperiode dauert. Welche Funktionen eine
-        Person zugleich innehaben darf, folgt den Statuten (Stellvertretung auch Kassa oder Schriftführung, Rechnungsprüfung außerhalb des
+        Person zugleich innehaben darf, ist fest geregelt (Stellvertretung auch Kassa oder Schriftführung, Rechnungsprüfung außerhalb des
         Vorstands).
       </p>
       <div class="table" role="table" aria-label="Funktionen">

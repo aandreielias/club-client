@@ -23,25 +23,25 @@ type StoredType = MeetingType;
 const BOARD_OFFICES: OfficeKind[] = ['CHAIR', 'VICE_CHAIR', 'TREASURER', 'SECRETARY', 'BOARD_MEMBER'];
 const CHAIRS: OfficeKind[] = ['CHAIR', 'VICE_CHAIR'];
 const ALL_MAJORITIES: Majority[] = ['SIMPLE', 'TWO_THIRDS', 'THREE_QUARTERS'];
-/** server: V51__meeting_types.sql — the statutes' kinds (§8, §10). */
+/** server: V51__meeting_types.sql — the seeded kinds. */
 export const SEEDED_TYPES: readonly StoredType[] = [
-  { key: 'ASSEMBLY', label: 'Ordentliche Mitgliederversammlung', invitationLabel: 'ordentlichen Mitgliederversammlung', statuteRef: '§ 8 Abs. 4',
+  { key: 'ASSEMBLY', label: 'Ordentliche Mitgliederversammlung', invitationLabel: 'ordentlichen Mitgliederversammlung',
     electorate: 'ASSEMBLY', noticeHours: 336, quorum: 'AT_LEAST_HALF', graceMinutes: 30, majorities: ALL_MAJORITIES, conveners: BOARD_OFFICES,
     actions: ['GENERAL', 'ELECTION'], needsReason: false, dueBy: '10-01', sort: 1, archived: false, inUse: false, steps: [] },
   { key: 'EXTRA_ASSEMBLY', label: 'Außerordentliche Mitgliederversammlung', invitationLabel: 'außerordentlichen Mitgliederversammlung',
-    statuteRef: '§ 8 Abs. 4', electorate: 'ASSEMBLY', noticeHours: 336, quorum: 'AT_LEAST_HALF', graceMinutes: 30, majorities: ALL_MAJORITIES,
+    electorate: 'ASSEMBLY', noticeHours: 336, quorum: 'AT_LEAST_HALF', graceMinutes: 30, majorities: ALL_MAJORITIES,
     conveners: BOARD_OFFICES, actions: ['GENERAL', 'ELECTION', 'HONORARY_GRANT', 'HONORARY_REVOKE', 'STATUTES_CHANGE', 'DISSOLUTION'],
     needsReason: false, dueBy: null, sort: 2, archived: false, inUse: false, steps: [] },
-  { key: 'BOARD', label: 'Ordentliche Vorstandssitzung', invitationLabel: 'ordentlichen Vorstandssitzung', statuteRef: '§ 10 Abs. 6',
+  { key: 'BOARD', label: 'Ordentliche Vorstandssitzung', invitationLabel: 'ordentlichen Vorstandssitzung',
     electorate: 'BOARD', noticeHours: 336, quorum: 'MORE_THAN_HALF', graceMinutes: null, majorities: ['SIMPLE'], conveners: CHAIRS,
     actions: ['GENERAL', 'CONVENE_ASSEMBLY'], needsReason: false, dueBy: '10-01', sort: 3, archived: false, inUse: false, steps: [] },
-  { key: 'EXTRA_BOARD', label: 'Außerordentliche Vorstandssitzung', invitationLabel: 'außerordentlichen Vorstandssitzung', statuteRef: '§ 10 Abs. 3',
+  { key: 'EXTRA_BOARD', label: 'Außerordentliche Vorstandssitzung', invitationLabel: 'außerordentlichen Vorstandssitzung',
     electorate: 'BOARD', noticeHours: 48, quorum: 'AT_LEAST_THREE_QUARTERS', graceMinutes: null, majorities: ['THREE_QUARTERS'], conveners: CHAIRS,
     actions: ['GENERAL', 'EXCLUSION', 'CONVENE_ASSEMBLY'], needsReason: true, dueBy: null, sort: 4, archived: false, inUse: false, steps: [] },
-  { key: 'SIMPLE_BOARD', label: 'Einfache Vorstandssitzung', invitationLabel: 'einfachen Vorstandssitzung', statuteRef: '§ 10 Abs. 7',
+  { key: 'SIMPLE_BOARD', label: 'Einfache Vorstandssitzung', invitationLabel: 'einfachen Vorstandssitzung',
     electorate: 'BOARD', noticeHours: 168, quorum: 'MORE_THAN_HALF', graceMinutes: null, majorities: ['SIMPLE'], conveners: BOARD_OFFICES,
     actions: ['GENERAL', 'CONVENE_ASSEMBLY'], needsReason: false, dueBy: null, sort: 5, archived: false, inUse: false, steps: [] },
-  { key: 'CONSTITUENT_BOARD', label: 'Konstituierende Vorstandssitzung', invitationLabel: 'konstituierenden Vorstandssitzung', statuteRef: '§ 10 Abs. 6',
+  { key: 'CONSTITUENT_BOARD', label: 'Konstituierende Vorstandssitzung', invitationLabel: 'konstituierenden Vorstandssitzung',
     electorate: 'BOARD', noticeHours: 336, quorum: 'MORE_THAN_HALF', graceMinutes: null, majorities: ['SIMPLE'], conveners: CHAIRS,
     actions: ['GENERAL', 'CONVENE_ASSEMBLY'], needsReason: false, dueBy: null, sort: 6, archived: false, inUse: false, steps: [] },
 ];
@@ -91,7 +91,7 @@ function seededRules(): ActionRule[] {
     { action: 'ELECTION', majority: null, followUps: [f('ENTER_OFFICE', 'Funktion eintragen: {funktion} – {mitglied}', 7),
       f('REPORT_AUTHORITY', 'Vereinsbehörde informieren: {funktion} – {mitglied}', 28)] },
     { action: 'STATUTES_CHANGE', majority: 'TWO_THIRDS', followUps: [f('REPORT_AUTHORITY', 'Statutenänderung der Vereinsbehörde anzeigen: {beschluss}', 28)] },
-    { action: 'DISSOLUTION', majority: 'THREE_QUARTERS', followUps: [f('REPORT_AUTHORITY', 'Auflösung der Vereinsbehörde anzeigen (§ 14 Abs. 2)', 28)] },
+    { action: 'DISSOLUTION', majority: 'THREE_QUARTERS', followUps: [f('REPORT_AUTHORITY', 'Auflösung der Vereinsbehörde anzeigen', 28)] },
     { action: 'EXCLUSION', majority: null, followUps: [f('NOTIFY_EXCLUSION', 'Ausschluss schriftlich mit Gründen mitteilen: {mitglied}', 7)] },
     { action: 'CONVENE_ASSEMBLY', majority: null, followUps: [f('CONVENE_ASSEMBLY', 'Außerordentliche Mitgliederversammlung einberufen', 7)] },
   ];
@@ -325,7 +325,7 @@ export class MockMeetings {
     const base = { urgency: null, videoUrl: null, openedAt: null, closedAt: null, protocol: null, presence: {}, links: [] };
     return [
       { ...base, id: 'mt-live', kind: 'EXTRA_ASSEMBLY', title: 'Außerordentliche Mitgliederversammlung',
-        agenda: '1. Begrüßung und Beschlussfähigkeit\n2. Mitgliedsbeitrag 2027\n3. Statutenänderung § 4 Abs. 3\n4. Allfälliges',
+        agenda: '1. Begrüßung und Beschlussfähigkeit\n2. Mitgliedsbeitrag 2027\n3. Statutenänderung: Mitgliedschaft\n4. Allfälliges',
         startsAt: ago(15), endsAt: ago(-105), location: 'Vereinsheim', videoUrl: 'https://meet.example.at/mv', status: 'OPEN',
         invitedAt: ago(20 * 24 * 60), openedAt: ago(10), protocol: '1. Begrüßung durch den Vorsitz, 8 von 12 Stimmberechtigten anwesend.',
         presence: { vorstand: 'APP', kassier: 'APP', schrift: 'APP', beisitz: 'APP', beisitz2: 'APP', admin: 'APP', eltern: 'ANALOG', ehren: 'ANALOG' },
@@ -352,7 +352,7 @@ export class MockMeetings {
     return [
       { ...base, id: 'rs-beitrag', meetingId: 'mt-live', title: 'Mitgliedsbeitrag 2027: 60 €', text: 'Der Vorstand schlägt 60 € pro Jahr vor (bisher 50 €).',
         majority: 'SIMPLE', status: 'OPEN', voters: 12, openedAt: iso(now - 5 * 60_000), yes: 1, no: 1, abstain: 0, ballots: ['kassier', 'schrift'] },
-      { ...base, id: 'rs-statuten', meetingId: 'mt-live', title: 'Statutenänderung § 4 Abs. 3', text: 'Ordentliche Mitglieder dürfen auch passiv teilnehmen.',
+      { ...base, id: 'rs-statuten', meetingId: 'mt-live', title: 'Statutenänderung: Mitgliedschaft', text: 'Ordentliche Mitglieder dürfen auch passiv teilnehmen.',
         majority: 'TWO_THIRDS', status: 'DRAFT', voters: null, yes: 0, no: 0, abstain: 0, ballots: [] },
       { ...base, id: 'rs-halle', meetingId: 'mt-past', title: 'Hallenmiete Wintersaison: 1.800 €', majority: 'SIMPLE', status: 'CLOSED', voters: 5,
         openedAt: iso(now - 40 * DAY), closedAt: iso(now - 40 * DAY + 600_000), result: 'PASSED', analogYes: 1, analogNo: 0, analogAbstain: 0,
@@ -495,7 +495,9 @@ export class MockMeetings {
       Verein: this.people.clubInfo().name, Art: type.invitationLabel,
       Titel: meeting.title.toLowerCase() === type.label.toLowerCase() ? null : meeting.title,
       Wann: `${fmt(meeting.startsAt, { dateStyle: 'full', timeStyle: 'short' })} bis ${fmt(meeting.endsAt, { timeStyle: 'short' })} Uhr`,
-      Ort: meeting.location, Video: meeting.videoUrl, Dringlichkeit: meeting.urgency, Statuten: type.statuteRef,
+      Ort: meeting.location, Video: meeting.videoUrl, Dringlichkeit: meeting.urgency,
+      // A placeholder older templates still carry (server: AgendaDocument); empty, so its paragraph is dropped.
+      Statuten: null,
       Versandt: fmt(meeting.invitedAt ?? new Date().toISOString(), { dateStyle: 'long' }),
     }, (meeting.agenda ?? '').split('\n').map((l) => l.trim()).filter(Boolean).concat(meeting.agenda?.trim() ? [] : ['Keine Tagesordnung eingetragen.']));
 
@@ -783,7 +785,7 @@ export class MockMeetings {
     if (dueBy && (!/^\d{2}-\d{2}$/.test(dueBy) || !isDayOfYear(Number(dueBy.slice(0, 2)), Number(dueBy.slice(3))))) fail(400, 'meeting-type.due-by-invalid');
     const type: StoredType = {
       key: key ?? `TYPE_${crypto.randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`, label, invitationLabel,
-      statuteRef: text(body.statuteRef, 40, 'meeting-type.statute-ref-invalid'), electorate: body.electorate, noticeHours: body.noticeHours,
+      electorate: body.electorate, noticeHours: body.noticeHours,
       quorum: body.quorum, graceMinutes: body.graceMinutes ?? null, majorities, conveners, actions, needsReason: !!body.needsReason, dueBy,
       sort: Number.isInteger(body.sort) ? body.sort : 0, archived: !!body.archived, inUse: false, steps: checkedSteps(body.steps),
     };

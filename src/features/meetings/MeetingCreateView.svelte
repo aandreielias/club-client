@@ -59,7 +59,7 @@
             <input bind:value={form.title} maxlength="120" required />
           </Field>
           {#if form.type?.needsReason}
-            <Field label="Grund der Dringlichkeit" hint="Steht in der Einladung{form.type.statuteRef ? ` (${form.type.statuteRef})` : ''}." error={form.error('urgency')}>
+            <Field label="Grund der Dringlichkeit" hint="Steht in der Einladung." error={form.error('urgency')}>
               <textarea bind:value={form.urgency} rows="2" maxlength="1000"></textarea>
             </Field>
           {/if}

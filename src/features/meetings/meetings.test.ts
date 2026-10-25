@@ -22,7 +22,7 @@ function policyFor(roles: Role[]): MeetingPolicy {
 }
 
 describe('meeting rules', () => {
-  it('mirror the notice periods of the statutes', () => {
+  it('mirror the notice periods of the seeded types', () => {
     const start = '2026-12-01T18:00:00.000Z';
     expect(latestInvite(type('ASSEMBLY'), start)).toBe('2026-11-17T18:00:00.000Z');
     expect(latestInvite(type('SIMPLE_BOARD'), start)).toBe('2026-11-24T18:00:00.000Z');

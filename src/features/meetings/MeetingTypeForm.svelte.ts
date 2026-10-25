@@ -11,7 +11,6 @@ export type NoticeUnit = 'hours' | 'days';
 export class MeetingTypeForm extends FormState<Errors> {
   label = $state('');
   invitationLabel = $state('');
-  statuteRef = $state('');
   electorate = $state<'BOARD' | 'ASSEMBLY'>('BOARD');
   notice = $state(14);
   noticeUnit = $state<NoticeUnit>('days');
@@ -42,7 +41,6 @@ export class MeetingTypeForm extends FormState<Errors> {
     if (!type) return;
     this.label = type.label;
     this.invitationLabel = type.invitationLabel;
-    this.statuteRef = type.statuteRef ?? '';
     this.electorate = type.electorate;
     this.noticeUnit = type.noticeHours % 24 === 0 ? 'days' : 'hours';
     this.notice = this.noticeUnit === 'days' ? type.noticeHours / 24 : type.noticeHours;
@@ -89,7 +87,6 @@ export class MeetingTypeForm extends FormState<Errors> {
     return {
       label: this.label.trim(),
       invitationLabel: this.invitationLabel.trim(),
-      statuteRef: this.statuteRef.trim() || null,
       electorate: this.electorate,
       noticeHours: this.noticeHours,
       quorum: this.quorum,
