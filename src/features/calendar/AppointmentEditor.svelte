@@ -9,6 +9,7 @@
   import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import Select from '../../ui/Select.svelte';
   import { CLUB_WIDE, type AppointmentForm } from './AppointmentForm.svelte';
+  import { session } from '../../lib/container';
   import { appointmentTypes } from './services';
   import { appointmentPolicy as policy } from './services';
   import type { Location } from '../locations/model';
@@ -84,6 +85,10 @@
         <input bind:value={form.cabinWomen} maxlength={limits.cabinMaxLength} placeholder="z. B. Kabine 3" />
       </Field>
     </div>
+  {/if}
+
+  {#if session.club?.ridesEnabled !== false}
+    <label class="check"><input type="checkbox" bind:checked={() => form.ridesOn, (v) => (form.rides = v)} /> Fahrgemeinschaften anbieten</label>
   {/if}
 
   <Field label="Beschreibung" error={form.error('description')}>

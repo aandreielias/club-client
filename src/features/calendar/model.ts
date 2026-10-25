@@ -54,6 +54,8 @@ export interface Appointment {
   startsAt: string;
   endsAt: string;
   cancelled: boolean;
+  /** Car pools offered (set from the type when created, switched per appointment; the club switch comes on top). */
+  rides: boolean;
 }
 
 export interface AppointmentList {
@@ -74,11 +76,13 @@ export interface NewAppointment {
   /** Club-local date of the last occurrence; null = single appointment. */
   repeatUntil: string | null;
   intervalWeeks: number | null;
+  /** Omitted: what the type offers. */
+  rides?: boolean;
 }
 
 /** Changes one occurrence; omitted fields stay unchanged, '' clears a text; clearLocationId unlinks the place. */
 export type AppointmentPatch = Partial<
-  Pick<Appointment, 'type' | 'title' | 'description' | 'location' | 'locationId' | 'cabinMen' | 'cabinWomen' | 'startsAt' | 'endsAt'>
+  Pick<Appointment, 'type' | 'title' | 'description' | 'location' | 'locationId' | 'cabinMen' | 'cabinWomen' | 'startsAt' | 'endsAt' | 'rides'>
 > & { clearLocationId?: boolean };
 
 

@@ -36,6 +36,7 @@ export const CALENDAR_MESSAGES: MessageCatalog = {
   'absence.reason-too-long': 'Der Grund ist zu lang (höchstens 300 Zeichen).',
   'ride.exists': 'Du fährst bereits mit eigenem Auto zu diesem Termin.',
   'ride.full': 'In diesem Auto ist kein Platz mehr frei.',
+  'ride.not-offered': 'Für diesen Termin gibt es keine Fahrgemeinschaften.',
   'ride.is-driver': 'Fährt bereits mit eigenem Auto zu diesem Termin.',
   'ride.driver-is-passenger': 'Der Fahrer hat ohnehin einen Platz.',
   'ride.not-driver': 'Nur der Fahrer kann die Fahrt absagen.',

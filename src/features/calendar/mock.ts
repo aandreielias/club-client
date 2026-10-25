@@ -106,7 +106,8 @@ export class MockCalendar {
     if (body.teamId && !this.people.teams.data.some((t) => t.id === body.teamId)) fail(409, 'data.conflict');
     this.requireMayEdit(member, body.teamId ?? null);
     if (typeOf(body.type).archived) fail(400, 'appointment.type-archived');
-    const first = MockCalendar.validated(this.placed({ ...body, id: '', seriesId: null, cancelled: false }, body.locationId ?? null));
+    const rides = body.rides ?? typeOf(body.type).rides;
+    const first = MockCalendar.validated(this.placed({ ...body, id: '', seriesId: null, cancelled: false, rides }, body.locationId ?? null));
     const starts = this.occurrences(first.startsAt, body.repeatUntil, body.intervalWeeks);
     const seriesId = starts.length > 1 || body.repeatUntil ? crypto.randomUUID() : null;
     const duration = Date.parse(first.endsAt) - Date.parse(first.startsAt);
@@ -255,6 +256,7 @@ export class MockCalendar {
 
   offerRide(member: Member, appointmentId: string, body: { seats?: number; note?: string | null }): Ride {
     const appointment = this.open(member, appointmentId);
+    this.requireRides(appointment);
     const seats = Number(body.seats);
     if (!Number.isInteger(seats) || seats < 1 || seats > 8) fail(400, 'ride.seats-invalid');
     if ((body.note?.length ?? 0) > 200) fail(400, 'ride.note-too-long');
@@ -267,6 +269,11 @@ export class MockCalendar {
     return this.rideDto(ride);
   }
 
+  /** server: RideHandlers.requireRides — new rides and passengers only where the club and the appointment offer car pools. */
+  private requireRides(appointment: Appointment): void {
+    if (!appointment.rides || !this.people.clubInfo().ridesEnabled) fail(409, 'ride.not-offered');
+  }
+
   cancelRide(member: Member, rideId: string): void {
     const ride = this.ride(member, rideId);
     if (ride.driverId !== member.id && !this.people.isManager(member)) fail(403, 'ride.not-driver');
@@ -277,6 +284,7 @@ export class MockCalendar {
   joinRide(member: Member, rideId: string, body: { memberId?: string | null }): Ride {
     const ride = this.ride(member, rideId);
     const appointment = this.open(member, ride.appointmentId);
+    this.requireRides(appointment);
     const target = body.memberId ?? member.id;
     if (target !== member.id && !this.people.wardsOf(member.id).includes(target)) fail(404, 'member.not-found');
     const all = this.rides.data.filter((r) => r.appointmentId === appointment.id);
@@ -466,9 +474,9 @@ export class MockCalendar {
     const at = (offsetDays: number, time: string) => clock.toInstant(`${ZonedClock.addDays(weekStart, offsetDays)}T${time}`);
     const items: Appointment[] = [];
     let n = 0;
-    type Seed = Omit<Appointment, 'id' | 'cancelled' | 'locationId' | 'cabinMen' | 'cabinWomen'> & Partial<Appointment>;
+    type Seed = Omit<Appointment, 'id' | 'cancelled' | 'locationId' | 'cabinMen' | 'cabinWomen' | 'rides'> & Partial<Appointment>;
     const add = (a: Seed) =>
-      items.push({ id: `a-${++n}`, cancelled: false, locationId: null, cabinMen: null, cabinWomen: null, ...a, description: a.description ?? null, location: a.location ?? null });
+      items.push({ id: `a-${++n}`, cancelled: false, locationId: null, cabinMen: null, cabinWomen: null, rides: typeOf(a.type).rides, ...a, description: a.description ?? null, location: a.location ?? null });
 
     for (let week = -1; week < 6; week++) {
       const base = week * 7;

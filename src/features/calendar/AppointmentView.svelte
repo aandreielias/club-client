@@ -73,7 +73,7 @@
   }
   useCommands(commands, {
     'appointment.edit': {
-      run: () => detail.appointment.value && edit.edit(AppointmentForm.edit(session.clock, detail.appointment.value)),
+      run: () => detail.appointment.value && edit.edit(AppointmentForm.edit(session.clock, detail.appointment.value, appointmentTypes)),
       when: () => !edit.editing && !!detail.appointment.value && policy.canEdit(detail.appointment.value),
     },
     'appointment.yes': { run: () => void answer('YES'), when: canAnswer },
@@ -106,7 +106,7 @@
     <Detail title={edit.form ? 'Termin bearbeiten' : appointment.title}>
       {#snippet actions()}
         {#if !edit.form && policy.canEdit(appointment)}
-          <Button icon="edit" onclick={() => edit.edit(AppointmentForm.edit(session.clock, appointment))}>Bearbeiten</Button>
+          <Button icon="edit" onclick={() => edit.edit(AppointmentForm.edit(session.clock, appointment, appointmentTypes))}>Bearbeiten</Button>
           <Button variant="danger" onclick={() => (cancelOpen = true)}>Absagen</Button>
         {/if}
       {/snippet}

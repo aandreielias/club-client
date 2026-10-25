@@ -18,6 +18,7 @@
   let website = $state(club.website ?? '');
   let contactEmail = $state(club.contactEmail ?? '');
   let seasonStartMonth = $state(String(club.seasonStartMonth));
+  let ridesEnabled = $state(club.ridesEnabled);
 
   const months = Array.from({ length: 12 }, (_, i) => ({
     value: String(i + 1),
@@ -27,7 +28,7 @@
 
   async function save(event: SubmitEvent) {
     event.preventDefault();
-    const edit = { name, shortName, address, registerNumber, website, contactEmail, seasonStartMonth: Number(seasonStartMonth) };
+    const edit = { name, shortName, address, registerNumber, website, contactEmail, seasonStartMonth: Number(seasonStartMonth), ridesEnabled };
     if (await action.run(() => session.updateClub(edit))) bus.publish(TOAST, { text: 'Vereinsdaten gespeichert.' });
   }
 </script>
@@ -61,6 +62,7 @@
       <input type="email" bind:value={contactEmail} maxlength={limits.linkMaxLength} />
     </Field>
   </div>
+  <label class="check"><input type="checkbox" bind:checked={ridesEnabled} /> Fahrgemeinschaften im Verein anbieten (pro Termin ein- und ausschaltbar)</label>
   <ErrorNote error={action.error} />
   <div><Button type="submit" busy={action.busy}>Speichern</Button></div>
 </form>

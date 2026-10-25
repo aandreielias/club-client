@@ -10,6 +10,17 @@ export type FormErrors = Partial<Record<FormField, string>>;
 /** Select value for "club-wide" (no team). */
 export const CLUB_WIDE = '';
 
+/** What a type offers (the club's types: AppointmentTypes; default: the seeded ones). */
+export interface TypeOffers {
+  cabins(type: AppointmentType): boolean;
+  rides(type: AppointmentType): boolean;
+}
+
+const SEEDED_OFFERS: TypeOffers = {
+  cabins: (type) => SEEDED_APPOINTMENT_TYPES.some((t) => t.key === type && t.cabins),
+  rides: (type) => SEEDED_APPOINTMENT_TYPES.some((t) => t.key === type && t.rides),
+};
+
 const limits = settings.calendar;
 
 /**
@@ -32,12 +43,13 @@ export class AppointmentForm extends FormState<FormErrors> {
   repeat = $state(false);
   repeatUntil = $state<LocalDate>('');
   intervalWeeks = $state(1);
-  /** Whether a type offers changing cabins; the calendar services point it at the club's types (default: the seeded ones). */
-  static hasCabins = (type: string): boolean => SEEDED_APPOINTMENT_TYPES.some((t) => t.key === type && t.cabins);
+  /** Car pools for this appointment; null follows the type until switched. */
+  rides = $state<boolean | null>(null);
 
   private constructor(
     private readonly clock: ZonedClock,
     readonly original: Appointment | null,
+    private readonly types: TypeOffers,
   ) {
     super();
   }
@@ -47,16 +59,17 @@ export class AppointmentForm extends FormState<FormErrors> {
   }
 
   /** Empty form for a new appointment on `date` (default today) at the default time. */
-  static blank(clock: ZonedClock, teamId: string | null, date: LocalDate = clock.today()): AppointmentForm {
-    const form = new AppointmentForm(clock, null);
+  static blank(clock: ZonedClock, teamId: string | null, date: LocalDate = clock.today(), types: TypeOffers = SEEDED_OFFERS): AppointmentForm {
+    const form = new AppointmentForm(clock, null, types);
     form.teamId = teamId ?? CLUB_WIDE;
     form.start = `${date}T${limits.defaultStartTime}`;
     form.end = ZonedClock.addMinutes(form.start, limits.defaultDurationMinutes);
     return form;
   }
 
-  static edit(clock: ZonedClock, appointment: Appointment): AppointmentForm {
-    const form = new AppointmentForm(clock, appointment);
+  static edit(clock: ZonedClock, appointment: Appointment, types: TypeOffers = SEEDED_OFFERS): AppointmentForm {
+    const form = new AppointmentForm(clock, appointment, types);
+    form.rides = appointment.rides;
     form.type = appointment.type;
     form.teamId = appointment.teamId ?? CLUB_WIDE;
     form.title = appointment.title;
@@ -77,9 +90,14 @@ export class AppointmentForm extends FormState<FormErrors> {
     if (start && duration !== null && duration > 0) this.end = ZonedClock.addMinutes(start, duration);
   }
 
-  /** Cabins only for types that have them; switching to a meeting drops them. */
+  /** Cabins only for types that have them; switching to a type without drops them. */
   get cabinsShown(): boolean {
-    return AppointmentForm.hasCabins(this.type);
+    return this.types.cabins(this.type);
+  }
+
+  /** Car pools as they will be saved: switched here, else what the type offers. */
+  get ridesOn(): boolean {
+    return this.rides ?? this.types.rides(this.type);
   }
 
   toNew(): NewAppointment {
@@ -96,6 +114,7 @@ export class AppointmentForm extends FormState<FormErrors> {
       endsAt: this.clock.toInstant(this.end),
       repeatUntil: this.repeat ? this.repeatUntil : null,
       intervalWeeks: this.repeat ? this.intervalWeeks : null,
+      rides: this.ridesOn,
     };
   }
 
@@ -119,6 +138,7 @@ export class AppointmentForm extends FormState<FormErrors> {
     if ((next.cabinWomen ?? '') !== (original.cabinWomen ?? '')) patch.cabinWomen = next.cabinWomen ?? '';
     if (next.startsAt !== original.startsAt) patch.startsAt = next.startsAt;
     if (next.endsAt !== original.endsAt) patch.endsAt = next.endsAt;
+    if (next.rides !== original.rides) patch.rides = next.rides;
     return patch;
   }
 

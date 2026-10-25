@@ -1,7 +1,6 @@
 import type { ClubPermissions } from '../../lib/policy/ClubPermissions';
 import type { SessionStore } from '../../lib/session/SessionStore.svelte';
 import type { Team } from '../../lib/types';
-import type { AppointmentTypes } from './AppointmentTypes.svelte';
 import type { Appointment } from './model';
 
 /**
@@ -12,7 +11,6 @@ export class AppointmentPolicy {
   constructor(
     private readonly session: SessionStore,
     private readonly permissions: ClubPermissions,
-    private readonly types: Pick<AppointmentTypes, 'rides'>,
   ) {}
 
   canCreate(): boolean {
@@ -35,9 +33,9 @@ export class AppointmentPolicy {
     return !appointment.cancelled && this.permissions.canManage(appointment.teamId);
   }
 
-  /** Car pools where the type offers them (seeded: games, tournaments, events), not for cancelled ones. */
+  /** Car pools where the club and the appointment offer them, not for cancelled ones. */
   hasRides(appointment: Appointment): boolean {
-    return !appointment.cancelled && this.types.rides(appointment.type);
+    return !appointment.cancelled && appointment.rides && this.session.club?.ridesEnabled !== false;
   }
 
   isPast(appointment: Appointment, now: Date = new Date()): boolean {

@@ -7,7 +7,7 @@
   import Detail from '../../ui/Detail.svelte';
   import AppointmentEditor from './AppointmentEditor.svelte';
   import { AppointmentForm } from './AppointmentForm.svelte';
-  import { appointmentPolicy as policy, calendarApi } from './services';
+  import { appointmentPolicy as policy, calendarApi, appointmentTypes } from './services';
 
   /** New appointment in the window. `id` carries presets as a query string: `team=<id>&date=<YYYY-MM-DD>`. */
   let { id, handle }: { id: string; handle: WindowHandle } = $props();
@@ -22,7 +22,7 @@
     if (permissions.isManager) await directory.loadTeams().catch(() => {});
     await directory.loadRosters();
     const date = presets.get('date');
-    return AppointmentForm.blank(session.clock, defaultTeam(), date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined);
+    return AppointmentForm.blank(session.clock, defaultTeam(), date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined, appointmentTypes);
   });
   void form.load();
 

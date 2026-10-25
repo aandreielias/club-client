@@ -20,6 +20,7 @@ const existing: Appointment = {
   startsAt: '2026-07-01T17:00:00.000Z',
   endsAt: '2026-07-01T18:30:00.000Z',
   cancelled: false,
+  rides: false,
 };
 
 describe('AppointmentForm', () => {
@@ -85,4 +86,20 @@ describe('AppointmentForm', () => {
     expect(form.cabinsShown).toBe(false);
     expect(form.toPatch()).toEqual({ locationId: 'l-sued', type: 'MEETING', cabinMen: '' });
   });
+
+  it('offers car pools as the type does until switched', () => {
+    const form = AppointmentForm.blank(clock, 't1');
+    form.type = 'MATCH';
+    expect(form.toNew().rides).toBe(true);
+    form.type = 'TRAINING';
+    expect(form.toNew().rides).toBe(false);
+    form.rides = true;
+    form.type = 'MEETING';
+    expect(form.toNew().rides).toBe(true);
+    expect(AppointmentForm.edit(clock, existing).toPatch()).toEqual({});
+    const edited = AppointmentForm.edit(clock, existing);
+    edited.rides = true;
+    expect(edited.toPatch()).toEqual({ rides: true });
+  });
 });
+

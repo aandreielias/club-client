@@ -105,6 +105,7 @@ export class MockDirectory {
     address: null,
     registerNumber: null,
     seasonStartMonth: 7,
+    ridesEnabled: true,
   };
 
   /** server: platform_club - edited facts on top of club.yml (blank = file value). */
@@ -400,7 +401,7 @@ export class MockDirectory {
     const e = this.clubEdits.data;
     return { ...this.club, name: e.name || this.club.name, shortName: e.shortName || this.club.shortName, website: e.website || null,
       contactEmail: e.contactEmail || null, address: e.address || null, registerNumber: e.registerNumber || null,
-      seasonStartMonth: e.seasonStartMonth ?? this.club.seasonStartMonth };
+      seasonStartMonth: e.seasonStartMonth ?? this.club.seasonStartMonth, ridesEnabled: e.ridesEnabled ?? true };
   }
 
   /** server: ClubController PUT - admin/board with step-up; blank fields fall back to club.yml. */
@@ -423,6 +424,7 @@ export class MockDirectory {
       address: text('address', limits.addressMaxLength),
       registerNumber: text('registerNumber', 15, new RegExp(limits.registerNumberPattern)),
       seasonStartMonth: (month as number | null) ?? undefined,
+      ridesEnabled: body.ridesEnabled !== false,
     });
     this.clubEdits.save();
     const club = this.clubInfo();

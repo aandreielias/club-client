@@ -95,6 +95,11 @@ describe('mock calendar', () => {
     expect(() => calendar.cancelRide(member('trainer'), ride.id)).toThrow(expect.objectContaining({ code: 'ride.not-driver' }));
     calendar.cancelRide(member('admin'), ride.id);
     expect(calendar.listRides(member('admin'), created.id)).toHaveLength(1);
+    // Switched off for the appointment: no new cars.
+    calendar.update(member('admin'), created.id, { rides: false });
+    expect(() => calendar.offerRide(member('trainer'), created.id, { seats: 2 })).toThrow(expect.objectContaining({ code: 'ride.not-offered' }));
+    const [training] = calendar.create(member('admin'), draft(null, { type: 'TRAINING', title: 'Training' }));
+    expect(training.rides).toBe(false);
   });
 
   it('links places, keeps their name as text and checks cabins', () => {
