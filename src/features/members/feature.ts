@@ -1,5 +1,6 @@
 import BoardPage from './BoardPage.svelte';
 import MembersHome from './MembersHome.svelte';
+import BoardHome from './BoardHome.svelte';
 import { permissions } from '../../lib/container';
 import { ADMIN_BOARD } from '../../lib/types';
 import type { Feature } from '../Feature';
@@ -27,5 +28,8 @@ export const membersFeature: Feature = {
   },
   messages: MEMBER_MESSAGES,
   start: () => boardSettings.start(),
-  home: { id: 'members', label: 'Mitglieder (braucht den Vereins-PIN)', component: MembersHome, roles: ADMIN_BOARD },
+  home: [
+    { id: 'members', label: 'Mitglieder (braucht den Vereins-PIN)', component: MembersHome, roles: ADMIN_BOARD },
+    { id: 'board', label: 'Vorstand', component: BoardHome },
+  ],
 };

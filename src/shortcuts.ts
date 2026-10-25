@@ -8,7 +8,7 @@
  * only clash within the same context (e.g. `E` edits in the task window and in the member window).
  */
 
-export type ShortcutContext = 'global' | 'window' | 'list' | 'page' | 'calendar' | 'task' | 'appointment' | 'member' | 'notifications';
+export type ShortcutContext = 'global' | 'window' | 'list' | 'page' | 'calendar' | 'task' | 'appointment' | 'member' | 'meeting' | 'notifications';
 
 export interface ShortcutDefinition {
   label: string;
@@ -35,6 +35,10 @@ export const SHORTCUTS = {
   // ---- Navigation ----
   'nav.home': { label: 'Zu Start', group: 'Navigation', context: 'global', keys: 'g h', path: '/' },
   'nav.calendar': { label: 'Zum Kalender', group: 'Navigation', context: 'global', keys: 'g k', path: '/calendar' },
+  'nav.events': { label: 'Zu den Events', group: 'Navigation', context: 'global', keys: 'g x', path: '/events' },
+  'nav.meetings': { label: 'Zu den Sitzungen', group: 'Navigation', context: 'global', keys: 'g s', path: '/meetings' },
+  'nav.deadlines': { label: 'Zu den Fristen', group: 'Navigation', context: 'global', keys: 'g f', path: '/deadlines' },
+  'nav.board': { label: 'Zum Vorstand', group: 'Navigation', context: 'global', keys: 'g v', path: '/board' },
   'nav.tasks': { label: 'Zu den Aufgaben', group: 'Navigation', context: 'global', keys: 'g a', path: '/tasks' },
   'nav.files': { label: 'Zu den Dateien', group: 'Navigation', context: 'global', keys: 'g d', path: '/files' },
   'nav.inventory': { label: 'Zum Inventar', group: 'Navigation', context: 'global', keys: 'g i', path: '/inventory' },
@@ -43,6 +47,7 @@ export const SHORTCUTS = {
   'nav.teams': { label: 'Zu den Teams', group: 'Navigation', context: 'global', keys: 'g t', path: '/teams' },
   'nav.notifications': { label: 'Zu den Benachrichtigungen', group: 'Navigation', context: 'global', keys: 'g b', path: '/notifications' },
   'nav.members': { label: 'Zu den Mitgliedern', group: 'Navigation', context: 'global', keys: 'g m', path: '/members' },
+  'nav.activity': { label: 'Zu den Logs', group: 'Navigation', context: 'global', keys: 'g l', path: '/activity' },
   'nav.account': { label: 'Zu meinem Konto', group: 'Navigation', context: 'global', keys: 'g p', path: '/account' },
   'nav.settings': { label: 'Zu den Einstellungen', group: 'Navigation', context: 'global', keys: 'g e', path: '/settings' },
   'nav.back': { label: 'Zurück', group: 'Navigation', context: 'global', keys: 'Alt+ArrowLeft' },
@@ -80,6 +85,7 @@ export const SHORTCUTS = {
   'appointment.maybe': { label: 'Vielleicht', group: 'Termin', context: 'appointment', keys: '2' },
   'appointment.no': { label: 'Absagen (Antwort)', group: 'Termin', context: 'appointment', keys: '3' },
   'member.edit': { label: 'Profil bearbeiten', group: 'Mitglied', context: 'member', keys: 'e' },
+  'meeting.invite': { label: 'Zur Sitzung einladen', group: 'Sitzung', context: 'meeting', keys: 'i' },
   'notifications.readAll': { label: 'Alle als gelesen markieren', group: 'Benachrichtigungen', context: 'notifications', keys: 'Shift+R' },
 } as const satisfies Record<string, ShortcutDefinition>;
 

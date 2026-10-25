@@ -6,6 +6,8 @@ import DeadlinesPage from './DeadlinesPage.svelte';
 import MeetingCreateView from './MeetingCreateView.svelte';
 import MeetingPage from './MeetingPage.svelte';
 import MeetingsPage from './MeetingsPage.svelte';
+import MeetingsHome from './MeetingsHome.svelte';
+import DeadlinesHome from './DeadlinesHome.svelte';
 import MeetingView from './MeetingView.svelte';
 import CircularCreateView from './CircularCreateView.svelte';
 import ResolutionPage from './ResolutionPage.svelte';
@@ -36,6 +38,10 @@ export const meetingsFeature: Feature = {
     DEADLINE: (item) => ({ hue: item.kind === 'resolution' ? 'purple' : 'orange', label: item.kind === 'resolution' ? 'Umlaufbeschluss' : 'Einladungsfrist' }),
   },
   start: () => meetingTypes.start(),
+  home: [
+    { id: 'meetings', label: 'Sitzungen', component: MeetingsHome },
+    { id: 'deadlines', label: 'Fristen', component: DeadlinesHome, roles: ADMIN_BOARD },
+  ],
   messages: MEETING_MESSAGES,
   links: [
     { server: '/meetings/:id', to: ({ id }) => ({ window: { kind: 'meeting', id } }) },

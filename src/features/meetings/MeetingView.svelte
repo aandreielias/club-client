@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { bus, session } from '../../lib/container';
+  import { bus, commands, session } from '../../lib/container';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
@@ -65,6 +66,16 @@
       confirmLabel: 'Einladen',
     }, () => view.attempt(model.action, () => model.invite()), 'Einladung verschickt.');
   }
+
+  useCommands(commands, {
+    'meeting.invite': {
+      run: () => model.meeting.value && void invite(model.meeting.value),
+      when: () => {
+        const m = model.meeting.value;
+        return !!m && m.canManage && m.status === 'DRAFT' && !late(m) && !model.action.busy;
+      },
+    },
+  });
 
   async function close() {
     await view.confirm({

@@ -411,6 +411,8 @@ export const settings = {
     listRows: 6,
     /** Days of the "Termine" section. */
     calendarDays: 30,
+    /** Days of the "Sitzungen", "Fristen" and "Turniere" sections (they are planned further ahead). */
+    planningDays: 90,
   },
 
   activity: {

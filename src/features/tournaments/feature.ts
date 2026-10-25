@@ -4,10 +4,12 @@ import { TOURNAMENT_MESSAGES } from './messages';
 import TournamentCreateView from './TournamentCreateView.svelte';
 import TournamentPage from './TournamentPage.svelte';
 import TournamentsPage from './TournamentsPage.svelte';
+import TournamentsHome from './TournamentsHome.svelte';
 import TournamentView from './TournamentView.svelte';
 
 export const tournamentsFeature: Feature = {
   id: 'tournaments',
+  home: { id: 'tournaments', label: 'Turniere', component: TournamentsHome },
   routes: [
     // Every member reads tournaments; guests too (their own only, server: TournamentHandlers.visible).
     { path: '/tournaments', component: TournamentsPage, nav: 'Turniere', icon: 'trophy', guest: true },
