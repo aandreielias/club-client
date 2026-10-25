@@ -13,8 +13,8 @@
   import Tag from '../../ui/Tag.svelte';
   import CircularVotes from './CircularVotes.svelte';
   import { MEETING_CHANGED } from './events';
-  import { isAssembly, KIND_LABELS, STATUS_LABELS, STATUS_TONES, type MeetingSummary } from './model';
-  import { meetingPolicy as policy, meetingsApi } from './services';
+  import { isAssembly, STATUS_LABELS, STATUS_TONES, type MeetingSummary } from './model';
+  import { meetingPolicy as policy, meetingsApi, meetingTypes } from './services';
 
   /** Mitgliederversammlungen and Vorstandssitzungen: upcoming first, then the past ones (newest first). */
   const list = new Resource(() => meetingsApi.list());
@@ -33,8 +33,8 @@
     {#each items as m (m.id)}
       <li>
         <a href="#/meetings/{m.id}" ondragstart={(e) => RecordDrag.set(e, { kind: 'meeting', id: m.id, title: m.title })}>
-          <span class="icon" class:board={!isAssembly(m.kind)}><Icon name="meetings" /></span>
-          <span class="name">{m.title}<span class="muted small kind">{KIND_LABELS[m.kind]}</span></span>
+          <span class="icon" class:board={!isAssembly(meetingTypes.get(m.kind))}><Icon name="meetings" /></span>
+          <span class="name">{m.title}<span class="muted small kind">{meetingTypes.label(m.kind)}</span></span>
           <span class="muted">{session.format.dateTime(m.startsAt)}</span>
           <Tag tone={STATUS_TONES[m.status]}>{STATUS_LABELS[m.status]}</Tag>
         </a>

@@ -1,4 +1,4 @@
-// Mock of the club-server meetings module (MeetingHandlers, MeetingRules).
+// Mock of the club-server meetings module (MeetingHandlers, MeetingTypeHandlers, MeetingType).
 import { directory, type MockDirectory } from '../../lib/mock/core';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
@@ -10,14 +10,45 @@ import { ADMIN_BOARD, canVote, type Member } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
 import { tasks } from '../tasks/mock';
 import {
-  actionNeedsMember, actions, CIRCULAR_MIN_MS, IMPLIED_MAJORITY, isAssembly, latestInvite, majorities, type Choice, type FollowUp, type FollowUpKind,
-  type Majority, type Meeting, type MeetingKind, type MeetingSummary, type PresenceMode, type Resolution, type ResolutionAction,
+  actionNeedsMember, actions, CIRCULAR_MIN_MS, IMPLIED_MAJORITY, isAssembly, isDayOfYear, isQuorate, latestInvite, majorities, mayConvene, type Choice,
+  type FollowUp, type FollowUpKind, type Majority, type Meeting, type MeetingKind, type MeetingSummary, type MeetingType, type PresenceMode,
+  type Quorum, type Resolution, type ResolutionAction,
 } from './model';
 
 const fail = MockServer.fail;
-const KINDS: readonly MeetingKind[] = ['ASSEMBLY', 'EXTRA_ASSEMBLY', 'BOARD', 'EXTRA_BOARD', 'SIMPLE_BOARD', 'CONSTITUENT_BOARD'];
 const DAY = 86_400_000;
-const GRACE = 30 * 60_000;
+
+/** `inUse` is computed when listed. */
+type StoredType = MeetingType;
+const BOARD_OFFICES: OfficeKind[] = ['CHAIR', 'VICE_CHAIR', 'TREASURER', 'SECRETARY', 'BOARD_MEMBER'];
+const CHAIRS: OfficeKind[] = ['CHAIR', 'VICE_CHAIR'];
+const ALL_MAJORITIES: Majority[] = ['SIMPLE', 'TWO_THIRDS', 'THREE_QUARTERS'];
+/** server: V51__meeting_types.sql — the statutes' kinds (§8, §10). */
+export const SEEDED_TYPES: readonly StoredType[] = [
+  { key: 'ASSEMBLY', label: 'Ordentliche Mitgliederversammlung', invitationLabel: 'ordentlichen Mitgliederversammlung', statuteRef: '§ 8 Abs. 4',
+    electorate: 'ASSEMBLY', noticeHours: 336, quorum: 'AT_LEAST_HALF', graceMinutes: 30, majorities: ALL_MAJORITIES, conveners: BOARD_OFFICES,
+    actions: ['GENERAL', 'ELECTION'], needsReason: false, dueBy: '10-01', sort: 1, archived: false, inUse: false },
+  { key: 'EXTRA_ASSEMBLY', label: 'Außerordentliche Mitgliederversammlung', invitationLabel: 'außerordentlichen Mitgliederversammlung',
+    statuteRef: '§ 8 Abs. 4', electorate: 'ASSEMBLY', noticeHours: 336, quorum: 'AT_LEAST_HALF', graceMinutes: 30, majorities: ALL_MAJORITIES,
+    conveners: BOARD_OFFICES, actions: ['GENERAL', 'ELECTION', 'HONORARY_GRANT', 'HONORARY_REVOKE', 'STATUTES_CHANGE', 'DISSOLUTION'],
+    needsReason: false, dueBy: null, sort: 2, archived: false, inUse: false },
+  { key: 'BOARD', label: 'Ordentliche Vorstandssitzung', invitationLabel: 'ordentlichen Vorstandssitzung', statuteRef: '§ 10 Abs. 6',
+    electorate: 'BOARD', noticeHours: 336, quorum: 'MORE_THAN_HALF', graceMinutes: null, majorities: ['SIMPLE'], conveners: CHAIRS,
+    actions: ['GENERAL', 'CONVENE_ASSEMBLY'], needsReason: false, dueBy: '10-01', sort: 3, archived: false, inUse: false },
+  { key: 'EXTRA_BOARD', label: 'Außerordentliche Vorstandssitzung', invitationLabel: 'außerordentlichen Vorstandssitzung', statuteRef: '§ 10 Abs. 3',
+    electorate: 'BOARD', noticeHours: 48, quorum: 'AT_LEAST_THREE_QUARTERS', graceMinutes: null, majorities: ['THREE_QUARTERS'], conveners: CHAIRS,
+    actions: ['GENERAL', 'EXCLUSION', 'CONVENE_ASSEMBLY'], needsReason: true, dueBy: null, sort: 4, archived: false, inUse: false },
+  { key: 'SIMPLE_BOARD', label: 'Einfache Vorstandssitzung', invitationLabel: 'einfachen Vorstandssitzung', statuteRef: '§ 10 Abs. 7',
+    electorate: 'BOARD', noticeHours: 168, quorum: 'MORE_THAN_HALF', graceMinutes: null, majorities: ['SIMPLE'], conveners: BOARD_OFFICES,
+    actions: ['GENERAL', 'CONVENE_ASSEMBLY'], needsReason: false, dueBy: null, sort: 5, archived: false, inUse: false },
+  { key: 'CONSTITUENT_BOARD', label: 'Konstituierende Vorstandssitzung', invitationLabel: 'konstituierenden Vorstandssitzung', statuteRef: '§ 10 Abs. 6',
+    electorate: 'BOARD', noticeHours: 336, quorum: 'MORE_THAN_HALF', graceMinutes: null, majorities: ['SIMPLE'], conveners: CHAIRS,
+    actions: ['GENERAL', 'CONVENE_ASSEMBLY'], needsReason: false, dueBy: null, sort: 6, archived: false, inUse: false },
+];
+const QUORUMS: readonly Quorum[] = ['AT_LEAST_HALF', 'MORE_THAN_HALF', 'AT_LEAST_THREE_QUARTERS'];
+const OFFICES: readonly OfficeKind[] = [...BOARD_OFFICES, 'AUDITOR'];
+const ACTIONS: readonly ResolutionAction[] = ['GENERAL', 'HONORARY_GRANT', 'HONORARY_REVOKE', 'ELECTION', 'STATUTES_CHANGE', 'DISSOLUTION', 'EXCLUSION',
+  'CONVENE_ASSEMBLY'];
 
 type StoredMeeting = Omit<Meeting, 'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage' | 'autoTasks' | 'followUps' | 'assignable'>
   & { presence: Record<string, PresenceMode>; autoTasks?: boolean; frozenElectorate?: string[] };
@@ -43,6 +74,7 @@ const text = (value: unknown, max: number, code: string): string | null => {
 };
 
 export class MockMeetings {
+  readonly types = new MockTable<StoredType[]>('meeting-types', () => structuredClone([...SEEDED_TYPES]));
   readonly meetings = new MockTable<StoredMeeting[]>('meetings', () => MockMeetings.seed());
   readonly resolutions = new MockTable<StoredResolution[]>('resolutions', () => MockMeetings.seedResolutions());
   /** meetingId → its folder and generated invitation (server: meetings_document). */
@@ -268,8 +300,9 @@ export class MockMeetings {
 
   create(viewer: Member, body: Record<string, any>): Meeting {
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
-    const kind = body.kind as MeetingKind;
-    if (!KINDS.includes(kind)) return fail(400, 'request.invalid');
+    const type = this.types.data.find((t) => t.key === body.kind) ?? fail(400, 'meeting.kind-unknown');
+    if (type.archived) fail(400, 'meeting.kind-archived');
+    const kind = type.key;
     if (!this.mayConvene(viewer, kind)) fail(403, 'meeting.may-not-convene');
     const meeting: StoredMeeting = {
       id: crypto.randomUUID(), kind, title: '', agenda: null, urgency: null, startsAt: '', endsAt: '', location: null, videoUrl: null,
@@ -302,14 +335,15 @@ export class MockMeetings {
   invite(viewer: Member, id: string): Meeting {
     const meeting = this.managed(viewer, id);
     if (meeting.status !== 'DRAFT') fail(409, 'meeting.already-invited');
-    if (new Date().toISOString() > latestInvite(meeting.kind, meeting.startsAt)) fail(409, 'meeting.notice-too-short');
+    if (new Date().toISOString() > latestInvite(this.type(meeting.kind), meeting.startsAt)) fail(409, 'meeting.notice-too-short');
     meeting.status = 'INVITED';
     meeting.invitedAt = new Date().toISOString();
     this.changed(meeting, 'INVITED');
-    if (meeting.kind === 'EXTRA_ASSEMBLY') this.complete((f) => f.kind === 'CONVENE_ASSEMBLY');
+    // server: an extraordinary general meeting = an assembly that is not the yearly one
+    if (isAssembly(this.type(meeting.kind)) && !this.type(meeting.kind).dueBy) this.complete((f) => f.kind === 'CONVENE_ASSEMBLY');
     mockServer.events.publish({
       type: 'meetings.meeting-invited',
-      data: { meetingId: meeting.id, recipients: this.people.electorate(isAssembly(meeting.kind) ? 'ASSEMBLY' : 'BOARD'), kind: meeting.kind,
+      data: { meetingId: meeting.id, recipients: this.electorate(meeting.kind), kind: meeting.kind,
         title: meeting.title, agenda: meeting.agenda, startsAt: meeting.startsAt, location: meeting.location, videoUrl: meeting.videoUrl },
     });
     return this.dto(viewer, meeting);
@@ -378,18 +412,13 @@ export class MockMeetings {
     }
     // Mock blobs live only for the session; after a reload the built-in template stands in.
     const templateBytes = files.blob(template.id) ?? (await defaultTemplate(JSZip));
-    const KIND = { ASSEMBLY: 'ordentlichen Mitgliederversammlung', EXTRA_ASSEMBLY: 'außerordentlichen Mitgliederversammlung',
-      BOARD: 'ordentlichen Vorstandssitzung', EXTRA_BOARD: 'außerordentlichen Vorstandssitzung', SIMPLE_BOARD: 'einfachen Vorstandssitzung',
-      CONSTITUENT_BOARD: 'konstituierenden Vorstandssitzung' } as const;
-    const STATUTE = { ASSEMBLY: '§ 8 Abs. 4', EXTRA_ASSEMBLY: '§ 8 Abs. 4', BOARD: '§ 10 Abs. 6', CONSTITUENT_BOARD: '§ 10 Abs. 6',
-      SIMPLE_BOARD: '§ 10 Abs. 7', EXTRA_BOARD: '§ 10 Abs. 3' } as const;
-    const kindTitle = KIND[meeting.kind].replace('en ', 'e ');
+    const type = this.type(meeting.kind);
     const fmt = (iso: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('de-AT', { timeZone: this.people.club.timeZone, ...options }).format(new Date(iso));
     const content = await fill(JSZip, templateBytes, {
-      Verein: this.people.club.name, Art: KIND[meeting.kind],
-      Titel: meeting.title.toLowerCase() === kindTitle.toLowerCase() ? null : meeting.title,
+      Verein: this.people.clubInfo().name, Art: type.invitationLabel,
+      Titel: meeting.title.toLowerCase() === type.label.toLowerCase() ? null : meeting.title,
       Wann: `${fmt(meeting.startsAt, { dateStyle: 'full', timeStyle: 'short' })} bis ${fmt(meeting.endsAt, { timeStyle: 'short' })} Uhr`,
-      Ort: meeting.location, Video: meeting.videoUrl, Dringlichkeit: meeting.urgency, Statuten: STATUTE[meeting.kind],
+      Ort: meeting.location, Video: meeting.videoUrl, Dringlichkeit: meeting.urgency, Statuten: type.statuteRef,
       Versandt: fmt(meeting.invitedAt ?? new Date().toISOString(), { dateStyle: 'long' }),
     }, (meeting.agenda ?? '').split('\n').map((l) => l.trim()).filter(Boolean).concat(meeting.agenda?.trim() ? [] : ['Keine Tagesordnung eingetragen.']));
 
@@ -405,7 +434,7 @@ export class MockMeetings {
       await files.uploadVersion(request({ id: stored.fileId }, form));
       ({ fileId, folderId } = stored);
     } else {
-      const assembly = isAssembly(meeting.kind);
+      const assembly = isAssembly(type);
       const parent = top(assembly ? 'Mitgliederversammlungen' : 'Vorstandssitzungen', assembly ? 'ASSEMBLY' : 'BOARD');
       folderId = stored && files.listFolders(viewer).some((f) => f.id === stored.folderId) ? stored.folderId
         : files.createFolder(viewer, { parentId: parent.id, name: `${day} ${meeting.title}`.slice(0, 100), kind: 'DOCUMENTS' }).id;
@@ -443,13 +472,14 @@ export class MockMeetings {
     if (meeting?.status === 'CLOSED') fail(409, 'meeting.closed');
     // server: FollowUpPlanner.check
     const action = (body.action ?? 'GENERAL') as ResolutionAction;
-    if (!actions(meeting?.kind ?? null).includes(action)) fail(400, 'resolution.action-not-here');
+    const type = meeting ? this.type(meeting.kind) : null;
+    if (!actions(type).includes(action)) fail(400, 'resolution.action-not-here');
     if (actionNeedsMember(action) !== !!body.actionMemberId) fail(400, 'resolution.action-member-missing');
     if ((action === 'ELECTION') !== !!body.actionOffice) fail(400, 'resolution.action-office-missing');
     const requested = (meeting ? body.majority ?? null : 'SIMPLE') as Majority | null;
     const implied = IMPLIED_MAJORITY[action] ?? requested;
     if (requested && implied !== requested) fail(400, 'resolution.majority-mismatch');
-    const majority = implied && majorities(meeting?.kind ?? null).includes(implied) ? implied : fail(400, 'resolution.majority-invalid');
+    const majority = implied && majorities(type).includes(implied) ? implied : fail(400, 'resolution.majority-invalid');
     const assigneeIds = this.checkedAssignees(body.assigneeIds, this.assignable(null, meeting, action !== 'GENERAL'));
     const title = text(body.title, 200, 'resolution.title-invalid') ?? fail(400, 'resolution.title-invalid');
     const deadline = meeting ? null : typeof body.deadline === 'string' ? new Date(body.deadline).toISOString() : fail(400, 'resolution.deadline-invalid');
@@ -557,7 +587,8 @@ export class MockMeetings {
   }
 
   private runsCircular(viewer: Member): boolean {
-    return this.mayConvene(viewer, 'SIMPLE_BOARD') || this.offices(viewer).includes('SECRETARY');
+    // server: MeetingRules.runsBoard
+    return viewer.roles.includes('ADMIN') || this.offices(viewer).some((o) => o !== 'AUDITOR');
   }
 
   private resolution(viewer: Member, id: string): StoredResolution {
@@ -618,7 +649,7 @@ export class MockMeetings {
     this.resolutions.save();
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId) : null;
     mockServer.events.publish({ type: 'meetings.resolution-changed', data: { resolutionId: r.id, meetingId: r.meetingId, change },
-      audience: meeting && isAssembly(meeting.kind) ? { everyone: true } : { roles: ADMIN_BOARD } });
+      audience: meeting && isAssembly(this.type(meeting.kind)) ? { everyone: true } : { roles: ADMIN_BOARD } });
   }
 
   /** server: Meeting record validation */
@@ -634,12 +665,72 @@ export class MockMeetings {
     if (!m.startsAt || !m.endsAt || m.endsAt <= m.startsAt) fail(400, 'meeting.times-invalid');
     if (Date.parse(m.endsAt) - Date.parse(m.startsAt) > DAY) fail(400, 'meeting.too-long');
     if (m.videoUrl && !m.videoUrl.startsWith('https://')) fail(400, 'meeting.video-url-invalid');
-    if ((m.kind === 'EXTRA_BOARD') !== !!m.urgency) fail(400, 'meeting.urgency-invalid');
+    if (this.type(m.kind).needsReason !== !!m.urgency) fail(400, 'meeting.urgency-invalid');
     this.meetings.save();
   }
 
   private electorate(kind: MeetingKind): string[] {
-    return this.people.electorate(isAssembly(kind) ? 'ASSEMBLY' : 'BOARD');
+    return this.people.electorate(this.type(kind).electorate);
+  }
+
+  private type(kind: MeetingKind): StoredType {
+    return this.types.data.find((t) => t.key === kind) ?? fail(400, 'meeting.kind-unknown');
+  }
+
+  // --- meeting types (server: MeetingTypeHandlers) ---
+
+  listTypes(): { items: MeetingType[] } {
+    const items = [...this.types.data].sort((a, b) => a.sort - b.sort || a.label.localeCompare(b.label));
+    return { items: items.map((t) => ({ ...t, inUse: this.meetings.data.some((m) => m.kind === t.key) })) };
+  }
+
+  /** server: MeetingType record validation. */
+  saveType(viewer: Member, key: string | null, body: Record<string, any>): MeetingType {
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    if (key && !this.types.data.some((t) => t.key === key)) fail(404, 'meeting-type.not-found');
+    const label = text(body.label, 80, 'meeting-type.label-invalid') ?? fail(400, 'meeting-type.label-invalid');
+    const invitationLabel = text(body.invitationLabel, 120, 'meeting-type.invitation-label-invalid') ?? fail(400, 'meeting-type.invitation-label-invalid');
+    const subset = <T,>(value: unknown, all: readonly T[]): T[] => (Array.isArray(value) && value.every((v) => all.includes(v)) ? [...new Set(value as T[])] : fail(400, 'request.invalid'));
+    const majorities = subset(body.majorities, ALL_MAJORITIES);
+    const conveners = subset(body.conveners, OFFICES);
+    const actions = subset(body.actions, ACTIONS);
+    if (body.electorate !== 'BOARD' && body.electorate !== 'ASSEMBLY') fail(400, 'meeting-type.electorate-invalid');
+    if (!Number.isInteger(body.noticeHours) || body.noticeHours < 0 || body.noticeHours > 8760) fail(400, 'meeting-type.notice-invalid');
+    if (!QUORUMS.includes(body.quorum)) fail(400, 'meeting-type.quorum-invalid');
+    if (body.graceMinutes != null && (!Number.isInteger(body.graceMinutes) || body.graceMinutes < 1 || body.graceMinutes > 1440)) fail(400, 'meeting-type.grace-invalid');
+    if (!majorities.length) fail(400, 'meeting-type.majorities-missing');
+    if (!conveners.length || conveners.includes('AUDITOR')) fail(400, 'meeting-type.conveners-invalid');
+    if (!actions.includes('GENERAL')) fail(400, 'meeting-type.actions-invalid');
+    if ((actions.includes('STATUTES_CHANGE') && !majorities.includes('TWO_THIRDS')) || (actions.includes('DISSOLUTION') && !majorities.includes('THREE_QUARTERS'))) {
+      fail(400, 'meeting-type.majority-for-action');
+    }
+    const dueBy = body.dueBy || null;
+    if (dueBy && (!/^\d{2}-\d{2}$/.test(dueBy) || !isDayOfYear(Number(dueBy.slice(0, 2)), Number(dueBy.slice(3))))) fail(400, 'meeting-type.due-by-invalid');
+    const type: StoredType = {
+      key: key ?? `TYPE_${crypto.randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`, label, invitationLabel,
+      statuteRef: text(body.statuteRef, 40, 'meeting-type.statute-ref-invalid'), electorate: body.electorate, noticeHours: body.noticeHours,
+      quorum: body.quorum, graceMinutes: body.graceMinutes ?? null, majorities, conveners, actions, needsReason: !!body.needsReason, dueBy,
+      sort: Number.isInteger(body.sort) ? body.sort : 0, archived: !!body.archived, inUse: false,
+    };
+    const index = this.types.data.findIndex((t) => t.key === type.key);
+    if (index >= 0) this.types.data[index] = type;
+    else this.types.data.push(type);
+    this.typesChanged();
+    return { ...type, inUse: this.meetings.data.some((m) => m.kind === type.key) };
+  }
+
+  deleteType(viewer: Member, key: string): void {
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    const index = this.types.data.findIndex((t) => t.key === key);
+    if (index < 0) fail(404, 'meeting-type.not-found');
+    if (this.meetings.data.some((m) => m.kind === key)) fail(409, 'meeting-type.in-use');
+    this.types.data.splice(index, 1);
+    this.typesChanged();
+  }
+
+  private typesChanged(): void {
+    this.types.save();
+    mockServer.events.publish({ type: 'meetings.meeting-types-changed', data: {} });
   }
 
   /** server: MeetingAccess.electorate — fixed when the meeting opened. */
@@ -659,18 +750,14 @@ export class MockMeetings {
     return this.people.officesOf(viewer.id);
   }
 
-  /** server: MeetingRules.mayConvene */
+  /** server: MeetingType.mayConvene */
   private mayConvene(viewer: Member, kind: MeetingKind): boolean {
-    if (viewer.roles.includes('ADMIN')) return true;
-    const offices = this.offices(viewer);
-    const board = offices.some((o) => o !== 'AUDITOR');
-    const chair = offices.includes('CHAIR') || offices.includes('VICE_CHAIR');
-    return isAssembly(kind) || kind === 'SIMPLE_BOARD' ? board : chair;
+    return mayConvene(this.type(kind), viewer.roles.includes('ADMIN'), this.offices(viewer));
   }
 
   private maySee(viewer: Member, m: StoredMeeting): boolean {
     if (this.people.hasRole(viewer, ADMIN_BOARD)) return true;
-    return isAssembly(m.kind) && canVote(viewer);
+    return isAssembly(this.type(m.kind)) && canVote(viewer);
   }
 
   private visible(viewer: Member, id: string): StoredMeeting {
@@ -685,13 +772,10 @@ export class MockMeetings {
     return meeting;
   }
 
-  /** server: MeetingRules.isQuorate */
+  /** server: MeetingAccess.isQuorate */
   private quorate(m: StoredMeeting, voters: string[]): boolean {
-    const present = voters.filter((id) => m.presence[id]).length;
-    if (!voters.length || !present || (m.status !== 'INVITED' && m.status !== 'OPEN')) return false;
-    if (isAssembly(m.kind)) return present * 2 >= voters.length || Date.now() >= Date.parse(m.startsAt) + GRACE;
-    if (m.kind === 'EXTRA_BOARD') return present * 4 >= voters.length * 3;
-    return present * 2 > voters.length;
+    if (m.status !== 'INVITED' && m.status !== 'OPEN') return false;
+    return isQuorate(this.type(m.kind), voters.filter((id) => m.presence[id]).length, voters.length, m.startsAt, Date.now());
   }
 
   private dto(viewer: Member, m: StoredMeeting): Meeting {
@@ -707,7 +791,7 @@ export class MockMeetings {
       links: m.links ?? [], // mock data stored before links existed
       autoTasks: m.autoTasks !== false,
       followUps: this.followUpDtos(this.followUps.data.filter((f) => f.meetingId === m.id && !f.resolutionId)),
-      latestInvite: latestInvite(m.kind, m.startsAt),
+      latestInvite: latestInvite(this.type(m.kind), m.startsAt),
       electorate: voters.map((id) => ({ memberId: id, name: name(id) })).sort(byName),
       present: Object.entries(presence).map(([id, mode]) => ({ memberId: id, name: name(id), mode })).sort(byName),
       quorate: this.quorate(m, voters),
@@ -721,7 +805,7 @@ export class MockMeetings {
   private changed(m: StoredMeeting, change: string): void {
     this.meetings.save();
     mockServer.events.publish({ type: 'meetings.meeting-changed', data: { meetingId: m.id, change },
-      audience: isAssembly(m.kind) ? { everyone: true } : { roles: ADMIN_BOARD } });
+      audience: isAssembly(this.type(m.kind)) ? { everyone: true } : { roles: ADMIN_BOARD } });
   }
 }
 
@@ -730,6 +814,10 @@ const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer
   .on('GET', '/api/v1/meetings', (req) => meetings.list(actor(req), req.query.get('from'), req.query.get('to')))
+  .on('GET', '/api/v1/meetings/types', (req) => (actor(req), meetings.listTypes()))
+  .on('POST', '/api/v1/meetings/types', (req) => meetings.saveType(actor(req), null, req.body ?? {}))
+  .on('PUT', '/api/v1/meetings/types/:key', (req) => meetings.saveType(actor(req), req.params.key, req.body ?? {}))
+  .on('DELETE', '/api/v1/meetings/types/:key', (req) => meetings.deleteType(actor(req), req.params.key))
   .on('POST', '/api/v1/meetings', (req) => meetings.create(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/meetings/:id', (req) => meetings.get(actor(req), req.params.id))
   .on('PATCH', '/api/v1/meetings/:id', (req) => meetings.update(actor(req), req.params.id, req.body ?? {}))

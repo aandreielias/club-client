@@ -17,3 +17,6 @@ export interface ResolutionChanged {
   meetingId: string | null;
   change: 'CREATED' | 'OPENED' | 'VOTED' | 'CLOSED' | 'DELETED';
 }
+
+/** The club changed its meeting types; reload them. */
+export const MEETING_TYPES_CHANGED = liveEvent<Record<string, never>>('meetings.meeting-types-changed');

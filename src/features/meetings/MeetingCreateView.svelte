@@ -13,22 +13,30 @@
   import Select from '../../ui/Select.svelte';
   import { membersApi } from '../members/services';
   import { MeetingForm } from './MeetingForm.svelte';
-  import { KIND_LABELS, latestInvite, type MeetingKind } from './model';
-  import { meetingPolicy as policy, meetingsApi } from './services';
+  import { latestInvite } from './model';
+  import { meetingPolicy as policy, meetingsApi, meetingTypes } from './services';
 
-  /** New meeting in the window: only the kinds the member may convene; afterwards the window shows the meeting. */
+  /** New meeting in the window: only the types the member may convene; afterwards the window shows the meeting. */
   let { handle }: { id: string; handle: WindowHandle } = $props();
 
   // svelte-ignore state_referenced_locally
   const create = new CreateController(bus, handle, 'Neue Sitzung');
-  const form = new MeetingForm(session.clock, `${session.clock.today()}T19:00`);
+  const form = new MeetingForm(session.clock, `${session.clock.today()}T19:00`, meetingTypes.items.map((t) => t.label));
   const kinds = new Resource(async () => {
-    const offices = (await membersApi.board()).offices.filter((o) => o.memberId === session.member.id).map((o) => o.office);
-    return (Object.keys(KIND_LABELS) as MeetingKind[]).filter((k) => policy.mayConvene(k, offices)).map((k) => ({ value: k, label: KIND_LABELS[k] }));
+    const [offices, types] = await Promise.all([
+      membersApi.board().then((b) => b.offices.filter((o) => o.memberId === session.member.id).map((o) => o.office)),
+      meetingTypes.load(),
+    ]);
+    return types.filter((t) => !t.archived && policy.mayConvene(t, offices)).map((t) => ({ value: t.key, label: t.label }));
   });
-  void kinds.load().then(() => kinds.value?.[0] && form.setKind(kinds.value[0].value));
+  void kinds.load().then(() => kinds.value?.[0] && setKind(kinds.value[0].value));
 
-  const deadline = $derived(form.start ? latestInvite(form.kind, form.startsAt) : null);
+  function setKind(key: string) {
+    const type = meetingTypes.get(key);
+    if (type) form.setType(type);
+  }
+
+  const deadline = $derived(form.start && form.type ? latestInvite(form.type, form.startsAt) : null);
   const late = $derived(!!deadline && deadline < new Date().toISOString());
 
   async function submit(event: SubmitEvent) {
@@ -45,13 +53,13 @@
       {#if options.length}
         <form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
           <Field label="Art">
-            <Select bind:value={() => form.kind, (k) => form.setKind(k)} {options} />
+            <Select bind:value={() => form.type?.key ?? '', (k) => k && setKind(k)} {options} />
           </Field>
           <Field label="Titel" error={form.error('title')}>
             <input bind:value={form.title} maxlength="120" required />
           </Field>
-          {#if form.kind === 'EXTRA_BOARD'}
-            <Field label="Grund der Dringlichkeit" hint="Steht in der Einladung (§ 10 Abs. 3)." error={form.error('urgency')}>
+          {#if form.type?.needsReason}
+            <Field label="Grund der Dringlichkeit" hint="Steht in der Einladung{form.type.statuteRef ? ` (${form.type.statuteRef})` : ''}." error={form.error('urgency')}>
               <textarea bind:value={form.urgency} rows="2" maxlength="1000"></textarea>
             </Field>
           {/if}
@@ -86,7 +94,7 @@
           </div>
         </form>
       {:else}
-        <p class="muted">Sitzungen berufen Mitglieder des Vorstands ein (Statuten § 8 Abs. 4, § 10).</p>
+        <p class="muted">Sitzungen berufen die Funktionen ein, die bei der Sitzungsart eingestellt sind.</p>
       {/if}
     {/snippet}
   </AsyncView>

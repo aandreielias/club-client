@@ -1,14 +1,14 @@
 import { FormState } from '../../lib/state/FormState.svelte';
 import { ZonedClock, type LocalDateTime } from '../../lib/time/ZonedClock';
-import { KIND_LABELS, type MeetingKind, type NewMeeting } from './model';
+import type { MeetingType, NewMeeting } from './model';
 
 export type MeetingField = 'title' | 'agenda' | 'urgency' | 'start' | 'end' | 'videoUrl';
 type Errors = Partial<Record<MeetingField, string>>;
 
-/** A new meeting: kind, title (follows the kind until typed), time in the club zone, place or video link, agenda. */
+/** A new meeting: type, title (follows the type until typed), time in the club zone, place or video link, agenda. */
 export class MeetingForm extends FormState<Errors> {
-  kind = $state<MeetingKind>('ASSEMBLY');
-  title = $state(KIND_LABELS.ASSEMBLY);
+  type = $state.raw<MeetingType | null>(null);
+  title = $state('');
   agenda = $state('');
   urgency = $state('');
   start = $state<LocalDateTime>('');
@@ -19,16 +19,18 @@ export class MeetingForm extends FormState<Errors> {
   constructor(
     private readonly clock: ZonedClock,
     start: LocalDateTime,
+    /** Labels of every type: a title that is one of them follows the type. */
+    private readonly labels: readonly string[] = [],
   ) {
     super();
     this.start = start;
     this.end = ZonedClock.addMinutes(start, 120);
   }
 
-  /** Changing the kind renames the meeting while the title is still a kind's name. */
-  setKind(kind: MeetingKind): void {
-    if (Object.values(KIND_LABELS).includes(this.title.trim())) this.title = KIND_LABELS[kind];
-    this.kind = kind;
+  /** Changing the type renames the meeting while the title is empty or still a type's name. */
+  setType(type: MeetingType): void {
+    if (!this.title.trim() || this.labels.includes(this.title.trim())) this.title = type.label;
+    this.type = type;
   }
 
   /** Moving the start keeps the duration. */
@@ -44,10 +46,10 @@ export class MeetingForm extends FormState<Errors> {
 
   toNew(): NewMeeting {
     return {
-      kind: this.kind,
+      kind: this.type!.key,
       title: this.title.trim(),
       agenda: this.agenda.trim() || null,
-      urgency: this.kind === 'EXTRA_BOARD' ? this.urgency.trim() || null : null,
+      urgency: this.type?.needsReason ? this.urgency.trim() || null : null,
       startsAt: this.startsAt,
       endsAt: this.clock.toInstant(this.end),
       location: this.location.trim() || null,
@@ -61,7 +63,7 @@ export class MeetingForm extends FormState<Errors> {
     const title = this.title.trim();
     if (!title || title.length > 120) errors.title = '1 bis 120 Zeichen.';
     if (this.agenda.trim().length > 4000) errors.agenda = 'Höchstens 4000 Zeichen.';
-    if (this.kind === 'EXTRA_BOARD' && !this.urgency.trim()) errors.urgency = 'Grund der Dringlichkeit angeben (§ 10 Abs. 3).';
+    if (this.type?.needsReason && !this.urgency.trim()) errors.urgency = 'Grund der Dringlichkeit angeben.';
     if (!this.start) errors.start = 'Beginn angeben.';
     if (!this.end || this.end <= this.start) errors.end = 'Das Ende liegt nach dem Beginn.';
     const video = this.videoUrl.trim();

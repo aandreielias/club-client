@@ -18,7 +18,7 @@
     type ResolutionAction,
   } from './model';
   import ResolutionCard from './ResolutionCard.svelte';
-  import { meetingsApi } from './services';
+  import { meetingsApi, meetingTypes } from './services';
 
   /** The resolutions of a meeting in order, live; who runs the meeting adds motions. */
   let { meeting }: { meeting: Meeting } = $props();
@@ -30,13 +30,13 @@
 
   const add = new Action();
   // svelte-ignore state_referenced_locally
-  const majorityOptions = majorities(meeting.kind).map((m) => ({ value: m, label: MAJORITY_LABELS[m] }));
+  const majorityOptions = majorities(meetingTypes.get(meeting.kind) ?? null).map((m) => ({ value: m, label: MAJORITY_LABELS[m] }));
   let title = $state('');
   let text = $state('');
   // svelte-ignore state_referenced_locally
   let majority = $state<Majority>(majorityOptions[0].value);
   // svelte-ignore state_referenced_locally
-  const actionOptions = actions(meeting.kind).map((a) => ({ value: a, label: ACTION_LABELS[a] }));
+  const actionOptions = actions(meetingTypes.get(meeting.kind) ?? null).map((a) => ({ value: a, label: ACTION_LABELS[a] }));
   let action = $state<ResolutionAction>('GENERAL');
   let actionMemberId = $state('');
   let actionOffice = $state<OfficeKind | ''>('');

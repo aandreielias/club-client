@@ -6,9 +6,11 @@ import { ZonedClock } from '../../lib/time/ZonedClock';
 import type { Member, Role } from '../../lib/types';
 import { MeetingForm } from './MeetingForm.svelte';
 import { MeetingPolicy } from './MeetingPolicy';
-import { meetings } from './mock';
-import { latestInvite } from './model';
+import { MeetingTypeForm } from './MeetingTypeForm.svelte';
+import { meetings, SEEDED_TYPES } from './mock';
+import { latestInvite, type MeetingType } from './model';
 
+const type = (key: string): MeetingType => SEEDED_TYPES.find((t) => t.key === key)!;
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
 const DAY = 86_400_000;
 const inDays = (days: number) => new Date(Date.now() + days * DAY).toISOString();
@@ -22,26 +24,26 @@ function policyFor(roles: Role[]): MeetingPolicy {
 describe('meeting rules', () => {
   it('mirror the notice periods of the statutes', () => {
     const start = '2026-12-01T18:00:00.000Z';
-    expect(latestInvite('ASSEMBLY', start)).toBe('2026-11-17T18:00:00.000Z');
-    expect(latestInvite('SIMPLE_BOARD', start)).toBe('2026-11-24T18:00:00.000Z');
-    expect(latestInvite('EXTRA_BOARD', start)).toBe('2026-11-29T18:00:00.000Z');
+    expect(latestInvite(type('ASSEMBLY'), start)).toBe('2026-11-17T18:00:00.000Z');
+    expect(latestInvite(type('SIMPLE_BOARD'), start)).toBe('2026-11-24T18:00:00.000Z');
+    expect(latestInvite(type('EXTRA_BOARD'), start)).toBe('2026-11-29T18:00:00.000Z');
   });
 
   it('let the chair convene ordinary board meetings and any board member a simple one', () => {
     const board = policyFor(['BOARD']);
-    expect(board.mayConvene('BOARD', ['TREASURER'])).toBe(false);
-    expect(board.mayConvene('BOARD', ['VICE_CHAIR', 'SECRETARY'])).toBe(true);
-    expect(board.mayConvene('SIMPLE_BOARD', ['TREASURER'])).toBe(true);
-    expect(board.mayConvene('ASSEMBLY', ['AUDITOR'])).toBe(false);
-    expect(policyFor(['ADMIN']).mayConvene('EXTRA_BOARD', [])).toBe(true);
+    expect(board.mayConvene(type('BOARD'), ['TREASURER'])).toBe(false);
+    expect(board.mayConvene(type('BOARD'), ['VICE_CHAIR', 'SECRETARY'])).toBe(true);
+    expect(board.mayConvene(type('SIMPLE_BOARD'), ['TREASURER'])).toBe(true);
+    expect(board.mayConvene(type('ASSEMBLY'), ['AUDITOR'])).toBe(false);
+    expect(policyFor(['ADMIN']).mayConvene(type('EXTRA_BOARD'), [])).toBe(true);
   });
 });
 
 describe('MeetingForm', () => {
-  it('follows the kind with its title and asks for the urgency of an extraordinary board meeting', () => {
-    const form = new MeetingForm(new ZonedClock('Europe/Vienna'), '2026-12-01T19:00');
+  it('follows the type with its title and asks for the urgency where the type needs one', () => {
+    const form = new MeetingForm(new ZonedClock('Europe/Vienna'), '2026-12-01T19:00', SEEDED_TYPES.map((t) => t.label));
     expect(form.end).toBe('2026-12-01T21:00');
-    form.setKind('EXTRA_BOARD');
+    form.setType(type('EXTRA_BOARD'));
     expect(form.title).toBe('Außerordentliche Vorstandssitzung');
     expect(Object.keys(form.errors)).toEqual(['urgency']);
     form.urgency = 'Halle gekündigt';
@@ -49,7 +51,7 @@ describe('MeetingForm', () => {
     expect(Object.keys(form.errors)).toEqual(['videoUrl']);
     form.videoUrl = '';
     form.title = 'Krisensitzung';
-    form.setKind('SIMPLE_BOARD');
+    form.setType(type('SIMPLE_BOARD'));
     expect(form.title).toBe('Krisensitzung'); // typed titles stay
     expect(form.toNew()).toMatchObject({ kind: 'SIMPLE_BOARD', urgency: null, startsAt: '2026-12-01T18:00:00.000Z', endsAt: '2026-12-01T20:00:00.000Z' });
   });
@@ -207,5 +209,33 @@ describe('follow-up tasks', () => {
 
     const linked = meetings.setResolutionLinks(member('vorstand'), r.id, [{ kind: 'MEMBER', id: 'spielerin' }, { kind: 'MEETING', id: 'mt-past' }]);
     expect(linked.links.map((l) => l.title)).toEqual(['Lena Spielerin', 'Ordentliche Vorstandssitzung']);
+  });
+});
+
+describe('meeting types', () => {
+  it('edit a seeded type and refuse rules that contradict each other', () => {
+    const form = new MeetingTypeForm(type('EXTRA_BOARD'));
+    expect([form.notice, form.noticeUnit, form.needsReason]).toEqual([2, 'days', true]);
+    form.actions = [...form.actions, 'STATUTES_CHANGE'];
+    expect(Object.keys(form.errors)).toEqual(['majorities']);
+    form.majorities = ['TWO_THIRDS', 'THREE_QUARTERS'];
+    form.yearly = true;
+    form.dueDay = 31;
+    form.dueMonth = 2;
+    expect(Object.keys(form.errors)).toEqual(['dueBy']);
+    form.dueDay = 28;
+    expect(form.toInput()).toMatchObject({ noticeHours: 48, dueBy: '02-28', needsReason: true });
+  });
+
+  it('are created by the board, used by meetings and then only archived', () => {
+    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    expect(() => meetings.saveType(member('spielerin'), null, {})).toThrow();
+    const created = meetings.saveType(member('vorstand'), null, { ...new MeetingTypeForm().toInput(), label: 'Klausur', invitationLabel: 'Klausur' });
+    expect(created.key).toMatch(/^TYPE_/);
+    meetings.create(member('vorstand'), { kind: created.key, title: 'Klausur', startsAt: inDays(20), endsAt: inDays(20.1) });
+    expect(meetings.listTypes().items.find((t) => t.key === created.key)?.inUse).toBe(true);
+    expect(() => meetings.deleteType(member('vorstand'), created.key)).toThrow();
+    meetings.saveType(member('vorstand'), created.key, { ...created, archived: true });
+    expect(() => meetings.create(member('vorstand'), { kind: created.key, title: 'Klausur', startsAt: inDays(21), endsAt: inDays(21.1) })).toThrow();
   });
 });

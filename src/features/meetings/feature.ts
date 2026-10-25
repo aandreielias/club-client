@@ -1,6 +1,7 @@
 import { ADMIN_BOARD } from '../../lib/types';
 import type { Feature } from '../Feature';
-import { isAssembly, type MeetingKind } from './model';
+import { isAssembly } from './model';
+import { meetingTypes } from './services';
 import DeadlinesPage from './DeadlinesPage.svelte';
 import MeetingCreateView from './MeetingCreateView.svelte';
 import MeetingPage from './MeetingPage.svelte';
@@ -29,11 +30,12 @@ export const meetingsFeature: Feature = {
   },
   calendar: {
     MEETING: (item) => {
-      const assembly = isAssembly(item.detail as MeetingKind);
+      const assembly = isAssembly(meetingTypes.get(item.detail ?? ''));
       return { hue: assembly ? 'blue' : 'purple', label: assembly ? 'Mitgliederversammlung' : 'Vorstandssitzung' };
     },
     DEADLINE: (item) => ({ hue: item.kind === 'resolution' ? 'purple' : 'orange', label: item.kind === 'resolution' ? 'Umlaufbeschluss' : 'Einladungsfrist' }),
   },
+  start: () => meetingTypes.start(),
   messages: MEETING_MESSAGES,
   links: [
     { server: '/meetings/:id', to: ({ id }) => ({ window: { kind: 'meeting', id } }) },

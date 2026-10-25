@@ -16,8 +16,8 @@
   import type { NewFollowUp } from './model';
   import RecordLink from '../../ui/RecordLink.svelte';
   import { permissions } from '../../lib/container';
-  import { isAssembly, KIND_LABELS, QUORUM_TEXT, STATUS_LABELS, STATUS_TONES, type Meeting, type PresenceMode } from './model';
-  import { meetingsApi } from './services';
+  import { isAssembly, quorumText, STATUS_LABELS, STATUS_TONES, type Meeting, type PresenceMode } from './model';
+  import { meetingsApi, meetingTypes } from './services';
 
   /** One meeting: date, agenda, invitation, presence with the quorum, protocol. Window and page. */
   let { id, handle, onclosed }: { id: string; handle?: WindowHandle; onclosed?: () => void } = $props();
@@ -58,7 +58,7 @@
   const late = (m: Meeting) => m.latestInvite < new Date().toISOString();
 
   async function invite(m: Meeting) {
-    const who = isAssembly(m.kind) ? 'alle stimmberechtigten Mitglieder' : 'den Vorstand';
+    const who = isAssembly(meetingTypes.get(m.kind)) ? 'alle stimmberechtigten Mitglieder' : 'den Vorstand';
     await view.confirm({
       title: 'Einladung verschicken',
       message: `Die Einladung mit Tagesordnung geht per E-Mail und App an ${who}. Danach steht der Termin fest.`,
@@ -106,7 +106,7 @@
       {/snippet}
       {#snippet meta()}
         <Tag tone={STATUS_TONES[m.status]}>{STATUS_LABELS[m.status]}</Tag>
-        <Tag tone={isAssembly(m.kind) ? 'blue' : 'purple'}>{KIND_LABELS[m.kind]}</Tag>
+        <Tag tone={isAssembly(meetingTypes.get(m.kind)) ? 'blue' : 'purple'}>{meetingTypes.label(m.kind)}</Tag>
       {/snippet}
 
       <dl class="props">
@@ -133,7 +133,7 @@
         <h2>Anwesenheit</h2>
         <p>
           <Tag tone={m.quorate ? 'green' : 'red'}>{m.quorate ? 'Beschlussfähig' : 'Nicht beschlussfähig'}</Tag>
-          <span class="muted small">{presentVoters(m)} von {m.electorate.length} Stimmberechtigten da · nötig: {QUORUM_TEXT[m.kind]}</span>
+          <span class="muted small">{presentVoters(m)} von {m.electorate.length} Stimmberechtigten da · nötig: {meetingTypes.get(m.kind) ? quorumText(meetingTypes.get(m.kind)!) : '…'}</span>
         </p>
         <ul class="people">
           {#each m.electorate as person (person.memberId)}

@@ -10,13 +10,14 @@
   import SidebarSection from './SidebarSection.svelte';
   import HomeSettingsSection from './HomeSettingsSection.svelte';
   import ClubSection from './ClubSection.svelte';
+  import MeetingTypesSection from '../meetings/MeetingTypesSection.svelte';
   import { session } from '../../lib/container';
   import { ADMIN_BOARD, type Role } from '../../lib/types';
 
   /** Settings in the window or on a page; `id` is the section shown first. */
   let { id, handle }: { id: string; handle?: WindowHandle } = $props();
 
-  type SectionId = 'appearance' | 'home' | 'sidebar' | 'shortcuts' | 'security' | 'general' | 'club';
+  type SectionId = 'appearance' | 'home' | 'sidebar' | 'shortcuts' | 'security' | 'general' | 'club' | 'meeting-types';
   /** `roles`: only shown to these (club-wide settings). */
   const ALL: readonly { id: SectionId; label: string; component: Component; roles?: readonly Role[] }[] = [
     { id: 'appearance', label: 'Darstellung', component: AppearanceSection },
@@ -26,6 +27,7 @@
     { id: 'security', label: 'Sicherheit', component: SecuritySection },
     { id: 'general', label: 'Allgemein', component: GeneralSection },
     { id: 'club', label: 'Verein', component: ClubSection, roles: ADMIN_BOARD },
+    { id: 'meeting-types', label: 'Sitzungsarten', component: MeetingTypesSection, roles: ADMIN_BOARD },
   ];
   const SECTIONS = ALL.filter((s) => !s.roles || session.hasRole(...s.roles));
 

@@ -35,6 +35,7 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   Deaktivieren: { text: 'Mitglied deaktivieren; die Person kann sich danach nicht mehr anmelden' },
   Reaktivieren: { text: 'Mitglied wieder freischalten; die Person kann sich wieder anmelden' },
   'Personendaten löschen (DSGVO)': { text: 'Name, Kontaktdaten und Login endgültig löschen; Einträge bleiben ohne Namen' },
+  'Neue Sitzungsart': { text: 'Eine eigene Art von Sitzung mit ihren Regeln anlegen' },
   'Mitgliedschaft speichern': { text: 'Art, Ehrenmitgliedschaft und Eintrittsdatum speichern' },
   'Funktion vergeben': { text: 'Funktion im Vorstand oder in der Rechnungsprüfung eintragen' },
   Beenden: { text: 'Funktion ab heute beenden' },

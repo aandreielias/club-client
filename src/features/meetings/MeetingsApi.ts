@@ -1,6 +1,6 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
 import type { RefKind } from '../../lib/records/refs';
-import type { Choice, FollowUp, Meeting, MeetingPatch, MeetingSummary, NewFollowUp, NewMeeting, NewResolution, PresenceMode, Resolution, ResolutionAction } from './model';
+import type { Choice, FollowUp, Meeting, MeetingPatch, MeetingType, MeetingTypeInput, MeetingSummary, NewFollowUp, NewMeeting, NewResolution, PresenceMode, Resolution, ResolutionAction } from './model';
 
 /** Typed access to the meetings endpoints. Every write needs a step-up and answers with the meeting. */
 export class MeetingsApi {
@@ -8,6 +8,20 @@ export class MeetingsApi {
   static readonly RESOLUTIONS = '/api/v1/resolutions';
 
   constructor(private readonly api: ApiClient) {}
+
+  async types(): Promise<MeetingType[]> {
+    return (await this.api.get<{ items: MeetingType[] }>(`${MeetingsApi.BASE}/types`)).items;
+  }
+
+  /** Admin/board with step-up; `key` null creates a type. */
+  saveType(key: string | null, type: MeetingTypeInput): Promise<MeetingType> {
+    return key ? this.api.put<MeetingType>(`${MeetingsApi.BASE}/types/${encodeURIComponent(key)}`, type) : this.api.post<MeetingType>(`${MeetingsApi.BASE}/types`, type);
+  }
+
+  /** Only types no meeting uses (`meeting-type.in-use`); archive the others. */
+  deleteType(key: string): Promise<void> {
+    return this.api.delete(`${MeetingsApi.BASE}/types/${encodeURIComponent(key)}`);
+  }
 
   /** Visible meetings starting in [from, to), by start; open bounds when left out. */
   async list(from?: string, to?: string): Promise<MeetingSummary[]> {

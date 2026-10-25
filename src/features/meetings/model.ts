@@ -4,49 +4,88 @@ import type { OfficeKind } from '../members/MembersApi';
 
 // Mirrors of the club-server meetings DTOs (statutes §8, §10). API times are UTC instants.
 
-/** ASSEMBLY/EXTRA_ASSEMBLY: Mitgliederversammlung; the others: Vorstandssitzungen. */
-export type MeetingKind = 'ASSEMBLY' | 'EXTRA_ASSEMBLY' | 'BOARD' | 'EXTRA_BOARD' | 'SIMPLE_BOARD' | 'CONSTITUENT_BOARD';
+/** Key of a club-defined meeting type (server: meetings_type); seeded with the statutes' kinds ASSEMBLY, BOARD, … */
+export type MeetingKind = string;
 export type MeetingStatus = 'DRAFT' | 'INVITED' | 'OPEN' | 'CLOSED';
 /** APP votes in the app; ANALOG is there without the app (in the room or on video). */
 export type PresenceMode = 'APP' | 'ANALOG';
 
-export const KIND_LABELS: Readonly<Record<MeetingKind, string>> = {
-  ASSEMBLY: 'Ordentliche Mitgliederversammlung',
-  EXTRA_ASSEMBLY: 'Außerordentliche Mitgliederversammlung',
-  BOARD: 'Ordentliche Vorstandssitzung',
-  EXTRA_BOARD: 'Außerordentliche Vorstandssitzung',
-  SIMPLE_BOARD: 'Einfache Vorstandssitzung',
-  CONSTITUENT_BOARD: 'Konstituierende Vorstandssitzung',
-};
-
 export const STATUS_LABELS: Readonly<Record<MeetingStatus, string>> = { DRAFT: 'Entwurf', INVITED: 'Eingeladen', OPEN: 'Läuft', CLOSED: 'Beendet' };
 export const STATUS_TONES: Readonly<Record<MeetingStatus, Hue>> = { DRAFT: 'gray', INVITED: 'blue', OPEN: 'green', CLOSED: 'brown' };
 
-export const isAssembly = (kind: MeetingKind): boolean => kind === 'ASSEMBLY' || kind === 'EXTRA_ASSEMBLY';
+/** server: MeetingsApi.Quorum — of the electorate present: at least half, more than half, at least three quarters. */
+export type Quorum = 'AT_LEAST_HALF' | 'MORE_THAN_HALF' | 'AT_LEAST_THREE_QUARTERS';
+export const QUORUM_LABELS: Readonly<Record<Quorum, string>> = {
+  AT_LEAST_HALF: 'mindestens die Hälfte',
+  MORE_THAN_HALF: 'mehr als die Hälfte',
+  AT_LEAST_THREE_QUARTERS: 'mindestens drei Viertel',
+};
+
+/** server: MeetingsApi.MeetingTypeDto. */
+export interface MeetingType {
+  key: MeetingKind;
+  label: string;
+  /** After "Einladung zur": "ordentlichen Mitgliederversammlung". */
+  invitationLabel: string;
+  statuteRef: string | null;
+  /** Who is invited, votes and counts for the quorum. */
+  electorate: 'BOARD' | 'ASSEMBLY';
+  noticeHours: number;
+  quorum: Quorum;
+  /** Not quorate at the hour → this many minutes later whoever is there decides. */
+  graceMinutes: number | null;
+  majorities: Majority[];
+  /** Offices that convene it; admins always may. */
+  conveners: OfficeKind[];
+  actions: ResolutionAction[];
+  /** States the reason of its urgency in the invitation. */
+  needsReason: boolean;
+  /** Held yearly, planned by this day ("MM-DD"). */
+  dueBy: string | null;
+  sort: number;
+  archived: boolean;
+  /** Meetings of this type exist: it can be archived, not deleted. */
+  inUse: boolean;
+}
+
+export type MeetingTypeInput = Omit<MeetingType, 'key' | 'inUse'>;
+
+export const isAssembly = (type: MeetingType | undefined): boolean => type?.electorate === 'ASSEMBLY';
 
 const HOUR = 3_600_000;
-/** server: MeetingRules.notice — §8 Abs 4, §10 Abs 3, 6, 7. */
-const NOTICE_MS: Readonly<Record<MeetingKind, number>> = {
-  ASSEMBLY: 14 * 24 * HOUR,
-  EXTRA_ASSEMBLY: 14 * 24 * HOUR,
-  BOARD: 14 * 24 * HOUR,
-  CONSTITUENT_BOARD: 14 * 24 * HOUR,
-  SIMPLE_BOARD: 7 * 24 * HOUR,
-  EXTRA_BOARD: 48 * HOUR,
-};
 
-/** server: MeetingRules.latestInvite — the last moment an invitation keeps the notice period. */
-export const latestInvite = (kind: MeetingKind, startsAt: string): string => new Date(new Date(startsAt).getTime() - NOTICE_MS[kind]).toISOString();
+/** server: MeetingType.latestInvite — the last moment an invitation keeps the notice period. */
+export const latestInvite = (type: MeetingType, startsAt: string): string =>
+  new Date(new Date(startsAt).getTime() - type.noticeHours * HOUR).toISOString();
 
 /** The quorum rule in words, next to the presence list. */
-export const QUORUM_TEXT: Readonly<Record<MeetingKind, string>> = {
-  ASSEMBLY: 'mindestens die Hälfte; 30 Minuten nach Beginn unabhängig von der Anzahl',
-  EXTRA_ASSEMBLY: 'mindestens die Hälfte; 30 Minuten nach Beginn unabhängig von der Anzahl',
-  BOARD: 'mehr als die Hälfte',
-  SIMPLE_BOARD: 'mehr als die Hälfte',
-  CONSTITUENT_BOARD: 'mehr als die Hälfte',
-  EXTRA_BOARD: 'mindestens drei Viertel',
-};
+export const quorumText = (type: MeetingType): string =>
+  QUORUM_LABELS[type.quorum] + (type.graceMinutes ? `; ${type.graceMinutes} Minuten nach Beginn unabhängig von der Anzahl` : '');
+
+/** server: MeetingType.mayConvene — admins act for the conveners. */
+export const mayConvene = (type: MeetingType, admin: boolean, offices: readonly OfficeKind[]): boolean =>
+  admin || type.conveners.some((o) => offices.includes(o));
+
+/** server: MeetingType.isQuorate; `present` counts only the electorate. */
+export function isQuorate(type: MeetingType, present: number, voters: number, startsAt: string, now: number): boolean {
+  if (!voters || !present) return false;
+  if (type.graceMinutes && now >= Date.parse(startsAt) + type.graceMinutes * 60_000) return true;
+  if (type.quorum === 'AT_LEAST_HALF') return present * 2 >= voters;
+  if (type.quorum === 'MORE_THAN_HALF') return present * 2 > voters;
+  return present * 4 >= voters * 3;
+}
+
+/** A day of the year ("MM-DD"; 29 February allowed), as the yearly meetings' day (server: MeetingType.parseDueBy). */
+export function isDayOfYear(month: number, day: number): boolean {
+  return Number.isInteger(month) && Number.isInteger(day) && new Date(2024, month - 1, day).getMonth() === month - 1 && day >= 1;
+}
+
+/** "14 Tage", "48 Stunden" (server: MeetingReminders.duration). */
+export function noticeText(hours: number): string {
+  if (hours % 24) return `${hours} ${hours === 1 ? 'Stunde' : 'Stunden'}`;
+  const days = hours / 24;
+  return `${days} ${days === 1 ? 'Tag' : 'Tage'}`;
+}
 
 export interface Person {
   memberId: string;
@@ -62,7 +101,7 @@ export interface Meeting {
   kind: MeetingKind;
   title: string;
   agenda: string | null;
-  /** Reason of an extraordinary board meeting (§10 Abs 3). */
+  /** Reason of the urgency, for types that need one (seeded: extraordinary board meeting, §10 Abs 3). */
   urgency: string | null;
   startsAt: string;
   endsAt: string;
@@ -109,20 +148,11 @@ export const ACTION_LABELS: Readonly<Record<ResolutionAction, string>> = {
   CONVENE_ASSEMBLY: 'Außerordentliche Mitgliederversammlung einberufen',
 };
 
+export const ACTION_ORDER: readonly ResolutionAction[] = Object.keys(ACTION_LABELS) as ResolutionAction[];
+
 /** server: FollowUpPlanner.actions — `null` = circular vote. */
-export function actions(kind: MeetingKind | null): ResolutionAction[] {
-  switch (kind) {
-    case null:
-      return ['GENERAL', 'CONVENE_ASSEMBLY'];
-    case 'ASSEMBLY':
-      return ['GENERAL', 'ELECTION'];
-    case 'EXTRA_ASSEMBLY':
-      return ['GENERAL', 'ELECTION', 'HONORARY_GRANT', 'HONORARY_REVOKE', 'STATUTES_CHANGE', 'DISSOLUTION'];
-    case 'EXTRA_BOARD':
-      return ['GENERAL', 'EXCLUSION', 'CONVENE_ASSEMBLY'];
-    default:
-      return ['GENERAL', 'CONVENE_ASSEMBLY'];
-  }
+export function actions(type: MeetingType | null): ResolutionAction[] {
+  return type ? ACTION_ORDER.filter((a) => type.actions.includes(a)) : ['GENERAL', 'CONVENE_ASSEMBLY'];
 }
 
 export const actionNeedsMember = (a: ResolutionAction): boolean => ['HONORARY_GRANT', 'HONORARY_REVOKE', 'ELECTION', 'EXCLUSION'].includes(a);
@@ -190,9 +220,8 @@ export const RESULT_LABELS: Readonly<Record<Result, string>> = { PASSED: 'Angeno
 export const RESULT_TONES: Readonly<Record<Result, Hue>> = { PASSED: 'green', FAILED: 'red', NOT_QUORATE: 'orange' };
 
 /** server: MeetingRules.majorities — `null` = circular vote. */
-export function majorities(kind: MeetingKind | null): Majority[] {
-  if (kind === 'ASSEMBLY' || kind === 'EXTRA_ASSEMBLY') return ['SIMPLE', 'TWO_THIRDS', 'THREE_QUARTERS'];
-  return kind === 'EXTRA_BOARD' ? ['THREE_QUARTERS'] : ['SIMPLE'];
+export function majorities(type: MeetingType | null): Majority[] {
+  return type ? (['SIMPLE', 'TWO_THIRDS', 'THREE_QUARTERS'] as const).filter((m) => type.majorities.includes(m)) : ['SIMPLE'];
 }
 
 /** server: Resolution.CIRCULAR_MIN (§10 Abs 15). */
