@@ -12,7 +12,7 @@ import { tasks } from '../tasks/mock';
 import {
   actionNeedsMember, actions, CIRCULAR_MIN_MS, IMPLIED_MAJORITY, isAssembly, isDayOfYear, isQuorate, latestInvite, majorities, mayConvene, type Choice,
   type FollowUp, type FollowUpKind, type Majority, type Meeting, type MeetingKind, type MeetingSummary, type MeetingType, type PresenceMode,
-  type Quorum, type Resolution, type ResolutionAction,
+  type MeetingStep, type Quorum, type Resolution, type ResolutionAction, type StepAnchor, type StepAudience,
 } from './model';
 
 const fail = MockServer.fail;
@@ -27,24 +27,60 @@ const ALL_MAJORITIES: Majority[] = ['SIMPLE', 'TWO_THIRDS', 'THREE_QUARTERS'];
 export const SEEDED_TYPES: readonly StoredType[] = [
   { key: 'ASSEMBLY', label: 'Ordentliche Mitgliederversammlung', invitationLabel: 'ordentlichen Mitgliederversammlung', statuteRef: '§ 8 Abs. 4',
     electorate: 'ASSEMBLY', noticeHours: 336, quorum: 'AT_LEAST_HALF', graceMinutes: 30, majorities: ALL_MAJORITIES, conveners: BOARD_OFFICES,
-    actions: ['GENERAL', 'ELECTION'], needsReason: false, dueBy: '10-01', sort: 1, archived: false, inUse: false },
+    actions: ['GENERAL', 'ELECTION'], needsReason: false, dueBy: '10-01', sort: 1, archived: false, inUse: false, steps: [] },
   { key: 'EXTRA_ASSEMBLY', label: 'Außerordentliche Mitgliederversammlung', invitationLabel: 'außerordentlichen Mitgliederversammlung',
     statuteRef: '§ 8 Abs. 4', electorate: 'ASSEMBLY', noticeHours: 336, quorum: 'AT_LEAST_HALF', graceMinutes: 30, majorities: ALL_MAJORITIES,
     conveners: BOARD_OFFICES, actions: ['GENERAL', 'ELECTION', 'HONORARY_GRANT', 'HONORARY_REVOKE', 'STATUTES_CHANGE', 'DISSOLUTION'],
-    needsReason: false, dueBy: null, sort: 2, archived: false, inUse: false },
+    needsReason: false, dueBy: null, sort: 2, archived: false, inUse: false, steps: [] },
   { key: 'BOARD', label: 'Ordentliche Vorstandssitzung', invitationLabel: 'ordentlichen Vorstandssitzung', statuteRef: '§ 10 Abs. 6',
     electorate: 'BOARD', noticeHours: 336, quorum: 'MORE_THAN_HALF', graceMinutes: null, majorities: ['SIMPLE'], conveners: CHAIRS,
-    actions: ['GENERAL', 'CONVENE_ASSEMBLY'], needsReason: false, dueBy: '10-01', sort: 3, archived: false, inUse: false },
+    actions: ['GENERAL', 'CONVENE_ASSEMBLY'], needsReason: false, dueBy: '10-01', sort: 3, archived: false, inUse: false, steps: [] },
   { key: 'EXTRA_BOARD', label: 'Außerordentliche Vorstandssitzung', invitationLabel: 'außerordentlichen Vorstandssitzung', statuteRef: '§ 10 Abs. 3',
     electorate: 'BOARD', noticeHours: 48, quorum: 'AT_LEAST_THREE_QUARTERS', graceMinutes: null, majorities: ['THREE_QUARTERS'], conveners: CHAIRS,
-    actions: ['GENERAL', 'EXCLUSION', 'CONVENE_ASSEMBLY'], needsReason: true, dueBy: null, sort: 4, archived: false, inUse: false },
+    actions: ['GENERAL', 'EXCLUSION', 'CONVENE_ASSEMBLY'], needsReason: true, dueBy: null, sort: 4, archived: false, inUse: false, steps: [] },
   { key: 'SIMPLE_BOARD', label: 'Einfache Vorstandssitzung', invitationLabel: 'einfachen Vorstandssitzung', statuteRef: '§ 10 Abs. 7',
     electorate: 'BOARD', noticeHours: 168, quorum: 'MORE_THAN_HALF', graceMinutes: null, majorities: ['SIMPLE'], conveners: BOARD_OFFICES,
-    actions: ['GENERAL', 'CONVENE_ASSEMBLY'], needsReason: false, dueBy: null, sort: 5, archived: false, inUse: false },
+    actions: ['GENERAL', 'CONVENE_ASSEMBLY'], needsReason: false, dueBy: null, sort: 5, archived: false, inUse: false, steps: [] },
   { key: 'CONSTITUENT_BOARD', label: 'Konstituierende Vorstandssitzung', invitationLabel: 'konstituierenden Vorstandssitzung', statuteRef: '§ 10 Abs. 6',
     electorate: 'BOARD', noticeHours: 336, quorum: 'MORE_THAN_HALF', graceMinutes: null, majorities: ['SIMPLE'], conveners: CHAIRS,
-    actions: ['GENERAL', 'CONVENE_ASSEMBLY'], needsReason: false, dueBy: null, sort: 6, archived: false, inUse: false },
+    actions: ['GENERAL', 'CONVENE_ASSEMBLY'], needsReason: false, dueBy: null, sort: 6, archived: false, inUse: false, steps: [] },
 ];
+/** server: V52__meeting_type_steps.sql and MeetingTypeHandlers.steps — the server's reminders (and, seeded, the protocol task). */
+function defaultSteps(seeded: boolean): MeetingStep[] {
+  const id = () => crypto.randomUUID();
+  return [
+    { id: id(), anchor: 'BEFORE_INVITE', offsetHours: 72, action: 'NOTIFICATION', audience: 'BOARD', title: null, body: null, system: 'INVITE_REMINDER' },
+    { id: id(), anchor: 'BEFORE_START', offsetHours: 24, action: 'NOTIFICATION', audience: 'ELECTORATE', title: null, body: null, system: 'START_REMINDER' },
+    ...(seeded ? [{ id: id(), anchor: 'AFTER_END', offsetHours: 168, action: 'TASK', audience: 'SECRETARY', title: 'Protokoll fertigstellen: {titel}',
+      body: 'Das Protokoll der Sitzung vom {datum} fertigstellen und ablegen.', system: null } as const] : []),
+  ];
+}
+for (const t of SEEDED_TYPES) t.steps = defaultSteps(true);
+
+const ANCHORS: readonly StepAnchor[] = ['BEFORE_INVITE', 'BEFORE_START', 'AFTER_END'];
+const AUDIENCES: readonly StepAudience[] = ['ELECTORATE', 'BOARD', 'CONVENERS', 'SECRETARY'];
+
+/** server: MeetingStep record and MeetingTypeHandlers.steps. */
+function checkedSteps(value: unknown): MeetingStep[] {
+  if (value == null) return defaultSteps(false);
+  if (!Array.isArray(value) || value.length > 30) return fail(400, 'meeting-step.too-many');
+  const systems = new Set<string>();
+  return value.map((s: Record<string, any>) => {
+    if (!ANCHORS.includes(s.anchor) || !AUDIENCES.includes(s.audience) || (s.action !== 'NOTIFICATION' && s.action !== 'TASK')) fail(400, 'meeting-step.invalid');
+    if (!Number.isInteger(s.offsetHours) || s.offsetHours < 0 || s.offsetHours > 8760) fail(400, 'meeting-step.offset-invalid');
+    if (s.system) {
+      if (systems.has(s.system)) fail(400, 'meeting-step.invalid');
+      systems.add(s.system);
+      const own = s.system === 'INVITE_REMINDER' ? 'BEFORE_INVITE' : 'BEFORE_START';
+      if (s.anchor !== own || s.action !== 'NOTIFICATION') fail(400, 'meeting-step.system-fixed');
+      return { id: s.id ?? crypto.randomUUID(), anchor: s.anchor, offsetHours: s.offsetHours, action: s.action, audience: s.audience, title: null, body: null, system: s.system };
+    }
+    const title = text(s.title, 150, 'meeting-step.title-invalid') ?? fail(400, 'meeting-step.title-invalid');
+    return { id: s.id ?? crypto.randomUUID(), anchor: s.anchor, offsetHours: s.offsetHours, action: s.action, audience: s.audience, title,
+      body: text(s.body, 1000, 'meeting-step.title-invalid'), system: null };
+  });
+}
+
 const QUORUMS: readonly Quorum[] = ['AT_LEAST_HALF', 'MORE_THAN_HALF', 'AT_LEAST_THREE_QUARTERS'];
 const OFFICES: readonly OfficeKind[] = [...BOARD_OFFICES, 'AUDITOR'];
 const ACTIONS: readonly ResolutionAction[] = ['GENERAL', 'HONORARY_GRANT', 'HONORARY_REVOKE', 'ELECTION', 'STATUTES_CHANGE', 'DISSOLUTION', 'EXCLUSION',
@@ -710,7 +746,7 @@ export class MockMeetings {
       key: key ?? `TYPE_${crypto.randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`, label, invitationLabel,
       statuteRef: text(body.statuteRef, 40, 'meeting-type.statute-ref-invalid'), electorate: body.electorate, noticeHours: body.noticeHours,
       quorum: body.quorum, graceMinutes: body.graceMinutes ?? null, majorities, conveners, actions, needsReason: !!body.needsReason, dueBy,
-      sort: Number.isInteger(body.sort) ? body.sort : 0, archived: !!body.archived, inUse: false,
+      sort: Number.isInteger(body.sort) ? body.sort : 0, archived: !!body.archived, inUse: false, steps: checkedSteps(body.steps),
     };
     const index = this.types.data.findIndex((t) => t.key === type.key);
     if (index >= 0) this.types.data[index] = type;

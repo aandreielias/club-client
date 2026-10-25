@@ -1,8 +1,8 @@
 import { FormState } from '../../lib/state/FormState.svelte';
 import type { OfficeKind } from '../members/MembersApi';
-import { isDayOfYear, type Majority, type MeetingType, type MeetingTypeInput, type Quorum, type ResolutionAction } from './model';
+import { isDayOfYear, type Majority, type MeetingStep, type MeetingType, type MeetingTypeInput, type Quorum, type ResolutionAction, type StepAnchor } from './model';
 
-export type MeetingTypeField = 'label' | 'invitationLabel' | 'notice' | 'grace' | 'majorities' | 'conveners' | 'actions' | 'dueBy';
+export type MeetingTypeField = 'label' | 'invitationLabel' | 'notice' | 'grace' | 'majorities' | 'conveners' | 'actions' | 'dueBy' | 'steps';
 type Errors = Partial<Record<MeetingTypeField, string>>;
 
 export type NoticeUnit = 'hours' | 'days';
@@ -27,6 +27,11 @@ export class MeetingTypeForm extends FormState<Errors> {
   dueMonth = $state(10);
   sort = $state(10);
   archived = $state(false);
+  /** What happens around each meeting; a new type starts with the server's two reminders. */
+  steps = $state<MeetingStep[]>([
+    { id: null, anchor: 'BEFORE_INVITE', offsetHours: 72, action: 'NOTIFICATION', audience: 'BOARD', title: null, body: null, system: 'INVITE_REMINDER' },
+    { id: null, anchor: 'BEFORE_START', offsetHours: 24, action: 'NOTIFICATION', audience: 'ELECTORATE', title: null, body: null, system: 'START_REMINDER' },
+  ]);
 
   constructor(type: MeetingType | null = null) {
     super();
@@ -47,6 +52,25 @@ export class MeetingTypeForm extends FormState<Errors> {
     if (type.dueBy) [this.dueMonth, this.dueDay] = type.dueBy.split('-').map(Number);
     this.sort = type.sort;
     this.archived = type.archived;
+    this.steps = type.steps.map((s) => ({ ...s }));
+  }
+
+  /** From the timeline: whole days stay in days. */
+  setNoticeHours(hours: number): void {
+    this.noticeUnit = hours % 24 === 0 ? 'days' : 'hours';
+    this.notice = this.noticeUnit === 'days' ? hours / 24 : hours;
+  }
+
+  /** A new task on that side; returns its index. */
+  addStep(anchor: StepAnchor): number {
+    const offsetHours = anchor === 'AFTER_END' ? 168 : 72;
+    this.steps.push({ id: null, anchor, offsetHours, action: 'TASK', audience: 'BOARD', title: anchor === 'AFTER_END' ? 'Nachbereiten: {titel}' : 'Vorbereiten: {titel}',
+      body: null, system: null });
+    return this.steps.length - 1;
+  }
+
+  removeStep(index: number): void {
+    this.steps.splice(index, 1);
   }
 
   get noticeHours(): number {
@@ -73,6 +97,7 @@ export class MeetingTypeForm extends FormState<Errors> {
       dueBy: this.yearly ? `${String(this.dueMonth).padStart(2, '0')}-${String(this.dueDay).padStart(2, '0')}` : null,
       sort: this.sort,
       archived: this.archived,
+      steps: this.steps.map((s) => (s.system ? { ...s, title: null, body: null } : { ...s, title: s.title?.trim() ?? '', body: s.body?.trim() || null })),
     };
   }
 
@@ -94,6 +119,10 @@ export class MeetingTypeForm extends FormState<Errors> {
     if (!this.actions.includes('GENERAL')) errors.actions = 'Sonstige Beschlüsse sind immer möglich.';
     if (this.yearly && !isDayOfYear(this.dueMonth, this.dueDay)) {
       errors.dueBy = 'Diesen Tag gibt es nicht.';
+    }
+    if (this.steps.length > 30) errors.steps = 'Höchstens 30 Schritte.';
+    else if (this.steps.some((s) => !s.system && (!s.title?.trim() || s.title.trim().length > 150 || (s.body?.length ?? 0) > 1000))) {
+      errors.steps = 'Jeder Schritt braucht einen Titel (bis 150 Zeichen, Text bis 1000).';
     }
     return errors;
   }

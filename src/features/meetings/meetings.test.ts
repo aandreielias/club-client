@@ -227,6 +227,20 @@ describe('meeting types', () => {
     expect(form.toInput()).toMatchObject({ noticeHours: 48, dueBy: '02-28', needsReason: true });
   });
 
+  it('keep the steps around a meeting: the server reminders plus the club\'s own', () => {
+    const form = new MeetingTypeForm(type('ASSEMBLY'));
+    expect(form.steps.map((s) => s.system ?? s.anchor)).toEqual(['INVITE_REMINDER', 'START_REMINDER', 'AFTER_END']);
+    const i = form.addStep('BEFORE_START');
+    form.steps[i].title = ' ';
+    expect(Object.keys(form.errors)).toEqual(['steps']);
+    form.steps[i].title = 'Saal buchen: {titel}';
+    form.setNoticeHours(72);
+    expect([form.notice, form.noticeUnit]).toEqual([3, 'days']);
+    form.setNoticeHours(30);
+    expect([form.notice, form.noticeUnit, form.noticeHours]).toEqual([30, 'hours', 30]);
+    expect(form.toInput().steps.at(-1)).toMatchObject({ anchor: 'BEFORE_START', action: 'TASK', title: 'Saal buchen: {titel}', system: null });
+  });
+
   it('are created by the board, used by meetings and then only archived', () => {
     directory.stepUp(member('vorstand'), MockDirectory.PIN);
     expect(() => meetings.saveType(member('spielerin'), null, {})).toThrow();
@@ -235,6 +249,8 @@ describe('meeting types', () => {
     meetings.create(member('vorstand'), { kind: created.key, title: 'Klausur', startsAt: inDays(20), endsAt: inDays(20.1) });
     expect(meetings.listTypes().items.find((t) => t.key === created.key)?.inUse).toBe(true);
     expect(() => meetings.deleteType(member('vorstand'), created.key)).toThrow();
+    expect(created.steps.map((s) => s.system)).toEqual(['INVITE_REMINDER', 'START_REMINDER']);
+    expect(() => meetings.saveType(member('vorstand'), created.key, { ...created, steps: [{ ...created.steps[0], action: 'TASK' }] })).toThrow();
     meetings.saveType(member('vorstand'), created.key, { ...created, archived: true });
     expect(() => meetings.create(member('vorstand'), { kind: created.key, title: 'Klausur', startsAt: inDays(21), endsAt: inDays(21.1) })).toThrow();
   });

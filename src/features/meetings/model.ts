@@ -21,6 +21,37 @@ export const QUORUM_LABELS: Readonly<Record<Quorum, string>> = {
   AT_LEAST_THREE_QUARTERS: 'mindestens drei Viertel',
 };
 
+/** server: MeetingsApi.StepAnchor — before the last day to invite (drafts), before the start (once invited), after the end. */
+export type StepAnchor = 'BEFORE_INVITE' | 'BEFORE_START' | 'AFTER_END';
+export type StepAction = 'NOTIFICATION' | 'TASK';
+/** BOARD: the board and who created the meeting; CONVENERS: holders of the convening offices. */
+export type StepAudience = 'ELECTORATE' | 'BOARD' | 'CONVENERS' | 'SECRETARY';
+/** The server's own reminders: invitation due, meeting starts soon (texts by the server). */
+export type SystemStep = 'INVITE_REMINDER' | 'START_REMINDER';
+
+/** server: MeetingsApi.StepDto — a notification or task a set time around each meeting of the type. */
+export interface MeetingStep {
+  /** null until saved. */
+  id: string | null;
+  anchor: StepAnchor;
+  offsetHours: number;
+  action: StepAction;
+  audience: StepAudience;
+  /** With {titel} and {datum}; null for system steps. */
+  title: string | null;
+  body: string | null;
+  system: SystemStep | null;
+}
+
+export const AUDIENCE_LABELS: Readonly<Record<StepAudience, string>> = {
+  ELECTORATE: 'Alle Stimmberechtigten',
+  BOARD: 'Vorstand und wer sie angelegt hat',
+  CONVENERS: 'Wer einberuft',
+  SECRETARY: 'Schriftführung',
+};
+export const ACTION_KIND_LABELS: Readonly<Record<StepAction, string>> = { NOTIFICATION: 'Benachrichtigung', TASK: 'Aufgabe' };
+export const SYSTEM_STEP_LABELS: Readonly<Record<SystemStep, string>> = { INVITE_REMINDER: 'Einladung fällig', START_REMINDER: 'Erinnerung an die Sitzung' };
+
 /** server: MeetingsApi.MeetingTypeDto. */
 export interface MeetingType {
   key: MeetingKind;
@@ -46,6 +77,7 @@ export interface MeetingType {
   archived: boolean;
   /** Meetings of this type exist: it can be archived, not deleted. */
   inUse: boolean;
+  steps: MeetingStep[];
 }
 
 export type MeetingTypeInput = Omit<MeetingType, 'key' | 'inUse'>;

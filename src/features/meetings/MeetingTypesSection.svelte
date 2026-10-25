@@ -11,7 +11,11 @@
   import { tooltip } from '../../ui/tooltip';
   import { OFFICE_LABELS, type OfficeKind } from '../members/MembersApi';
   import { MeetingTypeForm } from './MeetingTypeForm.svelte';
-  import { ACTION_LABELS, ACTION_ORDER, MAJORITY_LABELS, noticeText, QUORUM_LABELS, type Majority, type MeetingType, type Quorum } from './model';
+  import TimelineBar from './TimelineBar.svelte';
+  import {
+    ACTION_KIND_LABELS, ACTION_LABELS, ACTION_ORDER, AUDIENCE_LABELS, MAJORITY_LABELS, noticeText, QUORUM_LABELS, SYSTEM_STEP_LABELS, type Majority,
+    type MeetingType, type Quorum, type StepAction, type StepAnchor, type StepAudience,
+  } from './model';
   import { meetingsApi, meetingTypes } from './services';
 
   /** Einstellungen › Sitzungsarten (admin/board): the club's meeting types with their rules; seeded with the statutes' kinds. */
@@ -20,6 +24,16 @@
   /** The type being edited: its key, or '' for a new one; null = none. */
   let editing = $state<string | null>(null);
   let form = $state(new MeetingTypeForm());
+  /** The step selected on the timeline. */
+  let step = $state<number | null>(null);
+  const selectedStep = $derived(step == null ? null : form.steps[step]);
+  const ANCHORS = [
+    { value: 'BEFORE_INVITE', label: 'vor der Einladungsfrist (solange nicht eingeladen)' },
+    { value: 'BEFORE_START', label: 'vor Beginn (sobald eingeladen)' },
+    { value: 'AFTER_END', label: 'nach dem Ende' },
+  ] as const satisfies readonly { value: StepAnchor; label: string }[];
+  const AUDIENCES = (Object.keys(AUDIENCE_LABELS) as StepAudience[]).map((a) => ({ value: a, label: AUDIENCE_LABELS[a] }));
+  const STEP_ACTIONS = (Object.keys(ACTION_KIND_LABELS) as StepAction[]).map((a) => ({ value: a, label: ACTION_KIND_LABELS[a] }));
   const action = new Action();
 
   const ELECTORATES = [
@@ -41,6 +55,7 @@
   function edit(type: MeetingType | null) {
     form = new MeetingTypeForm(type);
     editing = type?.key ?? '';
+    step = null;
     action.error = null;
   }
 
@@ -125,6 +140,54 @@
             bind:value={() => form.grace ?? '', (v) => (form.grace = v === '' || v == null ? null : Number(v))} />
         </Field>
       </div>
+
+      <fieldset>
+        <legend>Ablauf rund um jede Sitzung</legend>
+        <p class="muted small">
+          Punkte ziehen oder mit den Pfeiltasten verschieben (Umschalt: eine Woche). Raute: letzter Tag zum Einladen. Kreis: Benachrichtigung,
+          Quadrat: Aufgabe. Im Text setzt {'{titel}'} den Titel und {'{datum}'} den Beginn der Sitzung ein.
+        </p>
+        <TimelineBar noticeHours={form.noticeHours} steps={form.steps} selected={step} onnotice={(h) => form.setNoticeHours(h)}
+          onmove={(i, h) => (form.steps[i].offsetHours = h)} onselect={(i) => (step = i)} />
+        <div class="row">
+          <Button size="sm" onclick={() => (step = form.addStep('BEFORE_START'))}>Schritt davor</Button>
+          <Button size="sm" onclick={() => (step = form.addStep('AFTER_END'))}>Schritt danach</Button>
+        </div>
+        {#if selectedStep && step != null}
+          {@const index = step}
+          <div class="stack step">
+            {#if selectedStep.system}
+              <strong>{SYSTEM_STEP_LABELS[selectedStep.system]}</strong>
+              <p class="muted small">Den Text schreibt der Server; Zeitpunkt und Empfänger lassen sich ändern.</p>
+            {:else}
+              <Field label="Titel">
+                <input bind:value={() => selectedStep.title ?? '', (v) => (form.steps[index].title = v)} maxlength="150" />
+              </Field>
+              <Field label="Text (optional)">
+                <textarea rows="2" maxlength="1000" bind:value={() => selectedStep.body ?? '', (v) => (form.steps[index].body = v)}></textarea>
+              </Field>
+              <Field label="Art">
+                <ChoiceGroup name="step-action" label="Art" options={STEP_ACTIONS}
+                  bind:value={() => selectedStep.action, (v) => v && (form.steps[index].action = v)} />
+              </Field>
+              <Field label="Bezugspunkt">
+                <Select bind:value={() => selectedStep.anchor, (v) => v && (form.steps[index].anchor = v)} options={ANCHORS} aria-label="Bezugspunkt" />
+              </Field>
+            {/if}
+            <div class="grid-2">
+              <Field label="Abstand in Stunden" hint="= {noticeText(selectedStep.offsetHours)}">
+                <input type="number" min="0" max="8760" step="1" class="short"
+                  bind:value={() => selectedStep.offsetHours, (v) => (form.steps[index].offsetHours = Math.max(0, Math.round(Number(v) || 0)))} />
+              </Field>
+              <Field label="An">
+                <Select bind:value={() => selectedStep.audience, (v) => v && (form.steps[index].audience = v)} options={AUDIENCES} aria-label="Empfänger" />
+              </Field>
+            </div>
+            <div><Button size="sm" variant="ghost" onclick={() => (form.removeStep(index), (step = null))}>Entfernen</Button></div>
+          </div>
+        {/if}
+        {#if form.error('steps')}<p class="danger small">{form.error('steps')}</p>{/if}
+      </fieldset>
 
       <fieldset>
         <legend>Einberufen von</legend>
@@ -234,6 +297,11 @@
   }
   .short {
     width: 6rem;
+  }
+  .step {
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
   }
   .danger {
     color: var(--color-danger);
