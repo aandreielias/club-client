@@ -5,6 +5,8 @@
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
+  import DateInput from '../../ui/DateInput.svelte';
+  import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import Select from '../../ui/Select.svelte';
   import { CLUB_WIDE, type AppointmentForm } from './AppointmentForm.svelte';
   import { APPOINTMENT_TYPES } from './model';
@@ -55,10 +57,10 @@
       <Select bind:value={form.teamId} options={teamOptions} disabled={form.isEdit} />
     </Field>
     <Field label="Beginn" error={form.error('start')}>
-      <input type="datetime-local" bind:value={() => form.start, (value) => form.setStart(value)} required />
+      <DateTimeInput bind:value={() => form.start, (value) => form.setStart(value)} required />
     </Field>
     <Field label="Ende" error={form.error('end')}>
-      <input type="datetime-local" bind:value={form.end} min={form.start} required />
+      <DateTimeInput bind:value={form.end} min={form.start} required />
     </Field>
   </div>
 
@@ -100,7 +102,7 @@
         </Field>
         <Field label="Bis einschließlich" error={form.error('repeatUntil')}
           hint={form.repeatUntil ? `${form.occurrences()} Termine` : undefined}>
-          <input type="date" bind:value={form.repeatUntil} min={form.start.slice(0, 10)} />
+          <DateInput bind:value={form.repeatUntil} min={form.start.slice(0, 10)} />
         </Field>
       </div>
     {/if}

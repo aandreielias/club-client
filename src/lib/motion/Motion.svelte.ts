@@ -70,9 +70,12 @@ export class Motion {
     const start = (document as Document & { startViewTransition?: (cb: () => Promise<void>) => unknown }).startViewTransition;
     if (this.reduced || !start) return change();
     // The callback resolves after Svelte has rendered the new page, so the browser captures it.
-    start.call(document, async () => {
+    const transition = start.call(document, async () => {
       change();
       await tick();
-    });
+    }) as { ready: Promise<void>; finished: Promise<void> };
+    // A transition aborted by the browser (e.g. a second navigation right away) only skips the animation; the change still ran.
+    transition.ready.catch(() => {});
+    transition.finished.catch(() => {});
   }
 }

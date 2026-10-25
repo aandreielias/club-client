@@ -6,6 +6,7 @@
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
+  import DateInput from '../../ui/DateInput.svelte';
   import type { MemberDetailModel } from './MemberDetailModel.svelte';
   import { MEMBERSHIP_CHOICES, type MembershipChoice } from './roles';
 
@@ -36,7 +37,7 @@
   <label class="check"><input type="checkbox" bind:checked={honorary} /> Ehrenmitglied (Beschluss der außerordentlichen Mitgliederversammlung)</label>
   {#if isMember}
     <Field label="Mitglied seit">
-      <input type="date" bind:value={since} max={today} />
+      <DateInput bind:value={since} max={today} />
     </Field>
   {/if}
   <p class="muted small">Stimmrecht und Wählbarkeit haben nur außerordentliche und Ehrenmitglieder (Statuten § 8 Abs. 1).</p>

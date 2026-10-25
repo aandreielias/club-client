@@ -10,6 +10,7 @@
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
+  import DateInput from '../../ui/DateInput.svelte';
   import Icon from '../../ui/Icon.svelte';
   import Page from '../../ui/Page.svelte';
   import Select from '../../ui/Select.svelte';
@@ -108,10 +109,10 @@
           <Select bind:value={office} placeholder="Bitte wählen" options={officeOptions} />
         </Field>
         <Field label="Beginn">
-          <input type="date" bind:value={startsOn} max={today} required />
+          <DateInput bind:value={startsOn} max={today} required />
         </Field>
         <Field label="Ende der Funktionsperiode (optional)" hint="Leer = drei Jahre nach Beginn.">
-          <input type="date" bind:value={termEndsOn} min={startsOn} />
+          <DateInput bind:value={termEndsOn} min={startsOn} />
         </Field>
       </div>
       <label class="check"><input type="checkbox" bind:checked={coopted} /> Kooptiert, bis die nächste Mitgliederversammlung bestätigt (§ 9 Abs. 6)</label>

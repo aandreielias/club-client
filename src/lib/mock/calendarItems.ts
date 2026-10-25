@@ -57,7 +57,7 @@ export function items(viewer: Member, from: string, to: string): CalendarItem[] 
   for (const t of tasks.list(viewer, false, null, true, from, to)) {
     if (!t.dueAt) continue;
     const manages = !t.teamId ? board : coached.includes(t.teamId) || board;
-    const followUp = Object.entries(tasks.sources.data).some(([id, s]) => id === t.id && s.kind === 'MEETING_FOLLOW_UP');
+    const followUp = Object.entries(tasks.sources.data).some(([id, s]) => id === t.id && s.kind !== 'CHANGE_REQUEST');
     out.push({ ...base, kind: 'task', id: t.id, title: t.title, start: t.dueAt, end: null, allDay: true, category: followUp ? 'FOLLOW_UP' : 'TASK',
       teamId: t.teamId, inactive: t.status === 'DONE', detail: t.status, movable: manages && t.status !== 'DONE' });
   }

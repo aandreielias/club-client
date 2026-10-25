@@ -226,12 +226,6 @@ input[type='radio']:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
-input[type='date'],
-input[type='datetime-local'],
-input[type='time'] {
-  font-variant-numeric: tabular-nums;
-}
-
 progress {
   height: 4px;
   border: 0;

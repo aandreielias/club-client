@@ -17,8 +17,8 @@ export class AnchoredList {
     private readonly list: () => HTMLElement | undefined,
     /** A press outside closes the list; the owner decides what else happens. */
     private readonly onoutside: () => void,
-    /** 'match': as wide as the anchor; 'min': at least as wide. */
-    private readonly width: 'match' | 'min',
+    /** 'match': as wide as the anchor; 'min': at least as wide; 'own': its own size and height (date picker). */
+    private readonly width: 'match' | 'min' | 'own',
   ) {}
 
   /** Opens the list; false when it was open already or is not rendered yet. */
@@ -47,9 +47,10 @@ export class AnchoredList {
     const list = this.list();
     if (!anchor || !list) return;
     const rect = anchor.getBoundingClientRect();
-    const height = Math.min(list.scrollHeight || AnchoredList.MAX_HEIGHT, AnchoredList.MAX_HEIGHT);
-    const at = dropdownPosition(rect, height, AnchoredList.MIN_WIDTH, { width: innerWidth, height: innerHeight }, AnchoredList.GAP);
-    list.style[this.width === 'match' ? 'width' : 'minWidth'] = `${rect.width}px`;
+    const own = this.width === 'own';
+    const height = own ? list.offsetHeight : Math.min(list.scrollHeight || AnchoredList.MAX_HEIGHT, AnchoredList.MAX_HEIGHT);
+    const at = dropdownPosition(rect, height, own ? list.offsetWidth : AnchoredList.MIN_WIDTH, { width: innerWidth, height: innerHeight }, AnchoredList.GAP);
+    if (!own) list.style[this.width === 'match' ? 'width' : 'minWidth'] = `${rect.width}px`;
     list.style.left = `${this.width === 'match' ? rect.left : at.x}px`;
     list.style.top = `${at.y}px`;
   }

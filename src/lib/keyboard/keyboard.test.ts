@@ -25,6 +25,7 @@ describe('KeySpec', () => {
     expect(KeySpec.fromEvent(key('?', { shiftKey: true }), false)).toBe('?'); // Shift is part of "?"
     expect(KeySpec.fromEvent(key('L', { shiftKey: true }), false)).toBe('Shift+L');
     expect(KeySpec.fromEvent(key('Shift', { shiftKey: true }), false)).toBeNull();
+    expect(KeySpec.fromEvent({ ...key('a'), key: undefined as unknown as string, code: '' }, false)).toBeNull(); // autofill keydown
     expect(KeySpec.fromEvent(key('ArrowLeft', { altKey: true }), false)).toBe('Alt+ArrowLeft');
   });
 

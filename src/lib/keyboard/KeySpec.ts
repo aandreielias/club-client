@@ -44,7 +44,8 @@ export class KeySpec {
 
   /** Canonical combo of a key event, or null for lone modifier keys. */
   static fromEvent(event: KeyInput, isMac: boolean): string | null {
-    if (MODIFIER_KEYS.has(event.key)) return null;
+    // Some synthetic keydowns (e.g. Chrome autofill) carry no key at all.
+    if (!event.key || MODIFIER_KEYS.has(event.key)) return null;
     let key: string;
     let shiftImplied = false;
     if (/^Key[A-Z]$/.test(event.code)) key = event.code.slice(3);

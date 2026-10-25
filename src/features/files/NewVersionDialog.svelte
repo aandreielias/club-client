@@ -6,6 +6,7 @@
   import Dialog from '../../ui/Dialog.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
+  import DateInput from '../../ui/DateInput.svelte';
   import type { StoredFile } from './model';
   import { filesApi } from './services';
   import { nextVersion } from './VersionLabel';
@@ -44,7 +45,7 @@
         <input bind:value={label} maxlength={settings.files.versionLabelMaxLength} required />
       </Field>
       <Field label="Stand vom" error={submitted && !date ? 'Datum angeben.' : null}>
-        <input type="date" bind:value={date} required />
+        <DateInput bind:value={date} required />
       </Field>
     </div>
     <ErrorNote error={action.error} />

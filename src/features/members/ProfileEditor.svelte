@@ -7,6 +7,7 @@
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
+  import DateInput from '../../ui/DateInput.svelte';
   import type { MemberDetailModel } from './MemberDetailModel.svelte';
   import { ProfileForm } from './MemberForms.svelte';
   import { memberPolicy as policy } from './services';
@@ -50,7 +51,7 @@
     {/if}
     {#if names || !member.birthDate}
       <Field label="Geburtsdatum" hint={member.birthDate ? undefined : names ? 'Noch nicht eingetragen.' : 'Noch nicht eingetragen; danach nur über den Verein änderbar.'} error={form.error('birthDate')}>
-        <input type="date" bind:value={form.birthDate} max={today} min={settings.members.earliestBirthDate} />
+        <DateInput bind:value={form.birthDate} max={today} min={settings.members.earliestBirthDate} />
       </Field>
     {/if}
     <Field label="Telefon" error={form.error('phone')}>

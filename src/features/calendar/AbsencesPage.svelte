@@ -9,6 +9,7 @@
   import DataTable from '../../ui/DataTable.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
+  import DateInput from '../../ui/DateInput.svelte';
   import Page from '../../ui/Page.svelte';
   import Select from '../../ui/Select.svelte';
   import { AbsenceForm } from './AbsenceForm.svelte';
@@ -67,8 +68,8 @@
 <Page title="Abwesenheiten" back={{ href: '/calendar', label: 'Kalender' }}>
   <form class="stack readable" onsubmit={submit} novalidate {@attach autofocus}>
     <div class="grid-2">
-      <Field label="Von"><input type="date" bind:value={form.from} min={today} required /></Field>
-      <Field label="Bis"><input type="date" bind:value={form.to} min={form.from || today} required /></Field>
+      <Field label="Von"><DateInput bind:value={form.from} min={today} required /></Field>
+      <Field label="Bis"><DateInput bind:value={form.to} min={form.from || today} required /></Field>
     </div>
     {#if who.length > 1}
       <Field label="Für"><Select bind:value={form.memberId} options={who} /></Field>

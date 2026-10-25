@@ -1,6 +1,7 @@
 import { ADMIN_BOARD } from '../../lib/types';
 import type { Feature } from '../Feature';
 import { isAssembly, type MeetingKind } from './model';
+import DeadlinesPage from './DeadlinesPage.svelte';
 import MeetingCreateView from './MeetingCreateView.svelte';
 import MeetingPage from './MeetingPage.svelte';
 import MeetingsPage from './MeetingsPage.svelte';
@@ -15,6 +16,8 @@ export const meetingsFeature: Feature = {
   routes: [
     // Voters (extraordinary and honorary members) see general meetings, the board its own meetings too (server: MeetingAccess.maySee).
     { path: '/meetings', component: MeetingsPage, nav: 'Sitzungen', icon: 'meetings' },
+    // Everything dated around the meetings as a list (the calendar's MEETING, DEADLINE, OFFICE and FOLLOW_UP items).
+    { path: '/deadlines', component: DeadlinesPage, nav: 'Fristen', icon: 'alert', roles: ADMIN_BOARD },
     { path: '/meetings/:id', component: MeetingPage },
     { path: '/resolutions/:id', component: ResolutionPage },
   ],

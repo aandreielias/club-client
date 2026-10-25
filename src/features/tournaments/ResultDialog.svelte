@@ -5,6 +5,7 @@
   import Dialog from '../../ui/Dialog.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
+  import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import { setsProblem, setTarget, tally } from './logic';
   import type { Outcome, TournamentMatch } from './model';
   import type { TournamentModel } from './TournamentModel.svelte';
@@ -92,7 +93,7 @@
       {:else}<p class="muted note">Sätze bis {format === 'BEACH' ? 21 : 25}, Entscheidungssatz bis 15, immer 2 Punkte Vorsprung.</p>{/if}
     {/if}
     <div class="grid-2">
-      <Field label="Anpfiff (optional)"><input type="datetime-local" bind:value={start} /></Field>
+      <Field label="Anpfiff (optional)"><DateTimeInput bind:value={start} /></Field>
       <Field label="Feld (optional)"><input bind:value={field} maxlength="40" placeholder="z. B. Feld 1" /></Field>
     </div>
     <ErrorNote error={model.action.error} />

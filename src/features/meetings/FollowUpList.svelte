@@ -4,6 +4,7 @@
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
+  import DateInput from '../../ui/DateInput.svelte';
   import RecordLink from '../../ui/RecordLink.svelte';
   import Tag from '../../ui/Tag.svelte';
   import MemberChips from './MemberChips.svelte';
@@ -58,7 +59,7 @@
       </Field>
       <MemberChips bind:value={assignees} {candidates} label="Verantwortlich" placeholder="Verantwortlich (leer = Vorstand)" />
       <Field label="Fällig (optional)">
-        <input type="date" bind:value={due} />
+        <DateInput bind:value={due} />
       </Field>
       <ErrorNote error={action.error} />
       <div class="row">

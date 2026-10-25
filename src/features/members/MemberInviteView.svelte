@@ -9,6 +9,7 @@
   import Detail from '../../ui/Detail.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
+  import DateInput from '../../ui/DateInput.svelte';
   import { InviteForm } from './MemberForms.svelte';
   import RoleChecklist from './RoleChecklist.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
@@ -53,7 +54,7 @@
       </Field>
     </div>
     <Field label="Geburtsdatum (optional)" hint="Sonst fragt die Website beim ersten Anmelden danach." error={form.error('birthDate')}>
-      <input type="date" bind:value={form.birthDate} max={today} min={settings.members.earliestBirthDate} />
+      <DateInput bind:value={form.birthDate} max={today} min={settings.members.earliestBirthDate} />
     </Field>
     <Field label="Telefon (optional)" error={form.error('phone')}>
       <input type="tel" bind:value={form.phone} maxlength={settings.profile.phoneMaxLength} autocomplete="off" />

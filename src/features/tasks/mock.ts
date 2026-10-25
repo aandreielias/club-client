@@ -342,6 +342,10 @@ export class MockTasks {
   }
 
   /** server: Task constructor checks */
+  private static items(texts: readonly string[]) {
+    return texts.map((text) => ({ id: crypto.randomUUID(), text, done: false }));
+  }
+
   private static validated(task: StoredTask): StoredTask {
     if (!task.title?.trim() || task.title.length > limits.titleMaxLength) fail(400, 'task.title-invalid');
     if ((task.description?.length ?? 0) > limits.descriptionMaxLength) fail(400, 'task.description-too-long');
@@ -360,9 +364,6 @@ export class MockTasks {
     return clock.toInstant(ZonedClock.addMinutes(clock.toLocal(dueAt), weeks * 7 * 24 * 60));
   }
 
-  private static items(texts: readonly string[]) {
-    return texts.map((text) => ({ id: crypto.randomUUID(), text, done: false }));
-  }
 
   /** By date, undated last. */
   static compareAt(a: { at: string | null }, b: { at: string | null }): number {

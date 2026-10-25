@@ -6,6 +6,7 @@
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
+  import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import Select from '../../ui/Select.svelte';
   import AssigneePicker from './AssigneePicker.svelte';
   import ChecklistEditor from './ChecklistEditor.svelte';
@@ -43,7 +44,7 @@
       <Select bind:value={form.teamId} options={teamOptions} disabled={form.isEdit} />
     </Field>
     <Field label="Fällig am (optional)" error={form.error('dueAt')}>
-      <input type="datetime-local" bind:value={form.due} />
+      <DateTimeInput bind:value={form.due} />
     </Field>
   </div>
   <Field label="Wiederholen" hint="Ist die Aufgabe erledigt, entsteht die nächste, fällig entsprechend später." error={form.error('repeat')}>

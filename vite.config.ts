@@ -11,7 +11,8 @@ const MAP_TILES = 'https://tiles.openfreemap.org';
 function csp(env: Record<string, string>): Plugin {
   const api = env.VITE_API_URL ?? '';
   const supabase = env.VITE_SUPABASE_URL ?? '';
-  const connect = ["'self'", api, api.replace(/^http/, 'ws'), supabase, MAP_TILES].filter(Boolean).join(' ');
+  // blob: document previews read the content they downloaded as an object URL (mock links are object URLs too).
+  const connect = ["'self'", 'blob:', api, api.replace(/^http/, 'ws'), supabase, MAP_TILES].filter(Boolean).join(' ');
   const images = ["'self'", 'blob:', 'data:', supabase, MAP_TILES].filter(Boolean).join(' ');
   const policy = [
     "default-src 'self'",

@@ -8,6 +8,7 @@
   import Detail from '../../ui/Detail.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
+  import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import Select from '../../ui/Select.svelte';
   import MemberChips from './MemberChips.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
@@ -56,7 +57,7 @@
       <textarea bind:value={text} rows="4" maxlength="4000"></textarea>
     </Field>
     <Field label="Abstimmen bis" hint="Mindestens drei Tage; gültig, wenn mehr als die Hälfte des Vorstands abstimmt." error={submitted && tooSoon ? 'Mindestens drei Tage ab jetzt.' : null}>
-      <input type="datetime-local" bind:value={deadline} min={earliest} required />
+      <DateTimeInput bind:value={deadline} min={earliest} required />
     </Field>
     <Field label="Art des Beschlusses" hint="Bestimmt die Aufgabe, die nach der Annahme entsteht.">
       <Select bind:value={action} options={actionOptions} />

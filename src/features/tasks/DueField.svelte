@@ -3,6 +3,7 @@
   import { backStack, bus, session } from '../../lib/container';
   import { TOAST } from '../../channels';
   import Button from '../../ui/Button.svelte';
+  import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import type { TaskDetailModel } from './TaskDetailModel.svelte';
   import TaskDue from './TaskDue.svelte';
@@ -39,8 +40,7 @@
 {#if editing}
   <form class="stack" onsubmit={save}>
     <div class="row">
-      <!-- svelte-ignore a11y_autofocus -->
-      <input class="when" type="datetime-local" bind:value aria-label="Fällig am" autofocus required />
+      <DateTimeInput inline bind:value aria-label="Fällig am" autofocus required />
       <Button type="submit" variant="primary" busy={detail.dueAction.busy}>Speichern</Button>
       <Button variant="ghost" onclick={() => (editing = false)}>Abbrechen</Button>
     </div>
@@ -57,8 +57,3 @@
   {#if editable}<ErrorNote error={detail.dueAction.error} />{/if}
 {/if}
 
-<style>
-  .when {
-    width: auto;
-  }
-</style>

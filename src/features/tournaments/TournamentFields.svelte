@@ -1,6 +1,7 @@
 <script lang="ts">
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import Field from '../../ui/Field.svelte';
+  import DateInput from '../../ui/DateInput.svelte';
   import Select from '../../ui/Select.svelte';
   import type { Location } from '../locations/model';
   import { locationsApi } from '../locations/services';
@@ -29,8 +30,8 @@
 
 <Field label="Name" error={form.error('name')}><input bind:value={form.name} maxlength="120" placeholder="z. B. Herbstcup 2026" required /></Field>
 <div class="grid-2">
-  <Field label="Von" error={form.error('dates')}><input type="date" bind:value={form.startsOn} required /></Field>
-  <Field label="Bis"><input type="date" bind:value={form.endsOn} min={form.startsOn} required /></Field>
+  <Field label="Von" error={form.error('dates')}><DateInput bind:value={form.startsOn} required /></Field>
+  <Field label="Bis"><DateInput bind:value={form.endsOn} min={form.startsOn} required /></Field>
 </div>
 <Field label="Ort (optional)">
   <Select bind:value={form.locationId} placeholder="Kein Ort" options={[{ value: '', label: 'Kein Ort' }, ...places.map((l) => ({ value: l.id, label: l.name }))]} />

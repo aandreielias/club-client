@@ -6,6 +6,7 @@
   import Centered from '../../ui/Centered.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
+  import DateInput from '../../ui/DateInput.svelte';
 
   let { onlogout }: { onlogout: () => void } = $props();
 
@@ -28,7 +29,7 @@
       Trainer:innen und Admins.
     </p>
     <Field label="Geburtsdatum">
-      <input type="date" bind:value={birthDate} max={yesterday} required />
+      <DateInput bind:value={birthDate} max={yesterday} required />
     </Field>
     <ErrorNote error={action.error} />
     <div class="row">

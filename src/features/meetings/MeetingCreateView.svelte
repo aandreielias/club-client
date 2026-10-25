@@ -9,6 +9,7 @@
   import Detail from '../../ui/Detail.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
+  import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import Select from '../../ui/Select.svelte';
   import { membersApi } from '../members/services';
   import { MeetingForm } from './MeetingForm.svelte';
@@ -56,10 +57,10 @@
           {/if}
           <div class="grid-2">
             <Field label="Beginn" error={form.error('start')}>
-              <input type="datetime-local" bind:value={() => form.start, (v) => form.setStart(v)} required />
+              <DateTimeInput bind:value={() => form.start, (v) => form.setStart(v)} required />
             </Field>
             <Field label="Ende" error={form.error('end')}>
-              <input type="datetime-local" bind:value={form.end} min={form.start} required />
+              <DateTimeInput bind:value={form.end} min={form.start} required />
             </Field>
           </div>
           {#if deadline}
