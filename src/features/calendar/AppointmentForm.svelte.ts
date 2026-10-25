@@ -1,7 +1,7 @@
 import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import { ZonedClock, type LocalDate, type LocalDateTime } from '../../lib/time/ZonedClock';
-import { hasCabins, type Appointment, type AppointmentPatch, type AppointmentType, type NewAppointment } from './model';
+import { SEEDED_APPOINTMENT_TYPES, type Appointment, type AppointmentPatch, type AppointmentType, type NewAppointment } from './model';
 
 export type FormField = 'title' | 'team' | 'start' | 'end' | 'description' | 'location' | 'cabins' | 'repeatUntil' | 'intervalWeeks';
 
@@ -32,6 +32,9 @@ export class AppointmentForm extends FormState<FormErrors> {
   repeat = $state(false);
   repeatUntil = $state<LocalDate>('');
   intervalWeeks = $state(1);
+  /** Whether a type offers changing cabins; the calendar services point it at the club's types (default: the seeded ones). */
+  static hasCabins = (type: string): boolean => SEEDED_APPOINTMENT_TYPES.some((t) => t.key === type && t.cabins);
+
   private constructor(
     private readonly clock: ZonedClock,
     readonly original: Appointment | null,
@@ -76,7 +79,7 @@ export class AppointmentForm extends FormState<FormErrors> {
 
   /** Cabins only for types that have them; switching to a meeting drops them. */
   get cabinsShown(): boolean {
-    return hasCabins(this.type);
+    return AppointmentForm.hasCabins(this.type);
   }
 
   toNew(): NewAppointment {

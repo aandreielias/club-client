@@ -124,3 +124,21 @@ describe('mock calendar', () => {
     }
   });
 });
+
+describe('mock appointment types', () => {
+  it('are added by the board, offer cabins only where set, and are archived once used', async () => {
+    const { appointmentTypes } = await import('./mock');
+    const board = directory.members.data.find((m) => m.id === 'vorstand')!;
+    directory.stepUp(board, MockDirectory.PIN);
+    expect(() => appointmentTypes.save(board, null, { label: 'Kurs', hue: 'pink', sort: 1 })).toThrow();
+    const kurs = appointmentTypes.save(board, null, { label: 'Kurs', hue: 'green', rides: false, cabins: false, sort: 9 });
+    const start = new Date(Date.now() + 3 * 86_400_000).toISOString();
+    const end = new Date(Date.now() + 3 * 86_400_000 + 3_600_000).toISOString();
+    const base = { teamId: null, type: kurs.key, title: 'Kurs', description: null, location: null, locationId: null, startsAt: start, endsAt: end,
+      repeatUntil: null, intervalWeeks: null };
+    expect(() => calendar.create(board, { ...base, cabinMen: 'Kabine 1', cabinWomen: null } as never)).toThrow();
+    calendar.create(board, { ...base, cabinMen: null, cabinWomen: null } as never);
+    expect(appointmentTypes.list().items.find((t) => t.key === kurs.key)?.inUse).toBe(true);
+    expect(() => appointmentTypes.delete(board, kurs.key)).toThrow();
+  });
+});

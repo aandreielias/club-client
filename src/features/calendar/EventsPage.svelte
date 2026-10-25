@@ -10,7 +10,7 @@
   import Tag from '../../ui/Tag.svelte';
   import { APPOINTMENTS_CHANGED } from './events';
   import { EventListModel } from './EventListModel.svelte';
-  import { typeHue } from './model';
+  import { appointmentTypes } from './services';
   import { appointmentPolicy as policy, calendarApi } from './services';
 
   const list = new EventListModel(calendarApi, session.clock, () => session.format, directory, store);
@@ -42,7 +42,7 @@
       {#if column.key === 'title'}
         <span class:cancelled={a.cancelled}>{a.title}</span>
       {:else if column.key === 'type'}
-        <Tag tone={a.cancelled ? 'gray' : typeHue(a.type)}>{a.cancelled ? 'Abgesagt' : list.display(a, column)}</Tag>
+        <Tag tone={a.cancelled ? 'gray' : appointmentTypes.hue(a.type)}>{a.cancelled ? 'Abgesagt' : list.display(a, column)}</Tag>
       {:else}
         {list.display(a, column)}
       {/if}

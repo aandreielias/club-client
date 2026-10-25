@@ -9,7 +9,7 @@
   import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import Select from '../../ui/Select.svelte';
   import { CLUB_WIDE, type AppointmentForm } from './AppointmentForm.svelte';
-  import { APPOINTMENT_TYPES } from './model';
+  import { appointmentTypes } from './services';
   import { appointmentPolicy as policy } from './services';
   import type { Location } from '../locations/model';
   import { locationsApi } from '../locations/services';
@@ -51,7 +51,7 @@
 
   <div class="grid-2">
     <Field label="Art">
-      <Select bind:value={form.type} options={APPOINTMENT_TYPES} />
+      <Select bind:value={form.type} options={appointmentTypes.options(form.type)} />
     </Field>
     <Field label="Für" hint={form.isEdit ? 'Lässt sich nach dem Anlegen nicht mehr ändern.' : undefined}>
       <Select bind:value={form.teamId} options={teamOptions} disabled={form.isEdit} />

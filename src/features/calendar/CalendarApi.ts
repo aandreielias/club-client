@@ -5,6 +5,8 @@ import type {
   Appointment,
   AppointmentList,
   AppointmentPatch,
+  AppointmentTypeInfo,
+  AppointmentTypeInput,
   Attendance,
   AttendanceResponse,
   FeedLink,
@@ -23,6 +25,21 @@ export class CalendarApi {
   constructor(private readonly api: ApiClient) {}
 
   /** Visible appointments overlapping [from, to) (UTC instants, at most 366 days), incl. cancelled ones. */
+  async types(): Promise<AppointmentTypeInfo[]> {
+    return (await this.api.get<{ items: AppointmentTypeInfo[] }>('/api/v1/calendar/types')).items;
+  }
+
+  /** Admin/board with step-up; `key` null creates a type. */
+  saveType(key: string | null, type: AppointmentTypeInput): Promise<AppointmentTypeInfo> {
+    return key ? this.api.put<AppointmentTypeInfo>(`/api/v1/calendar/types/${encodeURIComponent(key)}`, type)
+      : this.api.post<AppointmentTypeInfo>('/api/v1/calendar/types', type);
+  }
+
+  /** Only types no appointment uses (`appointment-type.in-use`); archive the others. */
+  deleteType(key: string): Promise<void> {
+    return this.api.delete(`/api/v1/calendar/types/${encodeURIComponent(key)}`);
+  }
+
   async list(from: string, to: string, teamId: string | null): Promise<Appointment[]> {
     const { items } = await this.api.get<AppointmentList>(CalendarApi.APPOINTMENTS, { from, to, teamId });
     return items;

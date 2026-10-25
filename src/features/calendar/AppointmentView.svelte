@@ -23,10 +23,10 @@
   import { CalendarApi } from './CalendarApi';
   import CancelDialog from './CancelDialog.svelte';
   import { APPOINTMENTS_CHANGED, RESPONSE_CHANGED } from './events';
-  import { typeHue, typeLabel, type Appointment } from './model';
+  import type { Appointment } from './model';
   import ResponseForm from './ResponseForm.svelte';
   import RidesPanel from './RidesPanel.svelte';
-  import { appointmentPolicy as policy, calendarApi } from './services';
+  import { appointmentPolicy as policy, appointmentTypes, calendarApi } from './services';
 
   /** One appointment: properties, own answer, attendance; edit and cancel for managers. Window and page. */
   let { id, handle }: { id: string; handle?: WindowHandle } = $props();
@@ -112,7 +112,7 @@
       {/snippet}
       {#snippet meta()}
         {#if !edit.form}
-          <Tag tone={typeHue(appointment.type)}>{typeLabel(appointment.type)}</Tag>
+          <Tag tone={appointmentTypes.hue(appointment.type)}>{appointmentTypes.label(appointment.type)}</Tag>
           {#if appointment.cancelled}<Tag tone="red">Abgesagt</Tag>{/if}
           {#if appointment.seriesId}<Tag tone="gray">Serie</Tag>{/if}
         {/if}

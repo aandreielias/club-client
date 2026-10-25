@@ -4,7 +4,8 @@ import type { LocalStore } from '../../lib/storage/LocalStore';
 import type { Formatter } from '../../lib/time/Formatter';
 import { ZonedClock, type LocalDate } from '../../lib/time/ZonedClock';
 import type { CalendarApi } from './CalendarApi';
-import { APPOINTMENT_TYPES, typeLabel, type Appointment } from './model';
+import type { Appointment } from './model';
+import { appointmentTypes } from './services';
 
 /** The server answers at most 366 days per request (CalendarApi.list). */
 const WINDOW_DAYS = 365;
@@ -24,12 +25,12 @@ export class EventListModel extends ListModel<Appointment> {
         columns: [
           { key: 'title', label: 'Titel', value: (a) => a.title },
           { key: 'start', label: 'Wann', value: (a) => a.startsAt, format: (a) => format().dateTime(a.startsAt), width: '12rem' },
-          { key: 'type', label: 'Art', value: (a) => typeLabel(a.type), width: '9rem' },
+          { key: 'type', label: 'Art', value: (a) => appointmentTypes.label(a.type), width: '9rem' },
           { key: 'team', label: 'Für', value: (a) => EventListModel.audience(a, directory), width: '9rem', hideOnCompact: true },
           { key: 'location', label: 'Ort', value: (a) => a.location, hideOnCompact: true },
         ],
         filters: [
-          { key: 'type', label: 'Art', kind: 'select', allLabel: 'Alle Arten', options: () => APPOINTMENT_TYPES, test: (a, type) => a.type === type },
+          { key: 'type', label: 'Art', kind: 'select', allLabel: 'Alle Arten', options: () => appointmentTypes.options(), test: (a, type) => a.type === type },
           {
             key: 'team',
             label: 'Team',

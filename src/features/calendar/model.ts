@@ -1,9 +1,37 @@
-import { settings } from '../../settings';
 import type { Hue } from '../../lib/types';
 
 // Mirrors of the club-server calendar and attendance DTOs. API times are UTC instants.
 
-export type AppointmentType = 'TRAINING' | 'MATCH' | 'MEETING' | 'EVENT' | 'TOURNAMENT';
+/** Key of a club-defined appointment type (server: calendar_type); seeded TRAINING, MATCH, TOURNAMENT, MEETING, EVENT. */
+export type AppointmentType = string;
+
+/** server: CalendarApi.AppointmentTypeDto. */
+export interface AppointmentTypeInfo {
+  key: AppointmentType;
+  label: string;
+  hue: Hue;
+  /** Car pools are offered. */
+  rides: boolean;
+  /** Changing cabins can be entered. */
+  cabins: boolean;
+  sort: number;
+  archived: boolean;
+  /** Appointments of this type exist: archive instead of deleting. */
+  inUse: boolean;
+}
+
+export type AppointmentTypeInput = Omit<AppointmentTypeInfo, 'key' | 'inUse'>;
+
+/** server: V55__appointment_types.sql — shown until the club's types are loaded. */
+export const SEEDED_APPOINTMENT_TYPES: readonly AppointmentTypeInfo[] = [
+  { key: 'TRAINING', label: 'Training', hue: 'blue', rides: false, cabins: true, sort: 1, archived: false, inUse: false },
+  { key: 'MATCH', label: 'Spiel', hue: 'red', rides: true, cabins: true, sort: 2, archived: false, inUse: false },
+  { key: 'TOURNAMENT', label: 'Turnier', hue: 'purple', rides: true, cabins: true, sort: 3, archived: false, inUse: false },
+  { key: 'MEETING', label: 'Besprechung', hue: 'brown', rides: false, cabins: false, sort: 4, archived: false, inUse: false },
+  { key: 'EVENT', label: 'Veranstaltung', hue: 'yellow', rides: true, cabins: true, sort: 5, archived: false, inUse: false },
+];
+
+export const HUES: readonly Hue[] = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'red'];
 
 export type ResponseStatus = 'YES' | 'NO' | 'MAYBE';
 
@@ -53,8 +81,6 @@ export type AppointmentPatch = Partial<
   Pick<Appointment, 'type' | 'title' | 'description' | 'location' | 'locationId' | 'cabinMen' | 'cabinWomen' | 'startsAt' | 'endsAt'>
 > & { clearLocationId?: boolean };
 
-/** Types with changing cabins (server: Appointment.CABIN_TYPES). */
-export const hasCabins = (type: AppointmentType): boolean => (settings.calendar.cabinTypes as readonly string[]).includes(type);
 
 export interface AttendanceEntry {
   memberId: string;
@@ -89,35 +115,16 @@ export interface FeedLink {
   url: string;
 }
 
-export const APPOINTMENT_TYPES: readonly { value: AppointmentType; label: string }[] = [
-  { value: 'TRAINING', label: 'Training' },
-  { value: 'MATCH', label: 'Spiel' },
-  { value: 'TOURNAMENT', label: 'Turnier' },
-  { value: 'MEETING', label: 'Besprechung' },
-  { value: 'EVENT', label: 'Veranstaltung' },
-];
-
 export const RESPONSE_OPTIONS: readonly { value: ResponseStatus; label: string }[] = [
   { value: 'YES', label: 'Zusage' },
   { value: 'MAYBE', label: 'Vielleicht' },
   { value: 'NO', label: 'Absage' },
 ];
 
-const TYPE_HUES: Readonly<Record<AppointmentType, Hue>> = {
-  TRAINING: 'blue',
-  MATCH: 'red',
-  TOURNAMENT: 'purple',
-  MEETING: 'brown',
-  EVENT: 'yellow',
-};
-
-export const typeHue = (type: AppointmentType): Hue => TYPE_HUES[type];
-
 const RESPONSE_HUES: Readonly<Record<ResponseStatus, Hue>> = { YES: 'green', MAYBE: 'yellow', NO: 'red' };
 
 export const responseHue = (status: ResponseStatus | null): Hue => (status ? RESPONSE_HUES[status] : 'gray');
 
-export const typeLabel = (type: AppointmentType): string => APPOINTMENT_TYPES.find((t) => t.value === type)?.label ?? type;
 
 export const responseLabel = (status: ResponseStatus | null): string =>
   status ? (RESPONSE_OPTIONS.find((o) => o.value === status)?.label ?? status) : 'Offen';

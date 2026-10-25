@@ -1,6 +1,6 @@
 import { IcsWriter, type IcsEvent } from '../../lib/calendar/IcsWriter';
 import type { CalendarApi } from './CalendarApi';
-import { typeLabel, type Appointment } from './model';
+import { SEEDED_APPOINTMENT_TYPES, type Appointment } from './model';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -19,6 +19,8 @@ export class CalendarExport {
   constructor(
     private readonly api: CalendarApi,
     private readonly limits: ExportLimits,
+    /** The club's name for a type (default: the seeded ones). */
+    private readonly typeLabel: (type: string) => string = (type) => SEEDED_APPOINTMENT_TYPES.find((t) => t.key === type)?.label ?? type,
   ) {}
 
   async appointments(now: Date = new Date()): Promise<Appointment[]> {
@@ -43,7 +45,7 @@ export class CalendarExport {
         summary: a.title,
         description: a.description,
         location: a.location,
-        categories: [typeLabel(a.type)],
+        categories: [this.typeLabel(a.type)],
         cancelled: a.cancelled,
       }),
     );

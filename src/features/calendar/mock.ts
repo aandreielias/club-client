@@ -7,7 +7,7 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import { ZonedClock, type LocalDate } from '../../lib/time/ZonedClock';
 import type { Member } from '../../lib/types';
-import { hasCabins, type Absence, type Appointment, type AppointmentPatch, type Ride, type AppointmentType, type Attendance, type AttendanceEntry, type NewAppointment, type ResponseStatus } from './model';
+import { HUES, SEEDED_APPOINTMENT_TYPES, type Absence, type AppointmentTypeInfo, type Appointment, type AppointmentPatch, type Ride, type AppointmentType, type Attendance, type AttendanceEntry, type NewAppointment, type ResponseStatus } from './model';
 import { locations } from '../locations/mock';
 import { inventory } from '../inventory/mock';
 
@@ -30,7 +30,9 @@ interface StoredResponse {
 const fail = MockServer.fail;
 const limits = settings.calendar;
 const DAY_MS = 86_400_000;
-const TYPES: readonly AppointmentType[] = ['TRAINING', 'MATCH', 'MEETING', 'EVENT', 'TOURNAMENT'];
+/** server: calendar_type (`inUse` computed when listed). */
+const types = new MockTable<AppointmentTypeInfo[]>('appointment-types', () => structuredClone([...SEEDED_APPOINTMENT_TYPES]));
+const typeOf = (key: AppointmentType): AppointmentTypeInfo => types.data.find((t) => t.key === key) ?? fail(400, 'appointment.type-unknown');
 const STATUSES: readonly ResponseStatus[] = ['YES', 'NO', 'MAYBE'];
 
 export class MockCalendar {
@@ -103,6 +105,7 @@ export class MockCalendar {
   create(member: Member, body: NewAppointment): Appointment[] {
     if (body.teamId && !this.people.teams.data.some((t) => t.id === body.teamId)) fail(409, 'data.conflict');
     this.requireMayEdit(member, body.teamId ?? null);
+    if (typeOf(body.type).archived) fail(400, 'appointment.type-archived');
     const first = MockCalendar.validated(this.placed({ ...body, id: '', seriesId: null, cancelled: false }, body.locationId ?? null));
     const starts = this.occurrences(first.startsAt, body.repeatUntil, body.intervalWeeks);
     const seriesId = starts.length > 1 || body.repeatUntil ? crypto.randomUUID() : null;
@@ -439,14 +442,15 @@ export class MockCalendar {
 
   /** server: Appointment constructor checks */
   private static validated<T extends Omit<Appointment, 'id' | 'seriesId' | 'cancelled'> & Partial<Appointment>>(a: T): T {
-    if (!a.type || !TYPES.includes(a.type)) fail(400, 'appointment.type-missing');
+    if (!a.type) fail(400, 'appointment.type-missing');
+    const type = typeOf(a.type);
     if (!a.title?.trim() || a.title.length > limits.titleMaxLength) fail(400, 'appointment.title-invalid');
     if ((a.description?.length ?? 0) > limits.descriptionMaxLength) fail(400, 'appointment.description-too-long');
     if ((a.location?.length ?? 0) > limits.locationMaxLength) fail(400, 'appointment.location-too-long');
     const cabinMen = a.cabinMen?.trim() || null;
     const cabinWomen = a.cabinWomen?.trim() || null;
     if ((cabinMen?.length ?? 0) > limits.cabinMaxLength || (cabinWomen?.length ?? 0) > limits.cabinMaxLength) fail(400, 'appointment.cabin-too-long');
-    if ((cabinMen || cabinWomen) && !hasCabins(a.type)) fail(400, 'appointment.cabin-not-allowed');
+    if ((cabinMen || cabinWomen) && !type.cabins) fail(400, 'appointment.cabin-not-allowed');
     const start = Date.parse(a.startsAt);
     const end = Date.parse(a.endsAt);
     if (isNaN(start) || isNaN(end) || end <= start) fail(400, 'appointment.times-invalid');
@@ -531,6 +535,41 @@ export class MockCalendar {
 
 export const calendar = new MockCalendar(directory);
 
+/** server: CalendarHandlers.listTypes, saveType, deleteType. */
+export const appointmentTypes = {
+  list(): { items: AppointmentTypeInfo[] } {
+    const items = [...types.data].sort((a, b) => a.sort - b.sort || a.label.localeCompare(b.label));
+    return { items: items.map((t) => ({ ...t, inUse: calendar.appointments.data.some((a) => a.type === t.key) })) };
+  },
+
+  save(member: Member, key: string | null, body: Record<string, any>): AppointmentTypeInfo {
+    directory.requirePrivileged(member, ['ADMIN', 'BOARD']);
+    if (key && !types.data.some((t) => t.key === key)) fail(404, 'appointment-type.not-found');
+    const label = typeof body.label === 'string' ? body.label.trim() : '';
+    if (!label || label.length > 40) fail(400, 'appointment-type.label-invalid');
+    if (!HUES.includes(body.hue)) fail(400, 'appointment-type.hue-invalid');
+    if (!Number.isInteger(body.sort) || body.sort < 0 || body.sort > 1000) fail(400, 'appointment-type.sort-invalid');
+    const type: AppointmentTypeInfo = { key: key ?? `TYPE_${crypto.randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`, label, hue: body.hue,
+      rides: !!body.rides, cabins: !!body.cabins, sort: body.sort, archived: !!body.archived, inUse: false };
+    const index = types.data.findIndex((t) => t.key === type.key);
+    if (index >= 0) types.data[index] = type;
+    else types.data.push(type);
+    types.save();
+    mockServer.events.publish({ type: 'calendar.appointment-types-changed', data: {} });
+    return { ...type, inUse: calendar.appointments.data.some((a) => a.type === type.key) };
+  },
+
+  delete(member: Member, key: string): void {
+    directory.requirePrivileged(member, ['ADMIN', 'BOARD']);
+    const index = types.data.findIndex((t) => t.key === key);
+    if (index < 0) fail(404, 'appointment-type.not-found');
+    if (calendar.appointments.data.some((a) => a.type === key)) fail(409, 'appointment-type.in-use');
+    types.data.splice(index, 1);
+    types.save();
+    mockServer.events.publish({ type: 'calendar.appointment-types-changed', data: {} });
+  },
+};
+
 // server: CalendarModule.remindItemHolders runs every 15 minutes; the browser mock checks on start and then periodically.
 if (typeof window !== 'undefined') {
   const remind = () => calendar.remindItemHolders(settings.inventory.reminderBeforeMs);
@@ -544,6 +583,10 @@ const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer
   .on('GET', '/api/v1/appointments/:id/activity', (req) => activity.list(actor(req), 'APPOINTMENT', calendar.visible(actor(req), req.params.id).id))
+  .on('GET', '/api/v1/calendar/types', (req) => (directory.actor(req), appointmentTypes.list()))
+  .on('POST', '/api/v1/calendar/types', (req) => appointmentTypes.save(directory.actor(req), null, req.body ?? {}))
+  .on('PUT', '/api/v1/calendar/types/:key', (req) => appointmentTypes.save(directory.actor(req), req.params.key, req.body ?? {}))
+  .on('DELETE', '/api/v1/calendar/types/:key', (req) => appointmentTypes.delete(directory.actor(req), req.params.key))
   .on('GET', '/api/v1/appointments', (req) =>
     ({ items: calendar.list(actor(req), req.query.get('from'), req.query.get('to'), req.query.get('teamId')) }))
   .on('POST', '/api/v1/appointments', (req) => ({ items: calendar.create(actor(req), req.body ?? {}) }))

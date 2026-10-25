@@ -351,10 +351,8 @@ export const settings = {
     descriptionMaxLength: 2000,
     locationMaxLength: 200,
     reasonMaxLength: 300,
-    /** Car pools: shown for these appointment types; server limits seats and note. */
-    rideTypes: ['MATCH', 'TOURNAMENT', 'EVENT'] as const,
-    /** server: Appointment.CABIN_TYPES - changing cabins for men and women, free text. */
-    cabinTypes: ['TRAINING', 'MATCH', 'TOURNAMENT', 'EVENT'] as const,
+    /** Car pools (where the appointment type offers them): server limits seats and note. */
+    /** Changing cabins for men and women, free text (where the appointment type offers them). */
     cabinMaxLength: 60,
     rideMaxSeats: 8,
     /** Car seen from above next to each ride (CarSeats); height follows the number of seats. */
