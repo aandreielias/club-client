@@ -37,6 +37,7 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Personendaten löschen (DSGVO)': { text: 'Name, Kontaktdaten und Login endgültig löschen; Einträge bleiben ohne Namen' },
   'Schritt davor': { text: 'Aufgabe oder Benachrichtigung vor jeder Sitzung dieser Art' },
   'Schritt danach': { text: 'Aufgabe oder Benachrichtigung nach jeder Sitzung dieser Art' },
+  'Folgeaufgabe hinzufügen': { text: 'Eine weitere Aufgabe nach diesem Beschluss anlegen lassen' },
   'Neue Sitzungsart': { text: 'Eine eigene Art von Sitzung mit ihren Regeln anlegen' },
   'Mitgliedschaft speichern': { text: 'Art, Ehrenmitgliedschaft und Eintrittsdatum speichern' },
   'Funktion vergeben': { text: 'Funktion im Vorstand oder in der Rechnungsprüfung eintragen' },

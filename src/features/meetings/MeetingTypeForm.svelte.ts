@@ -1,6 +1,6 @@
 import { FormState } from '../../lib/state/FormState.svelte';
 import type { OfficeKind } from '../members/MembersApi';
-import { isDayOfYear, type Majority, type MeetingStep, type MeetingType, type MeetingTypeInput, type Quorum, type ResolutionAction, type StepAnchor } from './model';
+import { ACTION_LABELS, isDayOfYear, MAJORITY_LABELS, type ActionRule, type Majority, type MeetingStep, type MeetingType, type MeetingTypeInput, type Quorum, type ResolutionAction, type StepAnchor } from './model';
 
 export type MeetingTypeField = 'label' | 'invitationLabel' | 'notice' | 'grace' | 'majorities' | 'conveners' | 'actions' | 'dueBy' | 'steps';
 type Errors = Partial<Record<MeetingTypeField, string>>;
@@ -33,7 +33,11 @@ export class MeetingTypeForm extends FormState<Errors> {
     { id: null, anchor: 'BEFORE_START', offsetHours: 24, action: 'NOTIFICATION', audience: 'ELECTORATE', title: null, body: null, system: 'START_REMINDER' },
   ]);
 
-  constructor(type: MeetingType | null = null) {
+  constructor(
+    type: MeetingType | null = null,
+    /** The club's resolution rules: a decision with a fixed majority needs the type to offer it. */
+    private readonly rules: readonly ActionRule[] = [],
+  ) {
     super();
     if (!type) return;
     this.label = type.label;
@@ -111,9 +115,9 @@ export class MeetingTypeForm extends FormState<Errors> {
     if (!Number.isInteger(this.notice) || this.notice < 0 || this.noticeHours > 8760) errors.notice = 'Ganze Zahl, höchstens ein Jahr.';
     if (this.grace != null && (!Number.isInteger(this.grace) || this.grace < 1 || this.grace > 1440)) errors.grace = '1 bis 1440 Minuten, oder leer.';
     if (!this.majorities.length) errors.majorities = 'Mindestens eine Mehrheit.';
-    else if ((this.actions.includes('STATUTES_CHANGE') && !this.majorities.includes('TWO_THIRDS'))
-      || (this.actions.includes('DISSOLUTION') && !this.majorities.includes('THREE_QUARTERS'))) {
-      errors.majorities = 'Statutenänderung braucht zwei Drittel, Auflösung drei Viertel.';
+    else {
+      const missing = this.rules.find((r) => r.majority && this.actions.includes(r.action) && !this.majorities.includes(r.majority));
+      if (missing) errors.majorities = `${ACTION_LABELS[missing.action]} braucht ${MAJORITY_LABELS[missing.majority!]}.`;
     }
     if (!this.conveners.length) errors.conveners = 'Mindestens eine Funktion.';
     if (!this.actions.includes('GENERAL')) errors.actions = 'Sonstige Beschlüsse sind immer möglich.';

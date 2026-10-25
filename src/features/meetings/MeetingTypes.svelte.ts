@@ -1,11 +1,12 @@
 import type { EventBus } from '../../lib/bus';
-import { MEETING_TYPES_CHANGED } from './events';
+import { ACTION_RULES_CHANGED, MEETING_TYPES_CHANGED } from './events';
 import type { MeetingsApi } from './MeetingsApi';
-import type { MeetingKind, MeetingType } from './model';
+import type { ActionRule, Majority, MeetingKind, MeetingType, ResolutionAction } from './model';
 
-/** The club's meeting types (server: meetings_type), loaded at start and reloaded when the club changes them. */
+/** The club's meeting types and resolution rules (server: meetings_type, meetings_action_rule), loaded at start and on changes. */
 export class MeetingTypes {
   items = $state.raw<MeetingType[]>([]);
+  rules = $state.raw<ActionRule[]>([]);
 
   constructor(
     private readonly api: MeetingsApi,
@@ -14,7 +15,20 @@ export class MeetingTypes {
 
   start(): () => void {
     void this.load().catch(() => {});
-    return this.bus.subscribe(MEETING_TYPES_CHANGED, () => void this.load().catch(() => {})).unsubscribe;
+    void this.loadRules().catch(() => {});
+    const types = this.bus.subscribe(MEETING_TYPES_CHANGED, () => void this.load().catch(() => {}));
+    const rules = this.bus.subscribe(ACTION_RULES_CHANGED, () => void this.loadRules().catch(() => {}));
+    return () => (types.unsubscribe(), rules.unsubscribe());
+  }
+
+  async loadRules(): Promise<ActionRule[]> {
+    this.rules = await this.api.resolutionRules();
+    return this.rules;
+  }
+
+  /** The majority a decision fixes (seeded: statute change two thirds, dissolution three quarters). */
+  fixedMajority(action: ResolutionAction): Majority | null {
+    return this.rules.find((r) => r.action === action)?.majority ?? null;
   }
 
   async load(): Promise<MeetingType[]> {

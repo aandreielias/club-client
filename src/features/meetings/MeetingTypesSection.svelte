@@ -9,7 +9,8 @@
   import Select from '../../ui/Select.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { tooltip } from '../../ui/tooltip';
-  import { OFFICE_LABELS, type OfficeKind } from '../members/MembersApi';
+  import { OFFICE_KINDS } from '../members/MembersApi';
+  import { boardSettings } from '../members/services';
   import { MeetingTypeForm } from './MeetingTypeForm.svelte';
   import TimelineBar from './TimelineBar.svelte';
   import {
@@ -49,11 +50,11 @@
     value: String(i + 1),
     label: new Intl.DateTimeFormat('de-AT', { month: 'long' }).format(new Date(2024, i, 1)),
   }));
-  const OFFICES = (Object.keys(OFFICE_LABELS) as OfficeKind[]).filter((o) => o !== 'AUDITOR');
+  const OFFICES = OFFICE_KINDS.filter((o) => o !== 'AUDITOR');
   const MAJORITIES = Object.keys(MAJORITY_LABELS) as Majority[];
 
   function edit(type: MeetingType | null) {
-    form = new MeetingTypeForm(type);
+    form = new MeetingTypeForm(type, meetingTypes.rules);
     editing = type?.key ?? '';
     step = null;
     action.error = null;
@@ -194,7 +195,7 @@
         <p class="muted small">Admins dürfen jede Sitzung anlegen. Die Schriftführung führt jede Sitzung mit.</p>
         {#each OFFICES as office (office)}
           <label class="check"><input type="checkbox" checked={form.conveners.includes(office)}
-            onchange={(e) => (form.conveners = form.toggle(form.conveners, office, e.currentTarget.checked))} /> {OFFICE_LABELS[office]}</label>
+            onchange={(e) => (form.conveners = form.toggle(form.conveners, office, e.currentTarget.checked))} /> {boardSettings.label(office)}</label>
         {/each}
         {#if form.error('conveners')}<p class="danger small">{form.error('conveners')}</p>{/if}
       </fieldset>

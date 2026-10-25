@@ -20,6 +20,7 @@ import {
   type Team,
   type TeamRole,
 } from '../types';
+import type { BoardSettings } from '../../features/members/MembersApi';
 import { MockEventBus, type MockAudience } from './MockEventBus';
 import { MockServer, mockServer, type MockRequest } from './MockServer';
 import { MockTable } from './MockTable';
@@ -73,7 +74,18 @@ interface OfficeRow {
 }
 
 const OFFICES = ['CHAIR', 'VICE_CHAIR', 'TREASURER', 'SECRETARY', 'BOARD_MEMBER', 'AUDITOR'] as const;
-const SINGLE_OFFICES: readonly string[] = ['CHAIR', 'VICE_CHAIR', 'TREASURER', 'SECRETARY'];
+/** server: V53__office_settings.sql — the statutes' rules for the offices and the board. */
+const SEEDED_BOARD_SETTINGS: BoardSettings = {
+  offices: [
+    { office: 'CHAIR', label: 'Vorsitz', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3 },
+    { office: 'VICE_CHAIR', label: 'Stellvertretung', enabled: true, minHolders: 0, maxHolders: 1, termYears: 3 },
+    { office: 'TREASURER', label: 'Kassier:in', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3 },
+    { office: 'SECRETARY', label: 'Schriftführung', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3 },
+    { office: 'BOARD_MEMBER', label: 'Vorstandsmitglied', enabled: true, minHolders: 0, maxHolders: null, termYears: 3 },
+    { office: 'AUDITOR', label: 'Rechnungsprüfung', enabled: true, minHolders: 2, maxHolders: 2, termYears: 3 },
+  ],
+  minBoardSize: 3, oddBoardSize: true, cooptWeeks: 4, termWarningDays: 60, byElectionDays: 7,
+};
 const plusYears = (date: string, years: number): string => `${Number(date.slice(0, 4)) + years}${date.slice(4)}`;
 
 /** Members, teams and security state of the mock club, plus the server's authorization helpers. */
@@ -159,7 +171,8 @@ export class MockDirectory {
       if (stored && stored.roles.length) Object.assign(stored, { membershipType: seeded.membershipType, honorary: seeded.honorary, memberSince: seeded.memberSince });
     }
     for (const office of MockDirectory.seedOffices()) {
-      const taken = SINGLE_OFFICES.includes(office.office) && this.running().some((o) => o.office === office.office);
+      const max = SEEDED_BOARD_SETTINGS.offices.find((o) => o.office === office.office)!.maxHolders;
+      const taken = max != null && this.running().filter((o) => o.office === office.office).length >= max;
       if (!this.offices.data.some((o) => o.id === office.id) && !this.officesOf(office.memberId).includes(office.office) && !taken) this.offices.data.push(office);
     }
     for (const [memberId, teams] of Object.entries(MockDirectory.seedMemberships())) this.memberships.data[memberId] ??= teams;
@@ -220,6 +233,9 @@ export class MockDirectory {
   readonly security = new MockTable<Record<string, PinState>>('security', () => ({}));
 
   /** server: members_club_pin (one row; null until admin or board set it) */
+  /** server: members_office_setting, members_board_setting */
+  readonly boardSettings = new MockTable<BoardSettings>('board-settings', () => structuredClone(SEEDED_BOARD_SETTINGS));
+
   readonly clubPin = new MockTable<{ pin: string | null; changedAt: string | null }>('club-pin', () => ({
     pin: MockDirectory.PIN,
     changedAt: new Date().toISOString(),
@@ -537,16 +553,48 @@ export class MockDirectory {
     const running = this.running();
     const people = new Set(running.filter((o) => o.office !== 'AUDITOR').map((o) => o.memberId));
     const warnings: string[] = [];
-    if (people.size < 3) warnings.push('board.too-small');
-    else if (people.size % 2 === 0) warnings.push('board.even');
-    for (const kind of ['CHAIR', 'TREASURER', 'SECRETARY']) {
-      if (!running.some((o) => o.office === kind)) warnings.push(`board.${kind.toLowerCase()}-missing`);
+    const settings = this.boardSettings.data;
+    if (people.size < settings.minBoardSize) warnings.push('board.too-small');
+    else if (settings.oddBoardSize && people.size % 2 === 0) warnings.push('board.even');
+    for (const s of settings.offices) {
+      if (s.enabled && running.filter((o) => o.office === s.office).length < s.minHolders) {
+        warnings.push(s.office === 'AUDITOR' ? 'board.auditors-missing' : `board.${s.office.toLowerCase().replace('_', '-')}-missing`);
+      }
     }
-    if (running.filter((o) => o.office === 'AUDITOR').length < 2) warnings.push('board.auditors-missing');
     const offices = running
       .map((o) => ({ ...o, name: this.displayName(o.memberId) }))
       .sort((a, b) => OFFICES.indexOf(a.office) - OFFICES.indexOf(b.office) || a.startsOn.localeCompare(b.startsOn));
     return { offices, warnings };
+  }
+
+  /** server: MembershipHandlers.saveSettings and BoardRules.validate. */
+  saveBoardSettings(viewer: Member, body: Record<string, any>): BoardSettings {
+    this.requirePrivileged(viewer, ADMIN_BOARD);
+    const list: Record<string, any>[] = Array.isArray(body.offices) ? body.offices : [];
+    if (list.length !== OFFICES.length || new Set(list.map((o) => o.office)).size !== OFFICES.length || list.some((o) => !OFFICES.includes(o.office))) {
+      fail(400, 'board-settings.offices-invalid');
+    }
+    const int = (v: unknown, min: number, max: number) => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
+    const offices = OFFICES.map((kind) => {
+      const o = list.find((x) => x.office === kind)!;
+      const label = typeof o.label === 'string' ? o.label.trim() : '';
+      if (!label || label.length > 40) fail(400, 'board-settings.label-invalid');
+      const max = o.maxHolders ?? null;
+      if (!int(o.minHolders, 0, 20) || (max != null && (!int(max, Math.max(1, o.minHolders), 20))) || (!o.enabled && o.minHolders > 0)) {
+        fail(400, 'board-settings.holders-invalid');
+      }
+      if (!int(o.termYears, 1, 10)) fail(400, 'board-settings.term-invalid');
+      return { office: kind, label, enabled: !!o.enabled, minHolders: o.minHolders, maxHolders: max, termYears: o.termYears };
+    });
+    if (!offices[0].enabled) fail(400, 'board-settings.chair-required');
+    if (!int(body.minBoardSize, 1, 20) || !int(body.cooptWeeks, 0, 52) || !int(body.termWarningDays, 1, 365) || !int(body.byElectionDays, 1, 365)) {
+      fail(400, 'board-settings.board-invalid');
+    }
+    Object.assign(this.boardSettings.data, { offices, minBoardSize: body.minBoardSize, oddBoardSize: !!body.oddBoardSize, cooptWeeks: body.cooptWeeks,
+      termWarningDays: body.termWarningDays, byElectionDays: body.byElectionDays });
+    this.boardSettings.save();
+    mockServer.events.publish({ type: 'members.board-settings-changed', data: {} });
+    return this.boardSettings.data;
   }
 
   assignOffice(viewer: Member, body: Record<string, any>): OfficeRow & { name: string } {
@@ -554,13 +602,14 @@ export class MockDirectory {
     const office = body.office as OfficeRow['office'];
     if (!OFFICES.includes(office) || typeof body.startsOn !== 'string') return fail(400, 'request.invalid');
     if (body.startsOn > this.clock.today()) fail(400, 'office.start-in-future');
-    const termEndsOn = typeof body.termEndsOn === 'string' && body.termEndsOn ? body.termEndsOn : plusYears(body.startsOn, 3);
-    if (termEndsOn <= body.startsOn || termEndsOn > plusYears(body.startsOn, 3)) fail(400, 'office.term-invalid');
+    const setting = this.boardSettings.data.offices.find((o) => o.office === office)!;
+    const termEndsOn = typeof body.termEndsOn === 'string' && body.termEndsOn ? body.termEndsOn : plusYears(body.startsOn, setting.termYears);
+    if (termEndsOn <= body.startsOn || termEndsOn > plusYears(body.startsOn, setting.termYears)) fail(400, 'office.term-invalid');
     const holder = this.members.data.find((m) => m.id === body.memberId && m.active) ?? fail(404, 'member.not-found');
     if (!canVote(holder)) fail(409, 'office.not-eligible');
     const running = this.running();
-    if (SINGLE_OFFICES.includes(office) && running.some((o) => o.office === office)) fail(409, 'office.taken');
-    if (office === 'AUDITOR' && running.filter((o) => o.office === 'AUDITOR').length >= 2) fail(409, 'office.taken');
+    if (!setting.enabled) fail(409, 'office.disabled');
+    if (setting.maxHolders != null && running.filter((o) => o.office === office).length >= setting.maxHolders) fail(409, 'office.taken');
     const held = running.filter((o) => o.memberId === holder.id).map((o) => o.office);
     if (held.includes(office)) fail(409, 'office.already-held');
     if (held.length && (held.includes('AUDITOR') || office === 'AUDITOR')) fail(409, 'office.auditor-in-board');
@@ -934,6 +983,8 @@ mockServer
     return directory.updateProfile(viewer, req.params.id, req.body ?? {});
   })
   .on('GET', '/api/v1/me/security', (req) => directory.securityStatus(directory.actor(req, true)))
+  .on('GET', '/api/v1/board/settings', (req) => (directory.actor(req), directory.boardSettings.data))
+  .on('PUT', '/api/v1/board/settings', (req) => directory.saveBoardSettings(directory.actor(req), req.body ?? {}))
   .on('PUT', '/api/v1/club/pin', (req) => directory.setClubPin(directory.actor(req), req.body?.pin))
   .on('POST', '/api/v1/me/step-up', (req) => directory.stepUp(directory.actor(req), req.body?.pin))
   .on('GET', '/api/v1/teams', (req) => {

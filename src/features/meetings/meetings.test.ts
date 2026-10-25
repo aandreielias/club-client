@@ -214,7 +214,7 @@ describe('follow-up tasks', () => {
 
 describe('meeting types', () => {
   it('edit a seeded type and refuse rules that contradict each other', () => {
-    const form = new MeetingTypeForm(type('EXTRA_BOARD'));
+    const form = new MeetingTypeForm(type('EXTRA_BOARD'), meetings.rules.data);
     expect([form.notice, form.noticeUnit, form.needsReason]).toEqual([2, 'days', true]);
     form.actions = [...form.actions, 'STATUTES_CHANGE'];
     expect(Object.keys(form.errors)).toEqual(['majorities']);

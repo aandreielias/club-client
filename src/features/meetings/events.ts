@@ -20,3 +20,6 @@ export interface ResolutionChanged {
 
 /** The club changed its meeting types; reload them. */
 export const MEETING_TYPES_CHANGED = liveEvent<Record<string, never>>('meetings.meeting-types-changed');
+
+/** The club changed its resolution rules; reload them. */
+export const ACTION_RULES_CHANGED = liveEvent<Record<string, never>>('meetings.action-rules-changed');

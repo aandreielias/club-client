@@ -1,4 +1,5 @@
 import { settings } from '../../settings';
+import type { BoardSettings } from './MembersApi';
 import type { MessageCatalog } from '../../lib/errors/ErrorMessages';
 
 const limits = settings.members;
@@ -34,14 +35,21 @@ export const MEMBER_MESSAGES: MessageCatalog = {
   'office.start-in-future': 'Funktionen erst ab ihrem Beginn eintragen.',
   'office.already-ended': 'Diese Funktion ist schon beendet.',
   'office.not-found': 'Diese Funktion gibt es nicht mehr.',
+  'office.disabled': 'Der Verein nutzt diese Funktion nicht (Einstellungen › Funktionen).',
+  'board-settings.offices-invalid': 'Jede Funktion genau einmal angeben.',
+  'board-settings.label-invalid': 'Jede Funktion braucht eine Bezeichnung mit 1 bis 40 Zeichen.',
+  'board-settings.holders-invalid': 'Anzahl zwischen 0 und 20, höchstens nicht unter mindestens; ungenutzte Funktionen brauchen niemanden.',
+  'board-settings.term-invalid': 'Eine Funktionsperiode dauert 1 bis 10 Jahre.',
+  'board-settings.chair-required': 'Den Vorsitz braucht jeder Verein.',
+  'board-settings.board-invalid': 'Vorstand 1 bis 20 Personen, Kooptieren 0 bis 52 Wochen, Fristen 1 bis 365 Tage.',
 };
 
-/** Statute gaps on the board page (server: BoardRules.warnings). */
-export const BOARD_WARNINGS: Readonly<Record<string, string>> = {
-  'board.too-small': 'Der Vorstand braucht mindestens drei Personen (§ 9 Abs. 1).',
-  'board.even': 'Der Vorstand braucht eine ungerade Anzahl Personen (§ 9 Abs. 1).',
-  'board.chair-missing': 'Der Vorsitz ist nicht besetzt.',
-  'board.treasurer-missing': 'Die Kassenführung ist nicht besetzt.',
-  'board.secretary-missing': 'Die Schriftführung ist nicht besetzt.',
-  'board.auditors-missing': 'Es braucht zwei Rechnungsprüfer:innen (§ 11).',
-};
+/** Gaps on the board page (server: BoardRules.warnings), worded with the club's office settings. */
+export function boardWarning(code: string, settings: BoardSettings | null): string {
+  if (code === 'board.too-small') return `Der Vorstand braucht mindestens ${settings?.minBoardSize ?? 3} Personen.`;
+  if (code === 'board.even') return 'Der Vorstand braucht eine ungerade Anzahl Personen.';
+  const kind = code === 'board.auditors-missing' ? 'AUDITOR' : code.replace(/^board\.|-missing$/g, '').replace('-', '_').toUpperCase();
+  const office = settings?.offices.find((o) => o.office === kind);
+  if (!office) return code;
+  return office.minHolders > 1 ? `${office.label}: es braucht ${office.minHolders} Personen.` : `${office.label} ist nicht besetzt.`;
+}

@@ -16,9 +16,9 @@
   import Select from '../../ui/Select.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { BoardModel } from './BoardModel.svelte';
-  import { BOARD_WARNINGS } from './messages';
-  import { OFFICE_LABELS, type Office, type OfficeKind } from './MembersApi';
-  import { memberPolicy as policy, membersApi } from './services';
+  import { boardWarning } from './messages';
+  import type { Office, OfficeKind } from './MembersApi';
+  import { boardSettings, memberPolicy as policy, membersApi } from './services';
 
   /** Vorstand (statutes §9) and Rechnungsprüfer (§11): who holds which function, until when. */
   const model = new BoardModel(membersApi);
@@ -27,7 +27,7 @@
   const today = session.clock.today();
   const candidates = new Resource(() => directory.allMembers());
   if (policy.canManageOffices()) void candidates.load();
-  const officeOptions = (Object.keys(OFFICE_LABELS) as OfficeKind[]).map((kind) => ({ value: kind, label: OFFICE_LABELS[kind] }));
+  const officeOptions = $derived(boardSettings.enabled.map((kind) => ({ value: kind, label: boardSettings.label(kind) })));
 
   let memberId = $state('');
   let office = $state<OfficeKind | ''>('');
@@ -45,7 +45,7 @@
     if (!memberId || !office) return;
     const assigned = await model.assign({ memberId, office, startsOn, termEndsOn: termEndsOn || null, coopted });
     if (!assigned) return;
-    bus.publish(TOAST, { text: `${OFFICE_LABELS[assigned.office]}: ${assigned.name}.` });
+    bus.publish(TOAST, { text: `${boardSettings.label(assigned.office)}: ${assigned.name}.` });
     if (assigned.memberId === session.member.id) await session.loadMe();
     memberId = '';
     office = '';
@@ -56,7 +56,7 @@
   async function end(o: Office) {
     const ok = await bus.request(CONFIRM, {
       title: 'Funktion beenden',
-      message: `${o.name} ist ab heute nicht mehr ${OFFICE_LABELS[o.office]}.${o.office === 'AUDITOR' ? '' : ' Die Vorstandsrolle endet mit der letzten Funktion im Vorstand.'}`,
+      message: `${o.name} ist ab heute nicht mehr ${boardSettings.label(o.office)}.${o.office === 'AUDITOR' ? '' : ' Die Vorstandsrolle endet mit der letzten Funktion im Vorstand.'}`,
       confirmLabel: 'Beenden',
       danger: true,
     });
@@ -70,7 +70,7 @@
   <ul class="offices">
     {#each offices as o (o.id)}
       <li>
-        <span class="function">{OFFICE_LABELS[o.office]}</span>
+        <span class="function">{boardSettings.label(o.office)}</span>
         <span><RecordLink kind="member" id={o.memberId} allowed={permissions.canSeeMember(o.memberId)}>{o.name}</RecordLink>{#if o.coopted} <Tag tone="orange">Kooptiert</Tag>{/if}</span>
         <span class="muted small">{session.format.date(o.startsOn)} bis {session.format.date(o.termEndsOn)}</span>
         {#if policy.canManageOffices()}
@@ -88,7 +88,7 @@
     {#snippet children(board)}
       {#if board.warnings.length}
         <ul class="warnings">
-          {#each board.warnings as code (code)}<li class:danger={SIZE_WARNINGS.includes(code)}><Icon name="alert" small /> {BOARD_WARNINGS[code] ?? code}</li>{/each}
+          {#each board.warnings as code (code)}<li class:danger={SIZE_WARNINGS.includes(code)}><Icon name="alert" small /> {boardWarning(code, boardSettings.value)}</li>{/each}
         </ul>
       {/if}
       {@render list(board.offices.filter((o) => o.office !== 'AUDITOR'), 'Noch keine Funktionen eingetragen.')}

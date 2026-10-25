@@ -24,6 +24,9 @@ export interface Membership {
 /** Vorstand functions (statutes §9) and Rechnungsprüfer (§11, not part of the board). */
 export type OfficeKind = 'CHAIR' | 'VICE_CHAIR' | 'TREASURER' | 'SECRETARY' | 'BOARD_MEMBER' | 'AUDITOR';
 
+export const OFFICE_KINDS: readonly OfficeKind[] = ['CHAIR', 'VICE_CHAIR', 'TREASURER', 'SECRETARY', 'BOARD_MEMBER', 'AUDITOR'];
+
+/** The statutes' names; the club's own come with the board settings (`boardSettings.label`). */
 export const OFFICE_LABELS: Readonly<Record<OfficeKind, string>> = {
   CHAIR: 'Vorsitz',
   VICE_CHAIR: 'Stellvertretung',
@@ -49,9 +52,31 @@ export interface NewOffice {
   memberId: string;
   office: OfficeKind;
   startsOn: string;
-  /** null = three years after the start. */
+  /** null = the full term of the office (club setting). */
   termEndsOn: string | null;
   coopted: boolean;
+}
+
+/** server: MembersApi.OfficeSetting — `maxHolders` null: any number; a disabled office is not assigned any more. */
+export interface OfficeSetting {
+  office: OfficeKind;
+  label: string;
+  enabled: boolean;
+  /** Fewer is a warning on the board page. */
+  minHolders: number;
+  maxHolders: number | null;
+  termYears: number;
+}
+
+/** server: MembersApi.BoardSettings — every office once, plus the board-wide rules (§9 Abs 1, 6). */
+export interface BoardSettings {
+  offices: OfficeSetting[];
+  minBoardSize: number;
+  oddBoardSize: boolean;
+  /** Weeks to co-opt after an early resignation; 0 = by-election at once. */
+  cooptWeeks: number;
+  termWarningDays: number;
+  byElectionDays: number;
 }
 
 /** Running offices; warnings are codes like 'board.too-small' (texts in BOARD_WARNINGS). */
@@ -135,6 +160,15 @@ export class MembersApi {
 
   setMembership(id: string, membership: Membership): Promise<Member> {
     return this.api.put<Member>(`${this.path(id)}/membership`, membership);
+  }
+
+  boardSettings(): Promise<BoardSettings> {
+    return this.api.get<BoardSettings>('/api/v1/board/settings');
+  }
+
+  /** Admin/board with step-up; running offices keep their terms. */
+  saveBoardSettings(settings: BoardSettings): Promise<BoardSettings> {
+    return this.api.put<BoardSettings>('/api/v1/board/settings', settings);
   }
 
   board(): Promise<Board> {

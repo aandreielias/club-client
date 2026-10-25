@@ -189,8 +189,37 @@ export function actions(type: MeetingType | null): ResolutionAction[] {
 
 export const actionNeedsMember = (a: ResolutionAction): boolean => ['HONORARY_GRANT', 'HONORARY_REVOKE', 'ELECTION', 'EXCLUSION'].includes(a);
 
-/** server: FollowUpPlanner.check — actions that fix the majority. */
-export const IMPLIED_MAJORITY: Partial<Record<ResolutionAction, Majority>> = { STATUTES_CHANGE: 'TWO_THIRDS', DISSOLUTION: 'THREE_QUARTERS' };
+/** server: MeetingsApi.FollowUpRule — `title` fills {beschluss}, {mitglied}, {funktion}; `dueDays` null: no due date. */
+export interface FollowUpRule {
+  /** null until saved. */
+  id: string | null;
+  kind: Exclude<FollowUpKind, 'MANUAL'>;
+  title: string;
+  dueDays: number | null;
+}
+
+/** server: MeetingsApi.ActionRule — `majority`: fixed for the decision (statute change, dissolution), null: the resolution picks. */
+export interface ActionRule {
+  action: ResolutionAction;
+  majority: Majority | null;
+  followUps: FollowUpRule[];
+}
+
+/** Follow-up kinds that finish themselves, each only after its own decision (server: FollowUpPlanner.OWN_ACTION). */
+export const OWN_ACTION: Partial<Record<FollowUpKind, ResolutionAction>> = {
+  ENTER_HONORARY: 'HONORARY_GRANT', REVOKE_HONORARY: 'HONORARY_REVOKE', ENTER_OFFICE: 'ELECTION', NOTIFY_EXCLUSION: 'EXCLUSION',
+  CONVENE_ASSEMBLY: 'CONVENE_ASSEMBLY',
+};
+
+export const FOLLOW_UP_KIND_LABELS: Readonly<Record<Exclude<FollowUpKind, 'MANUAL'>, string>> = {
+  IMPLEMENT: 'Umsetzen',
+  ENTER_HONORARY: 'Ehrenmitgliedschaft eintragen (erledigt sich selbst)',
+  REVOKE_HONORARY: 'Ehrenmitgliedschaft aberkennen (erledigt sich selbst)',
+  ENTER_OFFICE: 'Funktion eintragen (erledigt sich selbst)',
+  REPORT_AUTHORITY: 'Vereinsbehörde informieren',
+  NOTIFY_EXCLUSION: 'Ausschluss mitteilen',
+  CONVENE_ASSEMBLY: 'Mitgliederversammlung einberufen (erledigt sich selbst)',
+};
 
 export type FollowUpKind = 'IMPLEMENT' | 'ENTER_HONORARY' | 'REVOKE_HONORARY' | 'ENTER_OFFICE' | 'REPORT_AUTHORITY' | 'NOTIFY_EXCLUSION' | 'CONVENE_ASSEMBLY' | 'MANUAL';
 

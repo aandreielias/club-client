@@ -8,7 +8,7 @@
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
   import Tag from '../../ui/Tag.svelte';
-  import { OFFICE_LABELS } from '../members/MembersApi';
+  import { boardSettings } from '../members/services';
   import FollowUpList from './FollowUpList.svelte';
   import LinkList from './LinkList.svelte';
   import MemberChips from './MemberChips.svelte';
@@ -84,7 +84,7 @@
   </header>
   {#if r.text}<p class="text">{r.text}</p>{/if}
   {#if r.action !== 'GENERAL'}
-    <p class="small">{ACTION_LABELS[r.action]}{#if r.actionMember}: {r.actionMember.name}{/if}{#if r.actionOffice} als {OFFICE_LABELS[r.actionOffice]}{/if}</p>
+    <p class="small">{ACTION_LABELS[r.action]}{#if r.actionMember}: {r.actionMember.name}{/if}{#if r.actionOffice} als {boardSettings.label(r.actionOffice)}{/if}</p>
   {/if}
   {#if r.canManage && r.status !== 'CLOSED'}
     <MemberChips value={r.assignees.map((a) => a.memberId)} candidates={r.assignable} known={r.assignees} label="Verantwortlich für die Umsetzung"

@@ -10,7 +10,7 @@ import { ADMIN_BOARD, canVote, type Member } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
 import { tasks } from '../tasks/mock';
 import {
-  actionNeedsMember, actions, CIRCULAR_MIN_MS, IMPLIED_MAJORITY, isAssembly, isDayOfYear, isQuorate, latestInvite, majorities, mayConvene, type Choice,
+  actionNeedsMember, actions, CIRCULAR_MIN_MS, isAssembly, OWN_ACTION, type ActionRule, isDayOfYear, isQuorate, latestInvite, majorities, mayConvene, type Choice,
   type FollowUp, type FollowUpKind, type Majority, type Meeting, type MeetingKind, type MeetingSummary, type MeetingType, type PresenceMode,
   type MeetingStep, type Quorum, type Resolution, type ResolutionAction, type StepAnchor, type StepAudience,
 } from './model';
@@ -81,6 +81,24 @@ function checkedSteps(value: unknown): MeetingStep[] {
   });
 }
 
+/** server: V54__resolution_rules.sql */
+function seededRules(): ActionRule[] {
+  const f = (kind: ActionRule['followUps'][number]['kind'], title: string, dueDays: number | null) => ({ id: crypto.randomUUID(), kind, title, dueDays });
+  return [
+    { action: 'GENERAL', majority: null, followUps: [f('IMPLEMENT', 'Beschluss umsetzen: {beschluss}', null)] },
+    { action: 'HONORARY_GRANT', majority: null, followUps: [f('ENTER_HONORARY', 'Ehrenmitgliedschaft eintragen: {mitglied}', 7)] },
+    { action: 'HONORARY_REVOKE', majority: null, followUps: [f('REVOKE_HONORARY', 'Ehrenmitgliedschaft aberkennen: {mitglied}', 7)] },
+    { action: 'ELECTION', majority: null, followUps: [f('ENTER_OFFICE', 'Funktion eintragen: {funktion} – {mitglied}', 7),
+      f('REPORT_AUTHORITY', 'Vereinsbehörde informieren: {funktion} – {mitglied}', 28)] },
+    { action: 'STATUTES_CHANGE', majority: 'TWO_THIRDS', followUps: [f('REPORT_AUTHORITY', 'Statutenänderung der Vereinsbehörde anzeigen: {beschluss}', 28)] },
+    { action: 'DISSOLUTION', majority: 'THREE_QUARTERS', followUps: [f('REPORT_AUTHORITY', 'Auflösung der Vereinsbehörde anzeigen (§ 14 Abs. 2)', 28)] },
+    { action: 'EXCLUSION', majority: null, followUps: [f('NOTIFY_EXCLUSION', 'Ausschluss schriftlich mit Gründen mitteilen: {mitglied}', 7)] },
+    { action: 'CONVENE_ASSEMBLY', majority: null, followUps: [f('CONVENE_ASSEMBLY', 'Außerordentliche Mitgliederversammlung einberufen', 7)] },
+  ];
+}
+const FOLLOW_UP_KINDS = ['IMPLEMENT', 'ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'REPORT_AUTHORITY', 'NOTIFY_EXCLUSION', 'CONVENE_ASSEMBLY'] as const;
+const ABOUT_MEMBER: readonly FollowUpKind[] = ['ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'NOTIFY_EXCLUSION'];
+
 const QUORUMS: readonly Quorum[] = ['AT_LEAST_HALF', 'MORE_THAN_HALF', 'AT_LEAST_THREE_QUARTERS'];
 const OFFICES: readonly OfficeKind[] = [...BOARD_OFFICES, 'AUDITOR'];
 const ACTIONS: readonly ResolutionAction[] = ['GENERAL', 'HONORARY_GRANT', 'HONORARY_REVOKE', 'ELECTION', 'STATUTES_CHANGE', 'DISSOLUTION', 'EXCLUSION',
@@ -98,8 +116,6 @@ type StoredResolution = Pick<Resolution, 'id' | 'meetingId' | 'title' | 'text' |
   links?: LinkedRef[] };
 
 const DAY_MS = 86_400_000;
-const OFFICE_NAMES: Readonly<Record<OfficeKind, string>> = { CHAIR: 'Vorsitz', VICE_CHAIR: 'Stellvertretung', TREASURER: 'Kassier:in',
-  SECRETARY: 'Schriftführung', BOARD_MEMBER: 'Vorstandsmitglied', AUDITOR: 'Rechnungsprüfung' };
 const AUTOMATIC: readonly FollowUpKind[] = ['ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'CONVENE_ASSEMBLY'];
 
 const text = (value: unknown, max: number, code: string): string | null => {
@@ -110,6 +126,7 @@ const text = (value: unknown, max: number, code: string): string | null => {
 };
 
 export class MockMeetings {
+  readonly rules = new MockTable<ActionRule[]>('resolution-rules', seededRules);
   readonly types = new MockTable<StoredType[]>('meeting-types', () => structuredClone([...SEEDED_TYPES]));
   readonly meetings = new MockTable<StoredMeeting[]>('meetings', () => MockMeetings.seed());
   readonly resolutions = new MockTable<StoredResolution[]>('resolutions', () => MockMeetings.seedResolutions());
@@ -153,30 +170,54 @@ export class MockMeetings {
       dueAt: f.dueAt, taskId: refs[f.id]?.taskId ?? null, taskStatus: refs[f.id]?.status ?? null }));
   }
 
-  /** server: FollowUpPlanner.plan — the tasks a passed resolution brings. */
+  /** server: FollowUpPlanner.plan — the tasks a passed resolution brings, from the club's rules. */
   private planFollowUps(r: StoredResolution, meeting: StoredMeeting | null): void {
     const action = r.action ?? 'GENERAL';
     const name = r.actionMemberId ? this.name(r.actionMemberId) : '';
-    const office = r.actionOffice ? OFFICE_NAMES[r.actionOffice] : '';
-    const soon = new Date(Date.now() + 7 * DAY_MS).toISOString();
-    const authority = new Date(Date.now() + 28 * DAY_MS).toISOString();
-    const plan: [FollowUpKind, string, string | null, boolean][] = ({
-      GENERAL: [['IMPLEMENT', `Beschluss umsetzen: ${r.title}`, null, false]],
-      HONORARY_GRANT: [['ENTER_HONORARY', `Ehrenmitgliedschaft eintragen: ${name}`, soon, true]],
-      HONORARY_REVOKE: [['REVOKE_HONORARY', `Ehrenmitgliedschaft aberkennen: ${name}`, soon, true]],
-      ELECTION: [['ENTER_OFFICE', `Funktion eintragen: ${office} – ${name}`, soon, true],
-        ...(r.actionOffice === 'AUDITOR' ? [] : [['REPORT_AUTHORITY', `Vereinsbehörde informieren: ${office} – ${name}`, authority, false]])],
-      STATUTES_CHANGE: [['REPORT_AUTHORITY', `Statutenänderung der Vereinsbehörde anzeigen: ${r.title}`, authority, false]],
-      DISSOLUTION: [['REPORT_AUTHORITY', 'Auflösung der Vereinsbehörde anzeigen (§ 14 Abs. 2)', authority, false]],
-      EXCLUSION: [['NOTIFY_EXCLUSION', `Ausschluss schriftlich mit Gründen mitteilen: ${name}`, soon, true]],
-      CONVENE_ASSEMBLY: [['CONVENE_ASSEMBLY', 'Außerordentliche Mitgliederversammlung einberufen', soon, false]],
-    } as Record<ResolutionAction, [FollowUpKind, string, string | null, boolean][]>)[action];
+    const office = r.actionOffice ? this.people.boardSettings.data.offices.find((o) => o.office === r.actionOffice)!.label : '';
     const context = `${r.text ? `${r.text}\n\n` : ''}Beschlossen ${meeting ? `in „${meeting.title}“` : 'im Umlaufverfahren'}: „${r.title}“.`;
-    for (const [kind, title, dueAt, aboutMember] of plan) {
-      this.createFollowUp({ id: crypto.randomUUID(), meetingId: null, resolutionId: r.id, kind, memberId: aboutMember ? r.actionMemberId ?? null : null,
-        office: kind === 'ENTER_OFFICE' ? r.actionOffice ?? null : null, title: title.slice(0, 150), dueAt, doneAt: null }, context,
+    for (const rule of this.rules.data.find((x) => x.action === action)!.followUps) {
+      if (rule.kind === 'REPORT_AUTHORITY' && r.actionOffice === 'AUDITOR') continue; // auditors are no representatives
+      const about = ABOUT_MEMBER.includes(rule.kind);
+      const title = rule.title.replaceAll('{beschluss}', r.title).replaceAll('{mitglied}', name).replaceAll('{funktion}', office);
+      this.createFollowUp({ id: crypto.randomUUID(), meetingId: null, resolutionId: r.id, kind: rule.kind, memberId: about ? r.actionMemberId ?? null : null,
+        office: about ? r.actionOffice ?? null : null, title: title.slice(0, 150),
+        dueAt: rule.dueDays == null ? null : new Date(Date.now() + rule.dueDays * DAY_MS).toISOString(), doneAt: null }, context,
         r.assigneeIds?.length ? r.assigneeIds : meeting ? this.assignable(r, meeting, true) : [], null);
     }
+  }
+
+  // --- resolution rules (server: MeetingTypeHandlers.saveRules, FollowUpPlanner.validate) ---
+
+  saveRules(viewer: Member, body: Record<string, any>): { items: ActionRule[] } {
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    const items: Record<string, any>[] = Array.isArray(body.items) ? body.items : [];
+    if (items.length !== ACTIONS.length || new Set(items.map((i) => i.action)).size !== ACTIONS.length || items.some((i) => !ACTIONS.includes(i.action))) {
+      fail(400, 'action-rules.invalid');
+    }
+    const rules: ActionRule[] = ACTIONS.map((action) => {
+      const item = items.find((i) => i.action === action)!;
+      const majority = item.majority ?? null;
+      if (majority && !ALL_MAJORITIES.includes(majority)) fail(400, 'action-rules.invalid');
+      const followUps: Record<string, any>[] = Array.isArray(item.followUps) ? item.followUps : fail(400, 'action-rules.invalid');
+      if (followUps.length > 10) fail(400, 'action-rules.too-many');
+      return { action, majority, followUps: followUps.map((f) => {
+        if (!FOLLOW_UP_KINDS.includes(f.kind) || (OWN_ACTION[f.kind as FollowUpKind] && OWN_ACTION[f.kind as FollowUpKind] !== action)) fail(400, 'action-rules.kind-invalid');
+        const title = typeof f.title === 'string' ? f.title.trim() : '';
+        if (!title || title.length > 150) fail(400, 'action-rules.title-invalid');
+        if (f.dueDays != null && (!Number.isInteger(f.dueDays) || f.dueDays < 0 || f.dueDays > 365)) fail(400, 'action-rules.due-invalid');
+        return { id: f.id ?? crypto.randomUUID(), kind: f.kind, title, dueDays: f.dueDays ?? null };
+      }) };
+    });
+    for (const rule of rules) {
+      if (rule.majority && this.types.data.some((t) => t.actions.includes(rule.action) && !t.majorities.includes(rule.majority!))) {
+        fail(400, 'meeting-type.majority-for-action');
+      }
+    }
+    this.rules.data.splice(0, this.rules.data.length, ...rules);
+    this.rules.save();
+    mockServer.events.publish({ type: 'meetings.action-rules-changed', data: {} });
+    return { items: this.rules.data };
   }
 
   private name(id: string): string {
@@ -513,7 +554,7 @@ export class MockMeetings {
     if (actionNeedsMember(action) !== !!body.actionMemberId) fail(400, 'resolution.action-member-missing');
     if ((action === 'ELECTION') !== !!body.actionOffice) fail(400, 'resolution.action-office-missing');
     const requested = (meeting ? body.majority ?? null : 'SIMPLE') as Majority | null;
-    const implied = IMPLIED_MAJORITY[action] ?? requested;
+    const implied = this.rules.data.find((x) => x.action === action)?.majority ?? requested;
     if (requested && implied !== requested) fail(400, 'resolution.majority-mismatch');
     const majority = implied && majorities(type).includes(implied) ? implied : fail(400, 'resolution.majority-invalid');
     const assigneeIds = this.checkedAssignees(body.assigneeIds, this.assignable(null, meeting, action !== 'GENERAL'));
@@ -737,9 +778,7 @@ export class MockMeetings {
     if (!majorities.length) fail(400, 'meeting-type.majorities-missing');
     if (!conveners.length || conveners.includes('AUDITOR')) fail(400, 'meeting-type.conveners-invalid');
     if (!actions.includes('GENERAL')) fail(400, 'meeting-type.actions-invalid');
-    if ((actions.includes('STATUTES_CHANGE') && !majorities.includes('TWO_THIRDS')) || (actions.includes('DISSOLUTION') && !majorities.includes('THREE_QUARTERS'))) {
-      fail(400, 'meeting-type.majority-for-action');
-    }
+    if (this.rules.data.some((r) => r.majority && actions.includes(r.action) && !majorities.includes(r.majority))) fail(400, 'meeting-type.majority-for-action');
     const dueBy = body.dueBy || null;
     if (dueBy && (!/^\d{2}-\d{2}$/.test(dueBy) || !isDayOfYear(Number(dueBy.slice(0, 2)), Number(dueBy.slice(3))))) fail(400, 'meeting-type.due-by-invalid');
     const type: StoredType = {
@@ -850,6 +889,8 @@ const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer
   .on('GET', '/api/v1/meetings', (req) => meetings.list(actor(req), req.query.get('from'), req.query.get('to')))
+  .on('GET', '/api/v1/meetings/resolution-rules', (req) => (actor(req), { items: meetings.rules.data }))
+  .on('PUT', '/api/v1/meetings/resolution-rules', (req) => meetings.saveRules(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/meetings/types', (req) => (actor(req), meetings.listTypes()))
   .on('POST', '/api/v1/meetings/types', (req) => meetings.saveType(actor(req), null, req.body ?? {}))
   .on('PUT', '/api/v1/meetings/types/:key', (req) => meetings.saveType(actor(req), req.params.key, req.body ?? {}))

@@ -11,10 +11,11 @@
   import { RESOLUTION_CHANGED } from './events';
   import { directory } from '../../lib/container';
   import { canVote } from '../../lib/types';
-  import { OFFICE_LABELS, type OfficeKind } from '../members/MembersApi';
+  import type { OfficeKind } from '../members/MembersApi';
+  import { boardSettings } from '../members/services';
   import MemberChips from './MemberChips.svelte';
   import {
-    ACTION_LABELS, actionNeedsMember, actions, IMPLIED_MAJORITY, MAJORITY_LABELS, majorities, type Majority, type Meeting, type Resolution,
+    ACTION_LABELS, actionNeedsMember, actions, MAJORITY_LABELS, majorities, type Majority, type Meeting, type Resolution,
     type ResolutionAction,
   } from './model';
   import ResolutionCard from './ResolutionCard.svelte';
@@ -41,13 +42,13 @@
   let actionMemberId = $state('');
   let actionOffice = $state<OfficeKind | ''>('');
   let assignees = $state<string[]>([]);
-  const officeOptions = (Object.keys(OFFICE_LABELS) as OfficeKind[]).map((o) => ({ value: o, label: OFFICE_LABELS[o] }));
+  const officeOptions = boardSettings.enabled.map((o) => ({ value: o, label: boardSettings.label(o) }));
   const members = new Resource(() => directory.allMembers());
   void members.load();
   // Elections need someone who may be elected (§8 Abs 1); the other actions any active member.
   const memberOptions = $derived((members.value ?? []).filter((m) => (action === 'ELECTION' ? canVote(m) : m.active))
     .map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` })));
-  const implied = $derived(IMPLIED_MAJORITY[action]);
+  const implied = $derived(meetingTypes.fixedMajority(action));
   // server: ResolutionHandlers.assignable — those present; admins and board members only when its tasks need their rights.
   const candidates = $derived(meeting.assignable.filter((p) => action === 'GENERAL' || p.manager));
   $effect(() => {

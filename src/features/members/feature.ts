@@ -7,6 +7,7 @@ import MemberInviteView from './MemberInviteView.svelte';
 import MemberPage from './MemberPage.svelte';
 import MemberView from './MemberView.svelte';
 import { MEMBER_MESSAGES } from './messages';
+import { boardSettings } from './services';
 import MembersPage from './MembersPage.svelte';
 
 export const membersFeature: Feature = {
@@ -25,5 +26,6 @@ export const membersFeature: Feature = {
     'member-new': { component: MemberInviteView, roles: ADMIN_BOARD },
   },
   messages: MEMBER_MESSAGES,
+  start: () => boardSettings.start(),
   home: { id: 'members', label: 'Mitglieder (braucht den Vereins-PIN)', component: MembersHome, roles: ADMIN_BOARD },
 };
