@@ -7,6 +7,9 @@ import MeetingCreateView from './MeetingCreateView.svelte';
 import MeetingPage from './MeetingPage.svelte';
 import MeetingsPage from './MeetingsPage.svelte';
 import MeetingsHome from './MeetingsHome.svelte';
+import MeetingTypeCreateView from './MeetingTypeCreateView.svelte';
+import MeetingTypePage from './MeetingTypePage.svelte';
+import MeetingTypeView from './MeetingTypeView.svelte';
 import DeadlinesHome from './DeadlinesHome.svelte';
 import MeetingView from './MeetingView.svelte';
 import CircularCreateView from './CircularCreateView.svelte';
@@ -23,12 +26,15 @@ export const meetingsFeature: Feature = {
     { path: '/deadlines', component: DeadlinesPage, nav: 'Fristen', icon: 'alert', roles: ADMIN_BOARD },
     { path: '/meetings/:id', component: MeetingPage },
     { path: '/resolutions/:id', component: ResolutionPage },
+    { path: '/meeting-types/:key', component: MeetingTypePage, roles: ADMIN_BOARD },
   ],
   windows: {
     meeting: { component: MeetingView, page: (id) => `/meetings/${encodeURIComponent(id)}` },
     'meeting-new': { component: MeetingCreateView, roles: ADMIN_BOARD },
     resolution: { component: ResolutionView, page: (id) => `/resolutions/${encodeURIComponent(id)}` },
     'resolution-new': { component: CircularCreateView, roles: ADMIN_BOARD },
+    'meeting-type': { component: MeetingTypeView, page: (key) => `/meeting-types/${encodeURIComponent(key)}`, roles: ADMIN_BOARD },
+    'meeting-type-new': { component: MeetingTypeCreateView, roles: ADMIN_BOARD },
   },
   calendar: {
     MEETING: (item) => {

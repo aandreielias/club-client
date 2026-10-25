@@ -1,10 +1,13 @@
 import CalendarHome from './CalendarHome.svelte';
-import { PRIVILEGED } from '../../lib/types';
+import { ADMIN_BOARD, PRIVILEGED } from '../../lib/types';
 import type { Feature } from '../Feature';
 import { appointmentTypes } from './services';
 import AppointmentCreateView from './AppointmentCreateView.svelte';
 import AppointmentPage from './AppointmentPage.svelte';
 import AppointmentView from './AppointmentView.svelte';
+import AppointmentTypeCreateView from './AppointmentTypeCreateView.svelte';
+import AppointmentTypePage from './AppointmentTypePage.svelte';
+import AppointmentTypeView from './AppointmentTypeView.svelte';
 import CalendarPage from './CalendarPage.svelte';
 import EventsPage from './EventsPage.svelte';
 import AbsencesPage from './AbsencesPage.svelte';
@@ -18,10 +21,13 @@ export const calendarFeature: Feature = {
     { path: '/events', component: EventsPage, nav: 'Events', icon: 'events' },
     { path: '/calendar/absences', component: AbsencesPage },
     { path: '/calendar/:id', component: AppointmentPage },
+    { path: '/appointment-types/:key', component: AppointmentTypePage, roles: ADMIN_BOARD },
   ],
   windows: {
     appointment: { component: AppointmentView, page: (id) => `/calendar/${encodeURIComponent(id)}` },
     'appointment-new': { component: AppointmentCreateView, roles: PRIVILEGED },
+    'appointment-type': { component: AppointmentTypeView, page: (key) => `/appointment-types/${encodeURIComponent(key)}`, roles: ADMIN_BOARD },
+    'appointment-type-new': { component: AppointmentTypeCreateView, roles: ADMIN_BOARD },
   },
   start: () => appointmentTypes.start(),
   calendar: {
