@@ -150,6 +150,17 @@ export class MockMeetings {
     });
   }
 
+  /** server: LegalReminders.assemblyDue — five years after the last general meeting, once less than half a year away; null otherwise. */
+  assemblyDue(today: Date = new Date()): string | null {
+    const held = this.meetings.data.filter((m) => m.status === 'CLOSED' && isAssembly(this.type(m.kind))).map((m) => m.startsAt).sort().at(-1);
+    if (!held) return null;
+    const due = new Date(held);
+    due.setFullYear(due.getFullYear() + 5);
+    const warnFrom = new Date(due);
+    warnFrom.setMonth(warnFrom.getMonth() - 6);
+    return today < warnFrom ? null : due.toISOString().slice(0, 10);
+  }
+
   private complete(match: (f: StoredFollowUp) => boolean): void {
     for (const f of this.followUps.data.filter((x) => !x.doneAt && match(x))) {
       f.doneAt = new Date().toISOString();

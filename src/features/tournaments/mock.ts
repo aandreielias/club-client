@@ -356,7 +356,7 @@ export class MockTournaments {
    */
   private static played(id: string, name: string, on: string, finished: boolean, groupNames: string[][]) {
     const teams: TournamentTeam[] = groupNames.flatMap((names, g) => names.map((teamName, i) => ({
-      id: `${id}-t${g * 10 + i}`, name: teamName, clubTeamId: teamName === 'SDG Damen 1' ? 't-damen' : teamName === 'SDG U16' ? 't-u16' : null, group: label(g),
+      id: `${id}-t${g * 10 + i}`, name: teamName, clubTeamId: teamName === 'Damen 1' ? 't-damen' : teamName === 'U16' ? 't-u16' : null, group: label(g),
     })));
     const strength = (teamId: string) => teams.findIndex((t) => t.id === teamId) % 10; // lower index in its group: stronger
     let count = 0;
@@ -403,7 +403,7 @@ export class MockTournaments {
   private static seed(): { tournaments: StoredTournament[]; teams: Record<string, TournamentTeam[]>; matches: Record<string, TournamentMatch[]> } {
     const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
     const names: [string, string, string | null][] = [
-      ['tt-sdg1', 'SDG Damen 1', 't-damen'], ['tt-sdgu', 'SDG U16', 't-u16'], ['tt-uvc', 'UVC Graz', null],
+      ['tt-sdg1', 'Damen 1', 't-damen'], ['tt-sdgu', 'U16', 't-u16'], ['tt-uvc', 'UVC Graz', null],
       ['tt-tsv', 'TSV Seeblick', null], ['tt-ask', 'ASK Bergdorf', null], ['tt-vcm', 'VC Musterstadt', null],
     ];
     const teams: TournamentTeam[] = names.map(([id, name, clubTeamId], i) => ({ id, name, clubTeamId, group: i % 2 ? 'B' : 'A' }));
@@ -411,9 +411,9 @@ export class MockTournaments {
       ({ id, stage: 'GROUP', group, round, slot, homeId: home, awayId: away, ...MockTournaments.scores(sets.map(([h, a]) => ({ home: h, away: a }))),
         startsAt: null, field: group === 'A' ? 'Feld 1' : 'Feld 2', wave: round });
     const sommer = MockTournaments.played('tm-sommer', 'Sommerturnier 2026', day(-7), true,
-      [['SDG Damen 1', 'UVC Graz', 'TSV Seeblick', 'ASK Bergdorf'], ['VC Musterstadt', 'SDG U16', 'SV Talheim', 'VBC Ostend']]);
+      [['Damen 1', 'UVC Graz', 'TSV Seeblick', 'ASK Bergdorf'], ['VC Musterstadt', 'U16', 'SV Talheim', 'VBC Ostend']]);
     const fruehling = MockTournaments.played('tm-fruehling', 'Frühlingscup 2026', day(-1), false,
-      [['UVC Graz', 'SDG Damen 1', 'SV Talheim'], ['TSV Seeblick', 'VC Musterstadt', 'ASK Bergdorf']]);
+      [['UVC Graz', 'Damen 1', 'SV Talheim'], ['TSV Seeblick', 'VC Musterstadt', 'ASK Bergdorf']]);
     return {
       tournaments: [{ id: 'tm-herbst', name: 'Herbstcup 2026', startsOn: day(21), endsOn: day(21), locationId: 'l-west', appointmentId: null,
         groupCount: 2, advancePerGroup: 2, format: 'VOLLEYBALL', setsToWin: 2, teamSize: 6, fieldCount: 2, status: 'GROUPS', createdAt: new Date().toISOString() } as StoredTournament,

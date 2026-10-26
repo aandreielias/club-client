@@ -62,6 +62,7 @@ export const MEMBER_MESSAGES: MessageCatalog = {
 export function boardWarning(code: string, settings: BoardSettings | null): string {
   if (code === 'law.board-too-small') return 'Den Verein leiten mindestens zwei Personen (Vereinsgesetz § 5 Abs. 3).';
   if (code === 'law.auditors-missing') return 'Es braucht mindestens zwei Rechnungsprüfer:innen (Vereinsgesetz § 5 Abs. 5).';
+  if (code === 'law.assembly-due') return 'Die nächste Mitgliederversammlung ist bald fällig: sie findet mindestens alle fünf Jahre statt (Vereinsgesetz § 5 Abs. 2).';
   if (code === 'board.too-small') return `Der Vorstand braucht mindestens ${settings?.minBoardSize ?? 3} Personen.`;
   if (code === 'board.even') return 'Der Vorstand braucht eine ungerade Anzahl Personen.';
   const kind = code === 'board.auditors-missing' ? 'AUDITOR' : code.replace(/^board\.|-missing$/g, '').replace('-', '_').toUpperCase();

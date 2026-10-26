@@ -1,5 +1,6 @@
 // Member admin endpoints of the mock server (rules live in MockDirectory, like the server's MemberHandlers).
 import { directory, MockDirectory } from '../../lib/mock/core';
+import { meetings } from '../meetings/mock';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import { ADMIN_BOARD, type Member } from '../../lib/types';
@@ -21,7 +22,9 @@ mockServer
   .on('PUT', '/api/v1/members/:id/membership', (req) => directory.setMembership(directory.actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/board/offices', (req) => {
     directory.actor(req);
-    return directory.board();
+    const board = directory.board();
+    // server: MembersController.offices adds the meetings module's five-year general meeting
+    return meetings.assemblyDue() ? { ...board, warnings: ['law.assembly-due', ...board.warnings] } : board;
   })
   .on('POST', '/api/v1/board/offices', (req) => directory.assignOffice(directory.actor(req), req.body ?? {}))
   .on('POST', '/api/v1/board/offices/:id/end', (req) => directory.endOffice(directory.actor(req), req.params.id));
