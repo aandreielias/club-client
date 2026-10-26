@@ -16,6 +16,11 @@ export const UNKNOWN_MESSAGE = 'Unbekannter Fehler.';
 
 /** Codes shared by every feature (gateway, login, profile, club PIN). */
 export const CORE_MESSAGES: MessageCatalog = {
+  'auth.step-up-required': 'Dafür bitte zuerst den Vereins-PIN eingeben.',
+  'auth.device-name-invalid': 'Gerätename mit 1 bis 60 Zeichen angeben.',
+  'auth.device-key-invalid': 'Dieses Gerät konnte nicht eingerichtet werden. Bitte erneut versuchen.',
+  'auth.device-verification-failed': 'Das Gerät konnte nicht bestätigt werden. Bitte erneut versuchen.',
+  'auth.too-many-devices': 'Es sind schon 5 Geräte eingerichtet. Zuerst ein altes entfernen.',
   network: 'Server nicht erreichbar. Bitte Verbindung prüfen.',
   timeout: 'Der Server antwortet nicht rechtzeitig. Bitte erneut versuchen.',
   'access.denied': 'Dafür fehlt die Berechtigung.',

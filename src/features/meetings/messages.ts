@@ -1,6 +1,11 @@
 import type { MessageCatalog } from '../../lib/errors/ErrorMessages';
 
 export const MEETING_MESSAGES: MessageCatalog = {
+  'meeting-type.key-invalid': 'Der Schlüssel der Sitzungsart ist ungültig.',
+  'meeting.kind-missing': 'Bitte die Sitzungsart wählen.',
+  'meeting.assignee-not-allowed': 'Aufgaben nur an Anwesende vergeben, die sie auch erledigen dürfen.',
+  'meeting.template-invalid': 'Die Vorlage ist keine Word-Datei (.docx/.dotx).',
+  'resolution.start-fixed': 'Der Beginn eines Umlaufbeschlusses bleibt fix; nur die Frist lässt sich ändern.',
   'meeting.not-found': 'Sitzung nicht gefunden.',
   'meeting.title-invalid': 'Titel mit 1 bis 120 Zeichen angeben.',
   'meeting.agenda-too-long': 'Die Tagesordnung hat höchstens 4000 Zeichen.',

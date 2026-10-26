@@ -8,7 +8,7 @@ import { SEEDED_APPOINTMENT_TYPES, type AppointmentType, type AppointmentTypeInf
 export const APPOINTMENT_TYPES_CHANGED = liveEvent<Record<string, never>>('calendar.appointment-types-changed');
 
 /** The club's appointment types (server: calendar_type); the seeded ones until loaded. */
-export class AppointmentTypes extends LiveStore<readonly AppointmentTypeInfo[]> {
+export class AppointmentTypesStore extends LiveStore<readonly AppointmentTypeInfo[]> {
   constructor(api: CalendarApi, bus: EventBus) {
     super(() => api.types(), bus, APPOINTMENT_TYPES_CHANGED, SEEDED_APPOINTMENT_TYPES);
   }

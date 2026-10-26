@@ -4,6 +4,7 @@ import type { MessageCatalog } from '../../lib/errors/ErrorMessages';
 const limits = settings.files;
 
 export const FILE_MESSAGES: MessageCatalog = {
+  'file.not-a-document': 'Das geht nur mit Dokumenten, nicht mit Bildern.',
   'folder.not-found': 'Ordner nicht gefunden.',
   'folder.name-invalid': `Ordnername mit 1 bis ${limits.folderNameMaxLength} Zeichen angeben.`,
   'folder.kind-or-scope-missing': 'Art und Sichtbarkeit angeben.',

@@ -5,6 +5,12 @@ import type { MessageCatalog } from '../../lib/errors/ErrorMessages';
 const limits = settings.members;
 
 export const MEMBER_MESSAGES: MessageCatalog = {
+  'membership-kind.key-invalid': 'Der Schlüssel der Mitgliedschaftsart ist ungültig.',
+  'member.not-a-guest': 'Nur Gastzugänge lassen sich löschen. Mitglieder bitte deaktivieren.',
+  'office.kind-missing': 'Bitte die Funktion wählen.',
+  'office.start-missing': 'Bitte den Beginn der Funktion angeben.',
+  'office.end-before-start': 'Das Ende liegt vor dem Beginn der Funktion.',
+  'office.end-in-future': 'Funktionen erst an dem Tag beenden, an dem sie enden.',
   'member.email-invalid': 'Ungültige E-Mail-Adresse (vor dem @ keine Umlaute, Domains mit ß werden nicht unterstützt).',
   'member.email-taken': 'Zu dieser E-Mail-Adresse gibt es schon ein Mitglied.',
   'member.change-needs-request': 'Namen und Geburtsdatum bitte über einen Änderungsantrag ändern.',

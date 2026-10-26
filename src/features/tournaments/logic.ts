@@ -1,5 +1,5 @@
 // Tournament rules, the same as the server's (tournaments.domain: RoundRobin, Standings, Bracket).
-import type { TournamentFormat } from './model';
+import type { StandingRow, TournamentFormat } from './model';
 
 export interface Pairing {
   round: number;
@@ -32,20 +32,6 @@ export interface Result {
   awaySets: number | null;
   homePoints: number;
   awayPoints: number;
-}
-
-export interface Standing {
-  teamId: string;
-  name: string;
-  played: number;
-  won: number;
-  drawn: number;
-  lost: number;
-  setsWon: number;
-  setsLost: number;
-  ballsWon: number;
-  ballsLost: number;
-  points: number;
 }
 
 const played = (r: Result) => r.home !== null && r.away !== null && r.homeSets !== null && r.awaySets !== null;
@@ -95,11 +81,11 @@ export function tablePoints(format: TournamentFormat, winnerSets: number, loserS
 const ratio = (won: number, lost: number) => (lost ? won / lost : won ? Infinity : 0);
 
 /** Group table: points (see tablePoints), wins, set ratio, ball-point ratio, the direct match, then the name. */
-export function standings(teams: ReadonlyMap<string, string>, results: readonly Result[], format: TournamentFormat = 'VOLLEYBALL'): Standing[] {
-  const rows = new Map<string, Standing>(
+export function standings(teams: ReadonlyMap<string, string>, results: readonly Result[], format: TournamentFormat = 'VOLLEYBALL'): StandingRow[] {
+  const rows = new Map<string, StandingRow>(
     [...teams].map(([teamId, name]) => [teamId, { teamId, name, played: 0, won: 0, drawn: 0, lost: 0, setsWon: 0, setsLost: 0, ballsWon: 0, ballsLost: 0, points: 0 }]),
   );
-  const add = (row: Standing, won: number, lost: number, balls: number, ballsAgainst: number) => {
+  const add = (row: StandingRow, won: number, lost: number, balls: number, ballsAgainst: number) => {
     row.played++;
     if (won > lost) {
       row.won++;
@@ -228,19 +214,9 @@ export function groupChoices(teams: number, advancePerGroup: number): number[] {
 }
 
 /** One team over the whole tournament (group and knockout); `points` and `rank` come from its group table. */
-export interface TeamStats {
-  teamId: string;
-  name: string;
+export interface TeamStats extends Omit<StandingRow, 'points'> {
   group: string | null;
   rank: number | null;
-  played: number;
-  won: number;
-  drawn: number;
-  lost: number;
-  setsWon: number;
-  setsLost: number;
-  ballsWon: number;
-  ballsLost: number;
   points: number | null;
   /** "Sieger", "2. Platz", "Aus im Halbfinale", "im Viertelfinale", "Aus in der Gruppe"; null before the knockout. */
   knockout: string | null;

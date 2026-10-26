@@ -10,7 +10,7 @@ export const MEMBERSHIP_KINDS_CHANGED = liveEvent<Record<string, never>>('member
 export type MembershipChoice = MembershipType | 'NONE';
 
 /** The club's membership kinds (server: members_membership_kind); the seeded ones until loaded. */
-export class MembershipKinds extends LiveStore<readonly MembershipKind[]> {
+export class MembershipKindsStore extends LiveStore<readonly MembershipKind[]> {
   constructor(api: MembersApi, bus: EventBus) {
     super(() => api.membershipKinds(), bus, MEMBERSHIP_KINDS_CHANGED, SEEDED_MEMBERSHIP_KINDS);
   }

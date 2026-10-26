@@ -10,7 +10,7 @@ export type FormErrors = Partial<Record<FormField, string>>;
 /** Select value for "club-wide" (no team). */
 export const CLUB_WIDE = '';
 
-/** What a type offers (the club's types: AppointmentTypes; default: the seeded ones). */
+/** What a type offers (the club's types: AppointmentTypesStore; default: the seeded ones). */
 export interface TypeOffers {
   cabins(type: AppointmentType): boolean;
   rides(type: AppointmentType): boolean;

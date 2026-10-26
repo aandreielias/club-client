@@ -8,7 +8,7 @@
   import Field from '../../ui/Field.svelte';
   import DateInput from '../../ui/DateInput.svelte';
   import type { MemberDetailModel } from './MemberDetailModel.svelte';
-  import type { MembershipChoice } from './MembershipKinds.svelte';
+  import type { MembershipChoice } from './MembershipKindsStore.svelte';
   import { membershipKinds } from './services';
 
   /** Membership: type, honorary membership, start date. Admin/board. */

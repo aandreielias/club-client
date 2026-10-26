@@ -4,6 +4,9 @@ import type { MessageCatalog } from '../../lib/errors/ErrorMessages';
 const limits = settings.calendar;
 
 export const CALENDAR_MESSAGES: MessageCatalog = {
+  'appointment-type.key-invalid': 'Der Schlüssel der Terminart ist ungültig.',
+  'calendar.feed-not-found': 'Diesen Kalender-Link gibt es nicht mehr. Bitte einen neuen erstellen.',
+  'calendar.not-movable': 'Dieser Eintrag lässt sich im Kalender nicht verschieben.',
   'appointment.type-unknown': 'Diese Terminart gibt es nicht mehr.',
   'appointment.type-archived': 'Diese Terminart ist archiviert; eine andere wählen.',
   'appointment-type.not-found': 'Terminart nicht gefunden.',
