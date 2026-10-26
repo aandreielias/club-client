@@ -107,7 +107,6 @@ export class MockDirectory {
     registerNumber: null,
     seasonStartMonth: 7,
     ridesEnabled: true,
-    fiscalYearStart: '01-01',
     configured: false,
   };
 
@@ -461,8 +460,7 @@ export class MockDirectory {
     const e = this.clubEdits.data;
     return { ...this.club, name: e.name || this.club.name, shortName: e.shortName || this.club.shortName, website: e.website || null,
       contactEmail: e.contactEmail || null, address: e.address || null, registerNumber: e.registerNumber || null,
-      seasonStartMonth: e.seasonStartMonth ?? this.club.seasonStartMonth, ridesEnabled: e.ridesEnabled ?? true,
-      fiscalYearStart: e.fiscalYearStart || '01-01', configured: Object.keys(e).length > 0 };
+      seasonStartMonth: e.seasonStartMonth ?? this.club.seasonStartMonth, ridesEnabled: e.ridesEnabled ?? true, configured: Object.keys(e).length > 0 };
   }
 
   /** server: ClubController PUT - admin/board with step-up; blank fields fall back to club.yml. */
@@ -485,10 +483,9 @@ export class MockDirectory {
       website: text('website', limits.linkMaxLength, /^https:\/\/\S+$/),
       contactEmail: text('contactEmail', limits.linkMaxLength, /^[^@\s]+@[^@\s]+$/),
       address: text('address', limits.addressMaxLength),
-      registerNumber: text('registerNumber', 15, new RegExp(limits.registerNumberPattern)),
+      registerNumber: text('registerNumber', 20, new RegExp(limits.registerNumberPattern)),
       seasonStartMonth: (month as number | null) ?? undefined,
       ridesEnabled: body.ridesEnabled !== false,
-      fiscalYearStart: text('fiscalYearStart', 5, /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/) ?? undefined,
     });
     this.clubEdits.save();
     const club = this.clubInfo();
@@ -622,14 +619,11 @@ export class MockDirectory {
     const people = new Set(running.filter((o) => o.office !== 'AUDITOR').map((o) => o.memberId));
     const warnings: string[] = [];
     const settings = this.boardSettings.data;
-    // server: BoardRules.warnings — Vereinsgesetz § 5 minimums first
-    const auditors = new Set(running.filter((o) => o.office === 'AUDITOR').map((o) => o.memberId)).size;
-    if (people.size < 2) warnings.push('law.board-too-small');
-    if (auditors < 2) warnings.push('law.auditors-missing');
+    // server: BoardRules.warnings
     if (people.size < settings.minBoardSize) warnings.push('board.too-small');
     else if (settings.oddBoardSize && people.size % 2 === 0) warnings.push('board.even');
     for (const s of settings.offices) {
-      if (s.enabled && !(s.office === 'AUDITOR' && auditors < 2) && running.filter((o) => o.office === s.office).length < s.minHolders) {
+      if (s.enabled && running.filter((o) => o.office === s.office).length < s.minHolders) {
         warnings.push(s.office === 'AUDITOR' ? 'board.auditors-missing' : `board.${s.office.toLowerCase().replace('_', '-')}-missing`);
       }
     }
@@ -659,14 +653,10 @@ export class MockDirectory {
       return { office: kind, label, enabled: !!o.enabled, minHolders: o.minHolders, maxHolders: max, termYears: o.termYears };
     });
     const combinations: OfficePair[] = Array.isArray(body.combinations) ? body.combinations : fail(400, 'board-settings.combination-invalid');
-    if (combinations.some((p) => !p || !OFFICES.includes(p.a) || !OFFICES.includes(p.b) || p.a === p.b || p.a === 'AUDITOR' || p.b === 'AUDITOR')) {
+    if (combinations.some((p) => !p || !OFFICES.includes(p.a) || !OFFICES.includes(p.b) || p.a === p.b)) {
       fail(400, 'board-settings.combination-invalid');
     }
     if (!offices[0].enabled) fail(400, 'board-settings.chair-required');
-    const auditor = offices[5];
-    if (body.minBoardSize < 2 || !auditor.enabled || auditor.minHolders < 2 || (auditor.maxHolders != null && auditor.maxHolders < 2)) {
-      fail(400, 'board-settings.below-law');
-    }
     if (!int(body.minBoardSize, 1, 20) || !int(body.cooptWeeks, 0, 52) || !int(body.termWarningDays, 1, 365) || !int(body.byElectionDays, 1, 365)) {
       fail(400, 'board-settings.board-invalid');
     }
@@ -695,7 +685,6 @@ export class MockDirectory {
     if (setting.maxHolders != null && running.filter((o) => o.office === office).length >= setting.maxHolders) fail(409, 'office.taken');
     const held = running.filter((o) => o.memberId === holder.id).map((o) => o.office);
     if (held.includes(office)) fail(409, 'office.already-held');
-    if (held.length && (held.includes('AUDITOR') || office === 'AUDITOR')) fail(409, 'office.auditor-in-board');
     const allowed = (x: string, y: string) => this.boardSettings.data.combinations.some((p) => (p.a === x && p.b === y) || (p.a === y && p.b === x));
     if (held.some((h) => !allowed(h, office))) fail(409, 'office.combination');
     const row: OfficeRow = { id: crypto.randomUUID(), memberId: holder.id, office, startsOn: body.startsOn, termEndsOn, endedOn: null, coopted: body.coopted === true };

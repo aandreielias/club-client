@@ -42,9 +42,7 @@ export const MEMBER_MESSAGES: MessageCatalog = {
   'membership-kind.in-use': 'Mitglieder haben diese Art. Archiviere sie statt sie zu löschen.',
   'membership-kind.label-invalid': 'Bezeichnung mit 1 bis 40 Zeichen angeben.',
   'membership-kind.sort-invalid': 'Reihenfolge zwischen 0 und 1000.',
-  'board-settings.below-law': 'Das Vereinsgesetz verlangt mindestens zwei Personen im Vorstand und zwei Rechnungsprüfer:innen.',
   'board-settings.combination-invalid': 'Nur zwei verschiedene Funktionen des Vorstands lassen sich verbinden.',
-  'office.auditor-in-board': 'Rechnungsprüfer:innen dürfen nicht im Vorstand sein.',
   'office.term-invalid': 'Die Funktionsperiode endet nach dem Beginn und dauert höchstens drei Jahre.',
   'office.start-in-future': 'Funktionen erst ab ihrem Beginn eintragen.',
   'office.already-ended': 'Diese Funktion ist schon beendet.',
@@ -60,9 +58,6 @@ export const MEMBER_MESSAGES: MessageCatalog = {
 
 /** Gaps on the board page (server: BoardRules.warnings), worded with the club's office settings. */
 export function boardWarning(code: string, settings: BoardSettings | null): string {
-  if (code === 'law.board-too-small') return 'Den Verein leiten mindestens zwei Personen (Vereinsgesetz § 5 Abs. 3).';
-  if (code === 'law.auditors-missing') return 'Es braucht mindestens zwei Rechnungsprüfer:innen (Vereinsgesetz § 5 Abs. 5).';
-  if (code === 'law.assembly-due') return 'Die nächste Mitgliederversammlung ist bald fällig: sie findet mindestens alle fünf Jahre statt (Vereinsgesetz § 5 Abs. 2).';
   if (code === 'board.too-small') return `Der Vorstand braucht mindestens ${settings?.minBoardSize ?? 3} Personen.`;
   if (code === 'board.even') return 'Der Vorstand braucht eine ungerade Anzahl Personen.';
   const kind = code === 'board.auditors-missing' ? 'AUDITOR' : code.replace(/^board\.|-missing$/g, '').replace('-', '_').toUpperCase();

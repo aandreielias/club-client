@@ -255,17 +255,3 @@ describe('meeting types', () => {
     expect(() => meetings.create(member('vorstand'), { kind: created.key, title: 'Klausur', startsAt: inDays(21), endsAt: inDays(21.1) })).toThrow();
   });
 });
-
-describe('the general meeting every five years', () => {
-  it('is due five years after the last one, warned half a year before', () => {
-    expect(meetings.assemblyDue()).toBeNull(); // the seeds hold no closed general meeting
-    const past = { ...meetings.meetings.data.find((m) => m.id === 'mt-past')!, id: 'mt-assembly', kind: 'ASSEMBLY', startsAt: '2022-03-10T18:00:00.000Z' };
-    meetings.meetings.data.push(past);
-    try {
-      expect(meetings.assemblyDue(new Date('2026-09-01'))).toBeNull();
-      expect(meetings.assemblyDue(new Date('2026-09-11'))).toBe('2027-03-10');
-    } finally {
-      meetings.meetings.data.splice(meetings.meetings.data.indexOf(past), 1);
-    }
-  });
-});

@@ -221,12 +221,11 @@ export const FOLLOW_UP_KIND_LABELS: Readonly<Record<Exclude<FollowUpKind, 'MANUA
   ENTER_HONORARY: 'Ehrenmitgliedschaft eintragen (erledigt sich selbst)',
   REVOKE_HONORARY: 'Ehrenmitgliedschaft aberkennen (erledigt sich selbst)',
   ENTER_OFFICE: 'Funktion eintragen (erledigt sich selbst)',
-  REPORT_AUTHORITY: 'Vereinsbehörde informieren',
   NOTIFY_EXCLUSION: 'Ausschluss mitteilen',
   CONVENE_ASSEMBLY: 'Mitgliederversammlung einberufen (erledigt sich selbst)',
 };
 
-export type FollowUpKind = 'IMPLEMENT' | 'ENTER_HONORARY' | 'REVOKE_HONORARY' | 'ENTER_OFFICE' | 'REPORT_AUTHORITY' | 'NOTIFY_EXCLUSION' | 'CONVENE_ASSEMBLY' | 'MANUAL';
+export type FollowUpKind = 'IMPLEMENT' | 'ENTER_HONORARY' | 'REVOKE_HONORARY' | 'ENTER_OFFICE' | 'NOTIFY_EXCLUSION' | 'CONVENE_ASSEMBLY' | 'MANUAL';
 
 export interface FollowUp {
   id: string;

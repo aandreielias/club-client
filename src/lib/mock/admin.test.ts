@@ -37,7 +37,7 @@ describe('mock members admin', () => {
     expect(() => directory.assignOffice(member('vorstand'), { memberId: 'trainer', office: 'CHAIR', startsOn: today }))
       .toThrow(expect.objectContaining({ code: 'office.taken' }));
     expect(() => directory.assignOffice(member('vorstand'), { memberId: 'admin', office: 'BOARD_MEMBER', startsOn: today }))
-      .toThrow(expect.objectContaining({ code: 'office.auditor-in-board' }));
+      .toThrow(expect.objectContaining({ code: 'office.combination' }));
     expect(directory.board().warnings).toEqual([]); // the seeded board of five is complete
     const office = directory.assignOffice(member('vorstand'), { memberId: 'trainer', office: 'BOARD_MEMBER', startsOn: today });
     expect(member('trainer').roles).toContain('BOARD');

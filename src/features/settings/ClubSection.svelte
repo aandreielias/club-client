@@ -19,8 +19,6 @@
   let contactEmail = $state(club.contactEmail ?? '');
   let seasonStartMonth = $state(String(club.seasonStartMonth));
   let ridesEnabled = $state(club.ridesEnabled);
-  let fiscalDay = $state(Number(club.fiscalYearStart.slice(3)));
-  let fiscalMonth = $state(club.fiscalYearStart.slice(0, 2).replace(/^0/, ''));
 
   const months = Array.from({ length: 12 }, (_, i) => ({
     value: String(i + 1),
@@ -30,8 +28,7 @@
 
   async function save(event: SubmitEvent) {
     event.preventDefault();
-    const edit = { name, shortName, address, registerNumber, website, contactEmail, seasonStartMonth: Number(seasonStartMonth), ridesEnabled,
-      fiscalYearStart: `${fiscalMonth.padStart(2, '0')}-${String(fiscalDay).padStart(2, '0')}` };
+    const edit = { name, shortName, address, registerNumber, website, contactEmail, seasonStartMonth: Number(seasonStartMonth), ridesEnabled };
     if (await action.run(() => session.updateClub(edit))) bus.publish(TOAST, { text: 'Vereinsdaten gespeichert.' });
   }
 </script>
@@ -50,8 +47,8 @@
     <textarea bind:value={address} maxlength={limits.addressMaxLength} rows="2"></textarea>
   </Field>
   <div class="grid-2">
-    <Field label="ZVR-Zahl" hint="Nummer im Vereinsregister">
-      <input bind:value={registerNumber} inputmode="numeric" pattern={limits.registerNumberPattern} />
+    <Field label="Registernummer" hint="Nummer im Vereinsregister">
+      <input bind:value={registerNumber} maxlength="20" pattern={limits.registerNumberPattern} />
     </Field>
     <Field label="Saison beginnt im">
       <Select bind:value={seasonStartMonth} options={months} aria-label="Saison beginnt im" />
@@ -65,12 +62,6 @@
       <input type="email" bind:value={contactEmail} maxlength={limits.linkMaxLength} />
     </Field>
   </div>
-  <Field label="Rechnungsjahr beginnt am" hint="Rechnungsabschluss und Rechnungsprüfung zählen ab seinem Ende (Vereinsgesetz § 21).">
-    <div class="row">
-      <input type="number" min="1" max="31" bind:value={fiscalDay} class="short" aria-label="Tag" />
-      <Select bind:value={fiscalMonth} options={months} aria-label="Monat" />
-    </div>
-  </Field>
   <label class="check"><input type="checkbox" bind:checked={ridesEnabled} /> Fahrgemeinschaften im Verein anbieten (pro Termin ein- und ausschaltbar)</label>
   <ErrorNote error={action.error} />
   <div><Button type="submit" busy={action.busy}>Speichern</Button></div>

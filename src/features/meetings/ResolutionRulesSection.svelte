@@ -15,8 +15,7 @@
   import { meetingsApi, resolutionRules } from './services';
 
   /**
-   * Einstellungen › Beschlüsse (admin/board): per decision the majority it fixes and the tasks that follow when it passes; seeded with
-   * the statutes' and the Vereinsgesetz's.
+   * Einstellungen › Beschlüsse (admin/board): per decision the majority it fixes and the tasks that follow when it passes.
    */
   const rules = new Resource(async () => structuredClone(await resolutionRules.load()));
   void rules.load();

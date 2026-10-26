@@ -296,8 +296,8 @@ export const settings = {
     shortNameMaxLength: 20,
     addressMaxLength: 300,
     linkMaxLength: 200,
-    /** ZVR-Zahl: digits only. */
-    registerNumberPattern: '^\\d{1,15}$',
+    /** server: ClubController (letters, digits, space, dot, slash, hyphen). */
+    registerNumberPattern: '^[A-Za-z0-9 ./-]{1,20}$',
   },
 
   /** server: members module */

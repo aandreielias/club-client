@@ -17,8 +17,7 @@
   const action = new Action();
 
   /** Every pair of board offices (the auditors stay outside the board). */
-  const BOARD_OFFICES = OFFICE_KINDS.filter((o) => o !== 'AUDITOR');
-  const PAIRS = BOARD_OFFICES.flatMap((a, i) => BOARD_OFFICES.slice(i + 1).map((b) => [a, b] as const));
+  const PAIRS = OFFICE_KINDS.flatMap((a, i) => OFFICE_KINDS.slice(i + 1).map((b) => [a, b] as const));
 
   const same = (p: { a: OfficeKind; b: OfficeKind }, a: OfficeKind, b: OfficeKind) => (p.a === a && p.b === b) || (p.a === b && p.b === a);
   const allows = (value: BoardSettings, a: OfficeKind, b: OfficeKind) => value.combinations.some((p) => same(p, a, b));
@@ -40,7 +39,7 @@
     <form class="stack section" onsubmit={(e) => save(e, value)}>
       <p class="muted">
         Wie die Funktionen im Verein heißen, wie viele sie innehaben, wie lange eine Funktionsperiode dauert und welche Funktionen eine
-        Person zugleich innehaben darf. Die Rechnungsprüfung gehört nach dem Vereinsgesetz nie zum Vorstand.
+        Person zugleich innehaben darf.
       </p>
       <div class="table" role="table" aria-label="Funktionen">
         <div class="head" role="row">

@@ -90,13 +90,13 @@ function seededRules(): ActionRule[] {
     { action: 'HONORARY_GRANT', majority: null, followUps: [f('ENTER_HONORARY', 'Ehrenmitgliedschaft eintragen: {mitglied}', 7)] },
     { action: 'HONORARY_REVOKE', majority: null, followUps: [f('REVOKE_HONORARY', 'Ehrenmitgliedschaft aberkennen: {mitglied}', 7)] },
     { action: 'ELECTION', majority: null, followUps: [f('ENTER_OFFICE', 'Funktion eintragen: {funktion} – {mitglied}', 7)] },
-    { action: 'STATUTES_CHANGE', majority: 'TWO_THIRDS', followUps: [f('REPORT_AUTHORITY', 'Statutenänderung der Vereinsbehörde anzeigen: {beschluss}', 28)] },
-    { action: 'DISSOLUTION', majority: 'THREE_QUARTERS', followUps: [f('REPORT_AUTHORITY', 'Auflösung der Vereinsbehörde anzeigen', 28)] },
+    { action: 'STATUTES_CHANGE', majority: 'TWO_THIRDS', followUps: [] },
+    { action: 'DISSOLUTION', majority: 'THREE_QUARTERS', followUps: [] },
     { action: 'EXCLUSION', majority: null, followUps: [f('NOTIFY_EXCLUSION', 'Ausschluss schriftlich mit Gründen mitteilen: {mitglied}', 7)] },
     { action: 'CONVENE_ASSEMBLY', majority: null, followUps: [f('CONVENE_ASSEMBLY', 'Außerordentliche Mitgliederversammlung einberufen', 7)] },
   ];
 }
-const FOLLOW_UP_KINDS = ['IMPLEMENT', 'ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'REPORT_AUTHORITY', 'NOTIFY_EXCLUSION', 'CONVENE_ASSEMBLY'] as const;
+const FOLLOW_UP_KINDS = ['IMPLEMENT', 'ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'NOTIFY_EXCLUSION', 'CONVENE_ASSEMBLY'] as const;
 const ABOUT_MEMBER: readonly FollowUpKind[] = ['ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'NOTIFY_EXCLUSION'];
 
 const QUORUMS: readonly Quorum[] = ['AT_LEAST_HALF', 'MORE_THAN_HALF', 'AT_LEAST_THREE_QUARTERS'];
@@ -150,17 +150,6 @@ export class MockMeetings {
     });
   }
 
-  /** server: LegalReminders.assemblyDue — five years after the last general meeting, once less than half a year away; null otherwise. */
-  assemblyDue(today: Date = new Date()): string | null {
-    const held = this.meetings.data.filter((m) => m.status === 'CLOSED' && isAssembly(this.type(m.kind))).map((m) => m.startsAt).sort().at(-1);
-    if (!held) return null;
-    const due = new Date(held);
-    due.setFullYear(due.getFullYear() + 5);
-    const warnFrom = new Date(due);
-    warnFrom.setMonth(warnFrom.getMonth() - 6);
-    return today < warnFrom ? null : due.toISOString().slice(0, 10);
-  }
-
   private complete(match: (f: StoredFollowUp) => boolean): void {
     for (const f of this.followUps.data.filter((x) => !x.doneAt && match(x))) {
       f.doneAt = new Date().toISOString();
@@ -190,7 +179,6 @@ export class MockMeetings {
     const office = r.actionOffice ? this.people.boardSettings.data.offices.find((o) => o.office === r.actionOffice)!.label : '';
     const context = `${r.text ? `${r.text}\n\n` : ''}Beschlossen ${meeting ? `in „${meeting.title}“` : 'im Umlaufverfahren'}: „${r.title}“.`;
     for (const rule of this.rules.data.find((x) => x.action === action)!.followUps) {
-      if (rule.kind === 'REPORT_AUTHORITY' && r.actionOffice === 'AUDITOR') continue; // auditors are no representatives
       const about = ABOUT_MEMBER.includes(rule.kind);
       const title = rule.title.replaceAll('{beschluss}', r.title).replaceAll('{mitglied}', name).replaceAll('{funktion}', office);
       this.createFollowUp({ id: crypto.randomUUID(), meetingId: null, resolutionId: r.id, kind: rule.kind, memberId: about ? r.actionMemberId ?? null : null,

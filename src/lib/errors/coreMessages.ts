@@ -37,7 +37,6 @@ export const CORE_MESSAGES: MessageCatalog = {
   'auth.club-pin-not-set': 'Es gibt noch keinen Vereins-PIN. Admin oder Vorstand legen ihn in den Einstellungen fest.',
   'profile.birth-date-required': 'Bitte zuerst das Geburtsdatum eintragen.',
   'member.not-found': 'Mitglied nicht gefunden.',
-  'club.fiscal-year-invalid': 'Diesen Tag gibt es nicht; den Beginn des Rechnungsjahres prüfen.',
   'team.not-found': 'Team nicht gefunden.',
   'member.birth-date-in-future': 'Das Geburtsdatum liegt in der Zukunft.',
   'member.birth-date-invalid': 'Das Geburtsdatum ist ungültig.',
