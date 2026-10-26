@@ -1,4 +1,5 @@
 // Mock of the club-server meetings module (MeetingHandlers, MeetingTypeHandlers, MeetingType).
+import { generatedKey } from '../../lib/mock/keys';
 import { directory, type MockDirectory } from '../../lib/mock/core';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
@@ -791,7 +792,7 @@ export class MockMeetings {
     const dueBy = body.dueBy || null;
     if (dueBy && (!/^\d{2}-\d{2}$/.test(dueBy) || !isDayOfYear(Number(dueBy.slice(0, 2)), Number(dueBy.slice(3))))) fail(400, 'meeting-type.due-by-invalid');
     const type: StoredType = {
-      key: key ?? `TYPE_${crypto.randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`, label, invitationLabel,
+      key: key ?? generatedKey('TYPE'), label, invitationLabel,
       electorate: body.electorate, noticeHours: body.noticeHours,
       quorum: body.quorum, graceMinutes: body.graceMinutes ?? null, majorities, conveners, actions, needsReason: !!body.needsReason, dueBy,
       sort: Number.isInteger(body.sort) ? body.sort : 0, archived: !!body.archived, inUse: false, steps: checkedSteps(body.steps),

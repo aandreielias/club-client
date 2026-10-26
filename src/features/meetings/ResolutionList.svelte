@@ -18,7 +18,7 @@
     type ResolutionAction,
   } from './model';
   import ResolutionCard from './ResolutionCard.svelte';
-  import { meetingsApi, meetingTypes } from './services';
+  import { meetingsApi, meetingTypes, resolutionRules } from './services';
 
   /** The resolutions of a meeting in order, live; who runs the meeting adds motions. */
   let { meeting }: { meeting: Meeting } = $props();
@@ -47,7 +47,7 @@
   // Elections need someone who may be elected; the other actions any active member.
   const memberOptions = $derived((members.value ?? []).filter((m) => (action === 'ELECTION' ? m.eligible : m.active))
     .map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` })));
-  const implied = $derived(meetingTypes.fixedMajority(action));
+  const implied = $derived(resolutionRules.fixedMajority(action));
   // server: ResolutionHandlers.assignable — those present; admins and board members only when its tasks need their rights.
   const candidates = $derived(meeting.assignable.filter((p) => action === 'GENERAL' || p.manager));
   $effect(() => {

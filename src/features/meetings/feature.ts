@@ -1,7 +1,7 @@
 import { ADMIN_BOARD } from '../../lib/types';
 import type { Feature } from '../Feature';
 import { isAssembly } from './model';
-import { meetingTypes } from './services';
+import { meetingTypes, resolutionRules } from './services';
 import DeadlinesPage from './DeadlinesPage.svelte';
 import MeetingCreateView from './MeetingCreateView.svelte';
 import MeetingPage from './MeetingPage.svelte';
@@ -43,7 +43,10 @@ export const meetingsFeature: Feature = {
     },
     DEADLINE: (item) => ({ hue: item.kind === 'resolution' ? 'purple' : 'orange', label: item.kind === 'resolution' ? 'Umlaufbeschluss' : 'Einladungsfrist' }),
   },
-  start: () => meetingTypes.start(),
+  start: () => {
+    const stops = [meetingTypes.start(), resolutionRules.start()];
+    return () => stops.forEach((stop) => stop());
+  },
   home: [
     { id: 'meetings', label: 'Sitzungen', component: MeetingsHome },
     { id: 'deadlines', label: 'Fristen', component: DeadlinesHome, roles: ADMIN_BOARD },

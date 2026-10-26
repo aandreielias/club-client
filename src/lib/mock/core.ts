@@ -1,5 +1,6 @@
 // Mock of the club-server core: club facts, members, teams, wards, PIN and step-up.
 // Rules mirror the server's members and teams modules closely enough to exercise every client flow.
+import { generatedKey } from './keys';
 import { settings } from '../../settings';
 import { ZonedClock } from '../time/ZonedClock';
 import {
@@ -196,7 +197,7 @@ export class MockDirectory {
     const label = typeof body.label === 'string' ? body.label.trim() : '';
     if (!label || label.length > 40) fail(400, 'membership-kind.label-invalid');
     if (!Number.isInteger(body.sort) || body.sort < 0 || body.sort > 1000) fail(400, 'membership-kind.sort-invalid');
-    const kind: MembershipKind = { key: key ?? `KIND_${crypto.randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`, label,
+    const kind: MembershipKind = { key: key ?? generatedKey('KIND'), label,
       votes: !!body.votes, eligible: !!body.eligible, sort: body.sort, archived: !!body.archived, inUse: false };
     const next = [...this.membershipKinds.data.filter((k) => k.key !== kind.key), kind];
     this.requireHoldersEligible(next, this.boardSettings.data.honoraryVotes);

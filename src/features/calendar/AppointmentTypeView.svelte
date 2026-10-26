@@ -2,6 +2,7 @@
   import { backStack, bus, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { ADMIN_BOARD } from '../../lib/types';
+  import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
@@ -16,33 +17,17 @@
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle, onclosed);
   const edit = new EditSession<AppointmentTypeInput>(bus, backStack);
-  let loaded = $state(false);
-  let removed = false;
-  void appointmentTypes.load().then(() => (loaded = true), () => (loaded = true));
-
-  const type = $derived(appointmentTypes.get(id));
+  // svelte-ignore state_referenced_locally
+  const stored = new StoredRecord(view, appointmentTypes, () => id, 'Diese Terminart gibt es nicht mehr.', () => edit.save.busy);
+  const type = $derived(stored.record);
   view.title(() => type?.label);
-  $effect(() => {
-    if (loaded && !type && !edit.save.busy) {
-      if (!removed) view.notify('Diese Terminart gibt es nicht mehr.');
-      view.leave();
-    }
-  });
 
   async function submit() {
-    await edit.submit(async (form) => {
-      await calendarApi.saveType(id, { ...form, label: form.label.trim() });
-      await appointmentTypes.load();
-    }, 'Terminart gespeichert.');
+    await edit.submit((form) => stored.saved(() => calendarApi.saveType(id, { ...form, label: form.label.trim() })), 'Terminart gespeichert.');
   }
 
-  async function remove(label: string) {
-    await view.confirm({ title: 'Terminart löschen', message: label, confirmLabel: 'Löschen', danger: true },
-      () => view.attempt(edit.save, () => edit.save.run(async () => {
-        removed = true;
-        await calendarApi.deleteType(id);
-        await appointmentTypes.load();
-      })), 'Terminart gelöscht.');
+  function remove(label: string) {
+    void stored.remove(label, 'Terminart löschen', 'Terminart gelöscht.', edit.save, () => calendarApi.deleteType(id));
   }
 </script>
 

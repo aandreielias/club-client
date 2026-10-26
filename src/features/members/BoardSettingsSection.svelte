@@ -11,7 +11,8 @@
   import { boardSettings, membersApi } from './services';
 
   /** Einstellungen › Funktionen (admin/board): names, holders and terms of the offices, and the board-wide rules. */
-  const settings = new Resource(async () => structuredClone(await boardSettings.load()));
+  // A fresh copy to edit; the store keeps the saved settings.
+  const settings = new Resource(() => membersApi.boardSettings());
   void settings.load();
   const action = new Action();
 

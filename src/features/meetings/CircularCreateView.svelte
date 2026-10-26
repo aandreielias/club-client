@@ -14,14 +14,14 @@
   import { Resource } from '../../lib/state/Resource.svelte';
   import { membersApi } from '../members/services';
   import { ACTION_LABELS, actions, noticeText, QUORUM_LABELS, type ResolutionAction } from './model';
-  import { meetingsApi, meetingTypes } from './services';
+  import { meetingsApi, resolutionRules } from './services';
 
   /** New circular vote: the motion goes to the whole board at once and runs at least the club's shortest voting time. */
   let { handle }: { id: string; handle: WindowHandle } = $props();
 
   // svelte-ignore state_referenced_locally
   const create = new CreateController(bus, handle, 'Neuer Umlaufbeschluss');
-  const earliest = session.clock.toLocal(new Date(Date.now() + meetingTypes.circular.minHours * 3_600_000 + 60_000));
+  const earliest = session.clock.toLocal(new Date(Date.now() + resolutionRules.value.circular.minHours * 3_600_000 + 60_000));
   let title = $state('');
   let text = $state('');
   let deadline = $state(`${ZonedClock.addDays(earliest.slice(0, 10), 1)}T20:00`);
@@ -56,7 +56,7 @@
     <Field label="Begründung (optional)">
       <textarea bind:value={text} rows="4" maxlength="4000"></textarea>
     </Field>
-    <Field label="Abstimmen bis" hint="Mindestens {noticeText(meetingTypes.circular.minHours)}; gültig, wenn {QUORUM_LABELS[meetingTypes.circular.quorum]} des Vorstands abstimmt." error={submitted && tooSoon ? `Mindestens ${noticeText(meetingTypes.circular.minHours)} ab jetzt.` : null}>
+    <Field label="Abstimmen bis" hint="Mindestens {noticeText(resolutionRules.value.circular.minHours)}; gültig, wenn {QUORUM_LABELS[resolutionRules.value.circular.quorum]} des Vorstands abstimmt." error={submitted && tooSoon ? `Mindestens ${noticeText(resolutionRules.value.circular.minHours)} ab jetzt.` : null}>
       <DateTimeInput bind:value={deadline} min={earliest} required />
     </Field>
     <Field label="Art des Beschlusses" hint="Bestimmt die Aufgabe, die nach der Annahme entsteht.">

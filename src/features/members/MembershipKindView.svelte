@@ -2,6 +2,7 @@
   import { backStack, bus, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { ADMIN_BOARD } from '../../lib/types';
+  import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
@@ -16,33 +17,17 @@
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle, onclosed);
   const edit = new EditSession<MembershipKindInput>(bus, backStack);
-  let loaded = $state(false);
-  let removed = false;
-  void membershipKinds.load().then(() => (loaded = true), () => (loaded = true));
-
-  const kind = $derived(membershipKinds.get(id));
+  // svelte-ignore state_referenced_locally
+  const stored = new StoredRecord(view, membershipKinds, () => id, 'Diese Mitgliedsart gibt es nicht mehr.', () => edit.save.busy);
+  const kind = $derived(stored.record);
   view.title(() => kind?.label);
-  $effect(() => {
-    if (loaded && !kind && !edit.save.busy) {
-      if (!removed) view.notify('Diese Mitgliedsart gibt es nicht mehr.');
-      view.leave();
-    }
-  });
 
   async function submit() {
-    await edit.submit(async (form) => {
-      await membersApi.saveMembershipKind(id, { ...form, label: form.label.trim() });
-      await membershipKinds.load();
-    }, 'Mitgliedsart gespeichert.');
+    await edit.submit((form) => stored.saved(() => membersApi.saveMembershipKind(id, { ...form, label: form.label.trim() })), 'Mitgliedsart gespeichert.');
   }
 
-  async function remove(label: string) {
-    await view.confirm({ title: 'Mitgliedsart löschen', message: label, confirmLabel: 'Löschen', danger: true },
-      () => view.attempt(edit.save, () => edit.save.run(async () => {
-        removed = true;
-        await membersApi.deleteMembershipKind(id);
-        await membershipKinds.load();
-      })), 'Mitgliedsart gelöscht.');
+  function remove(label: string) {
+    void stored.remove(label, 'Mitgliedsart löschen', 'Mitgliedsart gelöscht.', edit.save, () => membersApi.deleteMembershipKind(id));
   }
 </script>
 

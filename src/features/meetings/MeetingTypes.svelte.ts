@@ -1,58 +1,37 @@
 import type { EventBus } from '../../lib/bus';
+import { LiveStore } from '../../lib/state/LiveStore.svelte';
 import { ACTION_RULES_CHANGED, MEETING_TYPES_CHANGED } from './events';
 import type { MeetingsApi } from './MeetingsApi';
-import { SEEDED_CIRCULAR, type ActionRule, type CircularRules, type Majority, type MeetingKind, type MeetingType, type ResolutionAction, type ResolutionRules } from './model';
+import { SEEDED_CIRCULAR, type Majority, type MeetingKind, type MeetingType, type ResolutionAction, type ResolutionRules } from './model';
 
-/** The club's meeting types and resolution rules (server: meetings_type, meetings_action_rule), loaded at start and on changes. */
-export class MeetingTypes {
-  items = $state.raw<MeetingType[]>([]);
-  rules = $state.raw<ActionRule[]>([]);
-  circular = $state.raw<CircularRules>(SEEDED_CIRCULAR);
-
-  constructor(
-    private readonly api: MeetingsApi,
-    private readonly bus: EventBus,
-  ) {}
-
-  start(): () => void {
-    void this.load().catch(() => {});
-    void this.loadRules().catch(() => {});
-    const types = this.bus.subscribe(MEETING_TYPES_CHANGED, () => void this.load().catch(() => {}));
-    const rules = this.bus.subscribe(ACTION_RULES_CHANGED, () => void this.loadRules().catch(() => {}));
-    return () => (types.unsubscribe(), rules.unsubscribe());
+/** The club's meeting types (server: meetings_type); empty until loaded. */
+export class MeetingTypes extends LiveStore<readonly MeetingType[]> {
+  constructor(api: MeetingsApi, bus: EventBus) {
+    super(() => api.types(), bus, MEETING_TYPES_CHANGED, []);
   }
 
-  async loadRules(): Promise<ResolutionRules> {
-    this.set(await this.api.resolutionRules());
-    return { items: this.rules, circular: this.circular };
-  }
-
-  set(rules: ResolutionRules): void {
-    this.rules = rules.items;
-    this.circular = rules.circular;
-  }
-
-  /** The majority a decision fixes (seeded: statute change two thirds, dissolution three quarters). */
-  fixedMajority(action: ResolutionAction): Majority | null {
-    return this.rules.find((r) => r.action === action)?.majority ?? null;
-  }
-
-  async load(): Promise<MeetingType[]> {
-    this.items = await this.api.types();
-    return this.items;
+  get items(): readonly MeetingType[] {
+    return this.value;
   }
 
   get(key: MeetingKind): MeetingType | undefined {
-    return this.items.find((t) => t.key === key);
+    return this.value.find((t) => t.key === key);
   }
 
   /** The key until the types are loaded. */
   label(key: MeetingKind): string {
     return this.get(key)?.label ?? key;
   }
+}
 
-  /** Types a new meeting may have. */
-  get active(): MeetingType[] {
-    return this.items.filter((t) => !t.archived);
+/** The club's resolution rules (server: meetings_action_rule, meetings_setting): fixed majorities, follow-ups, circular votes. */
+export class ResolutionRulesStore extends LiveStore<ResolutionRules> {
+  constructor(api: MeetingsApi, bus: EventBus) {
+    super(() => api.resolutionRules(), bus, ACTION_RULES_CHANGED, { items: [], circular: SEEDED_CIRCULAR });
+  }
+
+  /** The majority a decision fixes (seeded: statute change two thirds, dissolution three quarters). */
+  fixedMajority(action: ResolutionAction): Majority | null {
+    return this.value.items.find((r) => r.action === action)?.majority ?? null;
   }
 }

@@ -1,4 +1,5 @@
 // Mock of the club-server calendar and attendance modules (visibility, edit rights, series, answers).
+import { generatedKey } from '../../lib/mock/keys';
 import { activity, MockActivity } from '../../lib/mock/MockActivity';
 import { settings } from '../../settings';
 import { directory, type MockDirectory } from '../../lib/mock/core';
@@ -557,7 +558,7 @@ export const appointmentTypes = {
     if (!label || label.length > 40) fail(400, 'appointment-type.label-invalid');
     if (!HUES.includes(body.hue)) fail(400, 'appointment-type.hue-invalid');
     if (!Number.isInteger(body.sort) || body.sort < 0 || body.sort > 1000) fail(400, 'appointment-type.sort-invalid');
-    const type: AppointmentTypeInfo = { key: key ?? `TYPE_${crypto.randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`, label, hue: body.hue,
+    const type: AppointmentTypeInfo = { key: key ?? generatedKey('TYPE'), label, hue: body.hue,
       rides: !!body.rides, cabins: !!body.cabins, sort: body.sort, archived: !!body.archived, inUse: false };
     const index = types.data.findIndex((t) => t.key === type.key);
     if (index >= 0) types.data[index] = type;

@@ -1,26 +1,14 @@
 import type { EventBus } from '../../lib/bus';
 import { liveEvent } from '../../lib/live/LiveUpdates.svelte';
+import { LiveStore } from '../../lib/state/LiveStore.svelte';
 import { OFFICE_KINDS, OFFICE_LABELS, type BoardSettings, type MembersApi, type OfficeKind } from './MembersApi';
 
 export const BOARD_SETTINGS_CHANGED = liveEvent<Record<string, never>>('members.board-settings-changed');
 
-/** The club's office names and rules (server: members_office_setting), loaded at start and reloaded when the club changes them. */
-export class BoardSettingsStore {
-  value = $state.raw<BoardSettings | null>(null);
-
-  constructor(
-    private readonly api: MembersApi,
-    private readonly bus: EventBus,
-  ) {}
-
-  start(): () => void {
-    void this.load().catch(() => {});
-    return this.bus.subscribe(BOARD_SETTINGS_CHANGED, () => void this.load().catch(() => {})).unsubscribe;
-  }
-
-  async load(): Promise<BoardSettings> {
-    this.value = await this.api.boardSettings();
-    return this.value;
+/** The club's office names and rules (server: members_office_setting); null until loaded. */
+export class BoardSettingsStore extends LiveStore<BoardSettings | null> {
+  constructor(api: MembersApi, bus: EventBus) {
+    super(() => api.boardSettings(), bus, BOARD_SETTINGS_CHANGED, null);
   }
 
   /** The seeded name until the settings are loaded. */

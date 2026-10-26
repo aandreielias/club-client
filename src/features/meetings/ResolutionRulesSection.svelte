@@ -12,13 +12,13 @@
     ACTION_LABELS, FOLLOW_UP_KIND_LABELS, MAJORITY_LABELS, OWN_ACTION, QUORUM_LABELS, type ActionRule, type FollowUpRule, type Majority, type Quorum,
     type ResolutionAction, type ResolutionRules,
   } from './model';
-  import { meetingsApi, meetingTypes } from './services';
+  import { meetingsApi, resolutionRules } from './services';
 
   /**
    * Einstellungen › Beschlüsse (admin/board): per decision the majority it fixes and the tasks that follow when it passes; seeded with
    * the statutes' and the Vereinsgesetz's.
    */
-  const rules = new Resource(async () => structuredClone(await meetingTypes.loadRules()));
+  const rules = new Resource(async () => structuredClone(await resolutionRules.load()));
   void rules.load();
   const action = new Action();
 
@@ -41,7 +41,7 @@
 
   async function save(event: SubmitEvent, value: ResolutionRules) {
     event.preventDefault();
-    if (await action.run(async () => meetingTypes.set(await meetingsApi.saveResolutionRules(value)))) {
+    if (await action.run(async () => (resolutionRules.value = await meetingsApi.saveResolutionRules(value)))) {
       bus.publish(TOAST, { text: 'Beschlussregeln gespeichert.' });
     }
   }

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { backStack, bus } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
+  import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
@@ -12,7 +13,7 @@
     ACTION_KIND_LABELS, ACTION_LABELS, AUDIENCE_LABELS, MAJORITY_LABELS, majorities, noticeText, quorumText, SYSTEM_STEP_LABELS,
     type MeetingStep,
   } from './model';
-  import { meetingPolicy as policy, meetingsApi, meetingTypes } from './services';
+  import { meetingPolicy as policy, meetingsApi, meetingTypes, resolutionRules } from './services';
 
   /** One meeting type with its rules and the steps around each meeting; admin and board edit it. Window and page. */
   let { id, handle, onclosed }: { id: string; handle?: WindowHandle; onclosed?: () => void } = $props();
@@ -20,20 +21,10 @@
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle, onclosed);
   const edit = new EditSession<MeetingTypeForm>(bus, backStack);
-  let loaded = $state(false);
-  /** Deleted here: the confirm toast says so, the view just closes. */
-  let removed = false;
-  void meetingTypes.load().then(() => (loaded = true), () => (loaded = true));
-
-  const type = $derived(meetingTypes.get(id));
+  // svelte-ignore state_referenced_locally
+  const stored = new StoredRecord(view, meetingTypes, () => id, 'Diese Sitzungsart gibt es nicht mehr.', () => edit.save.busy);
+  const type = $derived(stored.record);
   view.title(() => type?.label);
-  // Deleted elsewhere (the store reloads on every change): close with a note.
-  $effect(() => {
-    if (loaded && !type && !edit.save.busy) {
-      if (!removed) view.notify('Diese Sitzungsart gibt es nicht mehr.');
-      view.leave();
-    }
-  });
 
   const ANCHOR_TEXT: Readonly<Record<MeetingStep['anchor'], string>> = {
     BEFORE_INVITE: 'vor der Einladungsfrist',
@@ -42,19 +33,11 @@
   };
 
   async function submit() {
-    await edit.submit(async (form) => {
-      await meetingsApi.saveType(id, form.toInput());
-      await meetingTypes.load();
-    }, 'Sitzungsart gespeichert.');
+    await edit.submit((form) => stored.saved(() => meetingsApi.saveType(id, form.toInput())), 'Sitzungsart gespeichert.');
   }
 
-  async function remove(label: string) {
-    await view.confirm({ title: 'Sitzungsart löschen', message: label, confirmLabel: 'Löschen', danger: true },
-      () => view.attempt(edit.save, () => edit.save.run(async () => {
-        removed = true;
-        await meetingsApi.deleteType(id);
-        await meetingTypes.load();
-      })), 'Sitzungsart gelöscht.');
+  function remove(label: string) {
+    void stored.remove(label, 'Sitzungsart löschen', 'Sitzungsart gelöscht.', edit.save, () => meetingsApi.deleteType(id));
   }
 </script>
 
@@ -62,7 +45,7 @@
   <Detail title={edit.form ? 'Sitzungsart bearbeiten' : type.label}>
     {#snippet actions()}
       {#if !edit.form && policy.canEditTypes()}
-        <Button icon="edit" onclick={() => edit.edit(new MeetingTypeForm(type, meetingTypes.rules))}>Bearbeiten</Button>
+        <Button icon="edit" onclick={() => edit.edit(new MeetingTypeForm(type, resolutionRules.value.items))}>Bearbeiten</Button>
         {#if !type.inUse}<Button variant="danger" icon="delete" onclick={() => remove(type.label)}>Löschen</Button>{/if}
       {/if}
     {/snippet}
