@@ -7,13 +7,24 @@
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
-  import type { BoardSettings } from './MembersApi';
+  import { OFFICE_KINDS, type BoardSettings, type OfficeKind } from './MembersApi';
   import { boardSettings, membersApi } from './services';
 
   /** Einstellungen › Funktionen (admin/board): names, holders and terms of the offices, and the board-wide rules. */
   const settings = new Resource(async () => structuredClone(await boardSettings.load()));
   void settings.load();
   const action = new Action();
+
+  /** Every pair of board offices (the auditors stay outside the board). */
+  const BOARD_OFFICES = OFFICE_KINDS.filter((o) => o !== 'AUDITOR');
+  const PAIRS = BOARD_OFFICES.flatMap((a, i) => BOARD_OFFICES.slice(i + 1).map((b) => [a, b] as const));
+
+  const same = (p: { a: OfficeKind; b: OfficeKind }, a: OfficeKind, b: OfficeKind) => (p.a === a && p.b === b) || (p.a === b && p.b === a);
+  const allows = (value: BoardSettings, a: OfficeKind, b: OfficeKind) => value.combinations.some((p) => same(p, a, b));
+
+  function toggle(value: BoardSettings, a: OfficeKind, b: OfficeKind, on: boolean) {
+    value.combinations = on ? [...value.combinations, { a, b }] : value.combinations.filter((p) => !same(p, a, b));
+  }
 
   async function save(event: SubmitEvent, value: BoardSettings) {
     event.preventDefault();
@@ -27,9 +38,8 @@
   {#snippet children(value)}
     <form class="stack section" onsubmit={(e) => save(e, value)}>
       <p class="muted">
-        Wie die Funktionen im Verein heißen, wie viele sie innehaben und wie lange eine Funktionsperiode dauert. Welche Funktionen eine
-        Person zugleich innehaben darf, ist fest geregelt (Stellvertretung auch Kassa oder Schriftführung, Rechnungsprüfung außerhalb des
-        Vorstands).
+        Wie die Funktionen im Verein heißen, wie viele sie innehaben, wie lange eine Funktionsperiode dauert und welche Funktionen eine
+        Person zugleich innehaben darf. Die Rechnungsprüfung gehört nach dem Vereinsgesetz nie zum Vorstand.
       </p>
       <div class="table" role="table" aria-label="Funktionen">
         <div class="head" role="row">
@@ -47,6 +57,16 @@
           </div>
         {/each}
       </div>
+
+      <fieldset>
+        <legend>Zugleich erlaubt</legend>
+        {#each PAIRS as [a, b] (a + b)}
+          <label class="check">
+            <input type="checkbox" checked={allows(value, a, b)} onchange={(e) => toggle(value, a, b, e.currentTarget.checked)} />
+            {boardSettings.label(a)} und {boardSettings.label(b)}
+          </label>
+        {/each}
+      </fieldset>
 
       <h3>Vorstand</h3>
       <div class="grid-2">
@@ -96,5 +116,16 @@
   }
   .short {
     width: 6rem;
+  }
+  fieldset {
+    display: grid;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  legend {
+    margin-bottom: var(--space-xs);
+    font-weight: var(--font-weight-medium);
   }
 </style>

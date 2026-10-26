@@ -3,7 +3,7 @@
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { ROLE_LABELS, type Member, type Role } from '../../lib/types';
-  import { membershipText, roleHue } from './roles';
+  import { roleHue } from './roles';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -17,7 +17,7 @@
   import { MemberDetailModel } from './MemberDetailModel.svelte';
   import ProfileEditor from './ProfileEditor.svelte';
   import RoleChecklist from './RoleChecklist.svelte';
-  import { memberPolicy as policy, membersApi } from './services';
+  import { memberPolicy as policy, membersApi, membershipKinds } from './services';
 
   /** One member: profile, roles, guardians, access. Window and page. */
   let { id, handle }: { id: string; handle?: WindowHandle } = $props();
@@ -119,7 +119,7 @@
           <dt>Foto-Einwilligung</dt>
           <dd>{member.photoConsent ? 'Ja' : 'Nein'}</dd>
           <dt>Mitgliedschaft</dt>
-          <dd>{membershipText(member)}</dd>
+          <dd>{membershipKinds.text(member)}</dd>
           {#if member.memberSince}
             <dt>Mitglied seit</dt>
             <dd>{session.format.date(member.memberSince)}</dd>

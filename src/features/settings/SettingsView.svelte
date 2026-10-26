@@ -13,6 +13,7 @@
   import MeetingTypesSection from '../meetings/MeetingTypesSection.svelte';
   import ResolutionRulesSection from '../meetings/ResolutionRulesSection.svelte';
   import BoardSettingsSection from '../members/BoardSettingsSection.svelte';
+  import MembershipSection from '../members/MembershipSection.svelte';
   import AppointmentTypesSection from '../calendar/AppointmentTypesSection.svelte';
   import { session } from '../../lib/container';
   import { ADMIN_BOARD, type Role } from '../../lib/types';
@@ -20,7 +21,7 @@
   /** Settings in the window or on a page; `id` is the section shown first. */
   let { id, handle }: { id: string; handle?: WindowHandle } = $props();
 
-  type SectionId = 'appearance' | 'home' | 'sidebar' | 'shortcuts' | 'security' | 'general' | 'club' | 'meeting-types' | 'offices' | 'resolution-rules' | 'appointment-types';
+  type SectionId = 'appearance' | 'home' | 'sidebar' | 'shortcuts' | 'security' | 'general' | 'club' | 'meeting-types' | 'membership' | 'offices' | 'resolution-rules' | 'appointment-types';
   /** `roles`: only shown to these (club-wide settings). */
   const ALL: readonly { id: SectionId; label: string; component: Component; roles?: readonly Role[] }[] = [
     { id: 'appearance', label: 'Darstellung', component: AppearanceSection },
@@ -31,6 +32,7 @@
     { id: 'general', label: 'Allgemein', component: GeneralSection },
     { id: 'club', label: 'Verein', component: ClubSection, roles: ADMIN_BOARD },
     { id: 'meeting-types', label: 'Sitzungsarten', component: MeetingTypesSection, roles: ADMIN_BOARD },
+    { id: 'membership', label: 'Mitgliedschaft', component: MembershipSection, roles: ADMIN_BOARD },
     { id: 'offices', label: 'Funktionen', component: BoardSettingsSection, roles: ADMIN_BOARD },
     { id: 'resolution-rules', label: 'Beschlüsse', component: ResolutionRulesSection, roles: ADMIN_BOARD },
     { id: 'appointment-types', label: 'Termine', component: AppointmentTypesSection, roles: ADMIN_BOARD },

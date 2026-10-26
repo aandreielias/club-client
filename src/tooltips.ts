@@ -38,6 +38,7 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Schritt davor': { text: 'Aufgabe oder Benachrichtigung vor jeder Sitzung dieser Art' },
   'Schritt danach': { text: 'Aufgabe oder Benachrichtigung nach jeder Sitzung dieser Art' },
   'Folgeaufgabe hinzufügen': { text: 'Eine weitere Aufgabe nach diesem Beschluss anlegen lassen' },
+  'Neue Mitgliedsart': { text: 'Eine eigene Art der Mitgliedschaft mit ihren Rechten anlegen' },
   'Neue Terminart': { text: 'Eine eigene Art von Terminen anlegen' },
   'Neue Sitzungsart': { text: 'Eine eigene Art von Sitzung mit ihren Regeln anlegen' },
   'Mitgliedschaft speichern': { text: 'Art, Ehrenmitgliedschaft und Eintrittsdatum speichern' },

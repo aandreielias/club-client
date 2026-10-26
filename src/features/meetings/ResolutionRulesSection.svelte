@@ -6,9 +6,11 @@
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
+  import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
   import {
-    ACTION_LABELS, FOLLOW_UP_KIND_LABELS, MAJORITY_LABELS, OWN_ACTION, type ActionRule, type FollowUpRule, type Majority, type ResolutionAction,
+    ACTION_LABELS, FOLLOW_UP_KIND_LABELS, MAJORITY_LABELS, OWN_ACTION, QUORUM_LABELS, type ActionRule, type FollowUpRule, type Majority, type Quorum,
+    type ResolutionAction, type ResolutionRules,
   } from './model';
   import { meetingsApi, meetingTypes } from './services';
 
@@ -20,6 +22,7 @@
   void rules.load();
   const action = new Action();
 
+  const QUORUMS = (Object.keys(QUORUM_LABELS) as Quorum[]).map((q) => ({ value: q, label: `${QUORUM_LABELS[q]} des Vorstands` }));
   const MAJORITIES = [
     { value: 'FREE', label: 'Wählt der Beschluss' },
     ...(Object.keys(MAJORITY_LABELS) as Majority[]).map((m) => ({ value: m, label: MAJORITY_LABELS[m] })),
@@ -36,22 +39,33 @@
     rule.followUps.push({ id: null, kind: 'IMPLEMENT', title: `${ACTION_LABELS[rule.action]}: {beschluss}`, dueDays: 7 });
   }
 
-  async function save(event: SubmitEvent, items: ActionRule[]) {
+  async function save(event: SubmitEvent, value: ResolutionRules) {
     event.preventDefault();
-    if (await action.run(async () => (meetingTypes.rules = await meetingsApi.saveResolutionRules(items)))) {
+    if (await action.run(async () => meetingTypes.set(await meetingsApi.saveResolutionRules(value)))) {
       bus.publish(TOAST, { text: 'Beschlussregeln gespeichert.' });
     }
   }
 </script>
 
 <AsyncView resource={rules}>
-  {#snippet children(items)}
-    <form class="stack section" onsubmit={(e) => save(e, items)}>
+  {#snippet children(value)}
+    <form class="stack section" onsubmit={(e) => save(e, value)}>
+      <section class="rule stack">
+        <h3>Umlaufbeschlüsse des Vorstands</h3>
+        <div class="row">
+          <Field label="Abstimmen mindestens" hint="Stunden ab dem Öffnen">
+            <input type="number" min="1" max="720" bind:value={value.circular.minHours} class="short" />
+          </Field>
+          <Field label="Gültig, wenn teilnehmen">
+            <Select bind:value={value.circular.quorum} options={QUORUMS} aria-label="Nötige Beteiligung" />
+          </Field>
+        </div>
+      </section>
       <p class="muted">
         Was ein Beschluss entscheidet, bringt seine Folgeaufgaben mit. Im Titel setzt {'{beschluss}'} den Beschluss, {'{mitglied}'} das
         betroffene Mitglied und {'{funktion}'} die Funktion ein. Ohne Fälligkeit hat die Aufgabe kein Datum.
       </p>
-      {#each items as rule (rule.action)}
+      {#each value.items as rule (rule.action)}
         <section class="rule stack">
           <div class="row between">
             <h3>{ACTION_LABELS[rule.action]}</h3>
@@ -90,6 +104,9 @@
     padding: var(--space-md);
     border-radius: var(--radius-lg);
     background: var(--color-surface);
+  }
+  .short {
+    width: 6rem;
   }
   .between {
     justify-content: space-between;

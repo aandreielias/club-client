@@ -1,6 +1,6 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
 import type { RefKind } from '../../lib/records/refs';
-import type { ActionRule, Choice, FollowUp, Meeting, MeetingPatch, MeetingType, MeetingTypeInput, MeetingSummary, NewFollowUp, NewMeeting, NewResolution, PresenceMode, Resolution, ResolutionAction } from './model';
+import type { Choice, FollowUp, Meeting, MeetingPatch, MeetingType, MeetingTypeInput, MeetingSummary, NewFollowUp, NewMeeting, NewResolution, PresenceMode, Resolution, ResolutionRules, ResolutionAction } from './model';
 
 /** Typed access to the meetings endpoints. Every write needs a step-up and answers with the meeting. */
 export class MeetingsApi {
@@ -9,13 +9,13 @@ export class MeetingsApi {
 
   constructor(private readonly api: ApiClient) {}
 
-  async resolutionRules(): Promise<ActionRule[]> {
-    return (await this.api.get<{ items: ActionRule[] }>(`${MeetingsApi.BASE}/resolution-rules`)).items;
+  resolutionRules(): Promise<ResolutionRules> {
+    return this.api.get<ResolutionRules>(`${MeetingsApi.BASE}/resolution-rules`);
   }
 
   /** Admin/board with step-up; every decision once. */
-  async saveResolutionRules(items: ActionRule[]): Promise<ActionRule[]> {
-    return (await this.api.put<{ items: ActionRule[] }>(`${MeetingsApi.BASE}/resolution-rules`, { items })).items;
+  saveResolutionRules(rules: ResolutionRules): Promise<ResolutionRules> {
+    return this.api.put<ResolutionRules>(`${MeetingsApi.BASE}/resolution-rules`, rules);
   }
 
   async types(): Promise<MeetingType[]> {

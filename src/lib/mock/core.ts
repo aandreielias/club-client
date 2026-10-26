@@ -8,7 +8,6 @@ import {
   guestOnly,
   type Club,
   type ClubEdit,
-  canVote,
   type Member,
   type MemberList,
   type MembershipType,
@@ -20,7 +19,7 @@ import {
   type Team,
   type TeamRole,
 } from '../types';
-import type { BoardSettings } from '../../features/members/MembersApi';
+import { SEEDED_MEMBERSHIP_KINDS, type BoardSettings, type MembershipKind, type OfficePair } from '../../features/members/MembersApi';
 import { MockEventBus, type MockAudience } from './MockEventBus';
 import { MockServer, mockServer, type MockRequest } from './MockServer';
 import { MockTable } from './MockTable';
@@ -50,7 +49,7 @@ function seedMember(id: string, firstName: string, lastName: string, roles: Role
   membershipType: MembershipType | null = null, honorary = false): Member {
   return {
     id, email: `${id}@example.at`, firstName, lastName, birthDate, phone: null, photoConsent: true, active: true, roles,
-    membershipType, honorary, memberSince: membershipType || honorary ? '2024-09-01' : null,
+    membershipType, honorary, memberSince: membershipType || honorary ? '2024-09-01' : null, voter: false, eligible: false,
   };
 }
 
@@ -85,6 +84,7 @@ const SEEDED_BOARD_SETTINGS: BoardSettings = {
     { office: 'AUDITOR', label: 'Rechnungsprüfung', enabled: true, minHolders: 2, maxHolders: 2, termYears: 3 },
   ],
   minBoardSize: 3, oddBoardSize: true, cooptWeeks: 4, termWarningDays: 60, byElectionDays: 7,
+  combinations: [{ a: 'TREASURER', b: 'VICE_CHAIR' }, { a: 'SECRETARY', b: 'VICE_CHAIR' }], honoraryVotes: true,
 };
 const plusYears = (date: string, years: number): string => `${Number(date.slice(0, 4)) + years}${date.slice(4)}`;
 
@@ -153,9 +153,66 @@ export class MockDirectory {
     ];
   }
 
+  /** server: members_membership_kind */
+  readonly membershipKinds = new MockTable<MembershipKind[]>('membership-kinds', () => structuredClone([...SEEDED_MEMBERSHIP_KINDS]));
+
   constructor() {
     this.addMissingMembers();
     this.upgradeSeed();
+    this.saveMembers();
+  }
+
+  /** server: MembershipRules — votes / may be elected with these kinds and honorary rule. */
+  private rights(m: Pick<Member, 'active' | 'membershipType' | 'honorary'>, kinds: readonly MembershipKind[] = this.membershipKinds.data,
+    honoraryVotes = this.boardSettings.data.honoraryVotes): { voter: boolean; eligible: boolean } {
+    const kind = kinds.find((k) => k.key === m.membershipType);
+    const honorary = honoraryVotes && m.honorary;
+    return { voter: m.active && (honorary || !!kind?.votes), eligible: m.active && (honorary || !!kind?.eligible) };
+  }
+
+  /** Stores the members with their rights brought up to date (the server computes them per answer). */
+  private saveMembers(): void {
+    for (const m of this.members.data) Object.assign(m, this.rights(m));
+    this.members.save();
+  }
+
+  /** server: MembershipHandlers.requireHoldersEligible */
+  private requireHoldersEligible(kinds: readonly MembershipKind[], honoraryVotes: boolean): void {
+    const holders = new Set(this.running().map((o) => o.memberId));
+    if (this.members.data.some((m) => m.active && holders.has(m.id) && !this.rights(m, kinds, honoraryVotes).eligible)) fail(409, 'member.holds-office');
+  }
+
+  listMembershipKinds(): { items: MembershipKind[] } {
+    const items = [...this.membershipKinds.data].sort((a, b) => a.sort - b.sort || a.label.localeCompare(b.label));
+    return { items: items.map((k) => ({ ...k, inUse: this.members.data.some((m) => m.membershipType === k.key) })) };
+  }
+
+  /** server: MembershipHandlers.saveKind */
+  saveMembershipKind(viewer: Member, key: string | null, body: Record<string, any>): MembershipKind {
+    this.requirePrivileged(viewer, ADMIN_BOARD);
+    if (key && !this.membershipKinds.data.some((k) => k.key === key)) fail(404, 'membership-kind.not-found');
+    const label = typeof body.label === 'string' ? body.label.trim() : '';
+    if (!label || label.length > 40) fail(400, 'membership-kind.label-invalid');
+    if (!Number.isInteger(body.sort) || body.sort < 0 || body.sort > 1000) fail(400, 'membership-kind.sort-invalid');
+    const kind: MembershipKind = { key: key ?? `KIND_${crypto.randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`, label,
+      votes: !!body.votes, eligible: !!body.eligible, sort: body.sort, archived: !!body.archived, inUse: false };
+    const next = [...this.membershipKinds.data.filter((k) => k.key !== kind.key), kind];
+    this.requireHoldersEligible(next, this.boardSettings.data.honoraryVotes);
+    this.membershipKinds.data.splice(0, this.membershipKinds.data.length, ...next);
+    this.membershipKinds.save();
+    this.saveMembers();
+    mockServer.events.publish({ type: 'members.membership-kinds-changed', data: {} });
+    return { ...kind, inUse: this.members.data.some((m) => m.membershipType === kind.key) };
+  }
+
+  deleteMembershipKind(viewer: Member, key: string): void {
+    this.requirePrivileged(viewer, ADMIN_BOARD);
+    const index = this.membershipKinds.data.findIndex((k) => k.key === key);
+    if (index < 0) fail(404, 'membership-kind.not-found');
+    if (this.members.data.some((m) => m.membershipType === key)) fail(409, 'membership-kind.in-use');
+    this.membershipKinds.data.splice(index, 1);
+    this.membershipKinds.save();
+    mockServer.events.publish({ type: 'members.membership-kinds-changed', data: {} });
   }
 
   /** Version 1 = mock data stored before the seed was versioned; a fresh seed runs the (harmless) upgrade once too. */
@@ -180,7 +237,7 @@ export class MockDirectory {
     for (const [guardian, minors] of Object.entries(SEED_WARDS)) this.wards.data[guardian] ??= [...minors];
     this.wards.save();
     for (const member of this.members.data) this.syncBoardRole(member);
-    this.members.save();
+    this.saveMembers();
     this.offices.save();
     this.memberships.save();
     this.#seed.data.version = SEED_VERSION;
@@ -192,7 +249,7 @@ export class MockDirectory {
     const missing = MockDirectory.seedMembers().filter((m) => !this.members.data.some((x) => x.id === m.id));
     if (!missing.length) return;
     this.members.data.push(...missing);
-    this.members.save();
+    this.saveMembers();
   }
 
   /** memberId → teamId → role in that team */
@@ -470,14 +527,16 @@ export class MockDirectory {
       photoConsent: false,
       active: true,
       roles,
-      membershipType: MockDirectory.membershipType(body.membershipType),
+      membershipType: this.membershipType(body.membershipType, null),
       honorary: false,
       memberSince: body.membershipType ? this.clock.today() : null,
+      voter: false,
+      eligible: false,
     };
     this.applyProfile(member, { birthDate: body.birthDate || undefined, phone: body.phone ?? undefined, photoConsent: body.photoConsent });
     if (body.guardianId != null && !this.members.data.some((m) => m.id === body.guardianId && m.active)) fail(404, 'member.not-found');
     this.members.data.push(member);
-    this.members.save();
+    this.saveMembers();
     if (body.guardianId != null) this.linkGuardian(viewer, member.id, body.guardianId);
     mockServer.events.publish({ type: 'members.member-invited', data: { memberId: member.id }, audience: { roles: ADMIN_BOARD } });
     return member;
@@ -490,7 +549,7 @@ export class MockDirectory {
     const target = this.members.data.find((m) => m.id === memberId) ?? fail(404, 'member.not-found');
     if (target.roles.includes('BOARD') !== roles.includes('BOARD')) fail(409, 'member.board-by-office');
     target.roles = roles;
-    this.members.save();
+    this.saveMembers();
     return this.visibleTo(viewer, target);
   }
 
@@ -504,7 +563,7 @@ export class MockDirectory {
     for (const o of this.running().filter((o) => o.memberId === memberId)) o.endedOn = this.clock.today();
     this.offices.save();
     target.roles = target.roles.filter((r) => r !== 'BOARD');
-    this.members.save();
+    this.saveMembers();
     mockServer.events.publish({ type: 'members.member-deactivated', data: { memberId }, audience: { roles: ADMIN_BOARD } });
     // server: TeamHandlers.onMemberDeactivated
     for (const teamId of Object.keys(this.teamRoles(memberId))) this.removeFromTeamUnchecked(teamId, memberId);
@@ -518,7 +577,7 @@ export class MockDirectory {
     if (!target.active && target.roles.length === 0) fail(409, 'member.erased');
     if (target.roles.includes('ADMIN') && !this.hasRole(viewer, ['ADMIN'])) fail(403, 'access.denied');
     target.active = true;
-    this.members.save();
+    this.saveMembers();
     return this.visibleTo(viewer, target);
   }
 
@@ -531,7 +590,7 @@ export class MockDirectory {
       photoConsent: false, roles: [], membershipType: null, honorary: false, memberSince: null });
     delete this.wards.data[memberId];
     for (const wards of Object.values(this.wards.data)) wards.splice(0, wards.length, ...wards.filter((id) => id !== memberId));
-    this.members.save();
+    this.saveMembers();
     this.wards.save();
   }
 
@@ -540,13 +599,13 @@ export class MockDirectory {
   setMembership(viewer: Member, memberId: string, body: Record<string, any>): Member {
     this.requirePrivileged(viewer, ADMIN_BOARD);
     const target = this.members.data.find((m) => m.id === memberId && m.active) ?? fail(404, 'member.not-found');
-    const membershipType = MockDirectory.membershipType(body.membershipType);
+    const membershipType = this.membershipType(body.membershipType, target.membershipType);
     const honorary = body.honorary === true;
     const memberSince = membershipType || honorary ? (typeof body.memberSince === 'string' && body.memberSince ? body.memberSince : null) : null;
     if (memberSince && memberSince > this.clock.today()) fail(400, 'member.member-since-in-future');
-    if (!canVote({ ...target, membershipType, honorary }) && this.running().some((o) => o.memberId === memberId)) fail(409, 'member.holds-office');
+    if (!this.rights({ ...target, membershipType, honorary }).eligible && this.running().some((o) => o.memberId === memberId)) fail(409, 'member.holds-office');
     Object.assign(target, { membershipType, honorary, memberSince });
-    this.members.save();
+    this.saveMembers();
     mockServer.events.publish({ type: 'members.membership-changed', data: { memberId, membershipType, honorary } });
     return this.visibleTo(viewer, target);
   }
@@ -588,13 +647,20 @@ export class MockDirectory {
       if (!int(o.termYears, 1, 10)) fail(400, 'board-settings.term-invalid');
       return { office: kind, label, enabled: !!o.enabled, minHolders: o.minHolders, maxHolders: max, termYears: o.termYears };
     });
+    const combinations: OfficePair[] = Array.isArray(body.combinations) ? body.combinations : fail(400, 'board-settings.combination-invalid');
+    if (combinations.some((p) => !p || !OFFICES.includes(p.a) || !OFFICES.includes(p.b) || p.a === p.b || p.a === 'AUDITOR' || p.b === 'AUDITOR')) {
+      fail(400, 'board-settings.combination-invalid');
+    }
     if (!offices[0].enabled) fail(400, 'board-settings.chair-required');
     if (!int(body.minBoardSize, 1, 20) || !int(body.cooptWeeks, 0, 52) || !int(body.termWarningDays, 1, 365) || !int(body.byElectionDays, 1, 365)) {
       fail(400, 'board-settings.board-invalid');
     }
+    this.requireHoldersEligible(this.membershipKinds.data, body.honoraryVotes !== false);
     Object.assign(this.boardSettings.data, { offices, minBoardSize: body.minBoardSize, oddBoardSize: !!body.oddBoardSize, cooptWeeks: body.cooptWeeks,
-      termWarningDays: body.termWarningDays, byElectionDays: body.byElectionDays });
+      termWarningDays: body.termWarningDays, byElectionDays: body.byElectionDays, combinations: combinations.map(({ a, b }) => ({ a, b })),
+      honoraryVotes: body.honoraryVotes !== false });
     this.boardSettings.save();
+    this.saveMembers();
     mockServer.events.publish({ type: 'members.board-settings-changed', data: {} });
     return this.boardSettings.data;
   }
@@ -608,17 +674,15 @@ export class MockDirectory {
     const termEndsOn = typeof body.termEndsOn === 'string' && body.termEndsOn ? body.termEndsOn : plusYears(body.startsOn, setting.termYears);
     if (termEndsOn <= body.startsOn || termEndsOn > plusYears(body.startsOn, setting.termYears)) fail(400, 'office.term-invalid');
     const holder = this.members.data.find((m) => m.id === body.memberId && m.active) ?? fail(404, 'member.not-found');
-    if (!canVote(holder)) fail(409, 'office.not-eligible');
+    if (!this.rights(holder).eligible) fail(409, 'office.not-eligible');
     const running = this.running();
     if (!setting.enabled) fail(409, 'office.disabled');
     if (setting.maxHolders != null && running.filter((o) => o.office === office).length >= setting.maxHolders) fail(409, 'office.taken');
     const held = running.filter((o) => o.memberId === holder.id).map((o) => o.office);
     if (held.includes(office)) fail(409, 'office.already-held');
     if (held.length && (held.includes('AUDITOR') || office === 'AUDITOR')) fail(409, 'office.auditor-in-board');
-    const both = [...held, office];
-    if (held.length && !(both.length === 2 && both.includes('VICE_CHAIR') && (both.includes('TREASURER') || both.includes('SECRETARY')))) {
-      fail(409, 'office.combination');
-    }
+    const allowed = (x: string, y: string) => this.boardSettings.data.combinations.some((p) => (p.a === x && p.b === y) || (p.a === y && p.b === x));
+    if (held.some((h) => !allowed(h, office))) fail(409, 'office.combination');
     const row: OfficeRow = { id: crypto.randomUUID(), memberId: holder.id, office, startsOn: body.startsOn, termEndsOn, endedOn: null, coopted: body.coopted === true };
     this.offices.data.push(row);
     this.offices.save();
@@ -644,7 +708,7 @@ export class MockDirectory {
       const board = new Set(this.running().filter((o) => o.office !== 'AUDITOR').map((o) => o.memberId));
       return this.members.data.filter((m) => m.active && board.has(m.id)).map((m) => m.id);
     }
-    return this.members.data.filter((m) => (body === 'ASSEMBLY' ? canVote(m) : m.active && (!!m.membershipType || m.honorary))).map((m) => m.id);
+    return this.members.data.filter((m) => (body === 'ASSEMBLY' ? this.rights(m).voter : m.active && (!!m.membershipType || m.honorary))).map((m) => m.id);
   }
 
   officesOf(memberId: string): OfficeRow['office'][] {
@@ -660,7 +724,7 @@ export class MockDirectory {
     const board = member.active && this.running().some((o) => o.memberId === member.id && o.office !== 'AUDITOR');
     if (board === member.roles.includes('BOARD')) return;
     member.roles = board ? [...member.roles, 'BOARD'] : member.roles.filter((r) => r !== 'BOARD');
-    this.members.save();
+    this.saveMembers();
   }
 
   private displayName(memberId: string): string {
@@ -668,9 +732,12 @@ export class MockDirectory {
     return m ? `${m.firstName} ${m.lastName}` : '–';
   }
 
-  private static membershipType(value: unknown): MembershipType | null {
+  /** server: MembershipHandlers.requireKind — a known kind; an archived one only stays with who has it. */
+  private membershipType(value: unknown, current: MembershipType | null): MembershipType | null {
     if (value == null) return null;
-    return value === 'ORDINARY' || value === 'EXTRAORDINARY' ? value : fail(400, 'request.invalid');
+    const kind = this.membershipKinds.data.find((k) => k.key === value) ?? fail(400, 'member.membership-unknown');
+    if (kind.archived && kind.key !== current) fail(400, 'member.membership-archived');
+    return kind.key;
   }
 
   /** server: MemberHandlers.family (who may open the profile) */
@@ -898,7 +965,7 @@ export class MockDirectory {
     if (email === member.email) return;
     if (this.members.data.some((m) => m.email === email)) fail(409, 'member.email-taken');
     member.email = email;
-    this.members.save();
+    this.saveMembers();
   }
 
   /** Validates a profile change on a copy; the member stays unchanged. */
@@ -927,7 +994,7 @@ export class MockDirectory {
     if (firstName !== undefined) member.firstName = MockDirectory.name(firstName, 'member.first-name-invalid');
     if (lastName !== undefined) member.lastName = MockDirectory.name(lastName, 'member.last-name-invalid');
     if (typeof photoConsent === 'boolean') member.photoConsent = photoConsent;
-    this.members.save();
+    this.saveMembers();
     return member;
   }
 
@@ -985,6 +1052,10 @@ mockServer
     return directory.updateProfile(viewer, req.params.id, req.body ?? {});
   })
   .on('GET', '/api/v1/me/security', (req) => directory.securityStatus(directory.actor(req, true)))
+  .on('GET', '/api/v1/membership-kinds', (req) => (directory.actor(req), directory.listMembershipKinds()))
+  .on('POST', '/api/v1/membership-kinds', (req) => directory.saveMembershipKind(directory.actor(req), null, req.body ?? {}))
+  .on('PUT', '/api/v1/membership-kinds/:key', (req) => directory.saveMembershipKind(directory.actor(req), req.params.key, req.body ?? {}))
+  .on('DELETE', '/api/v1/membership-kinds/:key', (req) => directory.deleteMembershipKind(directory.actor(req), req.params.key))
   .on('GET', '/api/v1/board/settings', (req) => (directory.actor(req), directory.boardSettings.data))
   .on('PUT', '/api/v1/board/settings', (req) => directory.saveBoardSettings(directory.actor(req), req.body ?? {}))
   .on('PUT', '/api/v1/club/pin', (req) => directory.setClubPin(directory.actor(req), req.body?.pin))

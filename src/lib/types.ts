@@ -32,10 +32,8 @@ export const ROLE_LABELS: Readonly<Record<Role, string>> = {
   GUEST: 'Gast',
 };
 
-/** Ordinary members take part, extraordinary members also help run the club and vote. */
-export type MembershipType = 'ORDINARY' | 'EXTRAORDINARY';
-
-export const MEMBERSHIP_LABELS: Readonly<Record<MembershipType, string>> = { ORDINARY: 'Ordentlich', EXTRAORDINARY: 'Außerordentlich' };
+/** Key of a club-defined membership kind (server: members_membership_kind); seeded ORDINARY, EXTRAORDINARY. */
+export type MembershipType = string;
 
 export interface Club {
   name: string;
@@ -74,10 +72,12 @@ export interface Member {
   honorary: boolean;
   /** ISO date. */
   memberSince: string | null;
+  /** Votes in the general meeting (server: MembershipRules). */
+  voter: boolean;
+  /** May be elected into an office. */
+  eligible: boolean;
 }
 
-/** server: Member.canVote — votes and may hold an office. */
-export const canVote = (m: Member): boolean => m.active && (m.membershipType === 'EXTRAORDINARY' || m.honorary);
 
 export interface MemberList {
   items: Member[];

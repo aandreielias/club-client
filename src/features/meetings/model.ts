@@ -97,13 +97,19 @@ export const quorumText = (type: MeetingType): string =>
 export const mayConvene = (type: MeetingType, admin: boolean, offices: readonly OfficeKind[]): boolean =>
   admin || type.conveners.some((o) => offices.includes(o));
 
+/** server: Quorum.reached — `count` of `total` reach the share; nobody of nobody does not. */
+export function quorumReached(quorum: Quorum, count: number, total: number): boolean {
+  if (!count || !total) return false;
+  if (quorum === 'AT_LEAST_HALF') return count * 2 >= total;
+  if (quorum === 'MORE_THAN_HALF') return count * 2 > total;
+  return count * 4 >= total * 3;
+}
+
 /** server: MeetingType.isQuorate; `present` counts only the electorate. */
 export function isQuorate(type: MeetingType, present: number, voters: number, startsAt: string, now: number): boolean {
   if (!voters || !present) return false;
   if (type.graceMinutes && now >= Date.parse(startsAt) + type.graceMinutes * 60_000) return true;
-  if (type.quorum === 'AT_LEAST_HALF') return present * 2 >= voters;
-  if (type.quorum === 'MORE_THAN_HALF') return present * 2 > voters;
-  return present * 4 >= voters * 3;
+  return quorumReached(type.quorum, present, voters);
 }
 
 /** A day of the year ("MM-DD"; 29 February allowed), as the yearly meetings' day (server: MeetingType.parseDueBy). */
@@ -284,8 +290,19 @@ export function majorities(type: MeetingType | null): Majority[] {
   return type ? (['SIMPLE', 'TWO_THIRDS', 'THREE_QUARTERS'] as const).filter((m) => type.majorities.includes(m)) : ['SIMPLE'];
 }
 
-/** server: Resolution.CIRCULAR_MIN. */
-export const CIRCULAR_MIN_MS = 3 * 24 * HOUR;
+/** server: MeetingsApi.CircularRules — shortest voting time of a circular vote, and the share of the board that must take part. */
+export interface CircularRules {
+  minHours: number;
+  quorum: Quorum;
+}
+
+export const SEEDED_CIRCULAR: CircularRules = { minHours: 72, quorum: 'MORE_THAN_HALF' };
+
+/** server: MeetingsApi.ActionRules. */
+export interface ResolutionRules {
+  items: ActionRule[];
+  circular: CircularRules;
+}
 
 export interface Resolution {
   id: string;

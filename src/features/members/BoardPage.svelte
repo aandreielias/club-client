@@ -5,7 +5,6 @@
   import RecordLink from '../../ui/RecordLink.svelte';
   import { CONFIRM, TOAST } from '../../channels';
   import { Resource } from '../../lib/state/Resource.svelte';
-  import { canVote } from '../../lib/types';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -35,9 +34,9 @@
   let termEndsOn = $state('');
   let coopted = $state(false);
 
-  /** server: canVote — only extraordinary and honorary members may be elected. */
+  /** server: MembershipRules.eligible — only members whose membership allows an office. */
   const memberOptions = $derived(
-    (candidates.value ?? []).filter(canVote).map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` })),
+    (candidates.value ?? []).filter((m) => m.eligible).map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` })),
   );
 
   async function assign(event: SubmitEvent) {
@@ -102,7 +101,7 @@
     <h2>Funktion vergeben</h2>
     <form class="stack" onsubmit={assign}>
       <div class="grid">
-        <Field label="Mitglied" hint="Nur außerordentliche und Ehrenmitglieder sind wählbar.">
+        <Field label="Mitglied" hint="Nur wählbare Mitglieder (Einstellungen › Mitgliedschaft).">
           <Select bind:value={memberId} placeholder="Bitte wählen" options={memberOptions} />
         </Field>
         <Field label="Funktion">

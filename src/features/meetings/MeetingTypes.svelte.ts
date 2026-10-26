@@ -1,12 +1,13 @@
 import type { EventBus } from '../../lib/bus';
 import { ACTION_RULES_CHANGED, MEETING_TYPES_CHANGED } from './events';
 import type { MeetingsApi } from './MeetingsApi';
-import type { ActionRule, Majority, MeetingKind, MeetingType, ResolutionAction } from './model';
+import { SEEDED_CIRCULAR, type ActionRule, type CircularRules, type Majority, type MeetingKind, type MeetingType, type ResolutionAction, type ResolutionRules } from './model';
 
 /** The club's meeting types and resolution rules (server: meetings_type, meetings_action_rule), loaded at start and on changes. */
 export class MeetingTypes {
   items = $state.raw<MeetingType[]>([]);
   rules = $state.raw<ActionRule[]>([]);
+  circular = $state.raw<CircularRules>(SEEDED_CIRCULAR);
 
   constructor(
     private readonly api: MeetingsApi,
@@ -21,9 +22,14 @@ export class MeetingTypes {
     return () => (types.unsubscribe(), rules.unsubscribe());
   }
 
-  async loadRules(): Promise<ActionRule[]> {
-    this.rules = await this.api.resolutionRules();
-    return this.rules;
+  async loadRules(): Promise<ResolutionRules> {
+    this.set(await this.api.resolutionRules());
+    return { items: this.rules, circular: this.circular };
+  }
+
+  set(rules: ResolutionRules): void {
+    this.rules = rules.items;
+    this.circular = rules.circular;
   }
 
   /** The majority a decision fixes (seeded: statute change two thirds, dissolution three quarters). */

@@ -8,7 +8,7 @@ import { linkRefs, type FileLink } from '../../lib/mock/MockLinks';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import type { FileRef } from '../../lib/links/model';
-import { canVote, type Member } from '../../lib/types';
+import type { Member } from '../../lib/types';
 import type { DownloadLink, FileVersion, Folder, FolderKind, FolderScope, StoredFile } from './model';
 
 type StoredFolder = Omit<Folder, 'canUpload' | 'canManage'>;
@@ -34,7 +34,7 @@ class Viewer {
   constructor(readonly member: Member, people: MockDirectory) {
     const own = people.teamRoles(member.id);
     this.board = people.isManager(member);
-    this.voter = canVote(member);
+    this.voter = member.voter;
     this.teamIds = new Set(Object.keys(own));
     this.coachTeamIds = new Set(Object.keys(own).filter((t) => own[t] === 'COACH'));
   }

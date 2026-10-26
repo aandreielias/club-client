@@ -13,9 +13,8 @@
   import { InviteForm } from './MemberForms.svelte';
   import RoleChecklist from './RoleChecklist.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
-  import { MEMBERSHIP_CHOICES } from './roles';
   import Select from '../../ui/Select.svelte';
-  import { memberPolicy as policy, membersApi } from './services';
+  import { memberPolicy as policy, membersApi, membershipKinds } from './services';
 
   /** Invitation of a new member in the window; afterwards the window shows the new member. */
   let { handle }: { id: string; handle: WindowHandle } = $props();
@@ -65,7 +64,7 @@
     <label class="check"><input type="checkbox" bind:checked={form.photoConsent} /> Einverständnis für Fotos liegt vor</label>
     <fieldset class="stack">
       <legend>Mitgliedschaft</legend>
-      <ChoiceGroup name="invite-membership" label="Mitgliedschaft" options={MEMBERSHIP_CHOICES} bind:value={form.membershipType} />
+      <ChoiceGroup name="invite-membership" label="Mitgliedschaft" options={membershipKinds.choices()} bind:value={form.membershipType} />
       <p class="muted small">Mitglied ab heute. Eltern ohne eigene Mitgliedschaft: „Kein Mitglied“.</p>
     </fieldset>
     <RoleChecklist bind:value={form.roles} allowed={policy.grantableRoles()} legend="Rollen" />

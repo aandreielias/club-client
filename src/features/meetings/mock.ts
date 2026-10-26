@@ -6,11 +6,11 @@ import { resolveRef } from '../../lib/mock/recordRefs';
 import { files } from '../files/mock';
 import { defaultTemplate, fill, TEMPLATE_NAME } from './invitationDocument';
 import type { LinkedRef, RefKind } from '../../lib/records/refs';
-import { ADMIN_BOARD, canVote, type Member } from '../../lib/types';
+import { ADMIN_BOARD, type Member } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
 import { tasks } from '../tasks/mock';
 import {
-  actionNeedsMember, actions, CIRCULAR_MIN_MS, isAssembly, OWN_ACTION, type ActionRule, isDayOfYear, isQuorate, latestInvite, majorities, mayConvene, type Choice,
+  actionNeedsMember, actions, isAssembly, quorumReached, SEEDED_CIRCULAR, type CircularRules, OWN_ACTION, type ActionRule, isDayOfYear, isQuorate, latestInvite, majorities, mayConvene, type Choice,
   type FollowUp, type FollowUpKind, type Majority, type Meeting, type MeetingKind, type MeetingSummary, type MeetingType, type PresenceMode,
   type MeetingStep, type Quorum, type Resolution, type ResolutionAction, type StepAnchor, type StepAudience,
 } from './model';
@@ -127,6 +127,8 @@ const text = (value: unknown, max: number, code: string): string | null => {
 
 export class MockMeetings {
   readonly rules = new MockTable<ActionRule[]>('resolution-rules', seededRules);
+  /** server: meetings_setting */
+  readonly circular = new MockTable<CircularRules>('circular-rules', () => ({ ...SEEDED_CIRCULAR }));
   readonly types = new MockTable<StoredType[]>('meeting-types', () => structuredClone([...SEEDED_TYPES]));
   readonly meetings = new MockTable<StoredMeeting[]>('meetings', () => MockMeetings.seed());
   readonly resolutions = new MockTable<StoredResolution[]>('resolutions', () => MockMeetings.seedResolutions());
@@ -189,7 +191,7 @@ export class MockMeetings {
 
   // --- resolution rules (server: MeetingTypeHandlers.saveRules, FollowUpPlanner.validate) ---
 
-  saveRules(viewer: Member, body: Record<string, any>): { items: ActionRule[] } {
+  saveRules(viewer: Member, body: Record<string, any>): { items: ActionRule[]; circular: CircularRules } {
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const items: Record<string, any>[] = Array.isArray(body.items) ? body.items : [];
     if (items.length !== ACTIONS.length || new Set(items.map((i) => i.action)).size !== ACTIONS.length || items.some((i) => !ACTIONS.includes(i.action))) {
@@ -214,10 +216,16 @@ export class MockMeetings {
         fail(400, 'meeting-type.majority-for-action');
       }
     }
+    const circular = body.circular ?? {};
+    if (!Number.isInteger(circular.minHours) || circular.minHours < 1 || circular.minHours > 720 || !QUORUMS.includes(circular.quorum)) {
+      fail(400, 'action-rules.circular-invalid');
+    }
     this.rules.data.splice(0, this.rules.data.length, ...rules);
     this.rules.save();
+    Object.assign(this.circular.data, { minHours: circular.minHours, quorum: circular.quorum });
+    this.circular.save();
     mockServer.events.publish({ type: 'meetings.action-rules-changed', data: {} });
-    return { items: this.rules.data };
+    return { items: this.rules.data, circular: this.circular.data };
   }
 
   private name(id: string): string {
@@ -263,7 +271,7 @@ export class MockMeetings {
     if (r.meetingId) fail(409, 'resolution.not-circular');
     if (r.status !== 'OPEN') fail(409, 'resolution.not-open');
     if (start !== r.openedAt) fail(409, 'resolution.start-fixed');
-    if (!end || Date.parse(end) < Date.parse(r.openedAt!) + CIRCULAR_MIN_MS || Date.parse(end) <= Date.now()) fail(400, 'resolution.deadline-too-short');
+    if (!end || Date.parse(end) < Date.parse(r.openedAt!) + this.circular.data.minHours * 3_600_000 || Date.parse(end) <= Date.now()) fail(400, 'resolution.deadline-too-short');
     r.deadline = end;
     this.resolutionChanged(r, 'UPDATED');
   }
@@ -585,7 +593,7 @@ export class MockMeetings {
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null;
     if (meeting && meeting.status !== 'OPEN') fail(409, 'meeting.not-open');
     if (meeting && !this.quorate(meeting, this.meetingVoters(meeting))) fail(409, 'resolution.not-quorate');
-    if (!meeting && Date.parse(r.deadline!) < Date.now() + CIRCULAR_MIN_MS) fail(400, 'resolution.deadline-too-short');
+    if (!meeting && Date.parse(r.deadline!) < Date.now() + this.circular.data.minHours * 3_600_000) fail(400, 'resolution.deadline-too-short');
     const voters = this.voters(r);
     Object.assign(r, { status: 'OPEN', openedAt: new Date().toISOString(), voters: voters.length, frozenVoters: meeting ? undefined : voters });
     this.resolutionChanged(r, 'OPENED');
@@ -645,7 +653,7 @@ export class MockMeetings {
     const yes = r.yes + (r.analogYes ?? 0);
     const valid = yes + r.no + (r.analogNo ?? 0);
     const passes = valid > 0 && (r.majority === 'SIMPLE' ? yes * 2 > valid : r.majority === 'TWO_THIRDS' ? yes * 3 >= valid * 2 : yes * 4 >= valid * 3);
-    const result = !r.meetingId && r.ballots.length * 2 <= (r.voters ?? 0) ? 'NOT_QUORATE' : passes ? 'PASSED' : 'FAILED';
+    const result = !r.meetingId && !quorumReached(this.circular.data.quorum, r.ballots.length, r.voters ?? 0) ? 'NOT_QUORATE' : passes ? 'PASSED' : 'FAILED';
     Object.assign(r, { status: 'CLOSED', closedAt: new Date().toISOString(), result });
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null;
     if (result === 'PASSED' && (!meeting || meeting.autoTasks !== false)) this.planFollowUps(r, meeting);
@@ -834,7 +842,7 @@ export class MockMeetings {
 
   private maySee(viewer: Member, m: StoredMeeting): boolean {
     if (this.people.hasRole(viewer, ADMIN_BOARD)) return true;
-    return isAssembly(this.type(m.kind)) && canVote(viewer);
+    return isAssembly(this.type(m.kind)) && viewer.voter;
   }
 
   private visible(viewer: Member, id: string): StoredMeeting {
@@ -891,7 +899,7 @@ const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer
   .on('GET', '/api/v1/meetings', (req) => meetings.list(actor(req), req.query.get('from'), req.query.get('to')))
-  .on('GET', '/api/v1/meetings/resolution-rules', (req) => (actor(req), { items: meetings.rules.data }))
+  .on('GET', '/api/v1/meetings/resolution-rules', (req) => (actor(req), { items: meetings.rules.data, circular: meetings.circular.data }))
   .on('PUT', '/api/v1/meetings/resolution-rules', (req) => meetings.saveRules(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/meetings/types', (req) => (actor(req), meetings.listTypes()))
   .on('POST', '/api/v1/meetings/types', (req) => meetings.saveType(actor(req), null, req.body ?? {}))

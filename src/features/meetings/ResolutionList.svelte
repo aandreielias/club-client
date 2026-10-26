@@ -10,7 +10,6 @@
   import Select from '../../ui/Select.svelte';
   import { RESOLUTION_CHANGED } from './events';
   import { directory } from '../../lib/container';
-  import { canVote } from '../../lib/types';
   import type { OfficeKind } from '../members/MembersApi';
   import { boardSettings } from '../members/services';
   import MemberChips from './MemberChips.svelte';
@@ -46,7 +45,7 @@
   const members = new Resource(() => directory.allMembers());
   void members.load();
   // Elections need someone who may be elected; the other actions any active member.
-  const memberOptions = $derived((members.value ?? []).filter((m) => (action === 'ELECTION' ? canVote(m) : m.active))
+  const memberOptions = $derived((members.value ?? []).filter((m) => (action === 'ELECTION' ? m.eligible : m.active))
     .map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` })));
   const implied = $derived(meetingTypes.fixedMajority(action));
   // server: ResolutionHandlers.assignable — those present; admins and board members only when its tasks need their rights.

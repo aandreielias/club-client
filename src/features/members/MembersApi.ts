@@ -57,6 +57,31 @@ export interface NewOffice {
   coopted: boolean;
 }
 
+/** server: MembersApi.MembershipKindDto — `votes` in the general meeting, `eligible` for an office; in use: archive, don't delete. */
+export interface MembershipKind {
+  key: MembershipType;
+  label: string;
+  votes: boolean;
+  eligible: boolean;
+  sort: number;
+  archived: boolean;
+  inUse: boolean;
+}
+
+export type MembershipKindInput = Omit<MembershipKind, 'key' | 'inUse'>;
+
+/** Seeded kinds, shown until the club's are loaded. */
+export const SEEDED_MEMBERSHIP_KINDS: readonly MembershipKind[] = [
+  { key: 'ORDINARY', label: 'Ordentlich', votes: false, eligible: false, sort: 1, archived: false, inUse: false },
+  { key: 'EXTRAORDINARY', label: 'Außerordentlich', votes: true, eligible: true, sort: 2, archived: false, inUse: false },
+];
+
+/** Two offices one person may hold together. */
+export interface OfficePair {
+  a: OfficeKind;
+  b: OfficeKind;
+}
+
 /** server: MembersApi.OfficeSetting — `maxHolders` null: any number; a disabled office is not assigned any more. */
 export interface OfficeSetting {
   office: OfficeKind;
@@ -77,6 +102,10 @@ export interface BoardSettings {
   cooptWeeks: number;
   termWarningDays: number;
   byElectionDays: number;
+  /** Offices one person may hold together; none = one office per person. */
+  combinations: OfficePair[];
+  /** Honorary members vote and may be elected. */
+  honoraryVotes: boolean;
 }
 
 /** Running offices; warnings are codes like 'board.too-small' (texts in BOARD_WARNINGS). */
@@ -160,6 +189,21 @@ export class MembersApi {
 
   setMembership(id: string, membership: Membership): Promise<Member> {
     return this.api.put<Member>(`${this.path(id)}/membership`, membership);
+  }
+
+  async membershipKinds(): Promise<MembershipKind[]> {
+    return (await this.api.get<{ items: MembershipKind[] }>('/api/v1/membership-kinds')).items;
+  }
+
+  /** Admin/board with step-up; `key` null creates a kind. */
+  saveMembershipKind(key: string | null, kind: MembershipKindInput): Promise<MembershipKind> {
+    return key ? this.api.put<MembershipKind>(`/api/v1/membership-kinds/${encodeURIComponent(key)}`, kind)
+      : this.api.post<MembershipKind>('/api/v1/membership-kinds', kind);
+  }
+
+  /** Only kinds no member has (`membership-kind.in-use`). */
+  deleteMembershipKind(key: string): Promise<void> {
+    return this.api.delete(`/api/v1/membership-kinds/${encodeURIComponent(key)}`);
   }
 
   boardSettings(): Promise<BoardSettings> {

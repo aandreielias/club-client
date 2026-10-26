@@ -1,4 +1,9 @@
-import { MEMBERSHIP_LABELS, ROLE_LABELS, type Member, type Role } from '../../lib/types';
+import { ROLE_LABELS, type Member, type Role } from '../../lib/types';
+import { SEEDED_MEMBERSHIP_KINDS } from './MembersApi';
+
+/** Kind key → label (the club's kinds; default: the seeded ones). */
+export type MembershipLabels = Readonly<Record<string, string>>;
+const SEEDED_LABELS: MembershipLabels = Object.fromEntries(SEEDED_MEMBERSHIP_KINDS.map((k) => [k.key, k.label]));
 import { InviteForm, type MemberField } from './MemberForms.svelte';
 import type { Invitation, Membership, MembersApi } from './MembersApi';
 
@@ -35,7 +40,7 @@ function cell(value: string): string {
 }
 
 /** Semicolon CSV with BOM, as German Excel opens and saves it. */
-export function membersToCsv(members: readonly Member[]): string {
+export function membersToCsv(members: readonly Member[], labels: MembershipLabels = SEEDED_LABELS): string {
   const lines = members.map((m) =>
     [
       m.firstName,
@@ -45,7 +50,7 @@ export function membersToCsv(members: readonly Member[]): string {
       m.phone ?? '',
       yesNo(m.photoConsent),
       m.roles.map((r) => ROLE_LABELS[r]).join(', '),
-      m.membershipType ? MEMBERSHIP_LABELS[m.membershipType] : '',
+      m.membershipType ? (labels[m.membershipType] ?? m.membershipType) : '',
       yesNo(m.honorary),
       m.memberSince ?? '',
       m.active ? 'Aktiv' : 'Inaktiv',
@@ -97,7 +102,8 @@ function byLabel<K extends string>(labels: Readonly<Record<K, string>>, value: s
  * Reads new accounts from a member CSV (the export format; column order free, "Status" ignored).
  * E-mails already in `existing` or earlier in the file, and roles the importer may not grant, are problems.
  */
-export function parseMemberImport(text: string, today: string, existing: ReadonlySet<string>, grantable: readonly Role[]): ParsedImport {
+export function parseMemberImport(text: string, today: string, existing: ReadonlySet<string>, grantable: readonly Role[],
+  labels: MembershipLabels = SEEDED_LABELS): ParsedImport {
   const body = text.replace(/^﻿/, '');
   const first = body.split(/\r?\n/, 1)[0];
   const records = parseCsv(body, first.split(';').length >= first.split(',').length ? ';' : ',');
@@ -138,7 +144,7 @@ export function parseMemberImport(text: string, today: string, existing: Readonl
     form.roles = roles as Role[];
 
     const type = get('Mitgliedschaft');
-    const membershipType = type ? byLabel(MEMBERSHIP_LABELS, type) : null;
+    const membershipType = type ? byLabel(labels, type) : null;
     if (type && !membershipType) return fail(`Mitgliedschaft "${type}" unbekannt.`);
     form.membershipType = membershipType ?? 'NONE';
 

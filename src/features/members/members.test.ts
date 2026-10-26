@@ -10,7 +10,7 @@ import type { MembersApi } from './MembersApi';
 const TODAY = '2026-10-15';
 
 const member = (id: string, roles: Role[], extra: Partial<Member> = {}): Member => ({
-  id, email: `${id}@x.at`, firstName: id, lastName: 'Test', birthDate: '2000-01-01', phone: null, photoConsent: true, active: true, membershipType: null, honorary: false, memberSince: null, roles, ...extra,
+  id, email: `${id}@x.at`, firstName: id, lastName: 'Test', birthDate: '2000-01-01', phone: null, photoConsent: true, active: true, membershipType: null, honorary: false, memberSince: null, voter: false, eligible: false, roles, ...extra,
 });
 
 function policyFor(roles: Role[]): MemberPolicy {

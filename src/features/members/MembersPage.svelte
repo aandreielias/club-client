@@ -11,7 +11,7 @@
   import { MEMBER_DEACTIVATED, MEMBER_INVITED } from './events';
   import { membersToCsv, parseMemberImport, runMemberImport, type ImportProblem } from './MemberCsv.svelte';
   import { MemberListModel } from './MemberListModel.svelte';
-  import { memberPolicy as policy, membersApi } from './services';
+  import { memberPolicy as policy, membersApi, membershipKinds } from './services';
 
   // The list needs a step-up: the PIN dialog appears on first load.
   const list = new MemberListModel(membersApi, store);
@@ -26,12 +26,14 @@
 
   /** Exports what the list shows (search and filters applied). */
   function exportCsv(): void {
-    BrowserFile.save(new Blob([membersToCsv(list.rows)], { type: 'text/csv;charset=utf-8' }), `mitglieder-${session.clock.today()}.csv`);
+    BrowserFile.save(new Blob([membersToCsv(list.rows, membershipLabels())], { type: 'text/csv;charset=utf-8' }), `mitglieder-${session.clock.today()}.csv`);
   }
+
+  const membershipLabels = () => Object.fromEntries(membershipKinds.items.map((k) => [k.key, k.label]));
 
   async function importCsv(file: File): Promise<void> {
     const existing = new Set((list.data.value ?? []).map((m) => m.email.toLowerCase()));
-    const parsed = parseMemberImport(await file.text(), session.clock.today(), existing, policy.grantableRoles());
+    const parsed = parseMemberImport(await file.text(), session.clock.today(), existing, policy.grantableRoles(), membershipLabels());
     problems = parsed.problems;
     if (!parsed.rows.length) {
       bus.publish(TOAST, { text: 'Keine neuen Mitglieder in der Datei.', tone: 'error' });

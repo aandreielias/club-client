@@ -8,7 +8,7 @@ const GRANTABLE: Role[] = ['COACH', 'PLAYER', 'PARENT', 'VOLUNTEER'];
 
 const member = (extra: Partial<Member> = {}): Member => ({
   id: 'm1', email: 'anna@x.at', firstName: 'Anna', lastName: 'Muster', birthDate: '2001-02-03', phone: '+43 660 1', photoConsent: true,
-  active: true, roles: ['PLAYER', 'COACH'], membershipType: 'EXTRAORDINARY', honorary: true, memberSince: '2020-01-01', ...extra,
+  active: true, roles: ['PLAYER', 'COACH'], membershipType: 'EXTRAORDINARY', honorary: true, memberSince: '2020-01-01', voter: true, eligible: true, ...extra,
 });
 
 describe('member CSV', () => {
