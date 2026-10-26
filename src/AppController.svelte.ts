@@ -25,7 +25,7 @@ import { ProblemError } from './lib/http/ProblemError';
 import { guestOnly } from './lib/types';
 
 /** Which top-level screen the app shows; derived from auth, profile and route state. */
-export type Screen = 'failed' | 'loading' | 'set-password' | 'forgot-password' | 'login' | 'onboarding' | 'shell';
+export type Screen = 'failed' | 'loading' | 'set-password' | 'forgot-password' | 'login' | 'onboarding' | 'setup' | 'shell';
 
 const AUTH_PATHS = { setPassword: '/set-password', forgotPassword: '/forgot-password' } as const;
 
@@ -226,6 +226,8 @@ export class AppController {
     if (path === AUTH_PATHS.setPassword && auth.signedIn) return 'set-password';
     if (!auth.signedIn) return path === AUTH_PATHS.forgotPassword ? 'forgot-password' : 'login';
     if (!session.me) return 'loading';
-    return session.me.missing.length ? 'onboarding' : 'shell';
+    if (session.me.missing.length) return 'onboarding';
+    // A fresh install: the first admin enters the club before anyone works in the app.
+    return !session.club.configured && session.hasRole('ADMIN') ? 'setup' : 'shell';
   }
 }

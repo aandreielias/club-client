@@ -94,8 +94,8 @@ export class MockDirectory {
   static readonly PIN = '73915';
 
   readonly club: Club = {
-    name: 'Soli Deo Gloria',
-    shortName: 'SDG',
+    name: 'Mein Verein',
+    shortName: 'Verein',
     sport: 'Volleyball',
     country: 'AT',
     timeZone: 'Europe/Vienna',
@@ -107,6 +107,7 @@ export class MockDirectory {
     seasonStartMonth: 7,
     ridesEnabled: true,
     fiscalYearStart: '01-01',
+    configured: false,
   };
 
   /** server: platform_club - edited facts on top of club.yml (blank = file value). */
@@ -460,12 +461,14 @@ export class MockDirectory {
     return { ...this.club, name: e.name || this.club.name, shortName: e.shortName || this.club.shortName, website: e.website || null,
       contactEmail: e.contactEmail || null, address: e.address || null, registerNumber: e.registerNumber || null,
       seasonStartMonth: e.seasonStartMonth ?? this.club.seasonStartMonth, ridesEnabled: e.ridesEnabled ?? true,
-      fiscalYearStart: e.fiscalYearStart || '01-01' };
+      fiscalYearStart: e.fiscalYearStart || '01-01', configured: Object.keys(e).length > 0 };
   }
 
   /** server: ClubController PUT - admin/board with step-up; blank fields fall back to club.yml. */
   updateClub(member: Member, body: Record<string, unknown>): Club {
-    this.requirePrivileged(member, ADMIN_BOARD);
+    // server: the first setup comes before any club PIN exists, so an admin without step-up
+    if (this.clubInfo().configured) this.requirePrivileged(member, ADMIN_BOARD);
+    else this.requireRole(member, ['ADMIN']);
     const limits = settings.club;
     const text = (key: string, max: number, pattern?: RegExp): string | null => {
       const value = body[key];

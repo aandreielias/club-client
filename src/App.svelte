@@ -6,6 +6,7 @@
   import SetPasswordPage from './features/auth/SetPasswordPage.svelte';
   import { features } from './features';
   import OnboardingPage from './features/onboarding/OnboardingPage.svelte';
+  import SetupPage from './features/onboarding/SetupPage.svelte';
   import { auth, backStack, bus, commands, documentTitle, forgetUser, pendingDeletes, scrollMemory, directory, errors, keyboard, live, mainPane, pageNavigator, preferences, router, session, split, splitPane, windows } from './lib/container';
   import PaneHost from './ui/PaneHost.svelte';
   import { guestOnly } from './lib/types';
@@ -78,6 +79,8 @@
   <LoginPage />
 {:else if app.screen === 'onboarding'}
   <OnboardingPage onlogout={logout} />
+{:else if app.screen === 'setup'}
+  <SetupPage onlogout={logout} />
 {:else if session.me && session.club}
   <div class="shell">
     <Sidebar title={session.club.name} user="{session.member.firstName} {session.member.lastName}" items={app.navigation}

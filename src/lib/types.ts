@@ -53,6 +53,8 @@ export interface Club {
   ridesEnabled: boolean;
   /** First day of the financial year (MM-DD); the deadlines for accounts and audit count from its end. */
   fiscalYearStart: string;
+  /** The club saved its facts once; until then admins see the setup page. */
+  configured: boolean;
 }
 
 /** What admins and the board edit (server: PUT /club); empty values fall back to club.yml. */
