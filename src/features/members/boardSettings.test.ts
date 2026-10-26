@@ -12,14 +12,15 @@ describe('club rules for offices and resolutions', () => {
     const before = structuredClone(directory.boardSettings.data);
     const changed = structuredClone(before);
     changed.offices[0].label = 'Obfrau';
-    changed.offices[5].minHolders = 1;
     changed.minBoardSize = 5;
     expect(() => directory.saveBoardSettings(member('spielerin'), changed)).toThrow();
     expect(() => directory.saveBoardSettings(member('vorstand'), { ...changed, offices: changed.offices.slice(1) })).toThrow();
+    expect(() => directory.saveBoardSettings(member('vorstand'), { ...changed, minBoardSize: 1 })).toThrow(expect.objectContaining({ code: 'board-settings.below-law' }));
     const saved = directory.saveBoardSettings(member('vorstand'), changed);
     expect(boardWarning('board.too-small', saved)).toBe('Der Vorstand braucht mindestens 5 Personen.');
     expect(boardWarning('board.chair-missing', saved)).toBe('Obfrau ist nicht besetzt.');
     expect(boardWarning('board.auditors-missing', before)).toBe('Rechnungsprüfung: es braucht 2 Personen.');
+    expect(boardWarning('law.board-too-small', before)).toContain('Vereinsgesetz');
     directory.saveBoardSettings(member('vorstand'), before);
   });
 

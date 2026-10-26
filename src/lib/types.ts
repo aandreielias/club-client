@@ -51,10 +51,12 @@ export interface Club {
   seasonStartMonth: number;
   /** Car pools in the whole club; per appointment they are switched in the calendar. */
   ridesEnabled: boolean;
+  /** First day of the financial year (MM-DD); the deadlines for accounts and audit count from its end. */
+  fiscalYearStart: string;
 }
 
 /** What admins and the board edit (server: PUT /club); empty values fall back to club.yml. */
-export type ClubEdit = Pick<Club, 'name' | 'shortName' | 'website' | 'contactEmail' | 'address' | 'registerNumber' | 'seasonStartMonth' | 'ridesEnabled'>;
+export type ClubEdit = Pick<Club, 'name' | 'shortName' | 'website' | 'contactEmail' | 'address' | 'registerNumber' | 'seasonStartMonth' | 'ridesEnabled' | 'fiscalYearStart'>;
 
 export interface Member {
   id: string;

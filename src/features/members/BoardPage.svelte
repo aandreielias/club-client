@@ -1,6 +1,6 @@
 <script lang="ts">
   /** Board size warnings (too few people, an even number): shown in red. */
-  const SIZE_WARNINGS = ['board.too-small', 'board.even'];
+  const SIZE_WARNINGS = ['law.board-too-small', 'law.auditors-missing', 'board.too-small', 'board.even'];
   import { bus, directory, permissions, session } from '../../lib/container';
   import RecordLink from '../../ui/RecordLink.svelte';
   import { CONFIRM, TOAST } from '../../channels';
