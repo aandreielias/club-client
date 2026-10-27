@@ -487,6 +487,20 @@ export class MockMeetings {
     return this.resolutionDto(viewer, r);
   }
 
+  /** server: ResolutionHandlers.extend — a circular vote only runs longer; its deadline task follows. */
+  extendDeadline(viewer: Member, id: string, deadline: unknown): Resolution {
+    const r = this.managedResolution(viewer, id);
+    if (r.meetingId) fail(409, 'resolution.not-circular');
+    if (r.status !== 'OPEN') fail(409, 'resolution.not-open');
+    const next = typeof deadline === 'string' ? deadline : fail(400, 'request.invalid');
+    if (next <= r.deadline! || Date.parse(next) <= Date.now()
+      || Date.parse(next) < Date.parse(r.openedAt!) + this.circular.data.minHours * 3_600_000) fail(400, 'resolution.deadline-too-short');
+    r.deadline = next;
+    tasks.deadline(`deadline-circular-${r.id}`, `Umlaufbeschluss: ${r.title}`, 'Der Umlaufbeschluss schließt dann von selbst.', next, [viewer.id]);
+    this.resolutionChanged(r, 'UPDATED');
+    return this.resolutionDto(viewer, r);
+  }
+
   closeResolution(viewer: Member, id: string): Resolution {
     return this.resolutionDto(viewer, this.closeNow(this.managedResolution(viewer, id)));
   }
@@ -786,7 +800,8 @@ export class MockMeetings {
 
   private changed(m: StoredMeeting, change: string): void {
     this.meetings.save();
-    if (m.status === 'DRAFT' && change !== 'DELETED') this.inviteTask(m);
+    if (change === 'DELETED') tasks.deadlineDrop(`deadline-invite-${m.id}`);
+    else if (m.status === 'DRAFT') this.inviteTask(m);
     else tasks.deadlineDone(`deadline-invite-${m.id}`);
     mockServer.events.publish({ type: 'meetings.meeting-changed', data: { meetingId: m.id, change },
       audience: isAssembly(this.type(m.kind)) ? { everyone: true } : { roles: ADMIN_BOARD } });
@@ -819,6 +834,7 @@ mockServer
   .on('DELETE', '/api/v1/resolutions/:id', (req) => meetings.deleteResolution(actor(req), req.params.id))
   .on('POST', '/api/v1/resolutions/:id/open', (req) => meetings.openResolution(actor(req), req.params.id))
   .on('POST', '/api/v1/resolutions/:id/close', (req) => meetings.closeResolution(actor(req), req.params.id))
+  .on('PUT', '/api/v1/resolutions/:id/deadline', (req) => meetings.extendDeadline(actor(req), req.params.id, req.body?.deadline))
   .on('POST', '/api/v1/resolutions/:id/vote', (req) => meetings.vote(actor(req), req.params.id, req.body?.choice))
   .on('POST', '/api/v1/resolutions/:id/recorded-vote', (req) => meetings.recordVote(actor(req), req.params.id, req.body?.memberId, req.body?.choice))
   .on('POST', '/api/v1/resolutions/:id/analog-votes', (req) => meetings.analogVotes(actor(req), req.params.id, req.body ?? {}))

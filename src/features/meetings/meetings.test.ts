@@ -270,5 +270,10 @@ describe('deadlines as tasks', () => {
     expect(task().dueAt).toBe(latestInvite(type('BOARD'), later));
     meetings.invite(member('vorstand'), draft.id);
     expect(task().status).toBe('DONE');
+
+    const gone = meetings.create(member('vorstand'), { kind: 'BOARD', title: 'Fristweg', startsAt: starts, endsAt: inDays(30.1) });
+    expect(tasks.tasks.data.some((t) => t.title === 'Einladen: Fristweg')).toBe(true);
+    meetings.delete(member('vorstand'), gone.id);
+    expect(tasks.tasks.data.some((t) => t.title === 'Einladen: Fristweg')).toBe(false);
   });
 });

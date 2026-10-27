@@ -52,7 +52,7 @@
       message: `„${label}“ wird aus allen Sitzungsarten genommen und ist für neue Beschlüsse nicht mehr wählbar. Gefasste Beschlüsse bleiben.` }))) return;
     rule.enabled = enabled;
     if (await action.run(async () => (resolutionRules.value = await meetingsApi.saveResolutionRules(value)))) {
-      bus.publish(TOAST, { text: enabled ? `${label} wiederhergestellt.` : `${label} entfernt.` });
+      bus.publish(TOAST, { text: enabled ? `${label} wiederhergestellt. In den Sitzungsarten wieder auswählen.` : `${label} entfernt.` });
     } else {
       rule.enabled = !enabled;
     }
@@ -109,6 +109,7 @@
       {#if value.items.some((r) => !r.enabled)}
         <section class="stack">
           <h3>Entfernte Beschlussarten</h3>
+          <p class="muted small">Wiederhergestellt ist eine Beschlussart wieder wählbar, aber in keiner Sitzungsart: dort jeweils neu auswählen.</p>
           {#each value.items.filter((r) => !r.enabled) as rule (rule.action)}
             <div class="row between removed">
               <span>{ACTION_LABELS[rule.action]}</span>

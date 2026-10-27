@@ -5,6 +5,7 @@
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
+  import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
   import Tag from '../../ui/Tag.svelte';
@@ -68,6 +69,18 @@
     return true;
   }
 
+  /** Circular votes only run longer; the deadline task follows on the server. */
+  let extending = $state(false);
+  let newDeadline = $state('');
+  function startExtend() {
+    newDeadline = session.clock.toLocal(r.deadline!).slice(0, 16);
+    extending = true;
+  }
+  async function extend() {
+    await write(() => meetingsApi.extendDeadline(r.id, session.clock.toInstant(newDeadline)), 'Frist verlängert.');
+    if (!action.error) extending = false;
+  }
+
   async function remove() {
     if (!(await bus.request(CONFIRM, { title: 'Entwurf löschen', message: r.title, confirmLabel: 'Löschen', danger: true }))) return;
     if (await action.run(() => meetingsApi.deleteResolution(r.id))) ondeleted?.();
@@ -92,7 +105,21 @@
   {:else if r.assignees.length}
     <p class="muted small">Verantwortlich: {r.assignees.map((a) => a.name).join(', ')}</p>
   {/if}
-  {#if r.deadline && r.status !== 'CLOSED'}<p class="muted small">Abstimmen bis {session.format.dateTime(r.deadline)}</p>{/if}
+  {#if r.deadline && r.status !== 'CLOSED'}
+    <div class="row">
+      <p class="muted small">Abstimmen bis {session.format.dateTime(r.deadline)}</p>
+      {#if r.canManage && r.status === 'OPEN' && !r.meetingId && !extending}
+        <Button size="sm" variant="ghost" onclick={startExtend}>Frist verlängern</Button>
+      {/if}
+    </div>
+    {#if extending}
+      <div class="row">
+        <DateTimeInput bind:value={newDeadline} min={session.clock.toLocal(r.deadline).slice(0, 16)} aria-label="Neue Frist" />
+        <Button size="sm" variant="primary" busy={action.busy} onclick={extend}>Verlängern</Button>
+        <Button size="sm" variant="ghost" onclick={() => (extending = false)}>Abbrechen</Button>
+      </div>
+    {/if}
+  {/if}
 
   {#if r.status === 'OPEN'}
     <p class="muted small">{r.ballots} von {r.voters} abgestimmt{r.analogPresent ? ` · ${r.analogPresent} ohne App${r.analogEntered ? ' (erfasst)' : ''}` : ''}</p>

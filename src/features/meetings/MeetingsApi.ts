@@ -138,6 +138,11 @@ export class MeetingsApi {
     return this.api.post<Resolution>(`${this.resolutionPath(id)}/open`);
   }
 
+  /** A circular vote runs longer (server: ResolutionHandlers.extend). */
+  extendDeadline(id: string, deadline: string): Promise<Resolution> {
+    return this.api.put<Resolution>(`${this.resolutionPath(id)}/deadline`, { deadline });
+  }
+
   closeResolution(id: string): Promise<Resolution> {
     return this.api.post<Resolution>(`${this.resolutionPath(id)}/close`);
   }

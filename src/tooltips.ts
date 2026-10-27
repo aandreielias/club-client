@@ -12,6 +12,8 @@ export interface ButtonTooltip {
 
 export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   Abbrechen: { text: 'Schließen, ohne zu speichern', command: 'view.back' },
+  'Frist verlängern': { text: 'Dem Umlaufbeschluss mehr Zeit geben' },
+  Verlängern: { text: 'Neue Frist speichern' },
   Abmelden: { text: 'Auf diesem Gerät abmelden' },
   'Fahrt absagen': { text: 'Die angebotene Fahrt zurückziehen; Mitfahrende werden ausgetragen' },
   'Fahrt anbieten': { text: 'Mit dem eigenen Auto fahren und freie Plätze anbieten' },

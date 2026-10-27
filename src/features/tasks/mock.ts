@@ -136,6 +136,18 @@ export class MockTasks {
     this.changed(task, 'CREATED');
   }
 
+  /** server: REMINDER_DROPPED — the record behind an open deadline task is gone, so is the task. */
+  deadlineDrop(key: string): void {
+    const taskId = Object.entries(this.sources.data).find(([, s]) => s.kind === 'MEETING_REMINDER' && s.id === key)?.[0];
+    const index = this.tasks.data.findIndex((t) => t.id === taskId && t.status !== 'DONE');
+    if (index < 0) return;
+    const [task] = this.tasks.data.splice(index, 1);
+    delete this.sources.data[task.id];
+    this.tasks.save();
+    this.sources.save();
+    this.changed(task, 'DELETED');
+  }
+
   /** server: REMINDER_DONE — the deadline is met. */
   deadlineDone(key: string): void {
     this.finish('MEETING_REMINDER', key);
