@@ -6,8 +6,9 @@
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
+  import ChipToggle from '../../ui/ChipToggle.svelte';
   import Field from '../../ui/Field.svelte';
-  import { OFFICE_KINDS, type BoardSettings, type OfficeKind } from './MembersApi';
+  import type { BoardSettings, OfficeKind } from './MembersApi';
   import { boardSettings, membersApi } from './services';
 
   /** Einstellungen › Funktionen (admin/board): names, holders and terms of the offices, and the board-wide rules. */
@@ -16,14 +17,13 @@
   void settings.load();
   const action = new Action();
 
-  /** Every pair of board offices (the auditors stay outside the board). */
-  const PAIRS = OFFICE_KINDS.flatMap((a, i) => OFFICE_KINDS.slice(i + 1).map((b) => [a, b] as const));
+  /** Offices one person may hold together with `office`; a pair counts for both, so it shows in both cards. */
+  const partners = (value: BoardSettings, office: OfficeKind): OfficeKind[] =>
+    value.combinations.flatMap((p) => (p.a === office ? [p.b] : p.b === office ? [p.a] : []));
 
-  const same = (p: { a: OfficeKind; b: OfficeKind }, a: OfficeKind, b: OfficeKind) => (p.a === a && p.b === b) || (p.a === b && p.b === a);
-  const allows = (value: BoardSettings, a: OfficeKind, b: OfficeKind) => value.combinations.some((p) => same(p, a, b));
-
-  function toggle(value: BoardSettings, a: OfficeKind, b: OfficeKind, on: boolean) {
-    value.combinations = on ? [...value.combinations, { a, b }] : value.combinations.filter((p) => !same(p, a, b));
+  function setPartners(value: BoardSettings, office: OfficeKind, next: OfficeKind[]) {
+    const others = value.combinations.filter((p) => p.a !== office && p.b !== office);
+    value.combinations = [...others, ...next.map((b) => ({ a: office, b }))];
   }
 
   async function save(event: SubmitEvent, value: BoardSettings) {
@@ -41,32 +41,32 @@
         Wie die Funktionen im Verein heißen, wie viele sie innehaben, wie lange eine Funktionsperiode dauert und welche Funktionen eine
         Person zugleich innehaben darf.
       </p>
-      <div class="table" role="table" aria-label="Funktionen">
-        <div class="head" role="row">
-          <span role="columnheader">Bezeichnung</span><span role="columnheader">Genutzt</span><span role="columnheader">Mindestens</span>
-          <span role="columnheader">Höchstens</span><span role="columnheader">Jahre</span>
-        </div>
+      <div class="cards">
         {#each value.offices as office (office.office)}
-          <div class="line" role="row">
-            <input bind:value={office.label} maxlength="40" aria-label="Bezeichnung" required />
-            <input type="checkbox" bind:checked={office.enabled} disabled={office.office === 'CHAIR'} aria-label="Genutzt: {office.label}" />
-            <input type="number" min="0" max="20" bind:value={office.minHolders} aria-label="Mindestens: {office.label}" />
-            <input type="number" min="1" max="20" placeholder="beliebig" aria-label="Höchstens: {office.label}"
-              bind:value={() => office.maxHolders ?? '', (v) => (office.maxHolders = v === '' || v == null ? null : Math.round(Number(v)))} />
-            <input type="number" min="1" max="10" bind:value={office.termYears} aria-label="Jahre: {office.label}" />
-          </div>
+          <section class="card stack" class:off={!office.enabled} aria-label={office.label}>
+            <div class="row between">
+              <input class="name" bind:value={office.label} maxlength="40" aria-label="Bezeichnung" required />
+              <label class="check small"><input type="checkbox" bind:checked={office.enabled} disabled={office.office === 'CHAIR'} /> genutzt</label>
+            </div>
+            {#if office.enabled}
+              <div class="row facts">
+                <label>Personen
+                  <input type="number" min="0" max="20" bind:value={office.minHolders} aria-label="Mindestens: {office.label}" />
+                  bis
+                  <input type="number" min="1" max="20" placeholder="beliebig" aria-label="Höchstens: {office.label}"
+                    bind:value={() => office.maxHolders ?? '', (v) => (office.maxHolders = v === '' || v == null ? null : Math.round(Number(v)))} />
+                </label>
+                <label>Periode <input type="number" min="1" max="10" bind:value={office.termYears} aria-label="Jahre: {office.label}" /> Jahre</label>
+              </div>
+              <div class="stack tight">
+                <span class="muted small">Zugleich mit</span>
+                <ChipToggle label="{office.label} zugleich mit" bind:value={() => partners(value, office.office), (next) => setPartners(value, office.office, next)}
+                  options={value.offices.filter((o) => o.enabled && o.office !== office.office).map((o) => ({ value: o.office, label: o.label }))} />
+              </div>
+            {/if}
+          </section>
         {/each}
       </div>
-
-      <fieldset>
-        <legend>Zugleich erlaubt</legend>
-        {#each PAIRS as [a, b] (a + b)}
-          <label class="check">
-            <input type="checkbox" checked={allows(value, a, b)} onchange={(e) => toggle(value, a, b, e.currentTarget.checked)} />
-            {boardSettings.label(a)} und {boardSettings.label(b)}
-          </label>
-        {/each}
-      </fieldset>
 
       <h3>Vorstand</h3>
       <div class="grid-2">
@@ -96,36 +96,40 @@
   h3 {
     margin: 0;
   }
-  .table {
+  .cards {
     display: grid;
-    gap: var(--space-xs);
-  }
-  .head,
-  .line {
-    display: grid;
-    grid-template-columns: minmax(10rem, 1fr) 4rem 6rem 6rem 5rem;
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
     gap: var(--space-sm);
-    align-items: center;
   }
-  .head {
-    color: var(--color-text-muted);
+  .card {
+    padding: var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+  }
+  .card.off {
+    opacity: 0.6;
+  }
+  .name {
+    flex: 1;
+    min-width: 0;
+    font-weight: var(--font-weight-medium);
+  }
+  .between {
+    justify-content: space-between;
+  }
+  .facts {
+    flex-wrap: wrap;
+    gap: var(--space-md);
     font-size: var(--font-size-small);
   }
-  .line input[type='checkbox'] {
-    justify-self: start;
+  .facts input {
+    width: 4.5rem;
+  }
+  .tight {
+    gap: var(--space-xs);
   }
   .short {
     width: 6rem;
-  }
-  fieldset {
-    display: grid;
-    gap: var(--space-xs);
-    margin: 0;
-    padding: 0;
-    border: 0;
-  }
-  legend {
-    margin-bottom: var(--space-xs);
-    font-weight: var(--font-weight-medium);
   }
 </style>

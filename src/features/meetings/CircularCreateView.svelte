@@ -28,7 +28,7 @@
   let submitted = $state(false);
   let action = $state<ResolutionAction>('GENERAL');
   let assignees = $state<string[]>([]);
-  const actionOptions = actions(null).map((a) => ({ value: a, label: ACTION_LABELS[a] }));
+  const actionOptions = actions(null).filter((a) => resolutionRules.enabled(a)).map((a) => ({ value: a, label: ACTION_LABELS[a] }));
   // server: circular votes run among the board, which also carries them out.
   const board = new Resource(async () => {
     const people = new Map((await membersApi.board()).offices.filter((o) => o.office !== 'AUDITOR').map((o) => [o.memberId, o.name]));

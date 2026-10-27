@@ -21,8 +21,10 @@ export class AppointmentTypesStore extends LiveStore<readonly AppointmentTypeInf
     return this.value.find((t) => t.key === key);
   }
 
+  /** Archived ones keep their name on what used them, marked; new records cannot choose them. */
   label(key: AppointmentType): string {
-    return this.get(key)?.label ?? key;
+    const found = this.get(key);
+    return found ? (found.archived ? `${found.label} (archiviert)` : found.label) : key;
   }
 
   hue(key: AppointmentType): Hue {

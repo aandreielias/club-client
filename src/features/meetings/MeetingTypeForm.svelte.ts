@@ -79,10 +79,6 @@ export class MeetingTypeForm extends FormState<Errors> {
     return this.noticeUnit === 'days' ? this.notice * 24 : this.notice;
   }
 
-  toggle<T>(list: T[], value: T, on: boolean): T[] {
-    return on ? [...new Set([...list, value])] : list.filter((v) => v !== value);
-  }
-
   toInput(): MeetingTypeInput {
     return {
       label: this.label.trim(),

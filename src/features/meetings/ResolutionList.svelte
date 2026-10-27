@@ -36,7 +36,7 @@
   // svelte-ignore state_referenced_locally
   let majority = $state<Majority>(majorityOptions[0].value);
   // svelte-ignore state_referenced_locally
-  const actionOptions = actions(meetingTypes.get(meeting.kind) ?? null).map((a) => ({ value: a, label: ACTION_LABELS[a] }));
+  const actionOptions = actions(meetingTypes.get(meeting.kind) ?? null).filter((a) => resolutionRules.enabled(a)).map((a) => ({ value: a, label: ACTION_LABELS[a] }));
   let action = $state<ResolutionAction>('GENERAL');
   let actionMemberId = $state('');
   let actionOffice = $state<OfficeKind | ''>('');

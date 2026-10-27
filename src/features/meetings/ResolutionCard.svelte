@@ -12,8 +12,8 @@
   import FollowUpList from './FollowUpList.svelte';
   import LinkList from './LinkList.svelte';
   import MemberChips from './MemberChips.svelte';
-  import { ACTION_LABELS, CHOICE_LABELS, MAJORITY_LABELS, RESULT_LABELS, RESULT_TONES, type Choice, type NewFollowUp, type Resolution } from './model';
-  import { meetingsApi } from './services';
+  import { CHOICE_LABELS, MAJORITY_LABELS, RESULT_LABELS, RESULT_TONES, type Choice, type NewFollowUp, type Resolution } from './model';
+  import { meetingsApi, resolutionRules } from './services';
 
   /**
    * One resolution: motion, required majority, secret vote (only the count of votes while open, the split after closing),
@@ -84,7 +84,7 @@
   </header>
   {#if r.text}<p class="text">{r.text}</p>{/if}
   {#if r.action !== 'GENERAL'}
-    <p class="small">{ACTION_LABELS[r.action]}{#if r.actionMember}: {r.actionMember.name}{/if}{#if r.actionOffice} als {boardSettings.label(r.actionOffice)}{/if}</p>
+    <p class="small">{resolutionRules.label(r.action)}{#if r.actionMember}: {r.actionMember.name}{/if}{#if r.actionOffice} als {boardSettings.label(r.actionOffice)}{/if}</p>
   {/if}
   {#if r.canManage && r.status !== 'CLOSED'}
     <MemberChips value={r.assignees.map((a) => a.memberId)} candidates={r.assignable} known={r.assignees} label="Verantwortlich für die Umsetzung"

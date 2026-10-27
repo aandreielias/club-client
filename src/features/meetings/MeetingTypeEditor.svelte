@@ -2,6 +2,7 @@
   import type { Action } from '../../lib/state/Action.svelte';
   import { autofocus } from '../../ui/autofocus';
   import Button from '../../ui/Button.svelte';
+  import ChipToggle from '../../ui/ChipToggle.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
@@ -145,33 +146,29 @@
   <fieldset>
     <legend>Einberufen von</legend>
     <p class="muted small">Admins dürfen jede Sitzung anlegen. Die Schriftführung führt jede Sitzung mit.</p>
-    {#each OFFICES as office (office)}
-      <label class="check"><input type="checkbox" checked={form.conveners.includes(office)}
-        onchange={(e) => (form.conveners = form.toggle(form.conveners, office, e.currentTarget.checked))} /> {boardSettings.label(office)}</label>
-    {/each}
+    <ChipToggle label="Einberufen von" options={OFFICES.map((o) => ({ value: o, label: boardSettings.label(o) }))} bind:value={form.conveners} />
     {#if form.error('conveners')}<p class="danger small">{form.error('conveners')}</p>{/if}
   </fieldset>
 
   <fieldset>
     <legend>Mögliche Mehrheiten</legend>
-    {#each MAJORITIES as majority (majority)}
-      <label class="check"><input type="checkbox" checked={form.majorities.includes(majority)}
-        onchange={(e) => (form.majorities = form.toggle(form.majorities, majority, e.currentTarget.checked))} /> {MAJORITY_LABELS[majority]}</label>
-    {/each}
+    <ChipToggle label="Mögliche Mehrheiten" options={MAJORITIES.map((m) => ({ value: m, label: MAJORITY_LABELS[m] }))} bind:value={form.majorities} />
     {#if form.error('majorities')}<p class="danger small">{form.error('majorities')}</p>{/if}
   </fieldset>
 
   <fieldset>
     <legend>Was Beschlüsse entscheiden dürfen</legend>
     <p class="muted small">Daraus entstehen nach dem Beschluss die Folgeaufgaben.</p>
-    {#each ACTION_ORDER.filter((x) => resolutionRules.value.items.find((r) => r.action === x)?.enabled !== false) as a (a)}
-      <label class="check"><input type="checkbox" checked={form.actions.includes(a)} disabled={a === 'GENERAL'}
-        onchange={(e) => (form.actions = form.toggle(form.actions, a, e.currentTarget.checked))} /> {ACTION_LABELS[a]}</label>
-    {/each}
+    <ChipToggle label="Was Beschlüsse entscheiden dürfen" bind:value={form.actions}
+      options={ACTION_ORDER.filter((x) => resolutionRules.enabled(x))
+        .map((a) => ({ value: a, label: ACTION_LABELS[a], disabled: a === 'GENERAL' }))} />
   </fieldset>
 
-  <label class="check"><input type="checkbox" bind:checked={form.needsReason} /> Die Einladung nennt den Grund der Dringlichkeit</label>
-  <label class="check"><input type="checkbox" bind:checked={form.yearly} /> Findet jährlich statt (Erinnerung und Aufgabe für den Vorstand)</label>
+  <fieldset>
+    <legend>Optionen</legend>
+    <label class="check"><input type="checkbox" bind:checked={form.needsReason} /> Die Einladung nennt den Grund der Dringlichkeit</label>
+    <label class="check"><input type="checkbox" bind:checked={form.yearly} /> Findet jährlich statt (Erinnerung und Aufgabe für den Vorstand)</label>
+  </fieldset>
   {#if form.yearly}
     <Field label="Geplant sein bis" error={form.error('dueBy')}>
       <div class="row">

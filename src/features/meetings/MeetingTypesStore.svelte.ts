@@ -19,7 +19,9 @@ export class MeetingTypesStore extends LiveStore<readonly MeetingType[]> {
   }
 
   /** The key until the types are loaded. */
+  /** Archived ones keep their name on what used them, marked; new records cannot choose them. */
   label(key: MeetingKind): string {
-    return this.get(key)?.label ?? key;
+    const found = this.get(key);
+    return found ? (found.archived ? `${found.label} (archiviert)` : found.label) : key;
   }
 }

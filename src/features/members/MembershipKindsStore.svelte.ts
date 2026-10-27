@@ -23,8 +23,10 @@ export class MembershipKindsStore extends LiveStore<readonly MembershipKind[]> {
     return this.value.find((k) => k.key === key);
   }
 
+  /** Archived ones keep their name on what used them, marked; new records cannot choose them. */
   label(key: MembershipType): string {
-    return this.get(key)?.label ?? key;
+    const found = this.get(key);
+    return found ? (found.archived ? `${found.label} (archiviert)` : found.label) : key;
   }
 
   /** Segmented choice for a member; `current` stays offered even when archived. */
