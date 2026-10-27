@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { background } from '../../lib/state/background';
   import { usePane } from '../../lib/split/usePane';
   import { untrack } from 'svelte';
   import { settings } from '../../settings';
@@ -60,7 +61,7 @@
 
   void model.load();
   directory.loadRosters();
-  if (permissions.isManager) directory.loadTeams().catch(() => {});
+  if (permissions.isManager) background(directory.loadTeams());
   useBus(bus, RELOAD_ON, () => void model.load());
 
   // View, date and team live in the URL (other keys such as the open window stay).

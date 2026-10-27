@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { background } from '../../lib/state/background';
   import { backStack, bus, commands, directory, linksApi, permissions, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
@@ -54,7 +55,7 @@
   void detail.load();
   void links.load();
   directory.loadRosters();
-  if (permissions.isManager) directory.loadTeams().catch(() => {});
+  if (permissions.isManager) background(directory.loadTeams());
 
   view.title(() => detail.appointment.value?.title);
 

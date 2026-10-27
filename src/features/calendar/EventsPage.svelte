@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { background } from '../../lib/state/background';
   import { bus, commands, directory, permissions, router, session, store, windows } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
   import { useBus } from '../../lib/bus/useBus.svelte';
@@ -16,7 +17,7 @@
   const list = new EventListModel(calendarApi, session.clock, () => session.format, directory, store);
   void list.load();
   directory.loadRosters();
-  if (permissions.isManager) directory.loadTeams().catch(() => {});
+  if (permissions.isManager) background(directory.loadTeams());
   useBus(bus, APPOINTMENTS_CHANGED, () => void list.load());
 
   const create = () => bus.publish(WINDOW_OPEN, { kind: 'appointment-new', id: '-' });

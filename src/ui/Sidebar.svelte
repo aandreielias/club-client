@@ -10,9 +10,9 @@
   import { menu } from './contextMenu';
   import Icon from './Icon.svelte';
   import { KeySpec } from '../lib/keyboard/KeySpec';
-  import { SafeTriangle } from '../lib/navigation/SafeTriangle';
   import GlobalSearch from './GlobalSearch.svelte';
   import Kbd from './Kbd.svelte';
+  import { SidebarFlyout } from './SidebarFlyout.svelte';
   import { tooltip, withKeys } from './tooltip';
 
   let {
@@ -58,7 +58,7 @@
   /** A plain left click switches the page in the pane last used and keeps a docked window; other clicks (new tab) stay native. */
   function go(event: MouseEvent, path: string) {
     open = false;
-    flyout = null;
+    flyout.key = null;
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     pageNavigator.go(path);
@@ -70,77 +70,8 @@
   // Same breakpoint as ThemeService's data-layout="compact".
   const compact = new MediaQuery(`max-width: ${settings.compactBelowPx - 0.02}px`);
 
-  // Group flyout: opens on hover/focus, closes shortly after the pointer leaves (so it can move into it).
-  let flyout = $state<string | null>(null);
-  let closing: ReturnType<typeof setTimeout> | undefined;
-  // Menu aim: heading diagonally for the open flyout, the pointer crosses other rows; they wait (`aimNext`) until it stops or turns away.
-  let aim: SafeTriangle | null = null;
-  let aimNext: string | null = null;
-  function openFlyout(key: string) {
-    if (aim && key !== flyout) {
-      aimNext = key;
-      return;
-    }
-    stopAim();
-    clearTimeout(closing);
-    flyout = key;
-  }
-  function closeFlyout(delay: number = settings.overlay.flyoutCloseDelayMs) {
-    clearTimeout(closing);
-    closing = setTimeout(() => {
-      const next = aimNext;
-      stopAim();
-      flyout = next;
-    }, delay);
-  }
-  function leaveGroup(event: PointerEvent, key: string) {
-    if (key !== flyout) {
-      if (aimNext === key) aimNext = null;
-      return;
-    }
-    const box = document.querySelector(`[data-flyout="${key}"]`)?.getBoundingClientRect();
-    if (!box || compact.current) return closeFlyout();
-    aim = new SafeTriangle({ x: event.clientX, y: event.clientY }, box);
-    window.addEventListener('pointermove', aiming);
-    closeFlyout(settings.overlay.flyoutAimMs);
-  }
-  function aiming(event: PointerEvent) {
-    // Still heading there: keep it open, a pause of flyoutAimMs from now ends the aim.
-    if (aim?.contains({ x: event.clientX, y: event.clientY })) return closeFlyout(settings.overlay.flyoutAimMs);
-    const next = aimNext;
-    stopAim();
-    if (next) openFlyout(next);
-    else closeFlyout(0);
-  }
-  function stopAim() {
-    aim = null;
-    aimNext = null;
-    window.removeEventListener('pointermove', aiming);
-  }
-  $effect(() => () => (clearTimeout(closing), stopAim()));
-  function groupKeys(event: KeyboardEvent, item: NavItem) {
-    if (event.key === 'ArrowRight' || event.key === ' ') {
-      event.preventDefault();
-      openFlyout(item.key);
-      tick().then(() => document.querySelector<HTMLElement>(`[data-flyout="${item.key}"] a`)?.focus());
-    }
-  }
-  function flyoutKeys(event: KeyboardEvent, item: NavItem) {
-    const links = [...(event.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('a')];
-    const index = links.indexOf(document.activeElement as HTMLElement);
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault();
-      links[(index + (event.key === 'ArrowDown' ? 1 : links.length - 1)) % links.length]?.focus();
-    } else if (event.key === 'Escape' || event.key === 'ArrowLeft') {
-      event.preventDefault();
-      event.stopPropagation();
-      flyout = null;
-      document.querySelector<HTMLElement>(`[data-group="${item.key}"]`)?.focus();
-    }
-  }
-  function leaveFlyout(event: FocusEvent) {
-    if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node)) closeFlyout(0);
-  }
+  const flyout = new SidebarFlyout(() => compact.current);
+  $effect(() => () => flyout.dispose());
 
   // The active highlight glides between entries (CSS transition on its position).
   let list: HTMLElement | undefined = $state();
@@ -192,18 +123,18 @@
     {/if}
     {#each items.filter((i) => !i.footer) as item (item.key)}
       {#if item.children}
-        <li class="group" onpointerenter={() => openFlyout(item.key)} onpointerleave={(e) => leaveGroup(e, item.key)} onfocusout={leaveFlyout}>
-          <a href="#{item.path}" data-group={item.key} class:active={isRowActive(item)} aria-haspopup="true" aria-expanded={flyout === item.key}
-            onclick={(e) => go(e, item.path)} onkeydown={(e) => groupKeys(e, item)}>
+        <li class="group" onpointerenter={() => flyout.show(item.key)} onpointerleave={(e) => flyout.leaveGroup(e, item.key)} onfocusout={(e) => flyout.leaveFocus(e)}>
+          <a href="#{item.path}" data-group={item.key} class:active={isRowActive(item)} aria-haspopup="true" aria-expanded={flyout.key === item.key}
+            onclick={(e) => go(e, item.path)} onkeydown={(e) => flyout.groupKeys(e, item.key)}>
             {#if item.icon}<Icon name={item.icon} />{/if}
             <span class="label">{item.label}</span>
             {#if item.badge}<span class="badge">{item.badge}<span class="visually-hidden"> neu</span></span>{/if}
             <span class="chevron"><Icon name="next" small /></span>
           </a>
           <!-- Desktop: flyout to the right while hovered or focused. Compact (no hover): the tabs stay listed below the group. -->
-          {#if flyout === item.key || compact.current}
+          {#if flyout.key === item.key || compact.current}
             <!-- svelte-ignore a11y_no_noninteractive_element_interactions (arrow keys between the links inside, which bubble here) -->
-            <ul class="flyout" data-flyout={item.key} aria-label={item.label} onkeydown={(e) => flyoutKeys(e, item)} transition:motion.pop={{ origin: 'left' }}>
+            <ul class="flyout" data-flyout={item.key} aria-label={item.label} onkeydown={(e) => flyout.flyoutKeys(e, item.key)} transition:motion.pop={{ origin: 'left' }}>
               <li class="flyout-title" aria-hidden="true">{item.label}</li>
               {#each item.children as child, i (child.path)}
                 <li in:motion.rise={{ delay: motion.stagger(i), distance: 3 }}>{@render tab(child)}</li>

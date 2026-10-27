@@ -1,10 +1,11 @@
 <script lang="ts">
+  import { background } from '../../lib/state/background';
   import SettingsList from '../../ui/SettingsList.svelte';
   import { noticeText } from './model';
   import { meetingTypes } from './services';
 
   /** Einstellungen › Sitzungsarten (admin/board): the club's meeting types; each opens in the window. */
-  void meetingTypes.load().catch(() => {});
+  background(meetingTypes.load());
 
   const rows = $derived(meetingTypes.items.map((t) => ({
     key: t.key, label: t.label, archived: t.archived,

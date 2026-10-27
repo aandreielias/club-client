@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { background } from '../../lib/state/background';
   import { bus, commands, directory, permissions, router, store, windows } from '../../lib/container';
   import { APP_ERROR, TOAST, WINDOW_OPEN } from '../../channels';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
@@ -16,7 +17,7 @@
   const list = new TaskListModel(tasksApi, taskPolicy, directory, store);
   void list.load();
   directory.loadRosters();
-  if (permissions.isManager) directory.loadTeams().catch(() => {});
+  if (permissions.isManager) background(directory.loadTeams());
   useBus(bus, TASK_CHANGED, () => void list.load());
   /** Window entries plus done/reopen for members who work on the task. */
   function taskMenu(task: Task): MenuEntry[] {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { background } from '../../lib/state/background';
   import { bus } from '../../lib/container';
   import { TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
@@ -8,8 +9,8 @@
   import { boardSettings, membersApi, membershipKinds } from './services';
 
   /** Einstellungen › Mitgliedschaft (admin/board): the club's kinds of membership, each opens in the window; rights of honorary members. */
-  void membershipKinds.load().catch(() => {});
-  void boardSettings.load().catch(() => {});
+  background(membershipKinds.load());
+  background(boardSettings.load());
 
   const rows = $derived(membershipKinds.items.map((k) => ({
     key: k.key, label: k.label, archived: k.archived,

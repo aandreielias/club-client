@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { background } from '../../lib/state/background';
   import { usePane } from '../../lib/split/usePane';
   import { settings } from '../../settings';
   import { APP_ERROR, CONFIRM, TOAST, WINDOW_OPEN } from '../../channels';
@@ -48,7 +49,7 @@
   void list.load();
   directory.loadRosters();
   // Managers: every team's roster, so tagged people (photo filter, "Von") have names without asking for the PIN.
-  if (permissions.isManager) directory.loadTeams().then(() => directory.loadRosters(directory.teams.map((t) => t.id))).catch(() => {});
+  if (permissions.isManager) background(directory.loadTeams().then(() => directory.loadRosters(directory.teams.map((t) => t.id))));
 
   useBus(bus, FILES_CHANGED, ({ data }) => {
     // Folder changes (name, colour, cover, visibility) also show in the parent's listing.

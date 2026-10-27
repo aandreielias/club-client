@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Member } from '../types';
+import { teams } from '../../features/teams/mock';
+import { board } from '../../features/members/mock';
 import { directory, MockDirectory } from './core';
 import { mockServer } from './MockServer';
 import { MockSocket } from './MockSocket';
@@ -32,22 +34,22 @@ describe('mock members admin', () => {
   it('gives BOARD only with a board office (server: MembershipHandlers)', () => {
     stepUp('vorstand');
     const today = directory.clock.today();
-    expect(() => directory.assignOffice(member('vorstand'), { memberId: 'spielerin', office: 'TREASURER', startsOn: today }))
+    expect(() => board.assignOffice(member('vorstand'), { memberId: 'spielerin', office: 'TREASURER', startsOn: today }))
       .toThrow(expect.objectContaining({ code: 'office.not-eligible' }));
-    expect(() => directory.assignOffice(member('vorstand'), { memberId: 'trainer', office: 'CHAIR', startsOn: today }))
+    expect(() => board.assignOffice(member('vorstand'), { memberId: 'trainer', office: 'CHAIR', startsOn: today }))
       .toThrow(expect.objectContaining({ code: 'office.taken' }));
-    expect(() => directory.assignOffice(member('vorstand'), { memberId: 'admin', office: 'BOARD_MEMBER', startsOn: today }))
+    expect(() => board.assignOffice(member('vorstand'), { memberId: 'admin', office: 'BOARD_MEMBER', startsOn: today }))
       .toThrow(expect.objectContaining({ code: 'office.combination' }));
-    expect(directory.board().warnings).toEqual([]); // the seeded board of five is complete
-    const office = directory.assignOffice(member('vorstand'), { memberId: 'trainer', office: 'BOARD_MEMBER', startsOn: today });
+    expect(board.board().warnings).toEqual([]); // the seeded board of five is complete
+    const office = board.assignOffice(member('vorstand'), { memberId: 'trainer', office: 'BOARD_MEMBER', startsOn: today });
     expect(member('trainer').roles).toContain('BOARD');
-    expect(directory.board().warnings).toEqual(['board.even']);
+    expect(board.board().warnings).toEqual(['board.even']);
     expect(() => directory.setMembership(member('vorstand'), 'trainer', { membershipType: 'ORDINARY' }))
       .toThrow(expect.objectContaining({ code: 'member.holds-office' }));
     expect(() => directory.setRoles(member('admin'), 'trainer', ['COACH'])).toThrow(expect.objectContaining({ code: 'auth.step-up-required' }));
     stepUp('admin');
     expect(() => directory.setRoles(member('admin'), 'trainer', ['COACH'])).toThrow(expect.objectContaining({ code: 'member.board-by-office' }));
-    directory.endOffice(member('vorstand'), office.id);
+    board.endOffice(member('vorstand'), office.id);
     expect(member('trainer').roles).not.toContain('BOARD');
   });
 
@@ -92,18 +94,18 @@ describe('mock members admin', () => {
 describe('mock teams admin', () => {
   it('creates teams and manages rosters with the server rules', () => {
     stepUp('vorstand');
-    expect(() => directory.createTeam(member('vorstand'), { name: 'Herren', season: '2026-27' })).toThrow(expect.objectContaining({ code: 'team.season-invalid' }));
-    const team = directory.createTeam(member('vorstand'), { name: 'Herren', season: '2026/27' });
-    expect(() => directory.createTeam(member('vorstand'), { name: 'Herren', season: '2026/27' })).toThrow(expect.objectContaining({ code: 'team.exists' }));
-    const roster = directory.setTeamMember(member('vorstand'), team.id, 'trainer', 'COACH');
+    expect(() => teams.createTeam(member('vorstand'), { name: 'Herren', season: '2026-27' })).toThrow(expect.objectContaining({ code: 'team.season-invalid' }));
+    const team = teams.createTeam(member('vorstand'), { name: 'Herren', season: '2026/27' });
+    expect(() => teams.createTeam(member('vorstand'), { name: 'Herren', season: '2026/27' })).toThrow(expect.objectContaining({ code: 'team.exists' }));
+    const roster = teams.setTeamMember(member('vorstand'), team.id, 'trainer', 'COACH');
     expect(roster.entries).toEqual([expect.objectContaining({ memberId: 'trainer', teamRole: 'COACH' })]);
 
     stepUp('trainer'); // ended by the reset in the previous test
-    expect(() => directory.setTeamMember(member('trainer'), 't-u16', 'spielerin', 'PLAYER')).toThrow(expect.objectContaining({ code: 'access.denied' }));
-    expect(() => directory.setTeamMember(member('spielerin'), 't-u16', 'neu', 'PLAYER')).toThrow(expect.objectContaining({ code: 'team.not-found' }));
-    directory.removeTeamMember(member('trainer'), 't-u16', 'spieler');
+    expect(() => teams.setTeamMember(member('trainer'), 't-u16', 'spielerin', 'PLAYER')).toThrow(expect.objectContaining({ code: 'access.denied' }));
+    expect(() => teams.setTeamMember(member('spielerin'), 't-u16', 'neu', 'PLAYER')).toThrow(expect.objectContaining({ code: 'team.not-found' }));
+    teams.removeTeamMember(member('trainer'), 't-u16', 'spieler');
     expect(directory.teamMembers('t-u16')).toEqual(['trainer', 'sara']);
-    expect(() => directory.removeTeamMember(member('trainer'), 't-u16', 'trainer')).toThrow(expect.objectContaining({ code: 'access.denied' }));
+    expect(() => teams.removeTeamMember(member('trainer'), 't-u16', 'trainer')).toThrow(expect.objectContaining({ code: 'access.denied' }));
   });
 });
 

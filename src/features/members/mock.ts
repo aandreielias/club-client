@@ -1,10 +1,149 @@
-// Member admin endpoints of the mock server (rules live in MockDirectory, like the server's MemberHandlers).
-import { directory, MockDirectory } from '../../lib/mock/core';
+// Member admin endpoints of the mock server (rules live in MockDirectory, like the server's MemberHandlers; offices and membership
+// kinds in MockBoard, like MembershipHandlers).
+import { generatedKey } from '../../lib/mock/keys';
+import { directory, MockDirectory, OFFICES, type OfficeRow } from '../../lib/mock/core';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import { ADMIN_BOARD, type Member } from '../../lib/types';
 import { settings } from '../../settings';
-import type { ChangeField, ChangeRequest } from './MembersApi';
+import type { BoardSettings, ChangeField, ChangeRequest, MembershipKind, OfficePair } from './MembersApi';
+
+const plusYears = (date: string, years: number): string => `${Number(date.slice(0, 4)) + years}${date.slice(4)}`;
+
+/** server: MembershipHandlers — membership kinds, board settings and offices; the tables stay on the directory, which every mock reads. */
+export class MockBoard {
+  constructor(private readonly people: MockDirectory) {}
+
+  listMembershipKinds(): { items: MembershipKind[] } {
+    const items = [...this.people.membershipKinds.data].sort((a, b) => a.sort - b.sort || a.label.localeCompare(b.label));
+    return { items: items.map((k) => ({ ...k, inUse: this.people.members.data.some((m) => m.membershipType === k.key) })) };
+  }
+
+  /** server: MembershipHandlers.saveKind */
+  saveMembershipKind(viewer: Member, key: string | null, body: Record<string, any>): MembershipKind {
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    if (key && !this.people.membershipKinds.data.some((k) => k.key === key)) fail(404, 'membership-kind.not-found');
+    const label = typeof body.label === 'string' ? body.label.trim() : '';
+    if (!label || label.length > 40) fail(400, 'membership-kind.label-invalid');
+    if (!Number.isInteger(body.sort) || body.sort < 0 || body.sort > 1000) fail(400, 'membership-kind.sort-invalid');
+    const kind: MembershipKind = { key: key ?? generatedKey('KIND'), label,
+      votes: !!body.votes, eligible: !!body.eligible, sort: body.sort, archived: !!body.archived, inUse: false };
+    const next = [...this.people.membershipKinds.data.filter((k) => k.key !== kind.key), kind];
+    this.people.requireHoldersEligible(next, this.people.boardSettings.data.honoraryVotes);
+    this.people.membershipKinds.data.splice(0, this.people.membershipKinds.data.length, ...next);
+    this.people.membershipKinds.save();
+    this.people.saveMembers();
+    mockServer.events.publish({ type: 'members.membership-kinds-changed', data: {} });
+    return { ...kind, inUse: this.people.members.data.some((m) => m.membershipType === kind.key) };
+  }
+
+  deleteMembershipKind(viewer: Member, key: string): void {
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    const index = this.people.membershipKinds.data.findIndex((k) => k.key === key);
+    if (index < 0) fail(404, 'membership-kind.not-found');
+    if (this.people.members.data.some((m) => m.membershipType === key)) fail(409, 'membership-kind.in-use');
+    this.people.membershipKinds.data.splice(index, 1);
+    this.people.membershipKinds.save();
+    mockServer.events.publish({ type: 'members.membership-kinds-changed', data: {} });
+  }
+
+  /** Version 1 = mock data stored before the seed was versioned; a fresh seed runs the (harmless) upgrade once too. */
+  board(): { offices: (OfficeRow & { name: string })[]; warnings: string[] } {
+    const running = this.people.running();
+    const people = new Set(running.filter((o) => o.office !== 'AUDITOR').map((o) => o.memberId));
+    const warnings: string[] = [];
+    const settings = this.people.boardSettings.data;
+    // server: BoardRules.warnings
+    if (people.size < settings.minBoardSize) warnings.push('board.too-small');
+    else if (settings.oddBoardSize && people.size % 2 === 0) warnings.push('board.even');
+    for (const s of settings.offices) {
+      if (s.enabled && running.filter((o) => o.office === s.office).length < s.minHolders) {
+        warnings.push(s.office === 'AUDITOR' ? 'board.auditors-missing' : `board.${s.office.toLowerCase().replace('_', '-')}-missing`);
+      }
+    }
+    const offices = running
+      .map((o) => ({ ...o, name: this.people.displayName(o.memberId) }))
+      .sort((a, b) => OFFICES.indexOf(a.office) - OFFICES.indexOf(b.office) || a.startsOn.localeCompare(b.startsOn));
+    return { offices, warnings };
+  }
+
+  /** server: MembershipHandlers.saveSettings and BoardRules.validate. */
+  saveBoardSettings(viewer: Member, body: Record<string, any>): BoardSettings {
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    const list: Record<string, any>[] = Array.isArray(body.offices) ? body.offices : [];
+    if (list.length !== OFFICES.length || new Set(list.map((o) => o.office)).size !== OFFICES.length || list.some((o) => !OFFICES.includes(o.office))) {
+      fail(400, 'board-settings.offices-invalid');
+    }
+    const int = (v: unknown, min: number, max: number) => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
+    const offices = OFFICES.map((kind) => {
+      const o = list.find((x) => x.office === kind)!;
+      const label = typeof o.label === 'string' ? o.label.trim() : '';
+      if (!label || label.length > 40) fail(400, 'board-settings.label-invalid');
+      const max = o.maxHolders ?? null;
+      if (!int(o.minHolders, 0, 20) || (max != null && (!int(max, Math.max(1, o.minHolders), 20))) || (!o.enabled && o.minHolders > 0)) {
+        fail(400, 'board-settings.holders-invalid');
+      }
+      if (!int(o.termYears, 1, 10)) fail(400, 'board-settings.term-invalid');
+      return { office: kind, label, enabled: !!o.enabled, minHolders: o.minHolders, maxHolders: max, termYears: o.termYears };
+    });
+    const combinations: OfficePair[] = Array.isArray(body.combinations) ? body.combinations : fail(400, 'board-settings.combination-invalid');
+    if (combinations.some((p) => !p || !OFFICES.includes(p.a) || !OFFICES.includes(p.b) || p.a === p.b)) {
+      fail(400, 'board-settings.combination-invalid');
+    }
+    if (!offices[0].enabled) fail(400, 'board-settings.chair-required');
+    if (!int(body.minBoardSize, 1, 20) || !int(body.cooptWeeks, 0, 52) || !int(body.termWarningDays, 1, 365) || !int(body.byElectionDays, 1, 365)) {
+      fail(400, 'board-settings.board-invalid');
+    }
+    this.people.requireHoldersEligible(this.people.membershipKinds.data, body.honoraryVotes !== false);
+    Object.assign(this.people.boardSettings.data, { offices, minBoardSize: body.minBoardSize, oddBoardSize: !!body.oddBoardSize, cooptWeeks: body.cooptWeeks,
+      termWarningDays: body.termWarningDays, byElectionDays: body.byElectionDays, combinations: combinations.map(({ a, b }) => ({ a, b })),
+      honoraryVotes: body.honoraryVotes !== false });
+    this.people.boardSettings.save();
+    this.people.saveMembers();
+    mockServer.events.publish({ type: 'members.board-settings-changed', data: {} });
+    return this.people.boardSettings.data;
+  }
+
+  assignOffice(viewer: Member, body: Record<string, any>): OfficeRow & { name: string } {
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    const office = body.office as OfficeRow['office'];
+    if (!OFFICES.includes(office) || typeof body.startsOn !== 'string') return fail(400, 'request.invalid');
+    if (body.startsOn > this.people.clock.today()) fail(400, 'office.start-in-future');
+    const setting = this.people.boardSettings.data.offices.find((o) => o.office === office)!;
+    const termEndsOn = typeof body.termEndsOn === 'string' && body.termEndsOn ? body.termEndsOn : plusYears(body.startsOn, setting.termYears);
+    if (termEndsOn <= body.startsOn || termEndsOn > plusYears(body.startsOn, setting.termYears)) fail(400, 'office.term-invalid');
+    const holder = this.people.members.data.find((m) => m.id === body.memberId && m.active) ?? fail(404, 'member.not-found');
+    if (!this.people.rights(holder).eligible) fail(409, 'office.not-eligible');
+    const running = this.people.running();
+    if (!setting.enabled) fail(409, 'office.disabled');
+    if (setting.maxHolders != null && running.filter((o) => o.office === office).length >= setting.maxHolders) fail(409, 'office.taken');
+    const held = running.filter((o) => o.memberId === holder.id).map((o) => o.office);
+    if (held.includes(office)) fail(409, 'office.already-held');
+    const allowed = (x: string, y: string) => this.people.boardSettings.data.combinations.some((p) => (p.a === x && p.b === y) || (p.a === y && p.b === x));
+    if (held.some((h) => !allowed(h, office))) fail(409, 'office.combination');
+    const row: OfficeRow = { id: crypto.randomUUID(), memberId: holder.id, office, startsOn: body.startsOn, termEndsOn, endedOn: null, coopted: body.coopted === true };
+    this.people.offices.data.push(row);
+    this.people.offices.save();
+    this.people.syncBoardRole(holder);
+    mockServer.events.publish({ type: 'members.office-assigned', data: { memberId: holder.id, office } });
+    return { ...row, name: this.people.displayName(holder.id) };
+  }
+
+  endOffice(viewer: Member, officeId: string): OfficeRow & { name: string } {
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    const row = this.people.offices.data.find((o) => o.id === officeId) ?? fail(404, 'office.not-found');
+    if (row.endedOn) fail(409, 'office.already-ended');
+    row.endedOn = this.people.clock.today();
+    this.people.offices.save();
+    const holder = this.people.members.data.find((m) => m.id === row.memberId);
+    if (holder) this.people.syncBoardRole(holder);
+    return { ...row, name: this.people.displayName(row.memberId) };
+  }
+
+  /** server: MembersApi.ELECTORATE — voters of a general meeting, the board, or every club member. */
+}
+
+export const board = new MockBoard(directory);
 
 mockServer
   .on('POST', '/api/v1/members', (req) => directory.invite(directory.actor(req), req.body ?? {}))
@@ -21,10 +160,16 @@ mockServer
   .on('PUT', '/api/v1/members/:id/membership', (req) => directory.setMembership(directory.actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/board/offices', (req) => {
     directory.actor(req);
-    return directory.board();
+    return board.board();
   })
-  .on('POST', '/api/v1/board/offices', (req) => directory.assignOffice(directory.actor(req), req.body ?? {}))
-  .on('POST', '/api/v1/board/offices/:id/end', (req) => directory.endOffice(directory.actor(req), req.params.id));
+  .on('GET', '/api/v1/membership-kinds', (req) => (directory.actor(req), board.listMembershipKinds()))
+  .on('POST', '/api/v1/membership-kinds', (req) => board.saveMembershipKind(directory.actor(req), null, req.body ?? {}))
+  .on('PUT', '/api/v1/membership-kinds/:key', (req) => board.saveMembershipKind(directory.actor(req), req.params.key, req.body ?? {}))
+  .on('DELETE', '/api/v1/membership-kinds/:key', (req) => board.deleteMembershipKind(directory.actor(req), req.params.key))
+  .on('GET', '/api/v1/board/settings', (req) => (directory.actor(req), directory.boardSettings.data))
+  .on('PUT', '/api/v1/board/settings', (req) => board.saveBoardSettings(directory.actor(req), req.body ?? {}))
+  .on('POST', '/api/v1/board/offices', (req) => board.assignOffice(directory.actor(req), req.body ?? {}))
+  .on('POST', '/api/v1/board/offices/:id/end', (req) => board.endOffice(directory.actor(req), req.params.id));
 
 /** server: ChangeRequestHandlers. Requests become tasks (tasks mock) and decisions notifications (notifications mock). */
 export class MockChangeRequests {

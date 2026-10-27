@@ -1,3 +1,4 @@
+import { background } from './background';
 import type { EventBus, EventChannel } from '../bus';
 import type { LiveEvent } from '../live/LiveUpdates.svelte';
 
@@ -19,8 +20,8 @@ export class LiveStore<T> {
 
   /** Loads now and on every change; returns the cleanup. */
   start(): () => void {
-    void this.load().catch(() => {});
-    return this.bus.subscribe(this.changed, () => void this.load().catch(() => {})).unsubscribe;
+    background(this.load());
+    return this.bus.subscribe(this.changed, () => background(this.load())).unsubscribe;
   }
 
   async load(): Promise<T> {

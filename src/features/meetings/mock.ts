@@ -10,6 +10,8 @@ import type { LinkedRef, RefKind } from '../../lib/records/refs';
 import { ADMIN_BOARD, type Member } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
 import { tasks } from '../tasks/mock';
+import { ALL_MAJORITIES, BOARD_OFFICES, defaultSteps, seedMeetings, seededRules, seedResolutions, SEEDED_TYPES, type StoredFollowUp, type StoredMeeting,
+  type StoredResolution, type StoredType } from './mockSeeds';
 import {
   actionNeedsMember, actions, isAssembly, quorumReached, SEEDED_CIRCULAR, type CircularRules, OWN_ACTION, type ActionRule, isDayOfYear, isQuorate, latestInvite, majorities, mayConvene, type Choice,
   type FollowUp, type FollowUpKind, type Majority, type Meeting, type MeetingKind, type MeetingSummary, type MeetingType, type PresenceMode,
@@ -18,45 +20,6 @@ import {
 
 const fail = MockServer.fail;
 const DAY = 86_400_000;
-
-/** `inUse` is computed when listed. */
-type StoredType = MeetingType;
-const BOARD_OFFICES: OfficeKind[] = ['CHAIR', 'VICE_CHAIR', 'TREASURER', 'SECRETARY', 'BOARD_MEMBER'];
-const CHAIRS: OfficeKind[] = ['CHAIR', 'VICE_CHAIR'];
-const ALL_MAJORITIES: Majority[] = ['SIMPLE', 'TWO_THIRDS', 'THREE_QUARTERS'];
-/** server: V51__meeting_types.sql — the seeded kinds. */
-export const SEEDED_TYPES: readonly StoredType[] = [
-  { key: 'ASSEMBLY', label: 'Ordentliche Mitgliederversammlung', invitationLabel: 'ordentlichen Mitgliederversammlung',
-    electorate: 'ASSEMBLY', noticeHours: 336, quorum: 'AT_LEAST_HALF', graceMinutes: 30, majorities: ALL_MAJORITIES, conveners: BOARD_OFFICES,
-    actions: ['GENERAL', 'ELECTION'], needsReason: false, dueBy: '10-01', sort: 1, archived: false, inUse: false, steps: [] },
-  { key: 'EXTRA_ASSEMBLY', label: 'Außerordentliche Mitgliederversammlung', invitationLabel: 'außerordentlichen Mitgliederversammlung',
-    electorate: 'ASSEMBLY', noticeHours: 336, quorum: 'AT_LEAST_HALF', graceMinutes: 30, majorities: ALL_MAJORITIES,
-    conveners: BOARD_OFFICES, actions: ['GENERAL', 'ELECTION', 'HONORARY_GRANT', 'HONORARY_REVOKE', 'STATUTES_CHANGE', 'DISSOLUTION'],
-    needsReason: false, dueBy: null, sort: 2, archived: false, inUse: false, steps: [] },
-  { key: 'BOARD', label: 'Ordentliche Vorstandssitzung', invitationLabel: 'ordentlichen Vorstandssitzung',
-    electorate: 'BOARD', noticeHours: 336, quorum: 'MORE_THAN_HALF', graceMinutes: null, majorities: ['SIMPLE'], conveners: CHAIRS,
-    actions: ['GENERAL', 'CONVENE_ASSEMBLY'], needsReason: false, dueBy: '10-01', sort: 3, archived: false, inUse: false, steps: [] },
-  { key: 'EXTRA_BOARD', label: 'Außerordentliche Vorstandssitzung', invitationLabel: 'außerordentlichen Vorstandssitzung',
-    electorate: 'BOARD', noticeHours: 48, quorum: 'AT_LEAST_THREE_QUARTERS', graceMinutes: null, majorities: ['THREE_QUARTERS'], conveners: CHAIRS,
-    actions: ['GENERAL', 'EXCLUSION', 'CONVENE_ASSEMBLY'], needsReason: true, dueBy: null, sort: 4, archived: false, inUse: false, steps: [] },
-  { key: 'SIMPLE_BOARD', label: 'Einfache Vorstandssitzung', invitationLabel: 'einfachen Vorstandssitzung',
-    electorate: 'BOARD', noticeHours: 168, quorum: 'MORE_THAN_HALF', graceMinutes: null, majorities: ['SIMPLE'], conveners: BOARD_OFFICES,
-    actions: ['GENERAL', 'CONVENE_ASSEMBLY'], needsReason: false, dueBy: null, sort: 5, archived: false, inUse: false, steps: [] },
-  { key: 'CONSTITUENT_BOARD', label: 'Konstituierende Vorstandssitzung', invitationLabel: 'konstituierenden Vorstandssitzung',
-    electorate: 'BOARD', noticeHours: 336, quorum: 'MORE_THAN_HALF', graceMinutes: null, majorities: ['SIMPLE'], conveners: CHAIRS,
-    actions: ['GENERAL', 'CONVENE_ASSEMBLY'], needsReason: false, dueBy: null, sort: 6, archived: false, inUse: false, steps: [] },
-];
-/** server: V52__meeting_type_steps.sql and MeetingTypeHandlers.steps — the server's reminders (and, seeded, the protocol task). */
-function defaultSteps(seeded: boolean): MeetingStep[] {
-  const id = () => crypto.randomUUID();
-  return [
-    { id: id(), anchor: 'BEFORE_INVITE', offsetHours: 72, action: 'NOTIFICATION', audience: 'BOARD', title: null, body: null, system: 'INVITE_REMINDER' },
-    { id: id(), anchor: 'BEFORE_START', offsetHours: 24, action: 'NOTIFICATION', audience: 'ELECTORATE', title: null, body: null, system: 'START_REMINDER' },
-    ...(seeded ? [{ id: id(), anchor: 'AFTER_END', offsetHours: 168, action: 'TASK', audience: 'SECRETARY', title: 'Protokoll fertigstellen: {titel}',
-      body: 'Das Protokoll der Sitzung vom {datum} fertigstellen und ablegen.', system: null } as const] : []),
-  ];
-}
-for (const t of SEEDED_TYPES) t.steps = defaultSteps(true);
 
 const ANCHORS: readonly StepAnchor[] = ['BEFORE_INVITE', 'BEFORE_START', 'AFTER_END'];
 const AUDIENCES: readonly StepAudience[] = ['ELECTORATE', 'BOARD', 'CONVENERS', 'SECRETARY'];
@@ -82,20 +45,6 @@ function checkedSteps(value: unknown): MeetingStep[] {
   });
 }
 
-/** server: V54__resolution_rules.sql */
-function seededRules(): ActionRule[] {
-  const f = (kind: ActionRule['followUps'][number]['kind'], title: string, dueDays: number | null) => ({ id: crypto.randomUUID(), kind, title, dueDays });
-  return [
-    { action: 'GENERAL', majority: null, followUps: [f('IMPLEMENT', 'Beschluss umsetzen: {beschluss}', null)] },
-    { action: 'HONORARY_GRANT', majority: null, followUps: [f('ENTER_HONORARY', 'Ehrenmitgliedschaft eintragen: {mitglied}', 7)] },
-    { action: 'HONORARY_REVOKE', majority: null, followUps: [f('REVOKE_HONORARY', 'Ehrenmitgliedschaft aberkennen: {mitglied}', 7)] },
-    { action: 'ELECTION', majority: null, followUps: [f('ENTER_OFFICE', 'Funktion eintragen: {funktion} – {mitglied}', 7)] },
-    { action: 'STATUTES_CHANGE', majority: 'TWO_THIRDS', followUps: [] },
-    { action: 'DISSOLUTION', majority: 'THREE_QUARTERS', followUps: [] },
-    { action: 'EXCLUSION', majority: null, followUps: [f('NOTIFY_EXCLUSION', 'Ausschluss schriftlich mit Gründen mitteilen: {mitglied}', 7)] },
-    { action: 'CONVENE_ASSEMBLY', majority: null, followUps: [f('CONVENE_ASSEMBLY', 'Außerordentliche Mitgliederversammlung einberufen', 7)] },
-  ];
-}
 const FOLLOW_UP_KINDS = ['IMPLEMENT', 'ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'NOTIFY_EXCLUSION', 'CONVENE_ASSEMBLY'] as const;
 const ABOUT_MEMBER: readonly FollowUpKind[] = ['ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'NOTIFY_EXCLUSION'];
 
@@ -103,17 +52,6 @@ const QUORUMS: readonly Quorum[] = ['AT_LEAST_HALF', 'MORE_THAN_HALF', 'AT_LEAST
 const OFFICES: readonly OfficeKind[] = [...BOARD_OFFICES, 'AUDITOR'];
 const ACTIONS: readonly ResolutionAction[] = ['GENERAL', 'HONORARY_GRANT', 'HONORARY_REVOKE', 'ELECTION', 'STATUTES_CHANGE', 'DISSOLUTION', 'EXCLUSION',
   'CONVENE_ASSEMBLY'];
-
-type StoredMeeting = Omit<Meeting, 'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage' | 'autoTasks' | 'followUps' | 'assignable'>
-  & { presence: Record<string, PresenceMode>; autoTasks?: boolean; frozenElectorate?: string[] };
-/** server: meetings_follow_up */
-type StoredFollowUp = { id: string; meetingId: string | null; resolutionId: string | null; kind: FollowUpKind; memberId: string | null;
-  office: OfficeKind | null; title: string; dueAt: string | null; doneAt: string | null };
-/** Counters hold what was voted, `ballots` only who voted (server: meetings_resolution, meetings_ballot). */
-type StoredResolution = Pick<Resolution, 'id' | 'meetingId' | 'title' | 'text' | 'majority' | 'status' | 'deadline' | 'voters' | 'analogYes'
-  | 'analogNo' | 'analogAbstain' | 'result' | 'openedAt' | 'closedAt'> & { yes: number; no: number; abstain: number; ballots: string[];
-  action?: ResolutionAction; actionMemberId?: string | null; actionOffice?: OfficeKind | null; assigneeIds?: string[]; frozenVoters?: string[];
-  links?: LinkedRef[] };
 
 const DAY_MS = 86_400_000;
 const AUTOMATIC: readonly FollowUpKind[] = ['ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'CONVENE_ASSEMBLY'];
@@ -130,8 +68,8 @@ export class MockMeetings {
   /** server: meetings_setting */
   readonly circular = new MockTable<CircularRules>('circular-rules', () => ({ ...SEEDED_CIRCULAR }));
   readonly types = new MockTable<StoredType[]>('meeting-types', () => structuredClone([...SEEDED_TYPES]));
-  readonly meetings = new MockTable<StoredMeeting[]>('meetings', () => MockMeetings.seed());
-  readonly resolutions = new MockTable<StoredResolution[]>('resolutions', () => MockMeetings.seedResolutions());
+  readonly meetings = new MockTable<StoredMeeting[]>('meetings', () => seedMeetings());
+  readonly resolutions = new MockTable<StoredResolution[]>('resolutions', () => seedResolutions());
   /** meetingId → its folder and generated invitation (server: meetings_document). */
   readonly documents = new MockTable<Record<string, { folderId: string; fileId: string }>>('meeting-documents', () => ({}));
 
@@ -139,6 +77,9 @@ export class MockMeetings {
 
   constructor(private readonly people: MockDirectory) {
     this.addMissingSeeds();
+    // server: the hourly reminder run gives every draft and open circular vote its deadline task
+    for (const m of this.meetings.data.filter((x) => x.status === 'DRAFT')) this.inviteTask(m);
+    for (const r of this.resolutions.data.filter((x) => !x.meetingId && x.status === 'OPEN')) this.circularTask(r, 'vorstand');
     // server: FollowUps.register — entering what a resolution decided finishes its task.
     mockServer.events.subscribe((event) => {
       const data = event.data as Record<string, any>;
@@ -298,64 +239,13 @@ export class MockMeetings {
 
   /** Seeded meetings and votes added later reach browsers that already stored mock data. */
   private addMissingSeeds(): void {
-    const meetings = MockMeetings.seed().filter((m) => !this.meetings.data.some((x) => x.id === m.id));
-    const resolutions = MockMeetings.seedResolutions().filter((r) => !this.resolutions.data.some((x) => x.id === r.id));
+    const meetings = seedMeetings().filter((m) => !this.meetings.data.some((x) => x.id === m.id));
+    const resolutions = seedResolutions().filter((r) => !this.resolutions.data.some((x) => x.id === r.id));
     if (!meetings.length && !resolutions.length) return;
     this.meetings.data.push(...meetings);
     this.resolutions.data.push(...resolutions);
     this.meetings.save();
     this.resolutions.save();
-  }
-
-  /**
-   * To try everything: a general meeting running now (quorate, two members without the app, one vote open), one to invite, an
-   * invited board meeting, a closed board meeting with its protocol.
-   */
-  private static seed(): StoredMeeting[] {
-    const at = (days: number, hour: number) => {
-      const d = new Date(Date.now() + days * DAY);
-      d.setUTCHours(hour, 0, 0, 0);
-      return d.toISOString();
-    };
-    const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
-    const base = { urgency: null, videoUrl: null, openedAt: null, closedAt: null, protocol: null, presence: {}, links: [] };
-    return [
-      { ...base, id: 'mt-live', kind: 'EXTRA_ASSEMBLY', title: 'Außerordentliche Mitgliederversammlung',
-        agenda: '1. Begrüßung und Beschlussfähigkeit\n2. Mitgliedsbeitrag 2027\n3. Statutenänderung: Mitgliedschaft\n4. Allfälliges',
-        startsAt: ago(15), endsAt: ago(-105), location: 'Vereinsheim', videoUrl: 'https://meet.example.at/mv', status: 'OPEN',
-        invitedAt: ago(20 * 24 * 60), openedAt: ago(10), protocol: '1. Begrüßung durch den Vorsitz, 8 von 12 Stimmberechtigten anwesend.',
-        presence: { vorstand: 'APP', kassier: 'APP', schrift: 'APP', beisitz: 'APP', beisitz2: 'APP', admin: 'APP', eltern: 'ANALOG', ehren: 'ANALOG' },
-        links: [
-          { kind: 'MEMBER', id: 'kassier', title: 'Karin Kassier', parentId: null },
-          { kind: 'MEETING', id: 'mt-past', title: 'Ordentliche Vorstandssitzung', parentId: null },
-          { kind: 'TEAM', id: 't-damen', title: 'Damen 1', parentId: null },
-        ] },
-      { ...base, id: 'mt-past', kind: 'BOARD', title: 'Ordentliche Vorstandssitzung', agenda: '1. Jahresvoranschlag\n2. Hallenmiete Wintersaison',
-        startsAt: at(-40, 17), endsAt: at(-40, 19), location: 'Vereinsheim', status: 'CLOSED', invitedAt: at(-60, 9), openedAt: at(-40, 17),
-        closedAt: at(-40, 19), protocol: '1. Jahresvoranschlag besprochen und angenommen.\n2. Hallenmiete: siehe Beschluss.',
-        presence: { vorstand: 'APP', kassier: 'APP', schrift: 'APP', beisitz: 'APP', beisitz2: 'ANALOG' } },
-      { ...base, id: 'mt-mv', kind: 'ASSEMBLY', title: 'Ordentliche Mitgliederversammlung', agenda: '1. Begrüßung\n2. Bericht des Vorstands\n3. Rechnungsabschluss\n4. Mitgliedsbeiträge',
-        startsAt: at(30, 17), endsAt: at(30, 19), location: 'Vereinsheim', status: 'DRAFT', invitedAt: null },
-      { ...base, id: 'mt-vs', kind: 'SIMPLE_BOARD', title: 'Vorstandssitzung', agenda: '1. Hallenzeiten\n2. Aufnahmeanträge',
-        startsAt: at(10, 18), endsAt: at(10, 19), location: null, videoUrl: 'https://meet.example.at/vorstand', status: 'INVITED', invitedAt: new Date().toISOString() },
-    ];
-  }
-
-  private static seedResolutions(): StoredResolution[] {
-    const now = Date.now();
-    const iso = (ms: number) => new Date(ms).toISOString();
-    const base = { text: null, deadline: null, analogYes: null, analogNo: null, analogAbstain: null, result: null, openedAt: null, closedAt: null };
-    return [
-      { ...base, id: 'rs-beitrag', meetingId: 'mt-live', title: 'Mitgliedsbeitrag 2027: 60 €', text: 'Der Vorstand schlägt 60 € pro Jahr vor (bisher 50 €).',
-        majority: 'SIMPLE', status: 'OPEN', voters: 12, openedAt: iso(now - 5 * 60_000), yes: 1, no: 1, abstain: 0, ballots: ['kassier', 'schrift'] },
-      { ...base, id: 'rs-statuten', meetingId: 'mt-live', title: 'Statutenänderung: Mitgliedschaft', text: 'Ordentliche Mitglieder dürfen auch passiv teilnehmen.',
-        majority: 'TWO_THIRDS', status: 'DRAFT', voters: null, yes: 0, no: 0, abstain: 0, ballots: [] },
-      { ...base, id: 'rs-halle', meetingId: 'mt-past', title: 'Hallenmiete Wintersaison: 1.800 €', majority: 'SIMPLE', status: 'CLOSED', voters: 5,
-        openedAt: iso(now - 40 * DAY), closedAt: iso(now - 40 * DAY + 600_000), result: 'PASSED', analogYes: 1, analogNo: 0, analogAbstain: 0,
-        yes: 3, no: 0, abstain: 1, ballots: ['vorstand', 'kassier', 'schrift', 'beisitz'] },
-      { ...base, id: 'rs-baelle', meetingId: null, title: 'Zehn neue Bälle um 400 €', text: 'Die alten Bälle sind abgenutzt; Angebot im Ordner Vorstand.',
-        majority: 'SIMPLE', status: 'OPEN', voters: 5, deadline: iso(now + 4 * DAY), openedAt: iso(now - DAY), yes: 1, no: 0, abstain: 0, ballots: ['kassier'] },
-    ];
   }
 
   list(viewer: Member, from: string | null, to: string | null): { items: MeetingSummary[] } {
@@ -586,8 +476,7 @@ export class MockMeetings {
     Object.assign(r, { status: 'OPEN', openedAt: new Date().toISOString(), voters: voters.length, frozenVoters: meeting ? undefined : voters });
     this.resolutionChanged(r, 'OPENED');
     if (!meeting) {
-      // server: MeetingReminders — the circular vote's deadline is a task for whoever started it
-      tasks.deadline(`deadline-circular-${r.id}`, `Umlaufbeschluss: ${r.title}`, 'Der Umlaufbeschluss schließt dann von selbst.', r.deadline!, [viewer.id]);
+      this.circularTask(r, viewer.id);
       mockServer.events.publish({ type: 'meetings.circular-opened', data: { resolutionId: r.id, recipients: voters, title: r.title, text: r.text, deadline: r.deadline } });
     }
     return this.resolutionDto(viewer, r);
@@ -878,17 +767,21 @@ export class MockMeetings {
     };
   }
 
+  /** server: MeetingReminders.inviteTask — a draft's invitation deadline as a task for the board, moved with the draft. */
+  private inviteTask(m: StoredMeeting): void {
+    tasks.deadline(`deadline-invite-${m.id}`, `Einladen: ${m.title}`, 'Rechtzeitig einladen, sonst ist die Einladungsfrist nicht mehr einzuhalten.',
+      latestInvite(this.type(m.kind), m.startsAt), this.people.audienceIds({ roles: ['BOARD'] }));
+  }
+
+  /** server: MeetingReminders.circularTask — the vote's deadline as a task for whoever started it. */
+  private circularTask(r: StoredResolution, startedBy: string): void {
+    tasks.deadline(`deadline-circular-${r.id}`, `Umlaufbeschluss: ${r.title}`, 'Der Umlaufbeschluss schließt dann von selbst.', r.deadline!, [startedBy]);
+  }
+
   private changed(m: StoredMeeting, change: string): void {
     this.meetings.save();
-    // server: MeetingReminders — a draft's invitation deadline is a task for the board, done once invited or deleted
-    const key = `deadline-invite-${m.id}`;
-    if (m.status === 'DRAFT' && change !== 'DELETED') {
-      const due = latestInvite(this.type(m.kind), m.startsAt);
-      tasks.deadline(key, `Einladen: ${m.title}`, 'Rechtzeitig einladen, sonst ist die Einladungsfrist nicht mehr einzuhalten.', due,
-        this.people.audienceIds({ roles: ['BOARD'] }));
-    } else {
-      tasks.deadlineDone(key);
-    }
+    if (m.status === 'DRAFT' && change !== 'DELETED') this.inviteTask(m);
+    else tasks.deadlineDone(`deadline-invite-${m.id}`);
     mockServer.events.publish({ type: 'meetings.meeting-changed', data: { meetingId: m.id, change },
       audience: isAssembly(this.type(m.kind)) ? { everyone: true } : { roles: ADMIN_BOARD } });
   }

@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { background } from '../../lib/state/background';
   import SettingsList from '../../ui/SettingsList.svelte';
   import { appointmentTypes } from './services';
 
   /** Einstellungen › Termine (admin/board): the club's kinds of appointments; each opens in the window. */
-  void appointmentTypes.load().catch(() => {});
+  background(appointmentTypes.load());
 
   const rows = $derived(appointmentTypes.items.map((t) => ({
     key: t.key, label: t.label, hue: t.hue, archived: t.archived,

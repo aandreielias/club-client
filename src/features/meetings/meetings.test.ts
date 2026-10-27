@@ -8,7 +8,8 @@ import { MeetingForm } from './MeetingForm.svelte';
 import { MeetingPolicy } from './MeetingPolicy';
 import { MeetingTypeForm } from './MeetingTypeForm.svelte';
 import { tasks } from '../tasks/mock';
-import { meetings, SEEDED_TYPES } from './mock';
+import { meetings } from './mock';
+import { SEEDED_TYPES } from './mockSeeds';
 import { latestInvite, type MeetingType } from './model';
 
 const type = (key: string): MeetingType => SEEDED_TYPES.find((t) => t.key === key)!;

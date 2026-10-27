@@ -1,3 +1,4 @@
+import { background } from './lib/state/background';
 import type { Component } from 'svelte';
 import type { FeatureRoute, PageProps } from './features/Feature';
 import type { FeatureRegistry, NavItem } from './features/FeatureRegistry';
@@ -126,7 +127,7 @@ export class AppController {
     const { live, features, session, directory, keyboard, bus } = this.deps;
     live.start();
     // Own teams' rosters: names and which profiles a coach may open (links, windows by URL).
-    directory.loadRosters().catch(() => {});
+    background(directory.loadRosters());
     const detachKeyboard = keyboard.attach();
     const removeCommands = this.registerGlobalCommands();
     const wake = () => document.visibilityState === 'visible' && live.wake();

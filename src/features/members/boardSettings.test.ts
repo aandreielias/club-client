@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { board } from './mock';
 import { directory, MockDirectory } from '../../lib/mock/core';
 import type { Member } from '../../lib/types';
 import { meetings } from '../meetings/mock';
@@ -13,13 +14,13 @@ describe('club rules for offices and resolutions', () => {
     const changed = structuredClone(before);
     changed.offices[0].label = 'Obfrau';
     changed.minBoardSize = 5;
-    expect(() => directory.saveBoardSettings(member('spielerin'), changed)).toThrow();
-    expect(() => directory.saveBoardSettings(member('vorstand'), { ...changed, offices: changed.offices.slice(1) })).toThrow();
-    const saved = directory.saveBoardSettings(member('vorstand'), changed);
+    expect(() => board.saveBoardSettings(member('spielerin'), changed)).toThrow();
+    expect(() => board.saveBoardSettings(member('vorstand'), { ...changed, offices: changed.offices.slice(1) })).toThrow();
+    const saved = board.saveBoardSettings(member('vorstand'), changed);
     expect(boardWarning('board.too-small', saved)).toBe('Der Vorstand braucht mindestens 5 Personen.');
     expect(boardWarning('board.chair-missing', saved)).toBe('Obfrau ist nicht besetzt.');
     expect(boardWarning('board.auditors-missing', before)).toBe('Rechnungsprüfung: es braucht 2 Personen.');
-    directory.saveBoardSettings(member('vorstand'), before);
+    board.saveBoardSettings(member('vorstand'), before);
   });
 
   it('fix majorities per decision only where every meeting type offers them', () => {
@@ -37,18 +38,18 @@ describe('club rules for offices and resolutions', () => {
 
   it('let the club define membership kinds and office pairs, and keep office holders eligible', () => {
     directory.stepUp(member('vorstand'), MockDirectory.PIN);
-    const supporter = directory.saveMembershipKind(member('vorstand'), null, { label: 'Unterstützend', votes: true, eligible: false, sort: 5 });
+    const supporter = board.saveMembershipKind(member('vorstand'), null, { label: 'Unterstützend', votes: true, eligible: false, sort: 5 });
     const target = member('spielerin');
     expect(directory.setMembership(member('vorstand'), target.id, { membershipType: supporter.key })).toMatchObject({ voter: true, eligible: false });
     expect(() => directory.setMembership(member('vorstand'), target.id, { membershipType: 'NOPE' })).toThrow();
-    expect(() => directory.deleteMembershipKind(member('vorstand'), supporter.key)).toThrow();
+    expect(() => board.deleteMembershipKind(member('vorstand'), supporter.key)).toThrow();
     const settings = structuredClone(directory.boardSettings.data);
-    expect(() => directory.saveBoardSettings(member('vorstand'), { ...settings, combinations: [{ a: 'CHAIR', b: 'CHAIR' }] })).toThrow();
-    directory.saveBoardSettings(member('vorstand'), { ...settings, combinations: [] });
+    expect(() => board.saveBoardSettings(member('vorstand'), { ...settings, combinations: [{ a: 'CHAIR', b: 'CHAIR' }] })).toThrow();
+    board.saveBoardSettings(member('vorstand'), { ...settings, combinations: [] });
     expect(directory.boardSettings.data.combinations).toEqual([]);
-    directory.saveBoardSettings(member('vorstand'), settings);
+    board.saveBoardSettings(member('vorstand'), settings);
     directory.setMembership(member('vorstand'), target.id, { membershipType: null });
-    directory.deleteMembershipKind(member('vorstand'), supporter.key);
+    board.deleteMembershipKind(member('vorstand'), supporter.key);
   });
 });
 

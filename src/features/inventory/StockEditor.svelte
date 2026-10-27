@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { background } from '../../lib/state/background';
   import { directory, permissions, session } from '../../lib/container';
   import type { Action } from '../../lib/state/Action.svelte';
   import Button from '../../ui/Button.svelte';
@@ -15,7 +16,7 @@
   let people = $state<{ memberId: string; name: string }[]>([]);
   locationsApi.list().then((list) => (places = list), () => {});
   // Admin and board pick anyone; coaches the members of their teams (the server accepts any active member).
-  (async () => {
+  background((async () => {
     await directory.loadRosters();
     const lists = permissions.isManager
       ? [await directory.candidates(null)]
@@ -23,7 +24,7 @@
     const unique = new Map(lists.flat().map((p) => [p.memberId, p]));
     if (!unique.has(session.member.id)) unique.set(session.member.id, { memberId: session.member.id, name: `${session.member.firstName} ${session.member.lastName}` });
     people = [...unique.values()].sort((a, b) => a.name.localeCompare(b.name, 'de'));
-  })().catch(() => {});
+  })());
 
   /** Lines may name a place or person that is no longer offered (deleted place, other team): keep it selectable. */
   const options = $derived([
