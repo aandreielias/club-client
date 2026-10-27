@@ -36,6 +36,20 @@ describe('club rules for offices and resolutions', () => {
     meetings.saveRules(member('vorstand'), { items: before, circular: meetings.circular.data });
   });
 
+  it('remove a decision from every meeting type, but never the general one', () => {
+    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    const before = structuredClone(meetings.rules.data);
+    const types = structuredClone(meetings.types.data);
+    const removed = before.map((r) => (r.action === 'EXCLUSION' || r.action === 'GENERAL' ? { ...r, enabled: false } : r));
+    const saved = meetings.saveRules(member('vorstand'), { items: removed, circular: meetings.circular.data });
+    expect(saved.items.find((r) => r.action === 'GENERAL')!.enabled).toBe(true);
+    expect(meetings.types.data.some((t) => t.actions.includes('EXCLUSION'))).toBe(false);
+    const extraBoard = types.find((t) => t.key === 'EXTRA_BOARD')!;
+    expect(() => meetings.saveType(member('vorstand'), 'EXTRA_BOARD', extraBoard)).toThrow(expect.objectContaining({ code: 'meeting-type.action-removed' }));
+    meetings.saveRules(member('vorstand'), { items: before, circular: meetings.circular.data });
+    meetings.types.data.splice(0, meetings.types.data.length, ...types);
+  });
+
   it('let the club define membership kinds and office pairs, and keep office holders eligible', () => {
     directory.stepUp(member('vorstand'), MockDirectory.PIN);
     const supporter = board.saveMembershipKind(member('vorstand'), null, { label: 'Unterstützend', votes: true, eligible: false, sort: 5 });

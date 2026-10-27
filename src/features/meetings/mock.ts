@@ -143,7 +143,7 @@ export class MockMeetings {
       if (majority && !ALL_MAJORITIES.includes(majority)) fail(400, 'action-rules.invalid');
       const followUps: Record<string, any>[] = Array.isArray(item.followUps) ? item.followUps : fail(400, 'action-rules.invalid');
       if (followUps.length > 10) fail(400, 'action-rules.too-many');
-      return { action, majority, followUps: followUps.map((f) => {
+      return { action, majority, enabled: action === 'GENERAL' || item.enabled !== false, followUps: followUps.map((f) => {
         if (!FOLLOW_UP_KINDS.includes(f.kind) || (OWN_ACTION[f.kind as FollowUpKind] && OWN_ACTION[f.kind as FollowUpKind] !== action)) fail(400, 'action-rules.kind-invalid');
         const title = typeof f.title === 'string' ? f.title.trim() : '';
         if (!title || title.length > 150) fail(400, 'action-rules.title-invalid');
@@ -152,7 +152,7 @@ export class MockMeetings {
       }) };
     });
     for (const rule of rules) {
-      if (rule.majority && this.types.data.some((t) => t.actions.includes(rule.action) && !t.majorities.includes(rule.majority!))) {
+      if (rule.enabled && rule.majority && this.types.data.some((t) => t.actions.includes(rule.action) && !t.majorities.includes(rule.majority!))) {
         fail(400, 'meeting-type.majority-for-action');
       }
     }
@@ -160,6 +160,11 @@ export class MockMeetings {
     if (!Number.isInteger(circular.minHours) || circular.minHours < 1 || circular.minHours > 720 || !QUORUMS.includes(circular.quorum)) {
       fail(400, 'action-rules.circular-invalid');
     }
+    // server: MeetingTypeHandlers.saveRules — a removed decision leaves every meeting type that offered it
+    const removed = rules.filter((r) => !r.enabled).map((r) => r.action);
+    const stripped = this.types.data.filter((t) => t.actions.some((a) => removed.includes(a)));
+    for (const t of stripped) t.actions = t.actions.filter((a) => !removed.includes(a));
+    if (stripped.length) this.typesChanged();
     this.rules.data.splice(0, this.rules.data.length, ...rules);
     this.rules.save();
     Object.assign(this.circular.data, { minHours: circular.minHours, quorum: circular.quorum });
@@ -669,6 +674,7 @@ export class MockMeetings {
     if (!conveners.length || conveners.includes('AUDITOR')) fail(400, 'meeting-type.conveners-invalid');
     if (!actions.includes('GENERAL')) fail(400, 'meeting-type.actions-invalid');
     if (this.rules.data.some((r) => r.majority && actions.includes(r.action) && !majorities.includes(r.majority))) fail(400, 'meeting-type.majority-for-action');
+    if (this.rules.data.some((r) => r.enabled === false && actions.includes(r.action))) fail(400, 'meeting-type.action-removed');
     const dueBy = body.dueBy || null;
     if (dueBy && (!/^\d{2}-\d{2}$/.test(dueBy) || !isDayOfYear(Number(dueBy.slice(0, 2)), Number(dueBy.slice(3))))) fail(400, 'meeting-type.due-by-invalid');
     const type: StoredType = {
@@ -792,7 +798,7 @@ const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer
   .on('GET', '/api/v1/meetings', (req) => meetings.list(actor(req), req.query.get('from'), req.query.get('to')))
-  .on('GET', '/api/v1/meetings/resolution-rules', (req) => (actor(req), { items: meetings.rules.data, circular: meetings.circular.data }))
+  .on('GET', '/api/v1/meetings/resolution-rules', (req) => (actor(req), { items: meetings.rules.data.map((r) => ({ ...r, enabled: r.enabled !== false })), circular: meetings.circular.data }))
   .on('PUT', '/api/v1/meetings/resolution-rules', (req) => meetings.saveRules(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/meetings/types', (req) => (actor(req), meetings.listTypes()))
   .on('POST', '/api/v1/meetings/types', (req) => meetings.saveType(actor(req), null, req.body ?? {}))

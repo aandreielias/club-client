@@ -10,6 +10,7 @@
   import { boardSettings } from '../members/services';
   import type { MeetingTypeForm } from './MeetingTypeForm.svelte';
   import TimelineBar from './TimelineBar.svelte';
+  import { resolutionRules } from './services';
   import {
     ACTION_KIND_LABELS, ACTION_LABELS, ACTION_ORDER, AUDIENCE_LABELS, MAJORITY_LABELS, noticeText, QUORUM_LABELS, SYSTEM_STEP_LABELS, type Majority,
     type Quorum, type StepAction, type StepAnchor, type StepAudience,
@@ -163,7 +164,7 @@
   <fieldset>
     <legend>Was Beschlüsse entscheiden dürfen</legend>
     <p class="muted small">Daraus entstehen nach dem Beschluss die Folgeaufgaben.</p>
-    {#each ACTION_ORDER as a (a)}
+    {#each ACTION_ORDER.filter((x) => resolutionRules.value.items.find((r) => r.action === x)?.enabled !== false) as a (a)}
       <label class="check"><input type="checkbox" checked={form.actions.includes(a)} disabled={a === 'GENERAL'}
         onchange={(e) => (form.actions = form.toggle(form.actions, a, e.currentTarget.checked))} /> {ACTION_LABELS[a]}</label>
     {/each}

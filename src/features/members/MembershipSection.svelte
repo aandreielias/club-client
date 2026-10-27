@@ -1,6 +1,7 @@
 <script lang="ts">
   import { background } from '../../lib/state/background';
   import { bus } from '../../lib/container';
+  import { removeRecord, restoreRecord } from '../../lib/detail/removeRecord';
   import { TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
   import Button from '../../ui/Button.svelte';
@@ -13,10 +14,16 @@
   background(boardSettings.load());
 
   const rows = $derived(membershipKinds.items.map((k) => ({
-    key: k.key, label: k.label, archived: k.archived,
+    key: k.key, label: k.label, archived: k.archived, inUse: k.inUse,
     detail: [k.votes && 'Stimmrecht', k.eligible && 'wählbar'].filter(Boolean).join(' · ') || 'ohne Stimmrecht',
   })));
   const action = new Action();
+
+  function ops(key: string) {
+    const { key: _key, inUse: _inUse, ...input } = membershipKinds.get(key)!;
+    return { delete: () => membersApi.deleteMembershipKind(key), archive: (archived: boolean) => membersApi.saveMembershipKind(key, { ...input, archived }),
+      reload: () => membershipKinds.load() };
+  }
 
   async function setHonoraryVotes(on: boolean) {
     const settings = boardSettings.value;
@@ -29,7 +36,8 @@
 
 <div class="stack section">
   <p class="muted">Welche Arten der Mitgliedschaft es gibt und wer in der Mitgliederversammlung abstimmt und in eine Funktion gewählt werden kann.</p>
-  <SettingsList {rows} kind="membership-kind" newLabel="Neue Mitgliedsart" />
+  <SettingsList {rows} kind="membership-kind" newLabel="Neue Mitgliedsart" onremove={(row) => removeRecord(bus, row, 'Mitgliedsart', ops(row.key))}
+    onrestore={(row) => restoreRecord(bus, 'Mitgliedsart', ops(row.key))} />
 
   <h3>Ehrenmitglieder</h3>
   <label class="check">

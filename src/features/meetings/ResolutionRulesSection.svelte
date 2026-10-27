@@ -1,6 +1,6 @@
 <script lang="ts">
   import { bus } from '../../lib/container';
-  import { TOAST } from '../../channels';
+  import { CONFIRM, TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
@@ -44,6 +44,19 @@
       bus.publish(TOAST, { text: 'Beschlussregeln gespeichert.' });
     }
   }
+
+  /** Removing takes the decision out of every Sitzungsart at once, so it is saved right away (with the other changes of the form). */
+  async function setEnabled(value: ResolutionRules, rule: ActionRule, enabled: boolean) {
+    const label = ACTION_LABELS[rule.action];
+    if (!enabled && !(await bus.request(CONFIRM, { title: 'Beschlussart entfernen', confirmLabel: 'Entfernen', danger: true,
+      message: `„${label}“ wird aus allen Sitzungsarten genommen und ist für neue Beschlüsse nicht mehr wählbar. Gefasste Beschlüsse bleiben.` }))) return;
+    rule.enabled = enabled;
+    if (await action.run(async () => (resolutionRules.value = await meetingsApi.saveResolutionRules(value)))) {
+      bus.publish(TOAST, { text: enabled ? `${label} wiederhergestellt.` : `${label} entfernt.` });
+    } else {
+      rule.enabled = !enabled;
+    }
+  }
 </script>
 
 <AsyncView resource={rules}>
@@ -64,12 +77,17 @@
         Was ein Beschluss entscheidet, bringt seine Folgeaufgaben mit. Im Titel setzt {'{beschluss}'} den Beschluss, {'{mitglied}'} das
         betroffene Mitglied und {'{funktion}'} die Funktion ein. Ohne Fälligkeit hat die Aufgabe kein Datum.
       </p>
-      {#each value.items as rule (rule.action)}
+      {#each value.items.filter((r) => r.enabled) as rule (rule.action)}
         <section class="rule stack">
           <div class="row between">
             <h3>{ACTION_LABELS[rule.action]}</h3>
-            <Select bind:value={() => rule.majority ?? 'FREE', (v) => (rule.majority = v === 'FREE' || !v ? null : (v as Majority))}
-              options={MAJORITIES} aria-label="Mehrheit für {ACTION_LABELS[rule.action]}" />
+            <div class="row">
+              <Select bind:value={() => rule.majority ?? 'FREE', (v) => (rule.majority = v === 'FREE' || !v ? null : (v as Majority))}
+                options={MAJORITIES} aria-label="Mehrheit für {ACTION_LABELS[rule.action]}" />
+              {#if rule.action !== 'GENERAL'}
+                <Button size="sm" variant="ghost" icon="delete" tooltip="{ACTION_LABELS[rule.action]} entfernen" onclick={() => setEnabled(value, rule, false)} />
+              {/if}
+            </div>
           </div>
           {#each rule.followUps as followUp, i (followUp.id ?? i)}
             <div class="follow">
@@ -88,6 +106,17 @@
           {/if}
         </section>
       {/each}
+      {#if value.items.some((r) => !r.enabled)}
+        <section class="stack">
+          <h3>Entfernte Beschlussarten</h3>
+          {#each value.items.filter((r) => !r.enabled) as rule (rule.action)}
+            <div class="row between removed">
+              <span>{ACTION_LABELS[rule.action]}</span>
+              <Button size="sm" variant="ghost" tooltip="{ACTION_LABELS[rule.action]} wieder anbieten" onclick={() => setEnabled(value, rule, true)}>Wiederherstellen</Button>
+            </div>
+          {/each}
+        </section>
+      {/if}
       <ErrorNote error={action.error} />
       <div><Button type="submit" variant="primary" busy={action.busy}>Speichern</Button></div>
     </form>
@@ -103,6 +132,9 @@
     padding: var(--space-md);
     border-radius: var(--radius-lg);
     background: var(--color-surface);
+  }
+  .removed {
+    color: var(--color-text-muted);
   }
   .short {
     width: 6rem;

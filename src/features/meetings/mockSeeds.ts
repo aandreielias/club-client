@@ -48,14 +48,14 @@ for (const t of SEEDED_TYPES) t.steps = defaultSteps(true);
 export function seededRules(): ActionRule[] {
   const f = (kind: ActionRule['followUps'][number]['kind'], title: string, dueDays: number | null) => ({ id: crypto.randomUUID(), kind, title, dueDays });
   return [
-    { action: 'GENERAL', majority: null, followUps: [f('IMPLEMENT', 'Beschluss umsetzen: {beschluss}', null)] },
-    { action: 'HONORARY_GRANT', majority: null, followUps: [f('ENTER_HONORARY', 'Ehrenmitgliedschaft eintragen: {mitglied}', 7)] },
-    { action: 'HONORARY_REVOKE', majority: null, followUps: [f('REVOKE_HONORARY', 'Ehrenmitgliedschaft aberkennen: {mitglied}', 7)] },
-    { action: 'ELECTION', majority: null, followUps: [f('ENTER_OFFICE', 'Funktion eintragen: {funktion} – {mitglied}', 7)] },
-    { action: 'STATUTES_CHANGE', majority: 'TWO_THIRDS', followUps: [] },
-    { action: 'DISSOLUTION', majority: 'THREE_QUARTERS', followUps: [] },
-    { action: 'EXCLUSION', majority: null, followUps: [f('NOTIFY_EXCLUSION', 'Ausschluss schriftlich mit Gründen mitteilen: {mitglied}', 7)] },
-    { action: 'CONVENE_ASSEMBLY', majority: null, followUps: [f('CONVENE_ASSEMBLY', 'Außerordentliche Mitgliederversammlung einberufen', 7)] },
+    { action: 'GENERAL', majority: null, followUps: [f('IMPLEMENT', 'Beschluss umsetzen: {beschluss}', null)], enabled: true },
+    { action: 'HONORARY_GRANT', majority: null, followUps: [f('ENTER_HONORARY', 'Ehrenmitgliedschaft eintragen: {mitglied}', 7)], enabled: true },
+    { action: 'HONORARY_REVOKE', majority: null, followUps: [f('REVOKE_HONORARY', 'Ehrenmitgliedschaft aberkennen: {mitglied}', 7)], enabled: true },
+    { action: 'ELECTION', majority: null, followUps: [f('ENTER_OFFICE', 'Funktion eintragen: {funktion} – {mitglied}', 7)], enabled: true },
+    { action: 'STATUTES_CHANGE', majority: 'TWO_THIRDS', followUps: [], enabled: true },
+    { action: 'DISSOLUTION', majority: 'THREE_QUARTERS', followUps: [], enabled: true },
+    { action: 'EXCLUSION', majority: null, followUps: [f('NOTIFY_EXCLUSION', 'Ausschluss schriftlich mit Gründen mitteilen: {mitglied}', 7)], enabled: true },
+    { action: 'CONVENE_ASSEMBLY', majority: null, followUps: [f('CONVENE_ASSEMBLY', 'Außerordentliche Mitgliederversammlung einberufen', 7)], enabled: true },
   ];
 }
 export type StoredMeeting = Omit<Meeting, 'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage' | 'autoTasks' | 'followUps' | 'assignable'>

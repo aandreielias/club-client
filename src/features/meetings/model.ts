@@ -208,6 +208,8 @@ export interface ActionRule {
   action: ResolutionAction;
   majority: Majority | null;
   followUps: FollowUpRule[];
+  /** false: the club removed this decision, no meeting type offers it (GENERAL always stays). */
+  enabled: boolean;
 }
 
 /** Follow-up kinds that finish themselves, each only after its own decision (server: FollowUpPlanner.OWN_ACTION). */

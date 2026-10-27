@@ -12,6 +12,7 @@ export const MEETING_MESSAGES: MessageCatalog = {
   'meeting.kind-unknown': 'Diese Sitzungsart gibt es nicht mehr.',
   'meeting.kind-archived': 'Diese Sitzungsart ist archiviert; für neue Sitzungen eine andere wählen.',
   'meeting-type.not-found': 'Sitzungsart nicht gefunden.',
+  'meeting-type.action-removed': 'Diese Beschlussart hat der Verein entfernt. Unter Beschlüsse wiederherstellen, um sie anzubieten.',
   'meeting-type.in-use': 'Es gibt Sitzungen dieser Art. Archiviere sie statt sie zu löschen.',
   'meeting-type.label-invalid': 'Bezeichnung mit 1 bis 80 Zeichen angeben.',
   'meeting-type.invitation-label-invalid': 'Text für die Einladung mit 1 bis 120 Zeichen angeben.',
