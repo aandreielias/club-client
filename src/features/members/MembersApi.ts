@@ -111,6 +111,10 @@ export interface BoardSettings {
   combinations: OfficePair[];
   /** A member may hold several kinds of membership. */
   multipleKinds: boolean;
+  /** Guardians act for members younger than this. */
+  guardianUntilAge: number;
+  /** From this age the member alone gives or withdraws photo consent. */
+  ownConsentAge: number;
 }
 
 /** Running offices; warnings are codes like 'board.too-small' (texts in BOARD_WARNINGS). */

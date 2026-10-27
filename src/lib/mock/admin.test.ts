@@ -84,7 +84,8 @@ describe('mock members admin', () => {
     stepUp('admin');
     expect(() => directory.linkGuardian(member('admin'), 'spieler', 'spieler')).toThrow(expect.objectContaining({ code: 'member.guardian-is-self' }));
     directory.linkGuardian(member('admin'), 'spielerin', 'eltern');
-    expect(directory.wardsOf('eltern')).toEqual(['spieler', 'spielerin']);
+    expect(directory.wards.data.eltern).toEqual(['spieler', 'spielerin']);
+    expect(directory.wardsOf('eltern')).toEqual(['spieler']); // Lena is an adult: the link is kept but gives no rights
     stepUp('trainer');
     directory.resetSecurity(member('admin'), 'trainer');
     expect(directory.securityStatus(member('trainer'))).toMatchObject({ clubPinSet: true, pinLocked: false, stepUpUntil: null });

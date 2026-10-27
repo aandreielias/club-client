@@ -56,6 +56,9 @@ export const MEMBER_MESSAGES: MessageCatalog = {
   'board-settings.term-invalid': 'Eine Funktionsperiode dauert 1 bis 10 Jahre.',
   'board-settings.chair-required': 'Den Vorsitz braucht jeder Verein.',
   'board-settings.board-invalid': 'Vorstand 1 bis 20 Personen, Kooptieren 0 bis 52 Wochen, Fristen 1 bis 365 Tage.',
+  'board-settings.ages-invalid': 'Erziehungsberechtigte bis 14 bis 21 Jahre, eigene Foto-Einwilligung ab 10 Jahren und höchstens bis zu diesem Alter.',
+  'member.consent-own': 'Ab diesem Alter entscheidet das Mitglied selbst über Fotos.',
+  'member.consent-by-guardian': 'Die Foto-Einwilligung geben bei jüngeren Mitgliedern die Erziehungsberechtigten.',
 };
 
 /** Gaps on the board page (server: BoardRules.warnings), worded with the club's office settings. */

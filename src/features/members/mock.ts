@@ -100,11 +100,15 @@ export class MockBoard {
     if (!int(body.minBoardSize, 1, 20) || !int(body.cooptWeeks, 0, 52) || !int(body.termWarningDays, 1, 365) || !int(body.byElectionDays, 1, 365)) {
       fail(400, 'board-settings.board-invalid');
     }
+    const ages = settings.members.ages;
+    if (!int(body.guardianUntilAge, ages.guardianMin, ages.guardianMax) || !int(body.ownConsentAge, ages.consentMin, body.guardianUntilAge)) {
+      fail(400, 'board-settings.ages-invalid');
+    }
     if (!body.multipleKinds && this.people.members.data.some((m) => m.membershipTypes.length > 1)) fail(409, 'member.several-kinds');
     this.people.requireHoldersEligible(this.people.membershipKinds.data);
     Object.assign(this.people.boardSettings.data, { offices, minBoardSize: body.minBoardSize, oddBoardSize: !!body.oddBoardSize, cooptWeeks: body.cooptWeeks,
       termWarningDays: body.termWarningDays, byElectionDays: body.byElectionDays, combinations: combinations.map(({ a, b }) => ({ a, b })),
-      multipleKinds: !!body.multipleKinds });
+      multipleKinds: !!body.multipleKinds, guardianUntilAge: body.guardianUntilAge, ownConsentAge: body.ownConsentAge });
     this.people.boardSettings.save();
     this.people.saveMembers();
     mockServer.events.publish({ type: 'members.board-settings-changed', data: {} });

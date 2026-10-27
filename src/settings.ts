@@ -318,6 +318,8 @@ export const settings = {
 
   /** server: members module (Member, MembersController) */
   members: {
+    /** server: BoardRules.validate (guardian age and own photo consent age) */
+    ages: { guardianMin: 14, guardianMax: 21, consentMin: 10 },
     nameMaxLength: 100,
     earliestBirthDate: '1900-01-01',
     /** Show the search field from this many members on. */

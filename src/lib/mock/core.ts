@@ -87,6 +87,7 @@ const SEEDED_BOARD_SETTINGS: BoardSettings = {
   ],
   minBoardSize: 3, oddBoardSize: true, cooptWeeks: 4, termWarningDays: 60, byElectionDays: 7,
   combinations: [{ a: 'TREASURER', b: 'VICE_CHAIR' }, { a: 'SECRETARY', b: 'VICE_CHAIR' }], multipleKinds: false,
+  guardianUntilAge: 18, ownConsentAge: 14,
 };
 
 /** Members, teams and security state of the mock club, plus the server's authorization helpers. */
@@ -175,6 +176,11 @@ export class MockDirectory {
     if (settings.multipleKinds === undefined) {
       settings.multipleKinds = false;
       delete settings.honoraryVotes;
+      this.boardSettings.save();
+    }
+    // Stored before the minors' ages existed (server: V70).
+    if (settings.guardianUntilAge === undefined) {
+      Object.assign(settings, { guardianUntilAge: 18, ownConsentAge: 14 });
       this.boardSettings.save();
     }
     for (const m of this.members.data as (Member & { membershipType?: MembershipType | null; honorary?: boolean })[]) {
@@ -326,8 +332,20 @@ export class MockDirectory {
 
   guardiansOf(memberIds: readonly string[]): string[] {
     return Object.entries(this.wards.data)
-      .filter(([, minors]) => minors.some((m) => memberIds.includes(m)))
+      .filter(([, minors]) => minors.some((m) => memberIds.includes(m) && this.underAge(m)))
       .map(([guardian]) => guardian);
+  }
+
+  /** server: JdbcMemberRepository.UNDER_AGE - guardian links count while the minor is younger than the club's guardian age. */
+  private underAge(memberId: string): boolean {
+    const birthDate = this.members.data.find((m) => m.id === memberId)?.birthDate;
+    return !birthDate || this.age(birthDate) < this.boardSettings.data.guardianUntilAge;
+  }
+
+  private age(birthDate: string): number {
+    const today = this.clock.today();
+    const years = Number(today.slice(0, 4)) - Number(birthDate.slice(0, 4));
+    return today.slice(5) < birthDate.slice(5) ? years - 1 : years;
   }
 
   /** The signed-in member, like the server's ResolveActor; refuses until the profile is complete. */
@@ -374,7 +392,7 @@ export class MockDirectory {
   }
 
   wardsOf(memberId: string): string[] {
-    return this.wards.data[memberId] ?? [];
+    return (this.wards.data[memberId] ?? []).filter((id) => this.underAge(id));
   }
 
   /** Teams whose items the member sees: own teams plus the teams of their minors. */
@@ -811,6 +829,12 @@ export class MockDirectory {
       this.requirePrivileged(viewer, ADMIN_BOARD);
     }
     if (!target) return fail(404, 'member.not-found');
+    // server: MemberHandlers.checkConsentAge - from the club's age the member decides about photos, below it a guardian
+    if (!this.isManager(viewer) && typeof patch.photoConsent === 'boolean' && patch.photoConsent !== target.photoConsent && target.birthDate) {
+      const ownDecision = this.age(target.birthDate) >= this.boardSettings.data.ownConsentAge;
+      if (viewer.id === memberId && !ownDecision) fail(403, 'member.consent-by-guardian');
+      if (viewer.id !== memberId && ownDecision) fail(403, 'member.consent-own');
+    }
     this.applyProfile(target, patch);
     return this.visibleTo(viewer, target);
   }

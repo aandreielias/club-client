@@ -31,3 +31,12 @@ describe('mock access requests and audit log', () => {
     expect(() => mockServer.handle('GET', '/api/v1/audit', undefined, as('vorstand'))).toThrow(expect.objectContaining({ code: 'access.denied' }));
   });
 });
+
+describe('mock minors rules', () => {
+  it('lets a 16-year-old decide about photos, not the guardian', () => {
+    expect(() => mockServer.handle('PATCH', '/api/v1/members/spieler', { photoConsent: true }, as('eltern'))).toThrow(
+      expect.objectContaining({ code: 'member.consent-own' }),
+    );
+    expect(mockServer.handle('PATCH', '/api/v1/members/spieler', { photoConsent: true }, as('spieler'))).toMatchObject({ photoConsent: true });
+  });
+});
