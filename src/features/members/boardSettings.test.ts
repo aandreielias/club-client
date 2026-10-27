@@ -54,16 +54,37 @@ describe('club rules for offices and resolutions', () => {
     directory.stepUp(member('vorstand'), MockDirectory.PIN);
     const supporter = board.saveMembershipKind(member('vorstand'), null, { label: 'Unterstützend', votes: true, eligible: false, sort: 5 });
     const target = member('spielerin');
-    expect(directory.setMembership(member('vorstand'), target.id, { membershipType: supporter.key })).toMatchObject({ voter: true, eligible: false });
-    expect(() => directory.setMembership(member('vorstand'), target.id, { membershipType: 'NOPE' })).toThrow();
+    expect(directory.setMembership(member('vorstand'), target.id, { membershipTypes: [supporter.key] })).toMatchObject({ voter: true, eligible: false });
+    expect(() => directory.setMembership(member('vorstand'), target.id, { membershipTypes: ['NOPE'] })).toThrow();
     expect(() => board.deleteMembershipKind(member('vorstand'), supporter.key)).toThrow();
     const settings = structuredClone(directory.boardSettings.data);
     expect(() => board.saveBoardSettings(member('vorstand'), { ...settings, combinations: [{ a: 'CHAIR', b: 'CHAIR' }] })).toThrow();
     board.saveBoardSettings(member('vorstand'), { ...settings, combinations: [] });
     expect(directory.boardSettings.data.combinations).toEqual([]);
     board.saveBoardSettings(member('vorstand'), settings);
-    directory.setMembership(member('vorstand'), target.id, { membershipType: null });
+    directory.setMembership(member('vorstand'), target.id, { membershipTypes: [] });
     board.deleteMembershipKind(member('vorstand'), supporter.key);
   });
 });
 
+
+describe('membership kinds per member', () => {
+  it('honour with one kind and restore it, or hold several when the club allows it', () => {
+    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['ORDINARY'] });
+    expect(directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['HONORARY'] }))
+      .toMatchObject({ membershipTypes: ['HONORARY'], previousType: 'ORDINARY', voter: true });
+    expect(() => directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['HONORARY', 'ORDINARY'] }))
+      .toThrow(expect.objectContaining({ code: 'member.several-kinds' }));
+    expect(directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['ORDINARY'] })).toMatchObject({ previousType: null });
+
+    const settings = structuredClone(directory.boardSettings.data);
+    board.saveBoardSettings(member('vorstand'), { ...settings, multipleKinds: true });
+    expect(directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['HONORARY', 'ORDINARY'] }))
+      .toMatchObject({ membershipTypes: ['ORDINARY', 'HONORARY'], previousType: null });
+    expect(() => board.saveBoardSettings(member('vorstand'), settings)).toThrow(expect.objectContaining({ code: 'member.several-kinds' }));
+    directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['ORDINARY'] });
+    board.saveBoardSettings(member('vorstand'), settings);
+    expect(() => board.deleteMembershipKind(member('vorstand'), 'HONORARY')).toThrow(expect.objectContaining({ code: 'membership-kind.fixed' }));
+  });
+});

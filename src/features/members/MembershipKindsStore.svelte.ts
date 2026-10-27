@@ -29,15 +29,18 @@ export class MembershipKindsStore extends LiveStore<readonly MembershipKind[]> {
     return found ? (found.archived ? `${found.label} (archiviert)` : found.label) : key;
   }
 
-  /** Segmented choice for a member; `current` stays offered even when archived. */
-  choices(current?: MembershipType | null): { value: MembershipChoice; label: string }[] {
-    return [{ value: 'NONE', label: 'Kein Mitglied' },
-      ...this.value.filter((k) => !k.archived || k.key === current).map((k) => ({ value: k.key, label: k.label }))];
+  /** The kinds a member may be given; those `current` holds stay offered even when archived. */
+  options(current: readonly MembershipType[] = []): { value: MembershipType; label: string }[] {
+    return this.value.filter((k) => !k.archived || current.includes(k.key)).map((k) => ({ value: k.key, label: k.label }));
+  }
+
+  /** Segmented choice for one kind per member, with "Kein Mitglied". */
+  choices(current: readonly MembershipType[] = []): { value: MembershipChoice; label: string }[] {
+    return [{ value: 'NONE', label: 'Kein Mitglied' }, ...this.options(current)];
   }
 
   /** "Außerordentlich, Ehrenmitglied", "Ehrenmitglied" or "Kein Vereinsmitglied". */
   text(member: Member): string {
-    const parts = [member.membershipType && this.label(member.membershipType), member.honorary && 'Ehrenmitglied'].filter(Boolean);
-    return parts.length ? parts.join(', ') : 'Kein Vereinsmitglied';
+    return member.membershipTypes.length ? member.membershipTypes.map((t) => this.label(t)).join(', ') : 'Kein Vereinsmitglied';
   }
 }

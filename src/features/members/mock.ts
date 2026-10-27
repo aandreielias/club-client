@@ -6,7 +6,7 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import { ADMIN_BOARD, type Member } from '../../lib/types';
 import { settings } from '../../settings';
-import type { BoardSettings, ChangeField, ChangeRequest, MembershipKind, OfficePair } from './MembersApi';
+import { HONORARY, type BoardSettings, type ChangeField, type ChangeRequest, type MembershipKind, type OfficePair } from './MembersApi';
 
 const plusYears = (date: string, years: number): string => `${Number(date.slice(0, 4)) + years}${date.slice(4)}`;
 
@@ -14,9 +14,14 @@ const plusYears = (date: string, years: number): string => `${Number(date.slice(
 export class MockBoard {
   constructor(private readonly people: MockDirectory) {}
 
+  /** server: JdbcMemberRepository.membershipKindInUse — held now, or remembered for a revoke. */
+  private inUse(key: string): boolean {
+    return this.people.members.data.some((m) => m.membershipTypes.includes(key) || m.previousType === key);
+  }
+
   listMembershipKinds(): { items: MembershipKind[] } {
     const items = [...this.people.membershipKinds.data].sort((a, b) => a.sort - b.sort || a.label.localeCompare(b.label));
-    return { items: items.map((k) => ({ ...k, inUse: this.people.members.data.some((m) => m.membershipType === k.key) })) };
+    return { items: items.map((k) => ({ ...k, inUse: this.inUse(k.key), fixed: k.key === HONORARY })) };
   }
 
   /** server: MembershipHandlers.saveKind */
@@ -26,28 +31,29 @@ export class MockBoard {
     const label = typeof body.label === 'string' ? body.label.trim() : '';
     if (!label || label.length > 40) fail(400, 'membership-kind.label-invalid');
     if (!Number.isInteger(body.sort) || body.sort < 0 || body.sort > 1000) fail(400, 'membership-kind.sort-invalid');
+    if (key === HONORARY && body.archived) fail(409, 'membership-kind.fixed');
     const kind: MembershipKind = { key: key ?? generatedKey('KIND'), label,
-      votes: !!body.votes, eligible: !!body.eligible, sort: body.sort, archived: !!body.archived, inUse: false };
+      votes: !!body.votes, eligible: !!body.eligible, sort: body.sort, archived: !!body.archived, inUse: false, fixed: key === HONORARY };
     const next = [...this.people.membershipKinds.data.filter((k) => k.key !== kind.key), kind];
-    this.people.requireHoldersEligible(next, this.people.boardSettings.data.honoraryVotes);
+    this.people.requireHoldersEligible(next);
     this.people.membershipKinds.data.splice(0, this.people.membershipKinds.data.length, ...next);
     this.people.membershipKinds.save();
     this.people.saveMembers();
     mockServer.events.publish({ type: 'members.membership-kinds-changed', data: {} });
-    return { ...kind, inUse: this.people.members.data.some((m) => m.membershipType === kind.key) };
+    return { ...kind, inUse: this.inUse(kind.key) };
   }
 
   deleteMembershipKind(viewer: Member, key: string): void {
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const index = this.people.membershipKinds.data.findIndex((k) => k.key === key);
     if (index < 0) fail(404, 'membership-kind.not-found');
-    if (this.people.members.data.some((m) => m.membershipType === key)) fail(409, 'membership-kind.in-use');
+    if (key === HONORARY) fail(409, 'membership-kind.fixed');
+    if (this.inUse(key)) fail(409, 'membership-kind.in-use');
     this.people.membershipKinds.data.splice(index, 1);
     this.people.membershipKinds.save();
     mockServer.events.publish({ type: 'members.membership-kinds-changed', data: {} });
   }
 
-  /** Version 1 = mock data stored before the seed was versioned; a fresh seed runs the (harmless) upgrade once too. */
   board(): { offices: (OfficeRow & { name: string })[]; warnings: string[] } {
     const running = this.people.running();
     const people = new Set(running.filter((o) => o.office !== 'AUDITOR').map((o) => o.memberId));
@@ -94,10 +100,11 @@ export class MockBoard {
     if (!int(body.minBoardSize, 1, 20) || !int(body.cooptWeeks, 0, 52) || !int(body.termWarningDays, 1, 365) || !int(body.byElectionDays, 1, 365)) {
       fail(400, 'board-settings.board-invalid');
     }
-    this.people.requireHoldersEligible(this.people.membershipKinds.data, body.honoraryVotes !== false);
+    if (!body.multipleKinds && this.people.members.data.some((m) => m.membershipTypes.length > 1)) fail(409, 'member.several-kinds');
+    this.people.requireHoldersEligible(this.people.membershipKinds.data);
     Object.assign(this.people.boardSettings.data, { offices, minBoardSize: body.minBoardSize, oddBoardSize: !!body.oddBoardSize, cooptWeeks: body.cooptWeeks,
       termWarningDays: body.termWarningDays, byElectionDays: body.byElectionDays, combinations: combinations.map(({ a, b }) => ({ a, b })),
-      honoraryVotes: body.honoraryVotes !== false });
+      multipleKinds: !!body.multipleKinds });
     this.people.boardSettings.save();
     this.people.saveMembers();
     mockServer.events.publish({ type: 'members.board-settings-changed', data: {} });

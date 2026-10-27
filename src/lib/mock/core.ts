@@ -46,10 +46,11 @@ export interface DevAccount {
 const fail = MockServer.fail;
 
 function seedMember(id: string, firstName: string, lastName: string, roles: Role[], birthDate: string | null,
-  membershipType: MembershipType | null = null, honorary = false): Member {
+  membershipType: MembershipType | null = null): Member {
   return {
     id, email: `${id}@example.at`, firstName, lastName, birthDate, phone: null, photoConsent: true, active: true, roles,
-    membershipType, honorary, memberSince: membershipType || honorary ? '2024-09-01' : null, voter: false, eligible: false,
+    membershipTypes: membershipType ? [membershipType] : [], previousType: null, memberSince: membershipType ? '2024-09-01' : null,
+    voter: false, eligible: false,
   };
 }
 
@@ -84,7 +85,7 @@ const SEEDED_BOARD_SETTINGS: BoardSettings = {
     { office: 'AUDITOR', label: 'Rechnungsprüfung', enabled: true, minHolders: 2, maxHolders: 2, termYears: 3 },
   ],
   minBoardSize: 3, oddBoardSize: true, cooptWeeks: 4, termWarningDays: 60, byElectionDays: 7,
-  combinations: [{ a: 'TREASURER', b: 'VICE_CHAIR' }, { a: 'SECRETARY', b: 'VICE_CHAIR' }], honoraryVotes: true,
+  combinations: [{ a: 'TREASURER', b: 'VICE_CHAIR' }, { a: 'SECRETARY', b: 'VICE_CHAIR' }], multipleKinds: false,
 };
 
 /** Members, teams and security state of the mock club, plus the server's authorization helpers. */
@@ -138,7 +139,7 @@ export class MockDirectory {
       seedMember('beisitz2', 'Oskar', 'Ott', ['PLAYER', 'BOARD'], '1995-12-24', 'EXTRAORDINARY'),
       seedMember('pruefer', 'Peter', 'Prüfer', ['VOLUNTEER'], '1969-05-30', 'EXTRAORDINARY'),
       // Honorary member only (votes).
-      seedMember('ehren', 'Hans', 'Ehren', ['VOLUNTEER'], '1950-01-15', null, true),
+      seedMember('ehren', 'Hans', 'Ehren', ['VOLUNTEER'], '1950-01-15', 'HONORARY'),
       seedMember('helfer', 'Julia', 'Helfer', ['VOLUNTEER'], '1993-09-09', 'EXTRAORDINARY'),
       seedMember('helfer2', 'Tobias', 'Tausend', ['VOLUNTEER', 'PARENT'], '1982-03-03', 'EXTRAORDINARY'),
       // Ordinary members: take part, do not vote.
@@ -157,17 +158,43 @@ export class MockDirectory {
   readonly membershipKinds = new MockTable<MembershipKind[]>('membership-kinds', () => structuredClone([...SEEDED_MEMBERSHIP_KINDS]));
 
   constructor() {
+    this.migrateMemberships();
     this.addMissingMembers();
     this.upgradeSeed();
     this.saveMembers();
   }
 
-  /** server: MembershipRules — votes / may be elected with these kinds and honorary rule. */
-  rights(m: Pick<Member, 'active' | 'membershipType' | 'honorary'>, kinds: readonly MembershipKind[] = this.membershipKinds.data,
-    honoraryVotes = this.boardSettings.data.honoraryVotes): { voter: boolean; eligible: boolean } {
-    const kind = kinds.find((k) => k.key === m.membershipType);
-    const honorary = honoraryVotes && m.honorary;
-    return { voter: m.active && (honorary || !!kind?.votes), eligible: m.active && (honorary || !!kind?.eligible) };
+  /** server: V67 — mock data stored before kinds were sets: honorary becomes a kind, the former kind is remembered. */
+  private migrateMemberships(): void {
+    if (!this.membershipKinds.data.some((k) => k.key === 'HONORARY')) {
+      this.membershipKinds.data.push(structuredClone(SEEDED_MEMBERSHIP_KINDS.find((k) => k.key === 'HONORARY')!));
+      this.membershipKinds.save();
+    }
+    const settings = this.boardSettings.data as BoardSettings & { honoraryVotes?: boolean };
+    if (settings.multipleKinds === undefined) {
+      settings.multipleKinds = false;
+      delete settings.honoraryVotes;
+      this.boardSettings.save();
+    }
+    for (const m of this.members.data as (Member & { membershipType?: MembershipType | null; honorary?: boolean })[]) {
+      if (m.membershipTypes) continue;
+      m.membershipTypes = m.honorary ? ['HONORARY'] : m.membershipType ? [m.membershipType] : [];
+      m.previousType = m.honorary ? m.membershipType ?? null : null;
+      delete m.membershipType;
+      delete m.honorary;
+    }
+  }
+
+  /** server: MembershipRules — votes / may be elected when any of the member's kinds does. */
+  rights(m: Pick<Member, 'active' | 'membershipTypes'>, kinds: readonly MembershipKind[] = this.membershipKinds.data): { voter: boolean; eligible: boolean } {
+    const own = kinds.filter((k) => m.membershipTypes.includes(k.key));
+    return { voter: m.active && own.some((k) => k.votes), eligible: m.active && own.some((k) => k.eligible) };
+  }
+
+  /** server: MembershipRules.ordered — the member's kinds in the club's order. */
+  ordered(keys: readonly MembershipType[]): MembershipType[] {
+    const sort = (key: MembershipType) => this.membershipKinds.data.find((k) => k.key === key)?.sort ?? 0;
+    return [...keys].sort((a, b) => sort(a) - sort(b) || a.localeCompare(b));
   }
 
   /** Stores the members with their rights brought up to date (the server computes them per answer). */
@@ -177,11 +204,12 @@ export class MockDirectory {
   }
 
   /** server: MembershipHandlers.requireHoldersEligible */
-  requireHoldersEligible(kinds: readonly MembershipKind[], honoraryVotes: boolean): void {
+  requireHoldersEligible(kinds: readonly MembershipKind[]): void {
     const holders = new Set(this.running().map((o) => o.memberId));
-    if (this.members.data.some((m) => m.active && holders.has(m.id) && !this.rights(m, kinds, honoraryVotes).eligible)) fail(409, 'member.holds-office');
+    if (this.members.data.some((m) => m.active && holders.has(m.id) && !this.rights(m, kinds).eligible)) fail(409, 'member.holds-office');
   }
 
+  /** Version 1 = mock data stored before the seed was versioned; a fresh seed runs the (harmless) upgrade once too. */
   readonly #seed = new MockTable<{ version: number }>('seed-version', () => ({ version: 1 }));
 
   /**
@@ -192,7 +220,7 @@ export class MockDirectory {
     if (this.#seed.data.version >= SEED_VERSION) return;
     for (const seeded of MockDirectory.seedMembers()) {
       const stored = this.members.data.find((m) => m.id === seeded.id);
-      if (stored && stored.roles.length) Object.assign(stored, { membershipType: seeded.membershipType, honorary: seeded.honorary, memberSince: seeded.memberSince });
+      if (stored && stored.roles.length) Object.assign(stored, { membershipTypes: seeded.membershipTypes, previousType: null, memberSince: seeded.memberSince });
     }
     for (const office of MockDirectory.seedOffices()) {
       const max = SEEDED_BOARD_SETTINGS.offices.find((o) => o.office === office.office)!.maxHolders;
@@ -495,8 +523,8 @@ export class MockDirectory {
       photoConsent: false,
       active: true,
       roles,
-      membershipType: this.membershipType(body.membershipType, null),
-      honorary: false,
+      membershipTypes: body.membershipType ? [this.membershipType(body.membershipType, [])] : [],
+      previousType: null,
       memberSince: body.membershipType ? this.clock.today() : null,
       voter: false,
       eligible: false,
@@ -555,7 +583,7 @@ export class MockDirectory {
     const target = this.members.data.find((m) => m.id === memberId) ?? fail(404, 'member.not-found');
     if (target.active) fail(409, 'member.erase-active');
     Object.assign(target, { email: `geloescht-${target.id}@example.invalid`, firstName: 'Gelöschtes', lastName: 'Mitglied', birthDate: null, phone: null,
-      photoConsent: false, roles: [], membershipType: null, honorary: false, memberSince: null });
+      photoConsent: false, roles: [], membershipTypes: [], previousType: null, memberSince: null });
     delete this.wards.data[memberId];
     for (const wards of Object.values(this.wards.data)) wards.splice(0, wards.length, ...wards.filter((id) => id !== memberId));
     this.saveMembers();
@@ -567,14 +595,20 @@ export class MockDirectory {
   setMembership(viewer: Member, memberId: string, body: Record<string, any>): Member {
     this.requirePrivileged(viewer, ADMIN_BOARD);
     const target = this.members.data.find((m) => m.id === memberId && m.active) ?? fail(404, 'member.not-found');
-    const membershipType = this.membershipType(body.membershipType, target.membershipType);
-    const honorary = body.honorary === true;
-    const memberSince = membershipType || honorary ? (typeof body.memberSince === 'string' && body.memberSince ? body.memberSince : null) : null;
+    const requested: unknown[] = Array.isArray(body.membershipTypes) ? body.membershipTypes : fail(400, 'request.invalid');
+    const membershipTypes = this.ordered([...new Set(requested.map((t) => this.membershipType(t, target.membershipTypes)))]);
+    const multiple = this.boardSettings.data.multipleKinds;
+    if (!multiple && membershipTypes.length > 1) fail(400, 'member.several-kinds');
+    const memberSince = membershipTypes.length ? (typeof body.memberSince === 'string' && body.memberSince ? body.memberSince : null) : null;
     if (memberSince && memberSince > this.clock.today()) fail(400, 'member.member-since-in-future');
-    if (!this.rights({ ...target, membershipType, honorary }).eligible && this.running().some((o) => o.memberId === memberId)) fail(409, 'member.holds-office');
-    Object.assign(target, { membershipType, honorary, memberSince });
+    if (!this.rights({ ...target, membershipTypes }).eligible && this.running().some((o) => o.memberId === memberId)) fail(409, 'member.holds-office');
+    // server: MembershipHandlers.previousType — with one kind, honouring remembers the former kind
+    const honouredAlone = !multiple && membershipTypes.length === 1 && membershipTypes[0] === 'HONORARY';
+    const previousType = !honouredAlone ? null : target.membershipTypes.includes('HONORARY') ? target.previousType : target.membershipTypes[0] ?? null;
+    Object.assign(target, { membershipTypes, previousType, memberSince });
     this.saveMembers();
-    mockServer.events.publish({ type: 'members.membership-changed', data: { memberId, membershipType, honorary } });
+    const honorary = membershipTypes.includes('HONORARY');
+    mockServer.events.publish({ type: 'members.membership-changed', data: { memberId, membershipTypes, honorary } });
     return this.visibleTo(viewer, target);
   }
 
@@ -583,7 +617,7 @@ export class MockDirectory {
       const board = new Set(this.running().filter((o) => o.office !== 'AUDITOR').map((o) => o.memberId));
       return this.members.data.filter((m) => m.active && board.has(m.id)).map((m) => m.id);
     }
-    return this.members.data.filter((m) => (body === 'ASSEMBLY' ? this.rights(m).voter : m.active && (!!m.membershipType || m.honorary))).map((m) => m.id);
+    return this.members.data.filter((m) => (body === 'ASSEMBLY' ? this.rights(m).voter : m.active && m.membershipTypes.length > 0)).map((m) => m.id);
   }
 
   officesOf(memberId: string): OfficeRow['office'][] {
@@ -608,10 +642,9 @@ export class MockDirectory {
   }
 
   /** server: MembershipHandlers.requireKind — a known kind; an archived one only stays with who has it. */
-  private membershipType(value: unknown, current: MembershipType | null): MembershipType | null {
-    if (value == null) return null;
+  private membershipType(value: unknown, current: readonly MembershipType[]): MembershipType {
     const kind = this.membershipKinds.data.find((k) => k.key === value) ?? fail(400, 'member.membership-unknown');
-    if (kind.archived && kind.key !== current) fail(400, 'member.membership-archived');
+    if (kind.archived && !current.includes(kind.key)) fail(400, 'member.membership-archived');
     return kind.key;
   }
 

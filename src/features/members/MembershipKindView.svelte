@@ -36,13 +36,13 @@
     {#snippet actions()}
       {#if !edit.form && session.hasRole(...ADMIN_BOARD)}
         <Button icon="edit" onclick={() => edit.edit({ label: kind.label, votes: kind.votes, eligible: kind.eligible, sort: kind.sort, archived: kind.archived })}>Bearbeiten</Button>
-        {#if !kind.inUse}<Button variant="danger" icon="delete" onclick={() => remove(kind.label)}>Löschen</Button>{/if}
+        {#if !kind.inUse && !kind.fixed}<Button variant="danger" icon="delete" onclick={() => remove(kind.label)}>Löschen</Button>{/if}
       {/if}
     {/snippet}
 
     {#if edit.form}
       <div class="editing" {@attach edit.track}>
-        <MembershipKindEditor form={edit.form} action={edit.save} submitLabel="Speichern" canArchive oncancel={() => edit.cancel()} onsubmit={submit} />
+        <MembershipKindEditor form={edit.form} action={edit.save} submitLabel="Speichern" canArchive={!kind.fixed} oncancel={() => edit.cancel()} onsubmit={submit} />
       </div>
     {:else}
       <dl class="props">

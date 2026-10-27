@@ -69,9 +69,10 @@ export interface Member {
   photoConsent: boolean;
   active: boolean;
   roles: Role[];
-  /** null and not honorary: no club member (e.g. parents, guests). */
-  membershipType: MembershipType | null;
-  honorary: boolean;
+  /** The member's kinds in the club's order; empty: no club member (e.g. parents, guests). Several only when the club allows it. */
+  membershipTypes: MembershipType[];
+  /** With one kind per member: the kind an honorary member had before (offered back on revoke). */
+  previousType: MembershipType | null;
   /** ISO date. */
   memberSince: string | null;
   /** Votes in the general meeting (server: MembershipRules). */

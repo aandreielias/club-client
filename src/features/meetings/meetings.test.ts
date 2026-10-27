@@ -187,7 +187,7 @@ describe('follow-up tasks', () => {
     const task = tasks.get(member('schrift'), closed.followUps[0].taskId!);
     expect(task).toMatchObject({ assignees: ['schrift'], status: 'OPEN', source: { kind: 'MEETING_FOLLOW_UP' } });
 
-    directory.setMembership(member('vorstand'), 'spielerin', { membershipType: 'ORDINARY', honorary: true });
+    directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['HONORARY'] });
     expect(tasks.get(member('schrift'), task.id).status).toBe('DONE');
 
     // Lena votes from the next meeting on: this one keeps the electorate it opened with.

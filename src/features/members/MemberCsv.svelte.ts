@@ -1,5 +1,5 @@
 import { ROLE_LABELS, type Member, type Role } from '../../lib/types';
-import { SEEDED_MEMBERSHIP_KINDS } from './MembersApi';
+import { HONORARY, SEEDED_MEMBERSHIP_KINDS } from './MembersApi';
 
 /** Kind key → label (the club's kinds; default: the seeded ones). */
 export type MembershipLabels = Readonly<Record<string, string>>;
@@ -50,8 +50,10 @@ export function membersToCsv(members: readonly Member[], labels: MembershipLabel
       m.phone ?? '',
       yesNo(m.photoConsent),
       m.roles.map((r) => ROLE_LABELS[r]).join(', '),
-      m.membershipType ? (labels[m.membershipType] ?? m.membershipType) : '',
-      yesNo(m.honorary),
+      // an honorary member's former kind (one kind per member) goes into the column, so an import restores both
+      (m.membershipTypes.some((t) => t !== HONORARY) ? m.membershipTypes.filter((t) => t !== HONORARY) : m.previousType ? [m.previousType] : [])
+        .map((t) => labels[t] ?? t).join(', '),
+      yesNo(m.membershipTypes.includes(HONORARY)),
       m.memberSince ?? '',
       m.active ? 'Aktiv' : 'Inaktiv',
     ]
@@ -103,7 +105,7 @@ function byLabel<K extends string>(labels: Readonly<Record<K, string>>, value: s
  * E-mails already in `existing` or earlier in the file, and roles the importer may not grant, are problems.
  */
 export function parseMemberImport(text: string, today: string, existing: ReadonlySet<string>, grantable: readonly Role[],
-  labels: MembershipLabels = SEEDED_LABELS): ParsedImport {
+  labels: MembershipLabels = SEEDED_LABELS, multipleKinds = false): ParsedImport {
   const body = text.replace(/^﻿/, '');
   const first = body.split(/\r?\n/, 1)[0];
   const records = parseCsv(body, first.split(';').length >= first.split(',').length ? ';' : ',');
@@ -156,7 +158,10 @@ export function parseMemberImport(text: string, today: string, existing: Readonl
     seen.add(invitation.email);
 
     const honorary = get('Ehrenmitglied').toLowerCase() === 'ja';
-    const membership = honorary || memberSince ? { membershipType: invitation.membershipType, honorary, memberSince: memberSince ?? today } : null;
+    // With one kind per member, the honour replaces the invited kind (the server remembers it for a revoke).
+    const own = invitation.membershipType ? [invitation.membershipType] : [];
+    const membershipTypes = !honorary ? own : multipleKinds ? [...own, HONORARY] : [HONORARY];
+    const membership = honorary || memberSince ? { membershipTypes, memberSince: memberSince ?? today } : null;
     rows.push({ line, invitation, membership });
   });
   return { rows, problems };

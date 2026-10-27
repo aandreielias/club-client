@@ -44,7 +44,7 @@ describe('mock members admin', () => {
     const office = board.assignOffice(member('vorstand'), { memberId: 'trainer', office: 'BOARD_MEMBER', startsOn: today });
     expect(member('trainer').roles).toContain('BOARD');
     expect(board.board().warnings).toEqual(['board.even']);
-    expect(() => directory.setMembership(member('vorstand'), 'trainer', { membershipType: 'ORDINARY' }))
+    expect(() => directory.setMembership(member('vorstand'), 'trainer', { membershipTypes: ['ORDINARY'] }))
       .toThrow(expect.objectContaining({ code: 'member.holds-office' }));
     expect(() => directory.setRoles(member('admin'), 'trainer', ['COACH'])).toThrow(expect.objectContaining({ code: 'auth.step-up-required' }));
     stepUp('admin');

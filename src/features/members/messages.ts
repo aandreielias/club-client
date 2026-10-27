@@ -5,6 +5,8 @@ import type { MessageCatalog } from '../../lib/errors/ErrorMessages';
 const limits = settings.members;
 
 export const MEMBER_MESSAGES: MessageCatalog = {
+  'member.several-kinds': 'Der Verein erlaubt nur eine Mitgliedsart pro Mitglied (Einstellungen › Mitgliedschaft). Wer mehrere hat, braucht zuerst eine.',
+  'membership-kind.fixed': 'Die Ehrenmitgliedschaft bleibt: umbenennen und ihre Rechte einstellen geht, entfernen nicht.',
   'membership-kind.key-invalid': 'Der Schlüssel der Mitgliedschaftsart ist ungültig.',
   'member.not-a-guest': 'Nur Gastzugänge lassen sich löschen. Mitglieder bitte deaktivieren.',
   'office.kind-missing': 'Bitte die Funktion wählen.',

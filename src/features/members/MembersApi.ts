@@ -16,8 +16,7 @@ export interface Invitation {
 }
 
 export interface Membership {
-  membershipType: MembershipType | null;
-  honorary: boolean;
+  membershipTypes: MembershipType[];
   memberSince: string | null;
 }
 
@@ -66,14 +65,20 @@ export interface MembershipKind {
   sort: number;
   archived: boolean;
   inUse: boolean;
+  /** Honorary membership: renamed and its rights set by the club, never removed. */
+  fixed: boolean;
 }
 
-export type MembershipKindInput = Omit<MembershipKind, 'key' | 'inUse'>;
+export type MembershipKindInput = Omit<MembershipKind, 'key' | 'inUse' | 'fixed'>;
+
+/** server: MembershipKind.HONORARY */
+export const HONORARY = 'HONORARY';
 
 /** Seeded kinds, shown until the club's are loaded. */
 export const SEEDED_MEMBERSHIP_KINDS: readonly MembershipKind[] = [
-  { key: 'ORDINARY', label: 'Ordentlich', votes: false, eligible: false, sort: 1, archived: false, inUse: false },
-  { key: 'EXTRAORDINARY', label: 'Außerordentlich', votes: true, eligible: true, sort: 2, archived: false, inUse: false },
+  { key: 'ORDINARY', label: 'Ordentlich', votes: false, eligible: false, sort: 1, archived: false, inUse: false, fixed: false },
+  { key: 'EXTRAORDINARY', label: 'Außerordentlich', votes: true, eligible: true, sort: 2, archived: false, inUse: false, fixed: false },
+  { key: 'HONORARY', label: 'Ehrenmitglied', votes: true, eligible: true, sort: 3, archived: false, inUse: false, fixed: true },
 ];
 
 /** Two offices one person may hold together. */
@@ -104,8 +109,8 @@ export interface BoardSettings {
   byElectionDays: number;
   /** Offices one person may hold together; none = one office per person. */
   combinations: OfficePair[];
-  /** Honorary members vote and may be elected. */
-  honoraryVotes: boolean;
+  /** A member may hold several kinds of membership. */
+  multipleKinds: boolean;
 }
 
 /** Running offices; warnings are codes like 'board.too-small' (texts in BOARD_WARNINGS). */

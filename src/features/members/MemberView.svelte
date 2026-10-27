@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { HONORARY } from './MembersApi';
   import { backStack, bus, commands, session } from '../../lib/container';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
@@ -102,7 +103,7 @@
       {/snippet}
       {#snippet meta()}
         {#if !member.active}<Tag tone="red">Inaktiv</Tag>{/if}
-        {#if member.honorary}<Tag tone="yellow">Ehrenmitglied</Tag>{/if}
+        {#if member.membershipTypes.includes(HONORARY)}<Tag tone="yellow">{membershipKinds.label(HONORARY)}</Tag>{/if}
         {#each member.roles as role (role)}<Tag tone={roleHue(role)}>{ROLE_LABELS[role]}</Tag>{/each}
       {/snippet}
 
@@ -131,7 +132,7 @@
 
       {#if policy.canSetMembership(member) && !editing}
         <h2>Mitgliedschaft</h2>
-        {#key member.id + member.membershipType + member.honorary + member.memberSince}<MembershipEditor {member} {model} />{/key}
+        {#key member.id + member.membershipTypes.join() + member.memberSince}<MembershipEditor {member} {model} />{/key}
       {/if}
 
       {#if policy.canSetRoles(member)}
