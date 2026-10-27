@@ -54,6 +54,7 @@ export class MockCalendar {
     this.links = new MockLinks('calendar-links', () => this.seedLinks());
     this.reminded = new MockTable<string[]>('need-reminders', () => []);
     mockServer.events.subscribe((event) => event.type === 'locations.location-changed' && this.onLocationChanged(event.data as never));
+    mockServer.events.subscribe((event) => event.type === 'members.member-erased' && this.onMemberErased((event.data as { memberId: string }).memberId));
   }
 
   /** "Benötigt" list and attachments (server: CalendarHandlers.getLinks / setLinks). */
@@ -519,6 +520,18 @@ export class MockCalendar {
         ],
       },
     };
+  }
+
+  /** server: AttendanceRepository.eraseMember and the iCal token (CalendarHandlers) */
+  private onMemberErased(memberId: string): void {
+    for (const answers of Object.values(this.responses.data)) delete answers[memberId];
+    const absences = this.absences.data.filter((a) => a.memberId !== memberId);
+    this.absences.data.splice(0, this.absences.data.length, ...absences);
+    const rides = this.rides.data.filter((r) => r.driverId !== memberId);
+    this.rides.data.splice(0, this.rides.data.length, ...rides);
+    for (const ride of this.rides.data) ride.passengers = ride.passengers.filter((id) => id !== memberId);
+    delete this.feeds.data[memberId];
+    for (const table of [this.responses, this.absences, this.rides, this.feeds]) table.save();
   }
 
   private seedRides(): StoredRide[] {

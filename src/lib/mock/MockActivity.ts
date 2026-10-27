@@ -37,6 +37,13 @@ export class MockActivity {
 
   constructor(private readonly people: MockDirectory) {
     mockServer.events.subscribe((event) => {
+      if (event.type === 'activity.purged') {
+        // server: ActivityHandlers on PURGED (privacy erasure of a record)
+        const { kind, recordId } = event.data as { kind: ActivityKind; recordId: string };
+        const kept = this.entries.data.filter((e) => e.kind !== kind || e.recordId !== recordId);
+        this.entries.data.splice(0, this.entries.data.length, ...kept);
+        this.entries.save();
+      }
       if (event.type !== 'activity.recorded') return;
       this.entries.data.push({ ...(event.data as Recorded), at: new Date().toISOString() });
       this.entries.save();

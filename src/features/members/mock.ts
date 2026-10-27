@@ -162,7 +162,11 @@ mockServer
   .on('GET', '/api/v1/members/:id/guardians', (req) => directory.listGuardians(directory.actor(req), req.params.id))
   .on('DELETE', '/api/v1/members/:id/guardians/:guardianId', (req) => directory.unlinkGuardian(directory.actor(req), req.params.id, req.params.guardianId))
   .on('POST', '/api/v1/members/:id/reactivate', (req) => directory.reactivate(directory.actor(req), req.params.id))
-  .on('POST', '/api/v1/members/:id/erase', (req) => directory.erase(directory.actor(req), req.params.id))
+  .on('POST', '/api/v1/members/:id/erase', (req) => {
+    directory.erase(directory.actor(req), req.params.id);
+    // server: MemberHandlers.erase publishes MEMBER_ERASED with the deleted change requests; every module drops its data
+    mockServer.events.publish({ type: 'members.member-erased', data: { memberId: req.params.id, changeRequestIds: changeRequests.deleteOf(req.params.id) } });
+  })
   .on('POST', '/api/v1/members/:id/security/reset', (req) => directory.resetSecurity(directory.actor(req), req.params.id))
   .on('PUT', '/api/v1/members/:id/membership', (req) => directory.setMembership(directory.actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/board/offices', (req) => {
@@ -183,6 +187,15 @@ export class MockChangeRequests {
   readonly requests = new MockTable<ChangeRequestRow[]>('change-requests', () => []);
 
   constructor(private readonly people: MockDirectory) {}
+
+  /** server: ChangeRequestRepository.deleteOf (GDPR erasure) */
+  deleteOf(memberId: string): string[] {
+    const ids = this.requests.data.filter((r) => r.memberId === memberId).map((r) => r.id);
+    const kept = this.requests.data.filter((r) => r.memberId !== memberId);
+    this.requests.data.splice(0, this.requests.data.length, ...kept);
+    this.requests.save();
+    return ids;
+  }
 
   request(member: Member, body: Record<string, unknown>): ChangeRequest {
     const field = body.field as ChangeField;

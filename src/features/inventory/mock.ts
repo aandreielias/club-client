@@ -23,6 +23,13 @@ export class MockInventory {
     this.stock = new MockTable('inventory-stock', () => MockInventory.seedStock());
     this.upgradeStored();
     mockServer.events.subscribe((event) => event.type === 'locations.location-changed' && this.onLocationChanged(event.data as never));
+    // server: InventoryRepository.releaseHolder (GDPR erasure): the stock stays, without a holder
+    mockServer.events.subscribe((event) => {
+      if (event.type !== 'members.member-erased') return;
+      const memberId = (event.data as { memberId: string }).memberId;
+      for (const lines of Object.values(this.stock.data)) for (const line of lines) if (line.holderId === memberId) line.holderId = null;
+      this.stock.save();
+    });
   }
 
   list(): Item[] {

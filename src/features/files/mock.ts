@@ -84,6 +84,13 @@ export class MockFiles {
     this.folders = new MockTable('folders', () => MockFiles.seedFolders());
     this.files = new MockTable('files', () => MockFiles.seedFiles());
     this.versions = new MockTable('file-versions', () => MockFiles.seedVersions());
+    // server: FileRepository.removeTags (GDPR erasure)
+    mockServer.events.subscribe((event) => {
+      if (event.type !== 'members.member-erased') return;
+      const memberId = (event.data as { memberId: string }).memberId;
+      for (const file of this.files.data) file.taggedMemberIds = file.taggedMemberIds.filter((id) => id !== memberId);
+      this.files.save();
+    });
     // Folders stored before several teams per folder existed carry a single `teamId` (server: migration V16).
     for (const f of this.folders.data as (StoredFolder & { teamId?: string | null })[]) {
       if (!Array.isArray(f.teamIds)) {

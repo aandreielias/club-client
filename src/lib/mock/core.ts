@@ -581,6 +581,9 @@ export class MockDirectory {
     return this.visibleTo(viewer, target);
   }
 
+  /** server: MembersApi.ERASED_NAME, shown instead of an erased member's name, also in stored link titles */
+  static readonly ERASED_NAME = 'Gelöschtes Mitglied';
+
   /** server: MemberHandlers.erase; the record stays, every personal value goes. */
   erase(viewer: Member, memberId: string): void {
     this.requirePrivileged(viewer, ['ADMIN']);

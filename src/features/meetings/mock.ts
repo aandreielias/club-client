@@ -1,6 +1,6 @@
 // Mock of the club-server meetings module (MeetingHandlers, MeetingTypeHandlers, MeetingType).
 import { generatedKey } from '../../lib/mock/keys';
-import { directory, type MockDirectory } from '../../lib/mock/core';
+import { directory, MockDirectory } from '../../lib/mock/core';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import { resolveRef } from '../../lib/mock/recordRefs';
@@ -87,6 +87,13 @@ export class MockMeetings {
         this.complete((f) => f.kind === (data.honorary ? 'ENTER_HONORARY' : 'REVOKE_HONORARY') && f.memberId === data.memberId);
       } else if (event.type === 'members.office-assigned') {
         this.complete((f) => f.kind === 'ENTER_OFFICE' && f.memberId === data.memberId && f.office === data.office);
+      } else if (event.type === 'members.member-erased') {
+        // server: MeetingRepository.renameMemberLinks
+        for (const record of [...this.meetings.data, ...this.resolutions.data]) {
+          for (const link of record.links ?? []) if (link.kind === 'MEMBER' && link.id === data.memberId) link.title = MockDirectory.ERASED_NAME;
+        }
+        this.meetings.save();
+        this.resolutions.save();
       }
     });
   }

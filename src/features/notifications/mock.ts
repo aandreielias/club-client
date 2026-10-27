@@ -1,6 +1,6 @@
 // Mock of the club-server notifications module (NotificationHandlers): inbox entries from domain
 // events, preferences, live announcement to the recipient. Push/e-mail delivery is not simulated.
-import { directory, type MockDirectory } from '../../lib/mock/core';
+import { directory, MockDirectory } from '../../lib/mock/core';
 import type { MockEvent } from '../../lib/mock/MockEventBus';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
@@ -134,6 +134,21 @@ export class MockNotifications {
   private onEvent(event: MockEvent): void {
     const data = event.data as Record<string, any>;
     switch (event.type) {
+      case 'members.member-erased':
+        // server: NotificationRepository.deleteMember
+        delete this.inbox.data[data.memberId];
+        delete this.preferences.data[data.memberId];
+        for (const entry of Object.values(this.inbox.data).flat()) {
+          for (const ref of entry.refs) if (ref.kind === 'MEMBER' && ref.id === data.memberId) ref.title = MockDirectory.ERASED_NAME;
+        }
+        this.inbox.save();
+        this.preferences.save();
+        break;
+      case 'tasks.task-purged':
+        // server: NotificationRepository.deleteLinkedTo
+        for (const [memberId, entries] of Object.entries(this.inbox.data)) this.inbox.data[memberId] = entries.filter((n) => n.link !== `/tasks/${data.taskId}`);
+        this.inbox.save();
+        break;
       case 'tasks.task-assigned':
         this.notify(data.memberIds, 'TASK_ASSIGNED', `Neue Aufgabe: ${data.title}`,
           data.dueAt ? `Fällig: ${this.#dateTime.format(new Date(data.dueAt))}.` : 'Ohne Fälligkeit.', `/tasks/${data.taskId}`);

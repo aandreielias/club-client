@@ -64,6 +64,7 @@ export class MockTasks {
   /** server: TaskHandlers.onChangeRequested / onChangeDecided */
   private onEvent(event: MockEvent): void {
     const data = event.data as Record<string, any>;
+    if (event.type === 'members.member-erased') this.onMemberErased(data.memberId, data.changeRequestIds);
     if (event.type === 'members.change-requested') {
       const managers = this.people.audienceIds({ roles: ADMIN_BOARD }).sort().slice(0, limits.maxAssignees);
       if (!managers.length) return;
@@ -137,6 +138,23 @@ export class MockTasks {
   }
 
   /** server: REMINDER_DROPPED — the record behind an open deadline task is gone, so is the task. */
+  /** server: SourcedTaskHandlers.onMemberErased - change-request tasks go (done ones too), the member leaves every task. */
+  private onMemberErased(memberId: string, changeRequestIds: string[]): void {
+    for (const [taskId, source] of Object.entries(this.sources.data)) {
+      if (source.kind !== 'CHANGE_REQUEST' || !changeRequestIds.includes(source.id)) continue;
+      const task = this.tasks.data.find((t) => t.id === taskId);
+      delete this.sources.data[taskId];
+      if (!task) continue;
+      this.changed(task, 'DELETED');
+      this.tasks.data.splice(this.tasks.data.indexOf(task), 1);
+      delete this.comments.data[taskId];
+      mockServer.events.publish({ type: 'tasks.task-purged', data: { taskId } });
+      mockServer.events.publish({ type: 'activity.purged', data: { kind: 'TASK', recordId: taskId } });
+    }
+    for (const task of this.tasks.data) task.assignees = task.assignees.filter((id) => id !== memberId);
+    for (const table of [this.tasks, this.sources, this.comments]) table.save();
+  }
+
   deadlineDrop(key: string): void {
     const taskId = Object.entries(this.sources.data).find(([, s]) => s.kind === 'MEETING_REMINDER' && s.id === key)?.[0];
     const index = this.tasks.data.findIndex((t) => t.id === taskId && t.status !== 'DONE');
