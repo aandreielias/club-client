@@ -42,3 +42,18 @@ describe('mock minors rules', () => {
     expect(mockServer.handle('PATCH', '/api/v1/members/spieler', { photoConsent: true }, as('spieler'))).toMatchObject({ photoConsent: true });
   });
 });
+
+describe('mock audit filters', () => {
+  it('filter by kind, area and person', () => {
+    directory.confirm(member('admin'));
+    mockServer.handle('PUT', '/api/v1/members/spieler/roles', { roles: ['PLAYER'] }, as('admin'));
+    mockServer.handle('GET', '/api/v1/members/spieler', undefined, as('vorstand'));
+    const list = (q: string) =>
+      (mockServer.handle('GET', `/api/v1/audit?${q}`, undefined, as('admin')) as { items: { method: string; actorId: string }[] }).items;
+    expect(list('kind=WRITE').every((e) => e.method !== 'GET')).toBe(true);
+    expect(list('kind=READ').every((e) => e.method === 'GET')).toBe(true);
+    expect(list('actorId=vorstand').every((e) => e.actorId === 'vorstand')).toBe(true);
+    expect(list('area=teams')).toEqual([]);
+    expect(() => list('area=../x')).toThrow(expect.objectContaining({ code: 'audit.area-invalid' }));
+  });
+});

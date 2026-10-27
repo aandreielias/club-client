@@ -36,6 +36,7 @@
   "attendance.not-in-team",
   "attendance.reason-too-long",
   "attendance.status-missing",
+  "audit.area-invalid",
   "auth.club-pin-not-set",
   "auth.device-key-invalid",
   "auth.device-name-invalid",

@@ -7427,6 +7427,9 @@ export interface operations {
         parameters: {
             query?: {
                 before?: number;
+                kind?: "READ" | "WRITE" | "EXPORT";
+                area?: string;
+                actorId?: string;
             };
             header?: never;
             path?: never;
