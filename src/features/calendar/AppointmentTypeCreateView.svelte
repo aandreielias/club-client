@@ -14,11 +14,16 @@
   // svelte-ignore state_referenced_locally
   const create = new CreateController(bus, handle, 'Neue Terminart');
 
-  const submit = () => create.submit(async () => {
-    const saved = await calendarApi.saveType(null, { ...form, label: form.label.trim() });
-    await appointmentTypes.load();
-    return saved.key;
-  }, 'appointment-type', 'Terminart angelegt.');
+  const submit = () =>
+    create.submit(
+      async () => {
+        const saved = await calendarApi.saveType(null, { ...form, label: form.label.trim() });
+        await appointmentTypes.load();
+        return saved.key;
+      },
+      'appointment-type',
+      'Terminart angelegt.',
+    );
 </script>
 
 <Detail title="Neue Terminart">

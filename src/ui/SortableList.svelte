@@ -80,7 +80,13 @@
     const to = target;
     drag = null;
     if (to >= 0 && to !== from) {
-      save(moved(entries.map((e) => e.key), from, to));
+      save(
+        moved(
+          entries.map((e) => e.key),
+          from,
+          to,
+        ),
+      );
       announce(key, to);
     }
   }
@@ -128,29 +134,31 @@
 
 <ol class="entries" aria-label={label}>
   {#each entries as entry, index (entry.key)}
-    <li><div
-      class="row-item"
-      bind:this={rows[index]}
-      tabindex="0"
-      role="button"
-      aria-pressed={grabbed?.key === entry.key}
-      aria-roledescription="verschiebbarer Eintrag"
-      aria-label="{entry.label}, Position {index + 1} von {entries.length}"
-      class:dragging={drag?.key === entry.key}
-      class:grabbed={grabbed?.key === entry.key}
-      style:transform={drag?.key === entry.key ? `translateY(${drag.offset}px)` : shift(index) ? `translateY(${shift(index)}px)` : undefined}
-      onpointerdown={(e) => pointerdown(e, entry, index)}
-      onpointermove={pointermove}
-      onpointerup={pointerup}
-      onpointercancel={() => (drag = null)}
-      onkeydown={(e) => keydown(e, entry, index)}
-    >
-      <span class="grip" aria-hidden="true"></span>
-      <span class="label">{entry.label}</span>
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <span class="extra" onpointerdown={(e) => e.stopPropagation()}>{@render extra?.(entry)}</span>
-      <span class="position muted">{index + 1}</span>
-    </div></li>
+    <li>
+      <div
+        class="row-item"
+        bind:this={rows[index]}
+        tabindex="0"
+        role="button"
+        aria-pressed={grabbed?.key === entry.key}
+        aria-roledescription="verschiebbarer Eintrag"
+        aria-label="{entry.label}, Position {index + 1} von {entries.length}"
+        class:dragging={drag?.key === entry.key}
+        class:grabbed={grabbed?.key === entry.key}
+        style:transform={drag?.key === entry.key ? `translateY(${drag.offset}px)` : shift(index) ? `translateY(${shift(index)}px)` : undefined}
+        onpointerdown={(e) => pointerdown(e, entry, index)}
+        onpointermove={pointermove}
+        onpointerup={pointerup}
+        onpointercancel={() => (drag = null)}
+        onkeydown={(e) => keydown(e, entry, index)}
+      >
+        <span class="grip" aria-hidden="true"></span>
+        <span class="label">{entry.label}</span>
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <span class="extra" onpointerdown={(e) => e.stopPropagation()}>{@render extra?.(entry)}</span>
+        <span class="position muted">{index + 1}</span>
+      </div>
+    </li>
   {/each}
 </ol>
 <p class="visually-hidden" aria-live="assertive">{announcement}</p>

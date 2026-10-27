@@ -34,7 +34,8 @@
   }
 
   // A series answers with every occurrence; the window shows the first.
-  const submit = (value: AppointmentForm) => create.submit(async () => (await calendarApi.create(value.toNew()))[0].id, 'appointment', 'Termin angelegt.');
+  const submit = (value: AppointmentForm) =>
+    create.submit(async () => (await calendarApi.create(value.toNew()))[0].id, 'appointment', 'Termin angelegt.');
 </script>
 
 <AsyncView resource={form}>

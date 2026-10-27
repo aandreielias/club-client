@@ -38,7 +38,9 @@
               <tr class:qualifies={i < tournament.advancePerGroup}>
                 <td class="num">{i + 1}</td>
                 <td class="team">{row.name}</td>
-                <td class="num">{row.played}</td><td class="num">{row.won}</td>{#if simple}<td class="num">{row.drawn}</td>{/if}<td class="num">{row.lost}</td>
+                <td class="num">{row.played}</td><td class="num">{row.won}</td>{#if simple}<td class="num">{row.drawn}</td>{/if}<td class="num"
+                  >{row.lost}</td
+                >
                 {#if !simple}
                   <td class="num" title="Differenz {signed(row.setsWon - row.setsLost)}">{row.setsWon}:{row.setsLost}</td>
                   <td class="num" title="Differenz {signed(row.ballsWon - row.ballsLost)}">{row.ballsWon}:{row.ballsLost}</td>
@@ -57,7 +59,13 @@
               <span class="end">
                 {#if m.field || m.wave}<span class="muted small">{matchPlace(m)}</span>{/if}
                 {#if editable}
-                  <Button size="sm" variant="ghost" icon={m.homeScore === null ? 'add' : 'edit'} tooltip="Ergebnis eintragen" onclick={() => (editing = m)} />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon={m.homeScore === null ? 'add' : 'edit'}
+                    tooltip="Ergebnis eintragen"
+                    onclick={() => (editing = m)}
+                  />
                 {/if}
               </span>
               {#if m.sets.length}<span class="sets muted small">{m.sets.map((s) => `${s.home}:${s.away}`).join(' · ')}</span>{/if}

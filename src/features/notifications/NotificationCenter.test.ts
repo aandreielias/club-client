@@ -6,7 +6,16 @@ import type { NotificationsApi } from './NotificationsApi';
 import type { Notification, NotificationList } from './model';
 
 const entry = (id: string, read: boolean): Notification => ({
-  id, kind: 'TASK_ASSIGNED', title: `T${id}`, body: '', link: null, createdAt: '2026-01-01T00:00:00Z', readAt: read ? '2026-01-01T01:00:00Z' : null, senderId: null, senderName: null, refs: [],
+  id,
+  kind: 'TASK_ASSIGNED',
+  title: `T${id}`,
+  body: '',
+  link: null,
+  createdAt: '2026-01-01T00:00:00Z',
+  readAt: read ? '2026-01-01T01:00:00Z' : null,
+  senderId: null,
+  senderName: null,
+  refs: [],
 });
 
 function setup(list: NotificationList) {
@@ -26,7 +35,11 @@ describe('NotificationCenter', () => {
     const { center, api, bus, toasts } = setup({ items: [entry('1', false)], unread: 1 });
     const stop = center.start();
     await vi.waitFor(() => expect(center.unread).toBe(1));
-    bus.publish(NOTIFICATION_CREATED, { type: 'notifications.notification-created', occurredAt: '', data: { notificationId: '2', kind: 'SECURITY', title: 'PIN geändert' } });
+    bus.publish(NOTIFICATION_CREATED, {
+      type: 'notifications.notification-created',
+      occurredAt: '',
+      data: { notificationId: '2', kind: 'SECURITY', title: 'PIN geändert' },
+    });
     expect(toasts.items.map((t) => t.text)).toEqual(['PIN geändert']);
     expect(api.list).toHaveBeenCalledTimes(2);
     stop();

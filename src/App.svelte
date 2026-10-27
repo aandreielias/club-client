@@ -7,7 +7,28 @@
   import { features } from './features';
   import OnboardingPage from './features/onboarding/OnboardingPage.svelte';
   import SetupPage from './features/onboarding/SetupPage.svelte';
-  import { auth, backStack, bus, commands, documentTitle, forgetUser, pendingDeletes, scrollMemory, directory, errors, keyboard, live, mainPane, pageNavigator, preferences, router, session, split, splitPane, windows } from './lib/container';
+  import {
+    auth,
+    backStack,
+    bus,
+    commands,
+    documentTitle,
+    forgetUser,
+    pendingDeletes,
+    scrollMemory,
+    directory,
+    errors,
+    keyboard,
+    live,
+    mainPane,
+    pageNavigator,
+    preferences,
+    router,
+    session,
+    split,
+    splitPane,
+    windows,
+  } from './lib/container';
   import PaneHost from './ui/PaneHost.svelte';
   import { guestOnly } from './lib/types';
   import SplitDivider from './ui/SplitDivider.svelte';
@@ -24,7 +45,26 @@
   import Toasts from './ui/Toasts.svelte';
   import TooltipHost from './ui/TooltipHost.svelte';
 
-  const app = new AppController({ auth, session, directory, router, features, live, errors, bus, commands, keyboard, windows, preferences, backStack, split, splitPane, pageNavigator, pendingDeletes, forgetUser });
+  const app = new AppController({
+    auth,
+    session,
+    directory,
+    router,
+    features,
+    live,
+    errors,
+    bus,
+    commands,
+    keyboard,
+    windows,
+    preferences,
+    backStack,
+    split,
+    splitPane,
+    pageNavigator,
+    pendingDeletes,
+    forgetUser,
+  });
   const logout = () => app.logout();
 
   onMount(() => {
@@ -83,8 +123,14 @@
   <SetupPage onlogout={logout} />
 {:else if session.me && session.club}
   <div class="shell">
-    <Sidebar title={session.club.name} user="{session.member.firstName} {session.member.lastName}" items={app.navigation}
-      current={router.path} connection={live.status} onlogout={logout} />
+    <Sidebar
+      title={session.club.name}
+      user="{session.member.firstName} {session.member.lastName}"
+      items={app.navigation}
+      current={router.path}
+      connection={live.status}
+      onlogout={logout}
+    />
     <main style:view-transition-name="page">
       {#if split.isOpen}
         <div class="panes" style:--split-ratio={split.ratio}>
@@ -140,8 +186,7 @@
   main {
     flex: 1;
     min-width: 0;
-    transition:
-      margin var(--motion-window) var(--motion-easing);
+    transition: margin var(--motion-window) var(--motion-easing);
   }
   /* A docked window leaves the page usable next to it. */
   :global(:root[data-window='side']:not([data-layout='compact'])) main {

@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { directory, MockDirectory } from '../../lib/mock/core';
+import { directory } from '../../lib/mock/core';
 import type { MockRequest } from '../../lib/mock/MockServer';
 import type { Member } from '../../lib/types';
 import { files, MockFiles } from './mock';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
 const stepUp = (id: string) => directory.confirm(member(id));
-const visible = (id: string) => files.listFolders(member(id)).map((f) => f.id).sort();
+const visible = (id: string) =>
+  files
+    .listFolders(member(id))
+    .map((f) => f.id)
+    .sort();
 
 function uploadRequest(as: string, folderId: string, content: BlobPart, name: string, tags: string[] = []): MockRequest {
   const form = new FormData();
@@ -38,13 +42,16 @@ describe('mock files', () => {
     expect(stored).toMatchObject({ contentType: 'application/pdf', uploadedBy: 'spielerin', hasThumbnail: false });
     await expect(files.upload(uploadRequest('spielerin', 'f-damen', 'MZ…', 'tool.pdf'))).rejects.toMatchObject({ code: 'file.type-not-allowed' });
     await expect(files.upload(uploadRequest('spielerin', 'f-photos', PDF, 'x.pdf'))).rejects.toMatchObject({ code: 'file.type-not-allowed' });
-    await expect(files.upload(uploadRequest('spielerin', 'f-damen', `${PDF}X5O!P%@AP EICAR-STANDARD-ANTIVIRUS-TEST-FILE!`, 'eicar.pdf')))
-      .rejects.toMatchObject({ code: 'file.infected' });
+    await expect(
+      files.upload(uploadRequest('spielerin', 'f-damen', `${PDF}X5O!P%@AP EICAR-STANDARD-ANTIVIRUS-TEST-FILE!`, 'eicar.pdf')),
+    ).rejects.toMatchObject({ code: 'file.infected' });
     await expect(files.upload(uploadRequest('spielerin', 'f-docs', PDF, 'x.pdf'))).rejects.toMatchObject({ code: 'access.denied' });
   });
 
   it('allows tags only with photo consent', async () => {
-    await expect(files.upload(uploadRequest('spielerin', 'f-photos', JPEG, 'a.jpg', ['spieler']))).rejects.toMatchObject({ code: 'file.tag-without-consent' });
+    await expect(files.upload(uploadRequest('spielerin', 'f-photos', JPEG, 'a.jpg', ['spieler']))).rejects.toMatchObject({
+      code: 'file.tag-without-consent',
+    });
     const photo = await files.upload(uploadRequest('spielerin', 'f-photos', JPEG, 'a.jpg', ['trainer']));
     expect(photo).toMatchObject({ contentType: 'image/jpeg', hasThumbnail: true, taggedMemberIds: ['trainer'] });
   });
@@ -61,9 +68,12 @@ describe('mock files', () => {
   it('limits folder depth and inherits scope', () => {
     stepUp('admin');
     let parent = 'f-minutes';
-    for (let depth = 3; depth <= 5; depth++) parent = files.createFolder(member('admin'), { parentId: parent, name: `L${depth}`, kind: 'DOCUMENTS' }).id;
+    for (let depth = 3; depth <= 5; depth++)
+      parent = files.createFolder(member('admin'), { parentId: parent, name: `L${depth}`, kind: 'DOCUMENTS' }).id;
     expect(files.listFolders(member('admin')).find((f) => f.id === parent)).toMatchObject({ scope: 'CLUB', teamIds: [] });
-    expect(() => files.createFolder(member('admin'), { parentId: parent, name: 'L6', kind: 'DOCUMENTS' })).toThrow(expect.objectContaining({ code: 'folder.too-deep' }));
+    expect(() => files.createFolder(member('admin'), { parentId: parent, name: 'L6', kind: 'DOCUMENTS' })).toThrow(
+      expect.objectContaining({ code: 'folder.too-deep' }),
+    );
   });
 });
 

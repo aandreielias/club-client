@@ -8,7 +8,20 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import { ZonedClock, type LocalDate } from '../../lib/time/ZonedClock';
 import type { Member } from '../../lib/types';
-import { HUES, SEEDED_APPOINTMENT_TYPES, type Absence, type AppointmentTypeInfo, type Appointment, type AppointmentPatch, type Ride, type AppointmentType, type Attendance, type AttendanceEntry, type NewAppointment, type ResponseStatus } from './model';
+import {
+  HUES,
+  SEEDED_APPOINTMENT_TYPES,
+  type Absence,
+  type AppointmentTypeInfo,
+  type Appointment,
+  type AppointmentPatch,
+  type Ride,
+  type AppointmentType,
+  type Attendance,
+  type AttendanceEntry,
+  type NewAppointment,
+  type ResponseStatus,
+} from './model';
 import { locations } from '../locations/mock';
 import { inventory } from '../inventory/mock';
 
@@ -54,7 +67,9 @@ export class MockCalendar {
     this.links = new MockLinks('calendar-links', () => this.seedLinks());
     this.reminded = new MockTable<string[]>('need-reminders', () => []);
     mockServer.events.subscribe((event) => event.type === 'locations.location-changed' && this.onLocationChanged(event.data as never));
-    mockServer.events.subscribe((event) => event.type === 'members.member-erased' && this.onMemberErased((event.data as { memberId: string }).memberId));
+    mockServer.events.subscribe(
+      (event) => event.type === 'members.member-erased' && this.onMemberErased((event.data as { memberId: string }).memberId),
+    );
   }
 
   /** "Benötigt" list and attachments (server: CalendarHandlers.getLinks / setLinks). */
@@ -69,7 +84,8 @@ export class MockCalendar {
   /** server: CalendarHandlers.itemUses */
   itemUses(member: Member, itemId: string): ItemUse[] {
     const now = Date.now();
-    return this.links.owners(itemId)
+    return this.links
+      .owners(itemId)
       .flatMap(([id, quantity]) => {
         const a = this.appointments.data.find((x) => x.id === id);
         return a && this.canSee(member, a) && !a.cancelled && Date.parse(a.endsAt) > now
@@ -84,7 +100,10 @@ export class MockCalendar {
     this.requireMayEdit(member, appointment.teamId);
     const links = this.links.set(member, appointment.id, body);
     this.changed(member, [appointment], 'UPDATED');
-    MockActivity.record('APPOINTMENT', appointment.id, member, 'UPDATED', { title: appointment.title, teamIds: appointment.teamId ? [appointment.teamId] : [] });
+    MockActivity.record('APPOINTMENT', appointment.id, member, 'UPDATED', {
+      title: appointment.title,
+      teamIds: appointment.teamId ? [appointment.teamId] : [],
+    });
     return links;
   }
 
@@ -189,8 +208,7 @@ export class MockCalendar {
     // server: an absence on the appointment's local day counts as NO until the member answers.
     const day = this.people.clock.localDate(appointment.startsAt);
     const showReasons =
-      this.people.isManager(member) ||
-      (appointment.teamId !== null && this.people.teamRoles(member.id)[appointment.teamId] === 'COACH');
+      this.people.isManager(member) || (appointment.teamId !== null && this.people.teamRoles(member.id)[appointment.teamId] === 'COACH');
     const entries: AttendanceEntry[] = [...expected]
       .flatMap((memberId): AttendanceEntry[] => {
         const name = this.people.name(memberId);
@@ -198,16 +216,27 @@ export class MockCalendar {
         const answer = answers[memberId];
         const away = answer ? undefined : this.absences.data.find((a) => a.memberId === memberId && a.from <= day && day <= a.to);
         if (away) {
-          return [{ memberId, name, status: 'NO' as const, reason: showReasons ? (away.reason ? `Abwesend: ${away.reason}` : 'Abwesend') : null, updatedAt: null, absent: true }];
+          return [
+            {
+              memberId,
+              name,
+              status: 'NO' as const,
+              reason: showReasons ? (away.reason ? `Abwesend: ${away.reason}` : 'Abwesend') : null,
+              updatedAt: null,
+              absent: true,
+            },
+          ];
         }
-        return [{
-          memberId,
-          name,
-          status: answer?.status ?? null,
-          reason: showReasons ? (answer?.reason ?? null) : null,
-          updatedAt: answer?.updatedAt ?? null,
-          absent: false,
-        }];
+        return [
+          {
+            memberId,
+            name,
+            status: answer?.status ?? null,
+            reason: showReasons ? (answer?.reason ?? null) : null,
+            updatedAt: answer?.updatedAt ?? null,
+            absent: false,
+          },
+        ];
       })
       .sort((a, b) => a.name.localeCompare(b.name));
     const count = (status: ResponseStatus | null) => entries.filter((e) => e.status === status).length;
@@ -301,7 +330,8 @@ export class MockCalendar {
 
   leaveRide(member: Member, rideId: string, memberId: string): Ride {
     const ride = this.ride(member, rideId);
-    const allowed = memberId === member.id || ride.driverId === member.id || this.people.isManager(member) || this.people.wardsOf(member.id).includes(memberId);
+    const allowed =
+      memberId === member.id || ride.driverId === member.id || this.people.isManager(member) || this.people.wardsOf(member.id).includes(memberId);
     if (!allowed) fail(403, 'ride.not-passenger');
     ride.passengers = ride.passengers.filter((p) => p !== memberId);
     this.ridesChanged(this.visible(member, ride.appointmentId));
@@ -359,7 +389,14 @@ export class MockCalendar {
     if (!first) return;
     mockServer.events.publish({
       type: 'calendar.appointments-changed',
-      data: { appointmentIds: appointments.map((a) => a.id), teamId: first.teamId, change, actorId: actor.id, title: first.title, firstStartsAt: first.startsAt },
+      data: {
+        appointmentIds: appointments.map((a) => a.id),
+        teamId: first.teamId,
+        change,
+        actorId: actor.id,
+        title: first.title,
+        firstStartsAt: first.startsAt,
+      },
       audience: this.people.teamAudience(first.teamId),
     });
   }
@@ -415,8 +452,14 @@ export class MockCalendar {
       for (const [holder, items] of bring) {
         mockServer.events.publish({
           type: 'calendar.items-to-bring',
-          data: { memberId: holder, recipients: [holder, ...this.people.guardiansOf([holder])], appointmentId: appointment.id,
-            title: appointment.title, startsAt: appointment.startsAt, items },
+          data: {
+            memberId: holder,
+            recipients: [holder, ...this.people.guardiansOf([holder])],
+            appointmentId: appointment.id,
+            title: appointment.title,
+            startsAt: appointment.startsAt,
+            items,
+          },
         });
       }
     }
@@ -431,7 +474,9 @@ export class MockCalendar {
     const old = this.appointments.data.filter((a) => a.locationId === undefined);
     if (!old.length) return;
     const byName = new Map(locations.list().map((l) => [l.name.toLowerCase(), l.id]));
-    old.forEach((a) => Object.assign(a, { locationId: (a.location && byName.get(a.location.toLowerCase())) ?? null, cabinMen: null, cabinWomen: null }));
+    old.forEach((a) =>
+      Object.assign(a, { locationId: (a.location && byName.get(a.location.toLowerCase())) ?? null, cabinMen: null, cabinWomen: null }),
+    );
     this.appointments.save();
   }
 
@@ -465,7 +510,15 @@ export class MockCalendar {
     const end = Date.parse(a.endsAt);
     if (isNaN(start) || isNaN(end) || end <= start) fail(400, 'appointment.times-invalid');
     if (end - start > limits.maxDurationDays * DAY_MS) fail(400, 'appointment.too-long');
-    return { ...a, title: a.title.trim(), description: a.description || null, location: a.location || null, locationId: a.locationId ?? null, cabinMen, cabinWomen };
+    return {
+      ...a,
+      title: a.title.trim(),
+      description: a.description || null,
+      location: a.location || null,
+      locationId: a.locationId ?? null,
+      cabinMen,
+      cabinWomen,
+    };
   }
 
   /** Demo data relative to today: weekly trainings, a match, club-wide events, one cancellation. */
@@ -478,27 +531,94 @@ export class MockCalendar {
     let n = 0;
     type Seed = Omit<Appointment, 'id' | 'cancelled' | 'locationId' | 'cabinMen' | 'cabinWomen' | 'rides'> & Partial<Appointment>;
     const add = (a: Seed) =>
-      items.push({ id: `a-${++n}`, cancelled: false, locationId: null, cabinMen: null, cabinWomen: null, rides: typeOf(a.type).rides, ...a, description: a.description ?? null, location: a.location ?? null });
+      items.push({
+        id: `a-${++n}`,
+        cancelled: false,
+        locationId: null,
+        cabinMen: null,
+        cabinWomen: null,
+        rides: typeOf(a.type).rides,
+        ...a,
+        description: a.description ?? null,
+        location: a.location ?? null,
+      });
 
     for (let week = -1; week < 6; week++) {
       const base = week * 7;
-      for (const [day, series] of [[1, 's-damen-di'], [3, 's-damen-do']] as const) {
-        add({ seriesId: series, teamId: 't-damen', type: 'TRAINING', title: 'Training Damen 1', description: null,
-          location: 'Turnhalle Nord', locationId: 'l-nord', cabinWomen: 'Kabine 3', startsAt: at(base + day, '19:00'), endsAt: at(base + day, '21:00') });
+      for (const [day, series] of [
+        [1, 's-damen-di'],
+        [3, 's-damen-do'],
+      ] as const) {
+        add({
+          seriesId: series,
+          teamId: 't-damen',
+          type: 'TRAINING',
+          title: 'Training Damen 1',
+          description: null,
+          location: 'Turnhalle Nord',
+          locationId: 'l-nord',
+          cabinWomen: 'Kabine 3',
+          startsAt: at(base + day, '19:00'),
+          endsAt: at(base + day, '21:00'),
+        });
       }
-      add({ seriesId: 's-u16-mo', teamId: 't-u16', type: 'TRAINING', title: 'Training U16', description: null,
-        location: 'Turnhalle Süd', locationId: 'l-sued', startsAt: at(base, '17:30'), endsAt: at(base, '19:00'), cancelled: week === 1 });
+      add({
+        seriesId: 's-u16-mo',
+        teamId: 't-u16',
+        type: 'TRAINING',
+        title: 'Training U16',
+        description: null,
+        location: 'Turnhalle Süd',
+        locationId: 'l-sued',
+        startsAt: at(base, '17:30'),
+        endsAt: at(base, '19:00'),
+        cancelled: week === 1,
+      });
     }
-    add({ seriesId: null, teamId: 't-damen', type: 'MATCH', title: 'Heimspiel gegen VC Musterstadt',
-      description: 'Treffpunkt 60 Minuten vor Spielbeginn in der Halle.', location: 'Turnhalle Nord', locationId: 'l-nord',
-      startsAt: at(12, '15:00'), endsAt: at(12, '17:30') });
-    add({ seriesId: null, teamId: 't-u16', type: 'TOURNAMENT', title: 'U16 Landesturnier', description: null,
-      location: 'Sportzentrum West', locationId: 'l-west', startsAt: at(19, '09:00'), endsAt: at(19, '18:00') });
-    add({ seriesId: null, teamId: null, type: 'MEETING', title: 'Mitgliederversammlung',
-      description: 'Tagesordnung:\n1. Bericht des Vorstands\n2. Kassenbericht\n3. Allfälliges', location: 'Vereinsheim', locationId: 'l-heim',
-      startsAt: at(16, '19:30'), endsAt: at(16, '21:30') });
-    add({ seriesId: null, teamId: null, type: 'EVENT', title: 'Saisonabschluss', description: null, location: 'Vereinsheim', locationId: 'l-heim',
-      startsAt: at(26, '18:00'), endsAt: at(26, '23:00') });
+    add({
+      seriesId: null,
+      teamId: 't-damen',
+      type: 'MATCH',
+      title: 'Heimspiel gegen VC Musterstadt',
+      description: 'Treffpunkt 60 Minuten vor Spielbeginn in der Halle.',
+      location: 'Turnhalle Nord',
+      locationId: 'l-nord',
+      startsAt: at(12, '15:00'),
+      endsAt: at(12, '17:30'),
+    });
+    add({
+      seriesId: null,
+      teamId: 't-u16',
+      type: 'TOURNAMENT',
+      title: 'U16 Landesturnier',
+      description: null,
+      location: 'Sportzentrum West',
+      locationId: 'l-west',
+      startsAt: at(19, '09:00'),
+      endsAt: at(19, '18:00'),
+    });
+    add({
+      seriesId: null,
+      teamId: null,
+      type: 'MEETING',
+      title: 'Mitgliederversammlung',
+      description: 'Tagesordnung:\n1. Bericht des Vorstands\n2. Kassenbericht\n3. Allfälliges',
+      location: 'Vereinsheim',
+      locationId: 'l-heim',
+      startsAt: at(16, '19:30'),
+      endsAt: at(16, '21:30'),
+    });
+    add({
+      seriesId: null,
+      teamId: null,
+      type: 'EVENT',
+      title: 'Saisonabschluss',
+      description: null,
+      location: 'Vereinsheim',
+      locationId: 'l-heim',
+      startsAt: at(26, '18:00'),
+      endsAt: at(26, '23:00'),
+    });
     return items;
   }
 
@@ -536,7 +656,9 @@ export class MockCalendar {
 
   private seedRides(): StoredRide[] {
     const match = this.appointments.data.find((a) => a.type === 'MATCH' && Date.parse(a.startsAt) > Date.now() && !a.cancelled);
-    return match ? [{ id: 'ride-1', appointmentId: match.id, driverId: 'trainer', seats: 3, note: 'Abfahrt 1 Stunde vorher bei der Halle', passengers: [] }] : [];
+    return match
+      ? [{ id: 'ride-1', appointmentId: match.id, driverId: 'trainer', seats: 3, note: 'Abfahrt 1 Stunde vorher bei der Halle', passengers: [] }]
+      : [];
   }
 
   private seedResponses(): Record<string, Record<string, StoredResponse>> {
@@ -558,7 +680,9 @@ export class MockCalendar {
 export const calendar = new MockCalendar(directory);
 // server: AttendanceRepository / CalendarRepository.personalData
 personalData.set('attendance', (memberId) => ({
-  answers: Object.entries(calendar.responses.data).filter(([, answers]) => memberId in answers).map(([appointmentId, answers]) => ({ appointmentId, ...answers[memberId] })),
+  answers: Object.entries(calendar.responses.data)
+    .filter(([, answers]) => memberId in answers)
+    .map(([appointmentId, answers]) => ({ appointmentId, ...answers[memberId] })),
   absences: calendar.absences.data.filter((a) => a.memberId === memberId),
   ridesOffered: calendar.rides.data.filter((r) => r.driverId === memberId),
   seatsTaken: calendar.rides.data.filter((r) => r.passengers.includes(memberId)).map((r) => ({ rideId: r.id })),
@@ -579,8 +703,16 @@ export const appointmentTypes = {
     if (!label || label.length > 40) fail(400, 'appointment-type.label-invalid');
     if (!HUES.includes(body.hue)) fail(400, 'appointment-type.hue-invalid');
     if (!Number.isInteger(body.sort) || body.sort < 0 || body.sort > 1000) fail(400, 'appointment-type.sort-invalid');
-    const type: AppointmentTypeInfo = { key: key ?? generatedKey('TYPE'), label, hue: body.hue,
-      rides: !!body.rides, cabins: !!body.cabins, sort: body.sort, archived: !!body.archived, inUse: false };
+    const type: AppointmentTypeInfo = {
+      key: key ?? generatedKey('TYPE'),
+      label,
+      hue: body.hue,
+      rides: !!body.rides,
+      cabins: !!body.cabins,
+      sort: body.sort,
+      archived: !!body.archived,
+      inUse: false,
+    };
     const index = types.data.findIndex((t) => t.key === type.key);
     if (index >= 0) types.data[index] = type;
     else types.data.push(type);
@@ -617,13 +749,15 @@ mockServer
   .on('POST', '/api/v1/calendar/types', (req) => appointmentTypes.save(directory.actor(req), null, req.body ?? {}))
   .on('PUT', '/api/v1/calendar/types/:key', (req) => appointmentTypes.save(directory.actor(req), req.params.key, req.body ?? {}))
   .on('DELETE', '/api/v1/calendar/types/:key', (req) => appointmentTypes.delete(directory.actor(req), req.params.key))
-  .on('GET', '/api/v1/appointments', (req) =>
-    ({ items: calendar.list(actor(req), req.query.get('from'), req.query.get('to'), req.query.get('teamId')) }))
+  .on('GET', '/api/v1/appointments', (req) => ({
+    items: calendar.list(actor(req), req.query.get('from'), req.query.get('to'), req.query.get('teamId')),
+  }))
   .on('POST', '/api/v1/appointments', (req) => ({ items: calendar.create(actor(req), req.body ?? {}) }))
   .on('GET', '/api/v1/appointments/:id', (req) => calendar.visible(actor(req), req.params.id))
   .on('PATCH', '/api/v1/appointments/:id', (req) => calendar.update(actor(req), req.params.id, req.body ?? {}))
-  .on('POST', '/api/v1/appointments/:id/cancel', (req) =>
-    ({ items: calendar.cancel(actor(req), req.params.id, req.query.get('includeFollowing') === 'true') }))
+  .on('POST', '/api/v1/appointments/:id/cancel', (req) => ({
+    items: calendar.cancel(actor(req), req.params.id, req.query.get('includeFollowing') === 'true'),
+  }))
   .on('GET', '/api/v1/appointments/:id/links', (req) => calendar.getLinks(actor(req), req.params.id))
   .on('PUT', '/api/v1/appointments/:id/links', (req) => calendar.setLinks(actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/appointments/:id/attendance', (req) => calendar.overview(actor(req), req.params.id))

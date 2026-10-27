@@ -6,7 +6,14 @@
   import { FOLDER_SCOPES, type FolderScope } from './model';
 
   /** Who sees a top-level folder: a scope, and for TEAM the teams. */
-  let { scope = $bindable(), teamIds = $bindable(), scopes, teamList, error, hintSuffix = '' }: {
+  let {
+    scope = $bindable(),
+    teamIds = $bindable(),
+    scopes,
+    teamList,
+    error,
+    hintSuffix = '',
+  }: {
     scope: FolderScope;
     teamIds: string[];
     scopes: typeof FOLDER_SCOPES;
@@ -25,8 +32,12 @@
 {#if scope === 'TEAM'}
   <div class="teams">
     <span class="legend">Teams</span>
-    <TeamPicker list={teamList} chosen={teamIds} {error}
-      ontoggle={(id) => (teamIds = teamIds.includes(id) ? teamIds.filter((t) => t !== id) : [...teamIds, id])} />
+    <TeamPicker
+      list={teamList}
+      chosen={teamIds}
+      {error}
+      ontoggle={(id) => (teamIds = teamIds.includes(id) ? teamIds.filter((t) => t !== id) : [...teamIds, id])}
+    />
   </div>
 {/if}
 

@@ -31,7 +31,10 @@ class Viewer {
   readonly teamIds: Set<string>;
   readonly coachTeamIds: Set<string>;
 
-  constructor(readonly member: Member, people: MockDirectory) {
+  constructor(
+    readonly member: Member,
+    people: MockDirectory,
+  ) {
     const own = people.teamRoles(member.id);
     this.board = people.isManager(member);
     this.voter = member.voter;
@@ -114,13 +117,33 @@ export class MockFiles {
     if (body.parentId) {
       const parent = this.visibleFolder(viewer, body.parentId);
       if (this.depth(parent) >= limits.maxFolderDepth) fail(400, 'folder.too-deep');
-      folder = { id: crypto.randomUUID(), parentId: parent.id, name, kind: body.kind, scope: parent.scope, teamIds: [...parent.teamIds], membersCanUpload: !!body.membersCanUpload, color: null, coverFileId: null };
+      folder = {
+        id: crypto.randomUUID(),
+        parentId: parent.id,
+        name,
+        kind: body.kind,
+        scope: parent.scope,
+        teamIds: [...parent.teamIds],
+        membersCanUpload: !!body.membersCanUpload,
+        color: null,
+        coverFileId: null,
+      };
     } else {
       const scope = body.scope as FolderScope;
       if (!['CLUB', 'TEAM', 'BOARD', 'ASSEMBLY'].includes(scope)) fail(400, 'folder.kind-or-scope-missing');
       const teamIds: string[] = Array.isArray(body.teamIds) ? [...new Set(body.teamIds.map(String))] : [];
       if ((scope === 'TEAM') !== teamIds.length > 0) fail(400, 'folder.team-scope-mismatch');
-      folder = { id: crypto.randomUUID(), parentId: null, name, kind: body.kind, scope, teamIds, membersCanUpload: !!body.membersCanUpload, color: null, coverFileId: null };
+      folder = {
+        id: crypto.randomUUID(),
+        parentId: null,
+        name,
+        kind: body.kind,
+        scope,
+        teamIds,
+        membersCanUpload: !!body.membersCanUpload,
+        color: null,
+        coverFileId: null,
+      };
     }
     this.requireManage(viewer, folder);
     this.folders.data.push(folder);
@@ -175,7 +198,12 @@ export class MockFiles {
     }
     if (body.name !== undefined) {
       const extension = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : '';
-      const base = String(body.name).replace(/\.[^.]*$/, '').replace(/[^\p{L}\p{N} ._()-]/gu, '_').trim().slice(0, 100) || 'datei';
+      const base =
+        String(body.name)
+          .replace(/\.[^.]*$/, '')
+          .replace(/[^\p{L}\p{N} ._()-]/gu, '_')
+          .trim()
+          .slice(0, 100) || 'datei';
       file.name = base + extension;
     }
     if (target !== folder) {
@@ -237,7 +265,14 @@ export class MockFiles {
       .filter(({ f, folder }) => viewer.canSee(folder) && (viewer.canManage(folder) || this.consented(f)) && f.name.toLocaleLowerCase().includes(q))
       .sort((a, b) => a.f.name.toLocaleLowerCase().localeCompare(b.f.name.toLocaleLowerCase()))
       .slice(0, Math.min(Math.max(limit, 1), 50))
-      .map(({ f, folder }) => ({ id: f.id, folderId: f.folderId, folderName: folder.name, name: f.name, contentType: f.contentType, sizeBytes: f.sizeBytes }));
+      .map(({ f, folder }) => ({
+        id: f.id,
+        folderId: f.folderId,
+        folderName: folder.name,
+        name: f.name,
+        contentType: f.contentType,
+        sizeBytes: f.sizeBytes,
+      }));
   }
 
   async upload(req: MockRequest): Promise<StoredFile> {
@@ -298,21 +333,38 @@ export class MockFiles {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) fail(400, 'file.version-date-missing');
     await MockFiles.simulateTransfer(upload.size, req.onProgress);
     const bytes = new Uint8Array(await upload.arrayBuffer());
-    if (MockFiles.detect(bytes, upload instanceof File ? upload.name : file.name)?.contentType !== file.contentType) fail(400, 'file.version-type-mismatch');
+    if (MockFiles.detect(bytes, upload instanceof File ? upload.name : file.name)?.contentType !== file.contentType)
+      fail(400, 'file.version-type-mismatch');
     if (new TextDecoder().decode(bytes.subarray(0, 512)).includes(EICAR)) fail(400, 'file.infected');
     const list = (this.versions.data[file.id] ??= []);
     if (list.some((v) => v.label.toLowerCase() === label.toLowerCase()) || (!list.length && label === '1.0')) fail(409, 'file.version-exists');
     if (!list.length) {
       // The first upload becomes version 1.0; its bytes move under their own key.
-      const first: StoredVersion = { id: crypto.randomUUID(), label: '1.0', date: file.createdAt.slice(0, 10), contentType: file.contentType,
-        sizeBytes: file.sizeBytes, uploadedBy: file.uploadedBy, createdAt: file.createdAt, current: false };
+      const first: StoredVersion = {
+        id: crypto.randomUUID(),
+        label: '1.0',
+        date: file.createdAt.slice(0, 10),
+        contentType: file.contentType,
+        sizeBytes: file.sizeBytes,
+        uploadedBy: file.uploadedBy,
+        createdAt: file.createdAt,
+        current: false,
+      };
       const blob = this.#blobs.get(file.id);
       if (blob) this.#blobs.set(first.id, blob);
       list.push(first);
     }
     list.forEach((v) => (v.current = false));
-    const added: StoredVersion = { id: crypto.randomUUID(), label, date, contentType: file.contentType, sizeBytes: upload.size,
-      uploadedBy: viewer.member.id, createdAt: new Date().toISOString(), current: true };
+    const added: StoredVersion = {
+      id: crypto.randomUUID(),
+      label,
+      date,
+      contentType: file.contentType,
+      sizeBytes: upload.size,
+      uploadedBy: viewer.member.id,
+      createdAt: new Date().toISOString(),
+      current: true,
+    };
     list.unshift(added);
     const blob = new Blob([bytes], { type: file.contentType });
     this.#blobs.set(added.id, blob);
@@ -464,16 +516,25 @@ export class MockFiles {
   private toDto(f: StoredFolder, viewer: Viewer): Folder {
     const manage = viewer.canManage(f);
     // Folders stored before colours existed have neither field.
-    return { ...f, color: f.color ?? null, coverFileId: f.coverFileId ?? null, canManage: manage, canUpload: manage || (f.membersCanUpload && viewer.canSee(f)) };
+    return {
+      ...f,
+      color: f.color ?? null,
+      coverFileId: f.coverFileId ?? null,
+      canManage: manage,
+      canUpload: manage || (f.membersCanUpload && viewer.canSee(f)),
+    };
   }
 
   /** server: FileHandlers.audience */
   private changed(folder: StoredFolder, fileId: string | null, change: 'UPLOADED' | 'DELETED' | 'TAGGED' | 'UPDATED' | 'FOLDER_UPDATED'): void {
     const audience: MockAudience =
-      folder.scope === 'CLUB' ? { everyone: true }
-        : folder.scope === 'BOARD' ? { roles: ['ADMIN', 'BOARD'] }
-        : folder.scope === 'ASSEMBLY' ? { members: this.people.electorate('ASSEMBLY'), roles: ['ADMIN', 'BOARD'] }
-        : this.teamsAudience(folder.teamIds);
+      folder.scope === 'CLUB'
+        ? { everyone: true }
+        : folder.scope === 'BOARD'
+          ? { roles: ['ADMIN', 'BOARD'] }
+          : folder.scope === 'ASSEMBLY'
+            ? { members: this.people.electorate('ASSEMBLY'), roles: ['ADMIN', 'BOARD'] }
+            : this.teamsAudience(folder.teamIds);
     mockServer.events.publish({ type: 'files.files-changed', data: { folderId: folder.id, fileId, change }, audience });
   }
 
@@ -499,17 +560,27 @@ export class MockFiles {
     }
     const w = file.width ?? 1200;
     const h = file.height ?? 800;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`
-      + `<rect width="100%" height="100%" fill="#e2e2e2"/>`
-      + `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="${Math.round(h / 14)}" fill="#777">${w} × ${h}</text></svg>`;
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
+      `<rect width="100%" height="100%" fill="#e2e2e2"/>` +
+      `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="${Math.round(h / 14)}" fill="#777">${w} × ${h}</text></svg>`;
     return new Blob([svg], { type: 'image/svg+xml' });
   }
 
   /** A one-page PDF with the file name, built by hand (offsets in the xref table must be exact). */
   static pdf(title: string): Blob {
     // Standard PDF fonts only cover Latin-1 reliably: spell umlauts out, escape the string delimiters.
-    const text = (s: string) => s.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue').replace(/ß/g, 'ss')
-      .replace(/[^\x20-\x7e]/g, '?').replace(/([()\\])/g, '\\$1');
+    const text = (s: string) =>
+      s
+        .replace(/ä/g, 'ae')
+        .replace(/ö/g, 'oe')
+        .replace(/ü/g, 'ue')
+        .replace(/Ä/g, 'Ae')
+        .replace(/Ö/g, 'Oe')
+        .replace(/Ü/g, 'Ue')
+        .replace(/ß/g, 'ss')
+        .replace(/[^\x20-\x7e]/g, '?')
+        .replace(/([()\\])/g, '\\$1');
     const stream = `BT /F1 20 Tf 72 760 Td (${text(title)}) Tj 0 -32 Td /F1 12 Tf (Beispieldokument im Testmodus ohne Server.) Tj ET`;
     const objects = [
       '<< /Type /Catalog /Pages 2 0 R >>',
@@ -535,11 +606,20 @@ export class MockFiles {
     const { default: JSZip } = await import('jszip');
     const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const zip = new JSZip();
-    zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
-    zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+    zip.file(
+      '[Content_Types].xml',
+      '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',
+    );
+    zip.file(
+      '_rels/.rels',
+      '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>',
+    );
     const paragraph = (text: string, size: number, bold = false) =>
       `<w:p><w:r><w:rPr>${bold ? '<w:b/>' : ''}<w:sz w:val="${size}"/></w:rPr><w:t>${escape(text)}</w:t></w:r></w:p>`;
-    zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paragraph(file.name.replace(/\.docx$/i, ''), 36, true)}${paragraphs.map((p) => paragraph(p, 24)).join('')}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>`);
+    zip.file(
+      'word/document.xml',
+      `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paragraph(file.name.replace(/\.docx$/i, ''), 36, true)}${paragraphs.map((p) => paragraph(p, 24)).join('')}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>`,
+    );
     return zip.generateAsync({ type: 'blob', mimeType: file.contentType });
   }
 
@@ -558,11 +638,26 @@ export class MockFiles {
       return typeof value === 'number' ? `<c r="${ref}"><v>${value}</v></c>` : `<c r="${ref}" t="inlineStr"><is><t>${escape(value)}</t></is></c>`;
     };
     const zip = new JSZip();
-    zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');
-    zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
-    zip.file('xl/workbook.xml', `<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${escape(file.name.replace(/\.xlsx$/i, '').slice(0, 31))}" sheetId="1" r:id="rId1"/></sheets></workbook>`);
-    zip.file('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>');
-    zip.file('xl/worksheets/sheet1.xml', `<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows.map((r, i) => `<row r="${i + 1}">${r.map((v, c) => cell(v, c, i)).join('')}</row>`).join('')}</sheetData></worksheet>`);
+    zip.file(
+      '[Content_Types].xml',
+      '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
+    );
+    zip.file(
+      '_rels/.rels',
+      '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+    );
+    zip.file(
+      'xl/workbook.xml',
+      `<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${escape(file.name.replace(/\.xlsx$/i, '').slice(0, 31))}" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+    );
+    zip.file(
+      'xl/_rels/workbook.xml.rels',
+      '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>',
+    );
+    zip.file(
+      'xl/worksheets/sheet1.xml',
+      `<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows.map((r, i) => `<row r="${i + 1}">${r.map((v, c) => cell(v, c, i)).join('')}</row>`).join('')}</sheetData></worksheet>`,
+    );
     return zip.generateAsync({ type: 'blob', mimeType: file.contentType });
   }
 
@@ -574,15 +669,31 @@ export class MockFiles {
       ['Ziele', 'Klassenerhalt Damen 1', 'Zweites Nachwuchsteam', 'Neue Trikots'],
       ['Nächste Schritte', 'Hallenzeiten bestätigen', 'Trainerteam einteilen'],
     ];
-    const ns = 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+    const ns =
+      'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
     const zip = new JSZip();
-    zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>${slides.map((_, i) => `<Override PartName="/ppt/slides/slide${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`).join('')}</Types>`);
-    zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>');
-    zip.file('ppt/presentation.xml', `<?xml version="1.0" encoding="UTF-8"?><p:presentation ${ns}><p:sldIdLst>${slides.map((_, i) => `<p:sldId id="${256 + i}" r:id="rId${i + 1}"/>`).join('')}</p:sldIdLst></p:presentation>`);
-    zip.file('ppt/_rels/presentation.xml.rels', `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${slides.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${i + 1}.xml"/>`).join('')}</Relationships>`);
+    zip.file(
+      '[Content_Types].xml',
+      `<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>${slides.map((_, i) => `<Override PartName="/ppt/slides/slide${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`).join('')}</Types>`,
+    );
+    zip.file(
+      '_rels/.rels',
+      '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>',
+    );
+    zip.file(
+      'ppt/presentation.xml',
+      `<?xml version="1.0" encoding="UTF-8"?><p:presentation ${ns}><p:sldIdLst>${slides.map((_, i) => `<p:sldId id="${256 + i}" r:id="rId${i + 1}"/>`).join('')}</p:sldIdLst></p:presentation>`,
+    );
+    zip.file(
+      'ppt/_rels/presentation.xml.rels',
+      `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${slides.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${i + 1}.xml"/>`).join('')}</Relationships>`,
+    );
     slides.forEach((lines, i) => {
       const paragraphs = lines.map((text) => `<a:p><a:r><a:t>${text}</a:t></a:r></a:p>`).join('');
-      zip.file(`ppt/slides/slide${i + 1}.xml`, `<?xml version="1.0" encoding="UTF-8"?><p:sld ${ns}><p:cSld><p:spTree><p:sp><p:txBody>${paragraphs}</p:txBody></p:sp></p:spTree></p:cSld></p:sld>`);
+      zip.file(
+        `ppt/slides/slide${i + 1}.xml`,
+        `<?xml version="1.0" encoding="UTF-8"?><p:sld ${ns}><p:cSld><p:spTree><p:sp><p:txBody>${paragraphs}</p:txBody></p:sp></p:spTree></p:cSld></p:sld>`,
+      );
     });
     return zip.generateAsync({ type: 'blob', mimeType: file.contentType });
   }
@@ -621,9 +732,16 @@ export class MockFiles {
   }
 
   private static seedFolders(): StoredFolder[] {
-    const folder = (id: string, name: string, kind: FolderKind, scope: FolderScope, teamId: string | null, membersCanUpload: boolean, parentId: string | null = null,
-      style: Pick<StoredFolder, 'color' | 'coverFileId'> = { color: null, coverFileId: null }): StoredFolder =>
-      ({ id, parentId, name, kind, scope, teamIds: teamId ? [teamId] : [], membersCanUpload, ...style });
+    const folder = (
+      id: string,
+      name: string,
+      kind: FolderKind,
+      scope: FolderScope,
+      teamId: string | null,
+      membersCanUpload: boolean,
+      parentId: string | null = null,
+      style: Pick<StoredFolder, 'color' | 'coverFileId'> = { color: null, coverFileId: null },
+    ): StoredFolder => ({ id, parentId, name, kind, scope, teamIds: teamId ? [teamId] : [], membersCanUpload, ...style });
     return [
       folder('f-docs', 'Vereinsdokumente', 'DOCUMENTS', 'CLUB', null, false),
       folder('f-minutes', 'Protokolle', 'DOCUMENTS', 'CLUB', null, false, 'f-docs'),
@@ -636,10 +754,28 @@ export class MockFiles {
 
   private static seedFiles(): StoredFile[] {
     const day = 86_400_000;
-    const file = (id: string, folderId: string, name: string, contentType: string, sizeBytes: number, uploadedBy: string, daysAgo: number,
-      image?: { width: number; height: number; tags?: string[] }): StoredFile => ({
-      id, folderId, name, contentType, sizeBytes, width: image?.width ?? null, height: image?.height ?? null, hasThumbnail: !!image,
-      uploadedBy, taggedMemberIds: image?.tags ?? [], createdAt: new Date(Date.now() - daysAgo * day).toISOString(), version: null,
+    const file = (
+      id: string,
+      folderId: string,
+      name: string,
+      contentType: string,
+      sizeBytes: number,
+      uploadedBy: string,
+      daysAgo: number,
+      image?: { width: number; height: number; tags?: string[] },
+    ): StoredFile => ({
+      id,
+      folderId,
+      name,
+      contentType,
+      sizeBytes,
+      width: image?.width ?? null,
+      height: image?.height ?? null,
+      hasThumbnail: !!image,
+      uploadedBy,
+      taggedMemberIds: image?.tags ?? [],
+      createdAt: new Date(Date.now() - daysAgo * day).toISOString(),
+      version: null,
     });
     return [
       file('file-1', 'f-docs', 'Satzung.pdf', 'application/pdf', 182_000, 'admin', 90),
@@ -658,8 +794,16 @@ export class MockFiles {
   /** The seeded Hallenordnung in two versions, so comparing has something to show. */
   private static seedVersions(): Record<string, StoredVersion[]> {
     const at = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString();
-    const v = (id: string, label: string, date: string, daysAgo: number, current: boolean): StoredVersion =>
-      ({ id, label, date, contentType: OFFICE.docx, sizeBytes: 12_000, uploadedBy: 'vorstand', createdAt: at(daysAgo), current });
+    const v = (id: string, label: string, date: string, daysAgo: number, current: boolean): StoredVersion => ({
+      id,
+      label,
+      date,
+      contentType: OFFICE.docx,
+      sizeBytes: 12_000,
+      uploadedBy: 'vorstand',
+      createdAt: at(daysAgo),
+      current,
+    });
     return { 'file-10': [v('v-10-2', '1.1', '2026-09-01', 5, true), v('v-10-1', '1.0', '2025-09-01', 60, false)] };
   }
 }

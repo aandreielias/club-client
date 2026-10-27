@@ -51,8 +51,13 @@ export class HttpTransport implements Transport {
         }
         if (xhr.status >= 200 && xhr.status < 300) resolve(data);
         else {
-          reject(new ProblemError(xhr.status, data?.code ?? `http.${xhr.status}`,
-            data?.correlationId ?? xhr.getResponseHeader(HttpTransport.CORRELATION_HEADER)));
+          reject(
+            new ProblemError(
+              xhr.status,
+              data?.code ?? `http.${xhr.status}`,
+              data?.correlationId ?? xhr.getResponseHeader(HttpTransport.CORRELATION_HEADER),
+            ),
+          );
         }
       };
       xhr.send(form);

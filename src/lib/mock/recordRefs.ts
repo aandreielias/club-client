@@ -14,8 +14,12 @@ import { MockServer } from './MockServer';
  * Resolves every kind but MEETING, which the caller passes in `meeting` (the meetings mock would otherwise import itself in a
  * cycle). Fails with `<code>.ref-unknown` for records the viewer cannot see.
  */
-export function resolveRef(viewer: Member, ref: { kind: RefKind; id: string }, code: string,
-  meeting: (id: string) => string | null = () => null): LinkedRef {
+export function resolveRef(
+  viewer: Member,
+  ref: { kind: RefKind; id: string },
+  code: string,
+  meeting: (id: string) => string | null = () => null,
+): LinkedRef {
   const titled = (title: string, parentId: string | null = null): LinkedRef => ({ kind: ref.kind, id: ref.id, title, parentId });
   try {
     switch (ref.kind) {

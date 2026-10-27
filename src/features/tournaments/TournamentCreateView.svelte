@@ -20,8 +20,12 @@
   async function submit(event: SubmitEvent) {
     event.preventDefault();
     form.submitted = true;
-    if (form.valid) await create.submit(async () => (await tournamentsApi.create(form.toNew())).id, 'tournament',
-        form.teamNames.length ? 'Turnier angelegt.' : 'Turnier angelegt. Jetzt die Teams eintragen.');
+    if (form.valid)
+      await create.submit(
+        async () => (await tournamentsApi.create(form.toNew())).id,
+        'tournament',
+        form.teamNames.length ? 'Turnier angelegt.' : 'Turnier angelegt. Jetzt die Teams eintragen.',
+      );
   }
 </script>
 

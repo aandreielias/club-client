@@ -21,7 +21,6 @@ describe('Router.match', () => {
   it('treats malformed escapes in a link as no match instead of throwing', () => {
     expect(Router.match('/tasks/:id', '/tasks/%E0')).toBeNull();
   });
-
 });
 
 describe('Router query helpers', () => {

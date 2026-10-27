@@ -57,10 +57,14 @@ export class NavLayout {
 
   /** An order saved before a tab joined a group: the group takes the place of its first tab. */
   private migrate(order: readonly string[]): string[] {
-    return [...new Set(order.map((key) => {
-      const group = this.groupOf(key);
-      return group ? NavLayout.groupKey(group.id) : key;
-    }))];
+    return [
+      ...new Set(
+        order.map((key) => {
+          const group = this.groupOf(key);
+          return group ? NavLayout.groupKey(group.id) : key;
+        }),
+      ),
+    ];
   }
 
   private groupOf(path: string): NavGroup | undefined {

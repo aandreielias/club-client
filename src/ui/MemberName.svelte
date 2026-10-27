@@ -18,7 +18,12 @@
   {#if tag}<Tag tone="gray">{directory.nameOf(memberId)}</Tag>{:else}{directory.nameOf(memberId)}{/if}
 {/snippet}
 
-<RecordLink kind="member" id={memberId} allowed={toAccount || permissions.canSeeMember(memberId)} hint={toAccount ? 'Mein Konto öffnen' : 'Profil öffnen'}
-  onopen={toAccount ? () => bus.publish(NAVIGATE, { path: '/account' }) : undefined}>
+<RecordLink
+  kind="member"
+  id={memberId}
+  allowed={toAccount || permissions.canSeeMember(memberId)}
+  hint={toAccount ? 'Mein Konto öffnen' : 'Profil öffnen'}
+  onopen={toAccount ? () => bus.publish(NAVIGATE, { path: '/account' }) : undefined}
+>
   {@render name()}
 </RecordLink>

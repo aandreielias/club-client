@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { directory, MockDirectory } from '../../lib/mock/core';
+import { directory } from '../../lib/mock/core';
 import type { Member } from '../../lib/types';
 import { calendar } from './mock';
 import type { NewAppointment } from './model';
@@ -51,12 +51,15 @@ describe('mock calendar', () => {
 
   it('creates weekly series at the same club-local time across DST', () => {
     stepUp('vorstand');
-    const series = calendar.create(member('vorstand'), draft(null, {
-      startsAt: '2027-03-23T17:00:00.000Z', // 18:00 Vienna (CET)
-      endsAt: '2027-03-23T18:00:00.000Z',
-      repeatUntil: '2027-04-06',
-      intervalWeeks: 1,
-    }));
+    const series = calendar.create(
+      member('vorstand'),
+      draft(null, {
+        startsAt: '2027-03-23T17:00:00.000Z', // 18:00 Vienna (CET)
+        endsAt: '2027-03-23T18:00:00.000Z',
+        repeatUntil: '2027-04-06',
+        intervalWeeks: 1,
+      }),
+    );
     expect(series.map((a) => directory.clock.toLocal(a.startsAt))).toEqual(['2027-03-23T18:00', '2027-03-30T18:00', '2027-04-06T18:00']);
     expect(new Set(series.map((a) => a.seriesId)).size).toBe(1);
 
@@ -65,10 +68,13 @@ describe('mock calendar', () => {
 
   it('applies the answer rules', () => {
     stepUp('admin');
-    const [past] = calendar.create(member('admin'), draft('t-damen', {
-      startsAt: '2020-01-01T10:00:00.000Z',
-      endsAt: '2020-01-01T11:00:00.000Z',
-    }));
+    const [past] = calendar.create(
+      member('admin'),
+      draft('t-damen', {
+        startsAt: '2020-01-01T10:00:00.000Z',
+        endsAt: '2020-01-01T11:00:00.000Z',
+      }),
+    );
     const [open] = calendar.create(member('admin'), draft('t-damen'));
     expect(() => calendar.respond(member('spielerin'), past.id, { status: 'YES' })).toThrow(expect.objectContaining({ code: 'attendance.closed' }));
     expect(() => calendar.respond(member('admin'), open.id, { status: 'YES' })).toThrow(expect.objectContaining({ code: 'attendance.not-in-team' }));
@@ -106,9 +112,12 @@ describe('mock calendar', () => {
     stepUp('trainer');
     const [created] = calendar.create(member('trainer'), draft('t-u16', { locationId: 'l-sued', location: 'egal', cabinMen: ' Kabine 2 ' }));
     expect(created).toMatchObject({ location: 'Turnhalle Süd', locationId: 'l-sued', cabinMen: 'Kabine 2', cabinWomen: null });
-    expect(() => calendar.create(member('trainer'), draft('t-u16', { type: 'MEETING', cabinMen: 'Kabine 1' })))
-      .toThrow(expect.objectContaining({ code: 'appointment.cabin-not-allowed' }));
-    expect(() => calendar.update(member('trainer'), created.id, { locationId: 'nope' })).toThrow(expect.objectContaining({ code: 'appointment.location-unknown' }));
+    expect(() => calendar.create(member('trainer'), draft('t-u16', { type: 'MEETING', cabinMen: 'Kabine 1' }))).toThrow(
+      expect.objectContaining({ code: 'appointment.cabin-not-allowed' }),
+    );
+    expect(() => calendar.update(member('trainer'), created.id, { locationId: 'nope' })).toThrow(
+      expect.objectContaining({ code: 'appointment.location-unknown' }),
+    );
     const moved = calendar.update(member('trainer'), created.id, { clearLocationId: true, location: 'Beachplatz', cabinMen: '' });
     expect(moved).toMatchObject({ locationId: null, location: 'Beachplatz', cabinMen: null });
   });
@@ -117,15 +126,26 @@ describe('mock calendar', () => {
     const { notifications } = await import('../notifications/mock');
     stepUp('trainer');
     const soon = new Date(Date.now() + 3 * 3_600_000).toISOString();
-    const [match] = calendar.create(member('trainer'), draft('t-u16', { type: 'MATCH', title: 'Auswärtsspiel', startsAt: soon,
-      endsAt: new Date(Date.parse(soon) + 7_200_000).toISOString() }));
+    const [match] = calendar.create(
+      member('trainer'),
+      draft('t-u16', { type: 'MATCH', title: 'Auswärtsspiel', startsAt: soon, endsAt: new Date(Date.parse(soon) + 7_200_000).toISOString() }),
+    );
     const { inventory } = await import('../inventory/mock');
-    inventory.setStock(member('trainer'), 'i-cart', [{ locationId: null, holderId: 'spieler', quantity: 2 }, { locationId: 'l-nord', holderId: null, quantity: 1 }]);
+    inventory.setStock(member('trainer'), 'i-cart', [
+      { locationId: null, holderId: 'spieler', quantity: 2 },
+      { locationId: 'l-nord', holderId: null, quantity: 1 },
+    ]);
     calendar.links.set(member('trainer'), match.id, { needs: [{ itemId: 'i-cart', quantity: 1 }], fileIds: [] });
     calendar.remindItemHolders(24 * 3_600_000);
     calendar.remindItemHolders(24 * 3_600_000);
     for (const id of ['spieler', 'eltern']) {
-      expect(notifications.list(id, true).items.filter((n) => n.kind === 'ITEM_REMINDER').map((n) => n.title), id).toEqual(['Mitbringen: 1× Ballwagen']);
+      expect(
+        notifications
+          .list(id, true)
+          .items.filter((n) => n.kind === 'ITEM_REMINDER')
+          .map((n) => n.title),
+        id,
+      ).toEqual(['Mitbringen: 1× Ballwagen']);
     }
   });
 });
@@ -139,8 +159,18 @@ describe('mock appointment types', () => {
     const kurs = appointmentTypes.save(board, null, { label: 'Kurs', hue: 'green', rides: false, cabins: false, sort: 9 });
     const start = new Date(Date.now() + 3 * 86_400_000).toISOString();
     const end = new Date(Date.now() + 3 * 86_400_000 + 3_600_000).toISOString();
-    const base = { teamId: null, type: kurs.key, title: 'Kurs', description: null, location: null, locationId: null, startsAt: start, endsAt: end,
-      repeatUntil: null, intervalWeeks: null };
+    const base = {
+      teamId: null,
+      type: kurs.key,
+      title: 'Kurs',
+      description: null,
+      location: null,
+      locationId: null,
+      startsAt: start,
+      endsAt: end,
+      repeatUntil: null,
+      intervalWeeks: null,
+    };
     expect(() => calendar.create(board, { ...base, cabinMen: 'Kabine 1', cabinWomen: null } as never)).toThrow();
     calendar.create(board, { ...base, cabinMen: null, cabinWomen: null } as never);
     expect(appointmentTypes.list().items.find((t) => t.key === kurs.key)?.inUse).toBe(true);

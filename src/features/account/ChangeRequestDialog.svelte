@@ -39,8 +39,13 @@
   <form class="stack" onsubmit={submit} {@attach autofocus}>
     <p class="muted">Der Vorstand bekommt die Anfrage als Aufgabe. Du wirst benachrichtigt, sobald entschieden ist.</p>
     <Field label="Neue Angabe: {label}">
-      <input {type} bind:value required maxlength={type === 'text' ? settings.members.nameMaxLength : undefined}
-        max={type === 'date' ? ZonedClock.addDays(session.clock.today(), -1) : undefined} />
+      <input
+        {type}
+        bind:value
+        required
+        maxlength={type === 'text' ? settings.members.nameMaxLength : undefined}
+        max={type === 'date' ? ZonedClock.addDays(session.clock.today(), -1) : undefined}
+      />
     </Field>
     <Field label="Begründung (optional)">
       <textarea bind:value={note} rows="3" maxlength={settings.members.changeNoteMaxLength}></textarea>

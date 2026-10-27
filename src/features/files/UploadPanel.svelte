@@ -13,7 +13,14 @@
 
   // The server's limit counts the whole multipart request: keep room for its headers and fields.
   // svelte-ignore state_referenced_locally
-  const queue = new UploadQueue(filesApi, fileTypes, errors, settings.files.maxUploadBytes - 64 * 1024, () => folder, (f) => onuploaded(f));
+  const queue = new UploadQueue(
+    filesApi,
+    fileTypes,
+    errors,
+    settings.files.maxUploadBytes - 64 * 1024,
+    () => folder,
+    (f) => onuploaded(f),
+  );
   let input: HTMLInputElement;
   let dragging = $state(false);
 
@@ -21,7 +28,13 @@
   let tagging = $state(false);
   let tags = $state<string[]>([]);
   // svelte-ignore state_referenced_locally
-  const people = new PersonListModel(() => tagCandidates.load(folder), directory, (id) => tags.includes(id), store, 'upload-tags');
+  const people = new PersonListModel(
+    () => tagCandidates.load(folder),
+    directory,
+    (id) => tags.includes(id),
+    store,
+    'upload-tags',
+  );
   $effect(() => {
     if (tagging) void people.load();
   });
@@ -60,8 +73,14 @@
   </div>
 
   <div class="tagging">
-    <Button size="sm" variant="ghost" icon="members" pressed={tagging} onclick={() => (tagging = !tagging)}
-      tooltip="Personen wählen, die auf allen Fotos der nächsten Uploads markiert werden">
+    <Button
+      size="sm"
+      variant="ghost"
+      icon="members"
+      pressed={tagging}
+      onclick={() => (tagging = !tagging)}
+      tooltip="Personen wählen, die auf allen Fotos der nächsten Uploads markiert werden"
+    >
       Personen auf den Fotos markieren{tags.length ? ` (${tags.length})` : ''}
     </Button>
     {#if tagging}

@@ -39,7 +39,9 @@
 </script>
 
 <Detail title="Neues Konto anlegen">
-  <p class="muted">Daten aus dem Aufnahmeantrag eintragen. Die Person bekommt eine E-Mail mit einem Link, legt ihr Passwort fest und ergänzt fehlende Angaben.</p>
+  <p class="muted">
+    Daten aus dem Aufnahmeantrag eintragen. Die Person bekommt eine E-Mail mit einem Link, legt ihr Passwort fest und ergänzt fehlende Angaben.
+  </p>
   <form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
     <Field label="E-Mail" error={form.error('email')}>
       <input type="email" bind:value={form.email} autocomplete="off" required />

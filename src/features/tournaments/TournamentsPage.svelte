@@ -19,17 +19,20 @@
   const list = new Resource(() => tournamentsApi.list());
   void list.load().then(() => {
     // A guest has exactly one tournament: show it right away.
-    if (!policy.canManage() && session.member.roles.includes('GUEST') && list.value?.length === 1) pane.navigate(`/tournaments/${list.value[0].id}`, true);
+    if (!policy.canManage() && session.member.roles.includes('GUEST') && list.value?.length === 1)
+      pane.navigate(`/tournaments/${list.value[0].id}`, true);
   });
   useBus(bus, TOURNAMENT_CHANGED, () => void list.load());
   const create = () => bus.publish(WINDOW_OPEN, { kind: 'tournament-new', id: '-' });
   useCommands(commands, { 'page.new': { run: create, when: () => policy.canManage() } });
 
-  const days = (from: string, to: string) =>
-    from === to ? session.format.date(from) : `${session.format.date(from)} – ${session.format.date(to)}`;
+  const days = (from: string, to: string) => (from === to ? session.format.date(from) : `${session.format.date(from)} – ${session.format.date(to)}`);
   const card = (t: TournamentSummary): RecordCard => ({
-    href: `#/tournaments/${t.id}`, record: { kind: 'tournament', id: t.id, title: t.name }, icon: 'trophy',
-    meta: `${days(t.startsOn, t.endsOn)} · ${t.teams} Teams`, tag: { tone: STATUS_TONES[t.status], label: STATUS_LABELS[t.status] },
+    href: `#/tournaments/${t.id}`,
+    record: { kind: 'tournament', id: t.id, title: t.name },
+    icon: 'trophy',
+    meta: `${days(t.startsOn, t.endsOn)} · ${t.teams} Teams`,
+    tag: { tone: STATUS_TONES[t.status], label: STATUS_LABELS[t.status] },
   });
 </script>
 

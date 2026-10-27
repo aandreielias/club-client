@@ -40,13 +40,20 @@
   {#if multiple}
     <ChipToggle label="Arten der Mitgliedschaft" options={membershipKinds.options(member.membershipTypes)} bind:value={types} />
   {:else}
-    <ChoiceGroup name="membership-{member.id}" label="Art der Mitgliedschaft" options={membershipKinds.choices(member.membershipTypes)}
-      bind:value={() => (types[0] ?? 'NONE') as MembershipChoice, (v) => (types = !v || v === 'NONE' ? [] : [v])} />
+    <ChoiceGroup
+      name="membership-{member.id}"
+      label="Art der Mitgliedschaft"
+      options={membershipKinds.choices(member.membershipTypes)}
+      bind:value={() => (types[0] ?? 'NONE') as MembershipChoice, (v) => (types = !v || v === 'NONE' ? [] : [v])}
+    />
   {/if}
   {#if previous}
     <div class="row">
-      <Button busy={model.membershipAction.busy} onclick={() => save([previous])}
-        tooltip="Ehrenmitgliedschaft aberkennen und wieder {membershipKinds.label(previous)} eintragen">Ehrenmitgliedschaft aberkennen</Button>
+      <Button
+        busy={model.membershipAction.busy}
+        onclick={() => save([previous])}
+        tooltip="Ehrenmitgliedschaft aberkennen und wieder {membershipKinds.label(previous)} eintragen">Ehrenmitgliedschaft aberkennen</Button
+      >
       <span class="muted small">zurück zu {membershipKinds.label(previous)}</span>
     </div>
   {/if}

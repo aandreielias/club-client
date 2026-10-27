@@ -10,7 +10,13 @@
   import MeetingTypeEditor from './MeetingTypeEditor.svelte';
   import { MeetingTypeForm } from './MeetingTypeForm.svelte';
   import {
-    ACTION_KIND_LABELS, AUDIENCE_LABELS, MAJORITY_LABELS, majorities, noticeText, quorumText, SYSTEM_STEP_LABELS,
+    ACTION_KIND_LABELS,
+    AUDIENCE_LABELS,
+    MAJORITY_LABELS,
+    majorities,
+    noticeText,
+    quorumText,
+    SYSTEM_STEP_LABELS,
     type MeetingStep,
   } from './model';
   import { meetingPolicy as policy, meetingsApi, meetingTypes, resolutionRules } from './services';
@@ -22,7 +28,13 @@
   const view = new DetailController(bus, handle, onclosed);
   const edit = new EditSession<MeetingTypeForm>(bus, backStack);
   // svelte-ignore state_referenced_locally
-  const stored = new StoredRecord(view, meetingTypes, () => id, 'Diese Sitzungsart gibt es nicht mehr.', () => edit.save.busy);
+  const stored = new StoredRecord(
+    view,
+    meetingTypes,
+    () => id,
+    'Diese Sitzungsart gibt es nicht mehr.',
+    () => edit.save.busy,
+  );
   const type = $derived(stored.record);
   view.title(() => type?.label);
 
@@ -57,14 +69,26 @@
     {:else}
       {#if type.archived}<p><Tag tone="gray">Archiviert</Tag></p>{/if}
       <dl class="props">
-        <dt>Eingeladen</dt><dd>{type.electorate === 'ASSEMBLY' ? 'Stimmberechtigte Mitglieder' : 'Vorstand'}</dd>
-        <dt>Einladungsfrist</dt><dd>{noticeText(type.noticeHours)} vor Beginn</dd>
-        <dt>Beschlussfähig</dt><dd>{quorumText(type)}</dd>
-        <dt>Einberufen von</dt><dd>{type.conveners.map((o) => boardSettings.label(o)).join(', ')}</dd>
-        <dt>Mehrheiten</dt><dd>{majorities(type).map((m) => MAJORITY_LABELS[m]).join(', ')}</dd>
-        <dt>Beschlüsse</dt><dd>{type.actions.map((a) => resolutionRules.label(a)).join(', ')}</dd>
-        {#if type.dueBy}<dt>Jährlich</dt><dd>geplant bis {type.dueBy.split('-').reverse().join('.')}.</dd>{/if}
-        {#if type.needsReason}<dt>Dringlichkeit</dt><dd>Die Einladung nennt den Grund.</dd>{/if}
+        <dt>Eingeladen</dt>
+        <dd>{type.electorate === 'ASSEMBLY' ? 'Stimmberechtigte Mitglieder' : 'Vorstand'}</dd>
+        <dt>Einladungsfrist</dt>
+        <dd>{noticeText(type.noticeHours)} vor Beginn</dd>
+        <dt>Beschlussfähig</dt>
+        <dd>{quorumText(type)}</dd>
+        <dt>Einberufen von</dt>
+        <dd>{type.conveners.map((o) => boardSettings.label(o)).join(', ')}</dd>
+        <dt>Mehrheiten</dt>
+        <dd>
+          {majorities(type)
+            .map((m) => MAJORITY_LABELS[m])
+            .join(', ')}
+        </dd>
+        <dt>Beschlüsse</dt>
+        <dd>{type.actions.map((a) => resolutionRules.label(a)).join(', ')}</dd>
+        {#if type.dueBy}<dt>Jährlich</dt>
+          <dd>geplant bis {type.dueBy.split('-').reverse().join('.')}.</dd>{/if}
+        {#if type.needsReason}<dt>Dringlichkeit</dt>
+          <dd>Die Einladung nennt den Grund.</dd>{/if}
       </dl>
       <h2>Ablauf rund um jede Sitzung</h2>
       <ul class="steps">

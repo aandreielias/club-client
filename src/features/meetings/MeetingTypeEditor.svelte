@@ -13,12 +13,30 @@
   import TimelineBar from './TimelineBar.svelte';
   import { resolutionRules } from './services';
   import {
-    ACTION_KIND_LABELS, ACTION_LABELS, ACTION_ORDER, AUDIENCE_LABELS, MAJORITY_LABELS, noticeText, QUORUM_LABELS, SYSTEM_STEP_LABELS, type Majority,
-    type Quorum, type StepAction, type StepAnchor, type StepAudience,
+    ACTION_KIND_LABELS,
+    ACTION_LABELS,
+    ACTION_ORDER,
+    AUDIENCE_LABELS,
+    MAJORITY_LABELS,
+    noticeText,
+    QUORUM_LABELS,
+    SYSTEM_STEP_LABELS,
+    type Majority,
+    type Quorum,
+    type StepAction,
+    type StepAnchor,
+    type StepAudience,
   } from './model';
 
   /** Form of a meeting type: its rules, the timeline of steps around each meeting, who convenes, majorities and decisions. */
-  let { form, action, submitLabel, canArchive, oncancel, onsubmit }: {
+  let {
+    form,
+    action,
+    submitLabel,
+    canArchive,
+    oncancel,
+    onsubmit,
+  }: {
     form: MeetingTypeForm;
     action: Action;
     submitLabel: string;
@@ -71,8 +89,12 @@
     </Field>
   </div>
   <Field label="Eingeladen und stimmberechtigt">
-    <ChoiceGroup name="type-electorate" label="Eingeladen und stimmberechtigt" options={ELECTORATES}
-      bind:value={() => form.electorate, (v) => v && (form.electorate = v)} />
+    <ChoiceGroup
+      name="type-electorate"
+      label="Eingeladen und stimmberechtigt"
+      options={ELECTORATES}
+      bind:value={() => form.electorate, (v) => v && (form.electorate = v)}
+    />
   </Field>
   <div class="grid-2">
     <Field label="Einladungsfrist" hint="So lange vor Beginn muss eingeladen sein." error={form.error('notice')}>
@@ -90,19 +112,31 @@
       <Select bind:value={form.quorum} options={QUORUMS} aria-label="Beschlussfähig mit" />
     </Field>
     <Field label="Danach beschlussfähig ohne Mindestzahl (optional)" hint="Minuten nach Beginn, wenn zu wenige da sind" error={form.error('grace')}>
-      <input type="number" min="1" max="1440" step="1" class="short"
-        bind:value={() => form.grace ?? '', (v) => (form.grace = v === '' || v == null ? null : Number(v))} />
+      <input
+        type="number"
+        min="1"
+        max="1440"
+        step="1"
+        class="short"
+        bind:value={() => form.grace ?? '', (v) => (form.grace = v === '' || v == null ? null : Number(v))}
+      />
     </Field>
   </div>
 
   <fieldset>
     <legend>Ablauf rund um jede Sitzung</legend>
     <p class="muted small">
-      Punkte ziehen oder mit den Pfeiltasten verschieben (Umschalt: eine Woche). Raute: letzter Tag zum Einladen. Kreis: Benachrichtigung,
-      Quadrat: Aufgabe. Im Text setzt {'{titel}'} den Titel und {'{datum}'} den Beginn der Sitzung ein.
+      Punkte ziehen oder mit den Pfeiltasten verschieben (Umschalt: eine Woche). Raute: letzter Tag zum Einladen. Kreis: Benachrichtigung, Quadrat:
+      Aufgabe. Im Text setzt {'{titel}'} den Titel und {'{datum}'} den Beginn der Sitzung ein.
     </p>
-    <TimelineBar noticeHours={form.noticeHours} steps={form.steps} selected={step} onnotice={(h) => form.setNoticeHours(h)}
-      onmove={(i, h) => (form.steps[i].offsetHours = h)} onselect={(i) => (step = i)} />
+    <TimelineBar
+      noticeHours={form.noticeHours}
+      steps={form.steps}
+      selected={step}
+      onnotice={(h) => form.setNoticeHours(h)}
+      onmove={(i, h) => (form.steps[i].offsetHours = h)}
+      onselect={(i) => (step = i)}
+    />
     <div class="row">
       <Button size="sm" onclick={() => (step = form.addStep('BEFORE_START'))}>Schritt davor</Button>
       <Button size="sm" onclick={() => (step = form.addStep('AFTER_END'))}>Schritt danach</Button>
@@ -121,8 +155,12 @@
             <textarea rows="2" maxlength="1000" bind:value={() => selectedStep.body ?? '', (v) => (form.steps[index].body = v)}></textarea>
           </Field>
           <Field label="Art">
-            <ChoiceGroup name="step-action" label="Art" options={STEP_ACTIONS}
-              bind:value={() => selectedStep.action, (v) => v && (form.steps[index].action = v)} />
+            <ChoiceGroup
+              name="step-action"
+              label="Art"
+              options={STEP_ACTIONS}
+              bind:value={() => selectedStep.action, (v) => v && (form.steps[index].action = v)}
+            />
           </Field>
           <Field label="Bezugspunkt">
             <Select bind:value={() => selectedStep.anchor, (v) => v && (form.steps[index].anchor = v)} options={ANCHORS} aria-label="Bezugspunkt" />
@@ -130,11 +168,21 @@
         {/if}
         <div class="grid-2">
           <Field label="Abstand in Stunden" hint="= {noticeText(selectedStep.offsetHours)}">
-            <input type="number" min="0" max="8760" step="1" class="short"
-              bind:value={() => selectedStep.offsetHours, (v) => (form.steps[index].offsetHours = Math.max(0, Math.round(Number(v) || 0)))} />
+            <input
+              type="number"
+              min="0"
+              max="8760"
+              step="1"
+              class="short"
+              bind:value={() => selectedStep.offsetHours, (v) => (form.steps[index].offsetHours = Math.max(0, Math.round(Number(v) || 0)))}
+            />
           </Field>
           <Field label="An">
-            <Select bind:value={() => selectedStep.audience, (v) => v && (form.steps[index].audience = v)} options={AUDIENCES} aria-label="Empfänger" />
+            <Select
+              bind:value={() => selectedStep.audience, (v) => v && (form.steps[index].audience = v)}
+              options={AUDIENCES}
+              aria-label="Empfänger"
+            />
           </Field>
         </div>
         <div><Button size="sm" variant="ghost" onclick={() => (form.removeStep(index), (step = null))}>Entfernen</Button></div>
@@ -159,9 +207,11 @@
   <fieldset>
     <legend>Was Beschlüsse entscheiden dürfen</legend>
     <p class="muted small">Daraus entstehen nach dem Beschluss die Folgeaufgaben.</p>
-    <ChipToggle label="Was Beschlüsse entscheiden dürfen" bind:value={form.actions}
-      options={ACTION_ORDER.filter((x) => resolutionRules.enabled(x))
-        .map((a) => ({ value: a, label: ACTION_LABELS[a], disabled: a === 'GENERAL' }))} />
+    <ChipToggle
+      label="Was Beschlüsse entscheiden dürfen"
+      bind:value={form.actions}
+      options={ACTION_ORDER.filter((x) => resolutionRules.enabled(x)).map((a) => ({ value: a, label: ACTION_LABELS[a], disabled: a === 'GENERAL' }))}
+    />
   </fieldset>
 
   <fieldset>

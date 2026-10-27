@@ -7,7 +7,14 @@
   import type { MembershipKindInput } from './MembersApi';
 
   /** Form of a membership kind: name, voting in the general meeting, being elected into an office. */
-  let { form, action, submitLabel, canArchive, oncancel, onsubmit }: {
+  let {
+    form,
+    action,
+    submitLabel,
+    canArchive,
+    oncancel,
+    onsubmit,
+  }: {
     form: MembershipKindInput;
     action: Action;
     submitLabel: string;

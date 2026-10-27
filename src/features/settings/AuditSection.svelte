@@ -31,8 +31,8 @@
 
 <div class="stack section">
   <p class="muted">
-    Änderungen mit erweiterten Rechten, Einblicke von Admin und Vorstand in Mitgliederdaten und Datenexporte. Einträge lassen sich nicht
-    ändern und werden nach zwei Jahren gelöscht.
+    Änderungen mit erweiterten Rechten, Einblicke von Admin und Vorstand in Mitgliederdaten und Datenexporte. Einträge lassen sich nicht ändern und
+    werden nach zwei Jahren gelöscht.
   </p>
   <table>
     <thead><tr><th>Zeit</th><th>Wer</th><th>Aktion</th><th>Was</th></tr></thead>

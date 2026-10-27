@@ -206,7 +206,8 @@ export class MembersApi {
 
   /** Admin/board with step-up; `key` null creates a kind. */
   saveMembershipKind(key: string | null, kind: MembershipKindInput): Promise<MembershipKind> {
-    return key ? this.api.put<MembershipKind>(`/api/v1/membership-kinds/${encodeURIComponent(key)}`, kind)
+    return key
+      ? this.api.put<MembershipKind>(`/api/v1/membership-kinds/${encodeURIComponent(key)}`, kind)
       : this.api.post<MembershipKind>('/api/v1/membership-kinds', kind);
   }
 

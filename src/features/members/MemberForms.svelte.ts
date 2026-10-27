@@ -76,7 +76,6 @@ export class InviteForm extends MemberFormBase {
 
 /** Edits another member's profile; only changed fields are sent. */
 export class ProfileForm extends MemberFormBase {
-
   constructor(
     readonly original: Member,
     today: string,

@@ -41,7 +41,12 @@
       {#if entry.absent}<Tag tone="gray">Abwesend</Tag>{:else}<Tag tone={responseHue(entry.status)}>{responseLabel(entry.status)}</Tag>{/if}
     {:else if column.key === 'name'}
       <!-- Profiles open in the window where the viewer may see them (coaches: their teams). -->
-      <RecordLink kind="member" id={entry.memberId} allowed={permissions.isPrivileged && permissions.canSeeMember(entry.memberId)} hint="Profil öffnen">{entry.name}</RecordLink>
+      <RecordLink
+        kind="member"
+        id={entry.memberId}
+        allowed={permissions.isPrivileged && permissions.canSeeMember(entry.memberId)}
+        hint="Profil öffnen">{entry.name}</RecordLink
+      >
     {:else if column.key === 'reason'}
       <span class="muted">{entry.reason ?? ''}</span>
     {:else}

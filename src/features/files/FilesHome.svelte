@@ -26,7 +26,11 @@
             <a class="tile" href="#/files/{folder.id}" {@attach tooltip(`${folder.name} öffnen`)}>
               <span class="preview" style:--hue={hue ? `var(--color-tag-${hue}-text)` : null}>
                 {#snippet icon()}<Icon name="files" />{/snippet}
-                {#if folder.coverFileId}<CoverImage fileId={folder.coverFileId} alt="Titelbild {folder.name}" fallback={icon} />{:else}{@render icon()}{/if}
+                {#if folder.coverFileId}<CoverImage
+                    fileId={folder.coverFileId}
+                    alt="Titelbild {folder.name}"
+                    fallback={icon}
+                  />{:else}{@render icon()}{/if}
               </span>
               <span class="name">{folder.name}</span>
             </a>

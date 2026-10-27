@@ -26,15 +26,24 @@
 
   /** Exports what the list shows (search and filters applied). */
   function exportCsv(): void {
-    BrowserFile.save(new Blob([membersToCsv(list.rows, membershipLabels())], { type: 'text/csv;charset=utf-8' }), `mitglieder-${session.clock.today()}.csv`);
+    BrowserFile.save(
+      new Blob([membersToCsv(list.rows, membershipLabels())], { type: 'text/csv;charset=utf-8' }),
+      `mitglieder-${session.clock.today()}.csv`,
+    );
   }
 
   const membershipLabels = () => Object.fromEntries(membershipKinds.items.map((k) => [k.key, k.label]));
 
   async function importCsv(file: File): Promise<void> {
     const existing = new Set((list.data.value ?? []).map((m) => m.email.toLowerCase()));
-    const parsed = parseMemberImport(await file.text(), session.clock.today(), existing, policy.grantableRoles(), membershipLabels(),
-      boardSettings.value?.multipleKinds ?? false);
+    const parsed = parseMemberImport(
+      await file.text(),
+      session.clock.today(),
+      existing,
+      policy.grantableRoles(),
+      membershipLabels(),
+      boardSettings.value?.multipleKinds ?? false,
+    );
     problems = parsed.problems;
     if (!parsed.rows.length) {
       bus.publish(TOAST, { text: 'Keine neuen Mitglieder in der Datei.', tone: 'error' });
@@ -51,7 +60,10 @@
     try {
       const failed = await runMemberImport(membersApi, parsed.rows, (e) => errors.text(e));
       problems = [...parsed.problems, ...failed].sort((a, b) => a.line - b.line);
-      bus.publish(TOAST, { text: `${parsed.rows.length - failed.length} von ${parsed.rows.length} Konten angelegt.`, tone: failed.length ? 'error' : 'info' });
+      bus.publish(TOAST, {
+        text: `${parsed.rows.length - failed.length} von ${parsed.rows.length} Konten angelegt.`,
+        tone: failed.length ? 'error' : 'info',
+      });
     } finally {
       importing = false;
       void list.load();
@@ -78,11 +90,18 @@
   {#if problems.length}
     <section class="problems" aria-live="polite">
       <p><strong>Import: {problems.length} Zeilen nicht angelegt</strong> <Button onclick={() => (problems = [])}>Ausblenden</Button></p>
-      <ul>{#each problems as p (p.line + p.text)}<li>Zeile {p.line}: {p.text}</li>{/each}</ul>
+      <ul>
+        {#each problems as p (p.line + p.text)}<li>Zeile {p.line}: {p.text}</li>{/each}
+      </ul>
     </section>
   {/if}
 
-  <MemberTable {list} emptyAction={policy.canInvite() ? { label: 'Neues Konto', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'member-new', id: '-' }) } : null} />
+  <MemberTable
+    {list}
+    emptyAction={policy.canInvite()
+      ? { label: 'Neues Konto', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'member-new', id: '-' }) }
+      : null}
+  />
   {#if list.data.value}<p class="muted small count">{list.activeCount} aktive Mitglieder</p>{/if}
 </Page>
 

@@ -40,7 +40,10 @@
   let adding = $state(false);
   let editing = $state(false);
   const deleteAction = new Action();
-  backStack.while(() => adding, () => (adding = false));
+  backStack.while(
+    () => adding,
+    () => (adding = false),
+  );
 
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle);
@@ -55,13 +58,27 @@
   }
 
   async function remove(entry: RosterEntry) {
-    const request = { title: 'Aus dem Team entfernen', message: `${entry.name} wird aus dem Team entfernt.`, confirmLabel: 'Entfernen', danger: true };
+    const request = {
+      title: 'Aus dem Team entfernen',
+      message: `${entry.name} wird aus dem Team entfernt.`,
+      confirmLabel: 'Entfernen',
+      danger: true,
+    };
     await view.confirm(request, () => view.attempt(model.removeAction, () => model.remove(entry)), 'Aus dem Team entfernt.');
   }
 
   async function deleteTeam(name: string) {
-    const request = { title: 'Team löschen', message: `„${name}“ wird gelöscht, die Mitgliedschaften mit ihm.`, confirmLabel: 'Löschen', danger: true };
-    const deleted = await view.confirm(request, () => view.attempt(deleteAction, () => deleteAction.run(() => teamsApi.delete(model.teamId))), 'Team gelöscht.');
+    const request = {
+      title: 'Team löschen',
+      message: `„${name}“ wird gelöscht, die Mitgliedschaften mit ihm.`,
+      confirmLabel: 'Löschen',
+      danger: true,
+    };
+    const deleted = await view.confirm(
+      request,
+      () => view.attempt(deleteAction, () => deleteAction.run(() => teamsApi.delete(model.teamId))),
+      'Team gelöscht.',
+    );
     if (deleted) {
       directory.forgetTeams();
       view.leave();
@@ -109,22 +126,40 @@
 
   <AsyncView resource={model.roster}>
     {#snippet children()}
-      <DataTable model={list} rowKey={(e) => e.memberId} onopen={open}
-        record={(e) => (permissions.canSeeMember(e.memberId) ? { kind: 'member', id: e.memberId, title: e.name } : null)} menu={rowMenu} emptyText="Noch keine Mitglieder im Team.">
+      <DataTable
+        model={list}
+        rowKey={(e) => e.memberId}
+        onopen={open}
+        record={(e) => (permissions.canSeeMember(e.memberId) ? { kind: 'member', id: e.memberId, title: e.name } : null)}
+        menu={rowMenu}
+        emptyText="Noch keine Mitglieder im Team."
+      >
         {#snippet cell(entry, column)}
           {#if column.key === 'role'}
             {#if policy.canAssign()}
               <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
               <span onclick={(e) => e.stopPropagation()}>
-                <Select inline aria-label="Rolle von {entry.name}" value={entry.teamRole} options={ROLE_OPTIONS} disabled={model.busy}
-                  onchange={(role) => changeRole(entry, role)} />
+                <Select
+                  inline
+                  aria-label="Rolle von {entry.name}"
+                  value={entry.teamRole}
+                  options={ROLE_OPTIONS}
+                  disabled={model.busy}
+                  onchange={(role) => changeRole(entry, role)}
+                />
               </span>
             {:else}
               <Tag tone={entry.teamRole === 'COACH' ? 'blue' : 'green'}>{list.display(entry, column)}</Tag>
             {/if}
           {:else if column.key === 'actions'}
             {#if policy.canRemove(model.teamId, entry)}
-              <Button size="sm" variant="ghost" disabled={model.busy} onclick={(e) => (e.stopPropagation(), remove(entry))} tooltip="Aus dem Team entfernen">Entfernen</Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={model.busy}
+                onclick={(e) => (e.stopPropagation(), remove(entry))}
+                tooltip="Aus dem Team entfernen">Entfernen</Button
+              >
             {/if}
           {:else}
             {list.display(entry, column)}

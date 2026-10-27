@@ -13,7 +13,10 @@
   let { task, detail, editable }: { task: Task; detail: TaskDetailModel; editable: boolean } = $props();
 
   let editing = $state(false);
-  backStack.while(() => editing, () => (editing = false));
+  backStack.while(
+    () => editing,
+    () => (editing = false),
+  );
   let value = $state('');
 
   function start() {
@@ -56,4 +59,3 @@
   </span>
   {#if editable}<ErrorNote error={detail.dueAction.error} />{/if}
 {/if}
-

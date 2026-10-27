@@ -1,8 +1,20 @@
 import type { IconName } from '../../icons';
 import { ADMIN_BOARD, type Role } from '../../lib/types';
 
-export type SectionId = 'appearance' | 'home' | 'sidebar' | 'shortcuts' | 'security' | 'general' | 'club' | 'meeting-types' | 'membership'
-  | 'offices' | 'resolution-rules' | 'appointment-types' | 'audit';
+export type SectionId =
+  | 'appearance'
+  | 'home'
+  | 'sidebar'
+  | 'shortcuts'
+  | 'security'
+  | 'general'
+  | 'club'
+  | 'meeting-types'
+  | 'membership'
+  | 'offices'
+  | 'resolution-rules'
+  | 'appointment-types'
+  | 'audit';
 
 export interface SettingsTab {
   id: SectionId;
@@ -21,18 +33,48 @@ export interface SettingsGroup {
 }
 
 export const SETTINGS_TREE: readonly SettingsGroup[] = [
-  { id: 'personal', label: 'Persönlich', icon: 'account', subgroups: [
-    { label: 'Ansicht', tabs: [{ id: 'appearance', label: 'Darstellung' }, { id: 'home', label: 'Startseite' }, { id: 'sidebar', label: 'Seitenleiste' }] },
-    { label: 'Bedienung', tabs: [{ id: 'shortcuts', label: 'Tastenkürzel' }] },
-    { label: 'Konto', tabs: [{ id: 'security', label: 'Sicherheit' }] },
-  ] },
-  { id: 'club', label: 'Verein', icon: 'club', roles: ADMIN_BOARD, subgroups: [
-    { label: 'Stammdaten', tabs: [{ id: 'club', label: 'Verein' }] },
-    { label: 'Mitglieder', tabs: [{ id: 'membership', label: 'Mitgliedschaft' }, { id: 'offices', label: 'Funktionen' }] },
-    { label: 'Sitzungen', tabs: [{ id: 'meeting-types', label: 'Sitzungsarten' }, { id: 'resolution-rules', label: 'Beschlüsse' }] },
-    { label: 'Kalender', tabs: [{ id: 'appointment-types', label: 'Termine' }] },
-    { label: 'Sicherheit', tabs: [{ id: 'audit', label: 'Protokoll', roles: ['ADMIN'] }] },
-  ] },
+  {
+    id: 'personal',
+    label: 'Persönlich',
+    icon: 'account',
+    subgroups: [
+      {
+        label: 'Ansicht',
+        tabs: [
+          { id: 'appearance', label: 'Darstellung' },
+          { id: 'home', label: 'Startseite' },
+          { id: 'sidebar', label: 'Seitenleiste' },
+        ],
+      },
+      { label: 'Bedienung', tabs: [{ id: 'shortcuts', label: 'Tastenkürzel' }] },
+      { label: 'Konto', tabs: [{ id: 'security', label: 'Sicherheit' }] },
+    ],
+  },
+  {
+    id: 'club',
+    label: 'Verein',
+    icon: 'club',
+    roles: ADMIN_BOARD,
+    subgroups: [
+      { label: 'Stammdaten', tabs: [{ id: 'club', label: 'Verein' }] },
+      {
+        label: 'Mitglieder',
+        tabs: [
+          { id: 'membership', label: 'Mitgliedschaft' },
+          { id: 'offices', label: 'Funktionen' },
+        ],
+      },
+      {
+        label: 'Sitzungen',
+        tabs: [
+          { id: 'meeting-types', label: 'Sitzungsarten' },
+          { id: 'resolution-rules', label: 'Beschlüsse' },
+        ],
+      },
+      { label: 'Kalender', tabs: [{ id: 'appointment-types', label: 'Termine' }] },
+      { label: 'Sicherheit', tabs: [{ id: 'audit', label: 'Protokoll', roles: ['ADMIN'] }] },
+    ],
+  },
 ];
 
 /** Below every group. */

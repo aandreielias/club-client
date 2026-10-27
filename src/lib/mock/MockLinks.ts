@@ -79,7 +79,10 @@ export class MockLinks {
       if (!name) return fail(400, 'links.item-unknown');
       return { itemId: n.itemId!, name, quantity: n.quantity! };
     });
-    const asked = [...stored.files, ...fileIds.filter((id) => !stored.files.some((f) => f.fileId === id)).map((id) => ({ fileId: id, folderId: null, name: null }))];
+    const asked = [
+      ...stored.files,
+      ...fileIds.filter((id) => !stored.files.some((f) => f.fileId === id)).map((id) => ({ fileId: id, folderId: null, name: null })),
+    ];
     const refs = new Map(linkRefs.files(member, asked).map((r) => [r.id, r]));
     const fileRows = fileIds.map((id): FileLink => {
       const ref = refs.get(id) ?? fail(400, 'links.file-unknown');
@@ -95,7 +98,8 @@ export class MockLinks {
   /** ownerId → quantity of every owner whose list needs the item. */
   owners(itemId: string): [string, number][] {
     return Object.entries(this.table.data).flatMap(([owner, rows]) =>
-      rows.needs.filter((n) => n.itemId === itemId).map((n): [string, number] => [owner, n.quantity]));
+      rows.needs.filter((n) => n.itemId === itemId).map((n): [string, number] => [owner, n.quantity]),
+    );
   }
 
   remove(ownerId: string): void {

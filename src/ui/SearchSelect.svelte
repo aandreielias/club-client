@@ -38,7 +38,12 @@
   let list: HTMLUListElement | undefined = $state();
   let timer: ReturnType<typeof setTimeout> | undefined;
   let sequence = 0;
-  const popover = new AnchoredList(() => input, () => list, () => hide(), 'match');
+  const popover = new AnchoredList(
+    () => input,
+    () => list,
+    () => hide(),
+    'match',
+  );
 
   async function run(text: string) {
     const current = ++sequence;

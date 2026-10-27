@@ -11,8 +11,11 @@
       <p>{request.message}</p>
       <div class="row end">
         <Button variant="ghost" onclick={() => confirmation.answer(false)}>Abbrechen</Button>
-        <Button variant={request.danger ? 'danger' : 'primary'} onclick={() => confirmation.answer(true)}
-          tooltip="{request.confirmLabel}: {request.title}">{request.confirmLabel}</Button>
+        <Button
+          variant={request.danger ? 'danger' : 'primary'}
+          onclick={() => confirmation.answer(true)}
+          tooltip="{request.confirmLabel}: {request.title}">{request.confirmLabel}</Button
+        >
       </div>
     </div>
   </Dialog>

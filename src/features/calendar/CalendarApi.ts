@@ -31,7 +31,8 @@ export class CalendarApi {
 
   /** Admin/board with step-up; `key` null creates a type. */
   saveType(key: string | null, type: AppointmentTypeInput): Promise<AppointmentTypeInfo> {
-    return key ? this.api.put<AppointmentTypeInfo>(`/api/v1/calendar/types/${encodeURIComponent(key)}`, type)
+    return key
+      ? this.api.put<AppointmentTypeInfo>(`/api/v1/calendar/types/${encodeURIComponent(key)}`, type)
       : this.api.post<AppointmentTypeInfo>('/api/v1/calendar/types', type);
   }
 

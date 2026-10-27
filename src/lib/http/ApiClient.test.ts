@@ -19,7 +19,10 @@ describe('ApiClient', () => {
   });
 
   it('keeps one idempotency key across the step-up retry and a network retry', async () => {
-    const send = vi.fn<Transport['send']>().mockRejectedValueOnce(stepUpRequired).mockRejectedValueOnce(ProblemError.network())
+    const send = vi
+      .fn<Transport['send']>()
+      .mockRejectedValueOnce(stepUpRequired)
+      .mockRejectedValueOnce(ProblemError.network())
       .mockResolvedValueOnce('done');
     expect(await new ApiClient(transport(send), async () => true).post('/x')).toBe('done');
     const keys = send.mock.calls.map((call) => call[3]);
@@ -71,9 +74,7 @@ describe('ApiClient', () => {
   });
 
   it('encodes query parameters and skips empty ones', () => {
-    expect(ApiClient.withQuery('/a', { from: '2026-01-01T00:00:00Z', teamId: null, all: true })).toBe(
-      '/a?from=2026-01-01T00%3A00%3A00Z&all=true',
-    );
+    expect(ApiClient.withQuery('/a', { from: '2026-01-01T00:00:00Z', teamId: null, all: true })).toBe('/a?from=2026-01-01T00%3A00%3A00Z&all=true');
     expect(ApiClient.withQuery('/a', { teamId: undefined })).toBe('/a');
     expect(ApiClient.withQuery('/a', { tag: ['x', null, 'y'] })).toBe('/a?tag=x&tag=y');
   });

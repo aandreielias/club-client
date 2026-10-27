@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { directory, MockDirectory } from '../../lib/mock/core';
+import { directory } from '../../lib/mock/core';
 import type { LinksApi } from '../../lib/links/LinksApi';
 import { LinksModel } from '../../lib/links/LinksModel.svelte';
 import type { Member } from '../../lib/types';
@@ -30,10 +30,20 @@ describe('mock inventory', () => {
       { locationId: null, holderId: 'spieler', quantity: 2 },
       { locationId: null, holderId: 'spieler', quantity: 1 },
     ]);
-    expect(split).toMatchObject({ quantity: 6, stock: [{ kind: 'LOCATION', quantity: 3 }, { kind: 'PERSON', id: 'spieler', name: 'David Spieler', quantity: 3 }] });
+    expect(split).toMatchObject({
+      quantity: 6,
+      stock: [
+        { kind: 'LOCATION', quantity: 3 },
+        { kind: 'PERSON', id: 'spieler', name: 'David Spieler', quantity: 3 },
+      ],
+    });
     expect(inventory.mine(member('spieler')).items).toContainEqual({ itemId: item.id, name: 'Netzantennen', quantity: 3 });
-    expect(() => inventory.setStock(member('trainer'), item.id, [{ locationId: 'l-nord', holderId: 'spieler', quantity: 1 }])).toThrow(code('inventory.stock-invalid'));
-    expect(() => inventory.setStock(member('trainer'), item.id, [{ locationId: null, holderId: null, quantity: 0 }])).toThrow(code('inventory.quantity-invalid'));
+    expect(() => inventory.setStock(member('trainer'), item.id, [{ locationId: 'l-nord', holderId: 'spieler', quantity: 1 }])).toThrow(
+      code('inventory.stock-invalid'),
+    );
+    expect(() => inventory.setStock(member('trainer'), item.id, [{ locationId: null, holderId: null, quantity: 0 }])).toThrow(
+      code('inventory.quantity-invalid'),
+    );
     inventory.delete(member('trainer'), item.id);
     expect(() => inventory.get(item.id)).toThrow(code('inventory.not-found'));
   });
@@ -53,7 +63,10 @@ describe('mock links', () => {
     // Members see what is needed, but the stock only admin, board and coaches.
     expect(links.needs.find((n) => n.itemId === 'i-balls')).toMatchObject({ deleted: false, stock: null });
     expect(calendar.getLinks(member('trainer'), match.id).needs.find((n) => n.itemId === 'i-balls')).toMatchObject({ stock: 24 });
-    expect(links.files.map((f) => [f.name, f.deleted])).toEqual([['Spielplan Herbst.xlsx', false], ['Aufstellung Vorsaison.pdf', true]]);
+    expect(links.files.map((f) => [f.name, f.deleted])).toEqual([
+      ['Spielplan Herbst.xlsx', false],
+      ['Aufstellung Vorsaison.pdf', true],
+    ]);
     // The deleted team file stays hidden from members outside the team.
     expect(() => calendar.getLinks(member('spieler'), match.id)).toThrow(code('appointment.not-found'));
   });
@@ -62,8 +75,9 @@ describe('mock links', () => {
     stepUp('trainer');
     const body = { needs: [{ itemId: 'i-pump', quantity: 1 }], fileIds: ['file-4'] };
     expect(() => tasks.setLinks(member('spieler'), 't-3', body)).toThrow(code('access.denied'));
-    expect(() => tasks.setLinks(member('trainer'), 't-3', { ...body, needs: [{ itemId: 'i-old-cart', quantity: 1 }] }))
-      .toThrow(code('links.item-unknown'));
+    expect(() => tasks.setLinks(member('trainer'), 't-3', { ...body, needs: [{ itemId: 'i-old-cart', quantity: 1 }] })).toThrow(
+      code('links.item-unknown'),
+    );
     expect(() => tasks.setLinks(member('trainer'), 't-3', { ...body, fileIds: ['file-8'] })).toThrow(code('links.file-unknown'));
     expect(() => tasks.setLinks(member('trainer'), 't-3', { needs: [{ itemId: 'i-pump', quantity: 0 }] })).toThrow(code('links.quantity-invalid'));
     const saved = tasks.setLinks(member('trainer'), 't-3', body);

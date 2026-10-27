@@ -26,7 +26,14 @@
    * The club's types or kinds in Einstellungen: each row opens its window and can be removed (archived while used); archived rows
    * show on request and come back with "Wiederherstellen". Rows without `onremove` (fixed ones) have no remove button.
    */
-  let { rows, kind, newLabel, onremove, onrestore, fixed = () => false }: {
+  let {
+    rows,
+    kind,
+    newLabel,
+    onremove,
+    onrestore,
+    fixed = () => false,
+  }: {
     rows: readonly SettingsRow[];
     kind: string;
     newLabel: string;
@@ -53,14 +60,21 @@
       {#if row.archived}
         <Button size="sm" variant="ghost" tooltip="{row.label} wieder verwenden" onclick={() => onrestore(row)}>Wiederherstellen</Button>
       {:else if !fixed(row)}
-        <Button size="sm" variant="ghost" icon="delete" tooltip={row.inUse ? `${row.label} archivieren (wird verwendet)` : `${row.label} löschen`}
-          onclick={() => onremove(row)} />
+        <Button
+          size="sm"
+          variant="ghost"
+          icon="delete"
+          tooltip={row.inUse ? `${row.label} archivieren (wird verwendet)` : `${row.label} löschen`}
+          onclick={() => onremove(row)}
+        />
       {/if}
     </li>
   {/each}
 </ul>
 <div class="row between">
-  <Button tooltip={BUTTON_TOOLTIPS[newLabel]?.text ?? newLabel} onclick={() => bus.publish(WINDOW_OPEN, { kind: `${kind}-new`, id: '-' })}>{newLabel}</Button>
+  <Button tooltip={BUTTON_TOOLTIPS[newLabel]?.text ?? newLabel} onclick={() => bus.publish(WINDOW_OPEN, { kind: `${kind}-new`, id: '-' })}
+    >{newLabel}</Button
+  >
   {#if archivedCount}
     <label class="check muted small"><input type="checkbox" bind:checked={showArchived} /> Archivierte anzeigen ({archivedCount})</label>
   {/if}

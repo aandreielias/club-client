@@ -17,7 +17,14 @@
     emptyAction,
     toolbar = true,
     limit,
-  }: { list: TaskListModel; menu?: (task: Task) => MenuEntry[]; emptyText: string; emptyAction?: EmptyAction | null; toolbar?: boolean; limit?: number } = $props();
+  }: {
+    list: TaskListModel;
+    menu?: (task: Task) => MenuEntry[];
+    emptyText: string;
+    emptyAction?: EmptyAction | null;
+    toolbar?: boolean;
+    limit?: number;
+  } = $props();
 </script>
 
 <DataTable

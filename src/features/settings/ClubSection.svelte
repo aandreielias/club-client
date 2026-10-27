@@ -34,7 +34,9 @@
 </script>
 
 <form class="stack section readable" onsubmit={save}>
-  <p class="muted">Gilt für alle Mitglieder: Name in Seitenleiste, E-Mails, Kalender-Abo und Einladungen. Leere Felder nehmen den Standard des Servers.</p>
+  <p class="muted">
+    Gilt für alle Mitglieder: Name in Seitenleiste, E-Mails, Kalender-Abo und Einladungen. Leere Felder nehmen den Standard des Servers.
+  </p>
   <div class="grid-2">
     <Field label="Name">
       <input bind:value={name} maxlength={limits.nameMaxLength} />
@@ -62,7 +64,9 @@
       <input type="email" bind:value={contactEmail} maxlength={limits.linkMaxLength} />
     </Field>
   </div>
-  <label class="check"><input type="checkbox" bind:checked={ridesEnabled} /> Fahrgemeinschaften im Verein anbieten (pro Termin ein- und ausschaltbar)</label>
+  <label class="check"
+    ><input type="checkbox" bind:checked={ridesEnabled} /> Fahrgemeinschaften im Verein anbieten (pro Termin ein- und ausschaltbar)</label
+  >
   <ErrorNote error={action.error} />
   <div><Button type="submit" busy={action.busy}>Speichern</Button></div>
 </form>

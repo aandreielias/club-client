@@ -12,7 +12,16 @@ import { meetings } from '../meetings/mock';
 import { CHANGE_FIELD_LABELS, type ChangeField } from '../members/MembersApi';
 
 const fail = MockServer.fail;
-const KINDS: readonly NotificationKind[] = ['TASK_ASSIGNED', 'TASK_DUE', 'APPOINTMENT_CANCELLED', 'SECURITY', 'CHANGE_DECIDED', 'MESSAGE', 'ITEM_REMINDER', 'MEETING'];
+const KINDS: readonly NotificationKind[] = [
+  'TASK_ASSIGNED',
+  'TASK_DUE',
+  'APPOINTMENT_CANCELLED',
+  'SECURITY',
+  'CHANGE_DECIDED',
+  'MESSAGE',
+  'ITEM_REMINDER',
+  'MEETING',
+];
 const MAX_LISTED = 100;
 const limits = settings.notifications.message;
 
@@ -91,7 +100,11 @@ export class MockNotifications {
     const inputs: { kind: RefKind; id: string }[] = Array.isArray(body.refs) ? body.refs : [];
     if (inputs.length > limits.maxRefs) fail(400, 'message.too-many-refs');
     const refs = inputs.map((ref) => this.ref(viewer, ref));
-    this.notify(recipients, 'MESSAGE', title, text.replace(/\n{3,}/g, '\n\n'), null, { senderId: viewer.id, senderName: `${viewer.firstName} ${viewer.lastName}`, refs });
+    this.notify(recipients, 'MESSAGE', title, text.replace(/\n{3,}/g, '\n\n'), null, {
+      senderId: viewer.id,
+      senderName: `${viewer.firstName} ${viewer.lastName}`,
+      refs,
+    });
     return { recipients: recipients.length };
   }
 
@@ -105,7 +118,9 @@ export class MockNotifications {
       if (!manager) fail(403, 'access.denied');
       this.people.audienceIds({ everyone: true }).forEach((id) => recipients.add(id));
     } else {
-      const coached = Object.entries(this.people.teamRoles(viewer.id)).filter(([, role]) => role === 'COACH').map(([team]) => team);
+      const coached = Object.entries(this.people.teamRoles(viewer.id))
+        .filter(([, role]) => role === 'COACH')
+        .map(([team]) => team);
       for (const teamId of teamIds) {
         if (!manager && !coached.includes(teamId)) fail(403, 'access.denied');
         this.people.teamMembers(teamId).forEach((id) => recipients.add(id));
@@ -146,61 +161,110 @@ export class MockNotifications {
         break;
       case 'tasks.task-purged':
         // server: NotificationRepository.deleteLinkedTo
-        for (const [memberId, entries] of Object.entries(this.inbox.data)) this.inbox.data[memberId] = entries.filter((n) => n.link !== `/tasks/${data.taskId}`);
+        for (const [memberId, entries] of Object.entries(this.inbox.data))
+          this.inbox.data[memberId] = entries.filter((n) => n.link !== `/tasks/${data.taskId}`);
         this.inbox.save();
         break;
       case 'tasks.task-assigned':
-        this.notify(data.memberIds, 'TASK_ASSIGNED', `Neue Aufgabe: ${data.title}`,
-          data.dueAt ? `Fällig: ${this.#dateTime.format(new Date(data.dueAt))}.` : 'Ohne Fälligkeit.', `/tasks/${data.taskId}`);
+        this.notify(
+          data.memberIds,
+          'TASK_ASSIGNED',
+          `Neue Aufgabe: ${data.title}`,
+          data.dueAt ? `Fällig: ${this.#dateTime.format(new Date(data.dueAt))}.` : 'Ohne Fälligkeit.',
+          `/tasks/${data.taskId}`,
+        );
         break;
       case 'calendar.appointments-changed': {
         if (data.change !== 'CANCELLED') return;
         const recipients = this.people.audienceIds(event.audience ?? {}).filter((id) => id !== data.actorId);
         const more = data.appointmentIds.length > 1 ? ` Auch die ${data.appointmentIds.length - 1} folgenden Termine fallen aus.` : '';
-        this.notify(recipients, 'APPOINTMENT_CANCELLED', `Abgesagt: ${data.title}`,
+        this.notify(
+          recipients,
+          'APPOINTMENT_CANCELLED',
+          `Abgesagt: ${data.title}`,
           `Der Termin am ${this.#dateTime.format(new Date(data.firstStartsAt))} findet nicht statt.${more}`,
-          `/appointments/${data.appointmentIds[0]}`);
+          `/appointments/${data.appointmentIds[0]}`,
+        );
         break;
       }
       case 'calendar.items-to-bring': {
         const items = (data.items as { name: string; quantity: number }[]).map((i) => `${i.quantity}× ${i.name}`).join(', ');
-        this.notify(data.recipients, 'ITEM_REMINDER', `Mitbringen: ${items}`,
-          `Zu „${data.title}“ am ${this.#dateTime.format(new Date(data.startsAt))}. Die Sachen sind bei dir.`, `/appointments/${data.appointmentId}`);
+        this.notify(
+          data.recipients,
+          'ITEM_REMINDER',
+          `Mitbringen: ${items}`,
+          `Zu „${data.title}“ am ${this.#dateTime.format(new Date(data.startsAt))}. Die Sachen sind bei dir.`,
+          `/appointments/${data.appointmentId}`,
+        );
         break;
       }
       case 'meetings.meeting-invited': {
         const where = data.location ? ` in ${data.location}` : '';
         const video = data.videoUrl ? ` Videokonferenz: ${data.videoUrl}.` : '';
         const agenda = data.agenda ? ` Tagesordnung: ${data.agenda}` : '';
-        this.notify(data.recipients, 'MEETING', `Einladung: ${data.title}`,
-          `${this.#dateTime.format(new Date(data.startsAt))}${where}.${video}${agenda}`, `/meetings/${data.meetingId}`);
+        this.notify(
+          data.recipients,
+          'MEETING',
+          `Einladung: ${data.title}`,
+          `${this.#dateTime.format(new Date(data.startsAt))}${where}.${video}${agenda}`,
+          `/meetings/${data.meetingId}`,
+        );
         break;
       }
       case 'meetings.circular-opened':
-        this.notify(data.recipients, 'MEETING', `Umlaufbeschluss: ${data.title}`,
-          `${data.text ? `${data.text} ` : ''}Abstimmen bis ${this.#dateTime.format(new Date(data.deadline))}.`, `/resolutions/${data.resolutionId}`);
+        this.notify(
+          data.recipients,
+          'MEETING',
+          `Umlaufbeschluss: ${data.title}`,
+          `${data.text ? `${data.text} ` : ''}Abstimmen bis ${this.#dateTime.format(new Date(data.deadline))}.`,
+          `/resolutions/${data.resolutionId}`,
+        );
         break;
       case 'members.change-decided':
-        this.notify([data.memberId], 'CHANGE_DECIDED', `${data.approved ? 'Änderung übernommen' : 'Änderung abgelehnt'}: ${CHANGE_FIELD_LABELS[data.field as ChangeField]}`,
-          data.approved ? 'Deine Kontodaten wurden geändert.' : 'Melde dich beim Vorstand, wenn du Fragen dazu hast.', '/account');
+        this.notify(
+          [data.memberId],
+          'CHANGE_DECIDED',
+          `${data.approved ? 'Änderung übernommen' : 'Änderung abgelehnt'}: ${CHANGE_FIELD_LABELS[data.field as ChangeField]}`,
+          data.approved ? 'Deine Kontodaten wurden geändert.' : 'Melde dich beim Vorstand, wenn du Fragen dazu hast.',
+          '/account',
+        );
         break;
       case 'members.security-changed':
-        this.notify([data.memberId], 'SECURITY', SECURITY_TITLES[data.change] ?? 'Sicherheitsänderung',
+        this.notify(
+          [data.memberId],
+          'SECURITY',
+          SECURITY_TITLES[data.change] ?? 'Sicherheitsänderung',
           data.change === 'CLUB_PIN_CHANGED'
             ? 'Frag beim Vorstand nach dem neuen PIN. Wusstest du nichts davon? Melde dich beim Vorstand.'
             : data.change === 'PIN_CHANGE_DUE'
               ? 'Ein Mitglied, das den Vereins-PIN kannte, hat seine Rolle nicht mehr. Ändere den PIN unter Einstellungen → Sicherheit.'
               : `Warst du das nicht? Melde dich sofort beim Vorstand von ${this.people.club.name}.`,
-          '/me/security');
+          '/me/security',
+        );
         break;
     }
   }
 
-  private notify(recipients: readonly string[], kind: NotificationKind, title: string, body: string, link: string | null,
-    message: Pick<Notification, 'senderId' | 'senderName' | 'refs'> = { senderId: null, senderName: null, refs: [] }): void {
+  private notify(
+    recipients: readonly string[],
+    kind: NotificationKind,
+    title: string,
+    body: string,
+    link: string | null,
+    message: Pick<Notification, 'senderId' | 'senderName' | 'refs'> = { senderId: null, senderName: null, refs: [] },
+  ): void {
     const unique = [...new Set(recipients)];
     for (const memberId of unique) {
-      const notification: Notification = { id: crypto.randomUUID(), kind, title, body, link, createdAt: new Date().toISOString(), readAt: null, ...message };
+      const notification: Notification = {
+        id: crypto.randomUUID(),
+        kind,
+        title,
+        body,
+        link,
+        createdAt: new Date().toISOString(),
+        readAt: null,
+        ...message,
+      };
       (this.inbox.data[memberId] ??= []).unshift(notification);
       mockServer.events.publish({
         type: 'notifications.notification-created',
@@ -214,7 +278,16 @@ export class MockNotifications {
   private seed(): Record<string, Notification[]> {
     const at = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
     const entry = (kind: NotificationKind, title: string, body: string, link: string, hoursAgo: number, read: boolean): Notification => ({
-      id: crypto.randomUUID(), kind, title, body, link, createdAt: at(hoursAgo), readAt: read ? at(hoursAgo - 1) : null, senderId: null, senderName: null, refs: [],
+      id: crypto.randomUUID(),
+      kind,
+      title,
+      body,
+      link,
+      createdAt: at(hoursAgo),
+      readAt: read ? at(hoursAgo - 1) : null,
+      senderId: null,
+      senderName: null,
+      refs: [],
     });
     return {
       spielerin: [
@@ -222,7 +295,16 @@ export class MockNotifications {
         entry('TASK_ASSIGNED', 'Neue Aufgabe: Fahrgemeinschaft Auswärtsspiel', 'Fällig in einer Woche.', '/tasks/t-2', 120, true),
       ],
       spieler: [entry('TASK_ASSIGNED', 'Neue Aufgabe: Bälle aufpumpen', 'Fällig gestern.', '/tasks/t-3', 48, false)],
-      trainer: [entry('SECURITY', 'Der Vereins-PIN wurde geändert', 'Frag beim Vorstand nach dem neuen PIN. Wusstest du nichts davon? Melde dich beim Vorstand.', '/me/security', 200, true)],
+      trainer: [
+        entry(
+          'SECURITY',
+          'Der Vereins-PIN wurde geändert',
+          'Frag beim Vorstand nach dem neuen PIN. Wusstest du nichts davon? Melde dich beim Vorstand.',
+          '/me/security',
+          200,
+          true,
+        ),
+      ],
     };
   }
 }
@@ -230,7 +312,14 @@ export class MockNotifications {
 export const notifications = new MockNotifications(directory);
 // server: NotificationRepository.personalData
 personalData.set('notifications', (memberId) => ({
-  inbox: (notifications.inbox.data[memberId] ?? []).map(({ kind, title, body, link, createdAt, readAt }) => ({ kind, title, body, link, createdAt, readAt })),
+  inbox: (notifications.inbox.data[memberId] ?? []).map(({ kind, title, body, link, createdAt, readAt }) => ({
+    kind,
+    title,
+    body,
+    link,
+    createdAt,
+    readAt,
+  })),
   preferences: notifications.preferences.data[memberId] ?? [],
 }));
 

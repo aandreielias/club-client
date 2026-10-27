@@ -32,7 +32,9 @@
     <li>
       <a href={card.href} ondragstart={(e) => RecordDrag.set(e, card.record)}>
         <span class="icon" class:alt={card.altIcon}><Icon name={card.icon} /></span>
-        <span class="name">{card.record.title}{#if card.detail}<span class="muted small detail">{card.detail}</span>{/if}</span>
+        <span class="name"
+          >{card.record.title}{#if card.detail}<span class="muted small detail">{card.detail}</span>{/if}</span
+        >
         <span class="muted meta">{card.meta}</span>
         <Tag tone={card.tag.tone}>{card.tag.label}</Tag>
       </a>
@@ -59,7 +61,9 @@
     background: var(--color-surface);
     color: inherit;
     text-decoration: none;
-    transition: border-color var(--motion-fast) var(--motion-easing), background var(--motion-fast) var(--motion-easing);
+    transition:
+      border-color var(--motion-fast) var(--motion-easing),
+      background var(--motion-fast) var(--motion-easing);
   }
   a:hover {
     border-color: var(--color-border-strong);

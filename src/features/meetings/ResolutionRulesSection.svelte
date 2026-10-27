@@ -9,8 +9,17 @@
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
   import {
-    ACTION_LABELS, FOLLOW_UP_KIND_LABELS, MAJORITY_LABELS, OWN_ACTION, QUORUM_LABELS, type ActionRule, type FollowUpRule, type Majority, type Quorum,
-    type ResolutionAction, type ResolutionRules,
+    ACTION_LABELS,
+    FOLLOW_UP_KIND_LABELS,
+    MAJORITY_LABELS,
+    OWN_ACTION,
+    QUORUM_LABELS,
+    type ActionRule,
+    type FollowUpRule,
+    type Majority,
+    type Quorum,
+    type ResolutionAction,
+    type ResolutionRules,
   } from './model';
   import { meetingsApi, resolutionRules } from './services';
 
@@ -48,8 +57,16 @@
   /** Removing takes the decision out of every Sitzungsart at once, so it is saved right away (with the other changes of the form). */
   async function setEnabled(value: ResolutionRules, rule: ActionRule, enabled: boolean) {
     const label = ACTION_LABELS[rule.action];
-    if (!enabled && !(await bus.request(CONFIRM, { title: 'Beschlussart entfernen', confirmLabel: 'Entfernen', danger: true,
-      message: `„${label}“ wird aus allen Sitzungsarten genommen und ist für neue Beschlüsse nicht mehr wählbar. Gefasste Beschlüsse bleiben.` }))) return;
+    if (
+      !enabled &&
+      !(await bus.request(CONFIRM, {
+        title: 'Beschlussart entfernen',
+        confirmLabel: 'Entfernen',
+        danger: true,
+        message: `„${label}“ wird aus allen Sitzungsarten genommen und ist für neue Beschlüsse nicht mehr wählbar. Gefasste Beschlüsse bleiben.`,
+      }))
+    )
+      return;
     rule.enabled = enabled;
     if (await action.run(async () => (resolutionRules.value = await meetingsApi.saveResolutionRules(value)))) {
       bus.publish(TOAST, { text: enabled ? `${label} wiederhergestellt. In den Sitzungsarten wieder auswählen.` : `${label} entfernt.` });
@@ -74,18 +91,27 @@
         </div>
       </section>
       <p class="muted">
-        Was ein Beschluss entscheidet, bringt seine Folgeaufgaben mit. Im Titel setzt {'{beschluss}'} den Beschluss, {'{mitglied}'} das
-        betroffene Mitglied und {'{funktion}'} die Funktion ein. Ohne Fälligkeit hat die Aufgabe kein Datum.
+        Was ein Beschluss entscheidet, bringt seine Folgeaufgaben mit. Im Titel setzt {'{beschluss}'} den Beschluss, {'{mitglied}'} das betroffene Mitglied
+        und {'{funktion}'} die Funktion ein. Ohne Fälligkeit hat die Aufgabe kein Datum.
       </p>
       {#each value.items.filter((r) => r.enabled) as rule (rule.action)}
         <section class="rule stack">
           <div class="row between">
             <h3>{ACTION_LABELS[rule.action]}</h3>
             <div class="row">
-              <Select bind:value={() => rule.majority ?? 'FREE', (v) => (rule.majority = v === 'FREE' || !v ? null : (v as Majority))}
-                options={MAJORITIES} aria-label="Mehrheit für {ACTION_LABELS[rule.action]}" />
+              <Select
+                bind:value={() => rule.majority ?? 'FREE', (v) => (rule.majority = v === 'FREE' || !v ? null : (v as Majority))}
+                options={MAJORITIES}
+                aria-label="Mehrheit für {ACTION_LABELS[rule.action]}"
+              />
               {#if rule.action !== 'GENERAL'}
-                <Button size="sm" variant="ghost" icon="delete" tooltip="{ACTION_LABELS[rule.action]} entfernen" onclick={() => setEnabled(value, rule, false)} />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  icon="delete"
+                  tooltip="{ACTION_LABELS[rule.action]} entfernen"
+                  onclick={() => setEnabled(value, rule, false)}
+                />
               {/if}
             </div>
           </div>
@@ -93,8 +119,14 @@
             <div class="follow">
               <Select bind:value={followUp.kind} options={kinds(rule.action)} aria-label="Art der Folgeaufgabe" />
               <input bind:value={followUp.title} maxlength="150" aria-label="Titel der Folgeaufgabe" required />
-              <input type="number" min="0" max="365" placeholder="ohne" aria-label="Fällig nach Tagen"
-                bind:value={() => followUp.dueDays ?? '', (v) => (followUp.dueDays = v === '' || v == null ? null : Math.round(Number(v)))} />
+              <input
+                type="number"
+                min="0"
+                max="365"
+                placeholder="ohne"
+                aria-label="Fällig nach Tagen"
+                bind:value={() => followUp.dueDays ?? '', (v) => (followUp.dueDays = v === '' || v == null ? null : Math.round(Number(v)))}
+              />
               <span class="muted small">Tage</span>
               <Button size="sm" variant="ghost" onclick={() => rule.followUps.splice(i, 1)}>Entfernen</Button>
             </div>
@@ -113,7 +145,9 @@
           {#each value.items.filter((r) => !r.enabled) as rule (rule.action)}
             <div class="row between removed">
               <span>{ACTION_LABELS[rule.action]}</span>
-              <Button size="sm" variant="ghost" tooltip="{ACTION_LABELS[rule.action]} wieder anbieten" onclick={() => setEnabled(value, rule, true)}>Wiederherstellen</Button>
+              <Button size="sm" variant="ghost" tooltip="{ACTION_LABELS[rule.action]} wieder anbieten" onclick={() => setEnabled(value, rule, true)}
+                >Wiederherstellen</Button
+              >
             </div>
           {/each}
         </section>

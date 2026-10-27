@@ -8,7 +8,11 @@ import { tasks } from '../tasks/mock';
 import { notifications } from './mock';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
-const cancelledTitles = (id: string) => notifications.list(id, false).items.filter((n) => n.kind === 'APPOINTMENT_CANCELLED').map((n) => n.title);
+const cancelledTitles = (id: string) =>
+  notifications
+    .list(id, false)
+    .items.filter((n) => n.kind === 'APPOINTMENT_CANCELLED')
+    .map((n) => n.title);
 const upcoming = (teamId: string | null) =>
   calendar.appointments.data.find((a) => a.teamId === teamId && !a.cancelled && Date.parse(a.startsAt) > Date.now())!;
 
@@ -27,9 +31,20 @@ describe('mock notifications', () => {
     const { received, socket } = await connect('spieler');
     directory.stepUp(member('trainer'), MockDirectory.PIN);
     tasks.create(member('trainer'), {
-      teamId: 't-u16', appointmentId: null, title: 'Netze prüfen', description: null, dueAt: null, assignees: ['spieler'], checklist: [], repeatWeeks: null,
+      teamId: 't-u16',
+      appointmentId: null,
+      title: 'Netze prüfen',
+      description: null,
+      dueAt: null,
+      assignees: ['spieler'],
+      checklist: [],
+      repeatWeeks: null,
     });
-    expect(notifications.list('spieler', true).items[0]).toMatchObject({ kind: 'TASK_ASSIGNED', title: 'Neue Aufgabe: Netze prüfen', link: expect.stringMatching(/^\/tasks\//) });
+    expect(notifications.list('spieler', true).items[0]).toMatchObject({
+      kind: 'TASK_ASSIGNED',
+      title: 'Neue Aufgabe: Netze prüfen',
+      link: expect.stringMatching(/^\/tasks\//),
+    });
     await vi.waitFor(() => expect(received.map((m) => m.type)).toContain('notifications.notification-created'));
     expect(received.map((m) => m.type)).toContain('tasks.task-changed');
     socket.close();
@@ -58,7 +73,9 @@ describe('mock notifications', () => {
     const changed = (id: string) => notifications.list(id, true).items.filter((n) => n.title === 'Der Vereins-PIN wurde geändert');
     for (const id of ['vorstand', 'trainer']) {
       expect(changed(id)[0], id).toMatchObject({
-        kind: 'SECURITY', link: '/me/security', body: 'Frag beim Vorstand nach dem neuen PIN. Wusstest du nichts davon? Melde dich beim Vorstand.',
+        kind: 'SECURITY',
+        link: '/me/security',
+        body: 'Frag beim Vorstand nach dem neuen PIN. Wusstest du nichts davon? Melde dich beim Vorstand.',
       });
     }
     expect(changed('admin')).toEqual([]);
@@ -88,17 +105,26 @@ describe('mock notifications', () => {
   it('sends messages: coaches only to their teams, guardians read along, linked records as the sender sees them', () => {
     directory.stepUp(member('trainer'), MockDirectory.PIN);
     const appointment = upcoming('t-u16');
-    const body = { title: 'Hallenwechsel', body: 'Samstag Südhalle.\nPünktlich!', teamIds: ['t-u16'], refs: [{ kind: 'APPOINTMENT', id: appointment.id }] };
+    const body = {
+      title: 'Hallenwechsel',
+      body: 'Samstag Südhalle.\nPünktlich!',
+      teamIds: ['t-u16'],
+      refs: [{ kind: 'APPOINTMENT', id: appointment.id }],
+    };
     const reach = notifications.send(member('trainer'), body, true).recipients;
     expect(notifications.send(member('trainer'), body, false).recipients).toBe(reach);
     for (const id of ['spieler', 'eltern']) {
       expect(notifications.list(id, true).items[0]).toMatchObject({
-        kind: 'MESSAGE', senderId: 'trainer', body: 'Samstag Südhalle.\nPünktlich!', refs: [{ kind: 'APPOINTMENT', id: appointment.id, title: appointment.title }],
+        kind: 'MESSAGE',
+        senderId: 'trainer',
+        body: 'Samstag Südhalle.\nPünktlich!',
+        refs: [{ kind: 'APPOINTMENT', id: appointment.id, title: appointment.title }],
       });
     }
     expect(() => notifications.send(member('trainer'), { title: 'x', everyone: true }, false)).toThrow(expect.objectContaining({ status: 403 }));
-    expect(() => notifications.send(member('trainer'), { ...body, refs: [{ kind: 'TASK', id: 'nope' }] }, false))
-      .toThrow(expect.objectContaining({ code: 'message.ref-unknown' }));
+    expect(() => notifications.send(member('trainer'), { ...body, refs: [{ kind: 'TASK', id: 'nope' }] }, false)).toThrow(
+      expect.objectContaining({ code: 'message.ref-unknown' }),
+    );
     expect(() => notifications.send(member('spieler'), body, true)).toThrow(expect.objectContaining({ status: 403 }));
   });
 });

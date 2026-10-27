@@ -60,11 +60,15 @@
 
   async function invite(m: Meeting) {
     const who = isAssembly(meetingTypes.get(m.kind)) ? 'alle stimmberechtigten Mitglieder' : 'den Vorstand';
-    await view.confirm({
-      title: 'Einladung verschicken',
-      message: `Die Einladung mit Tagesordnung geht per E-Mail und App an ${who}. Danach steht der Termin fest.`,
-      confirmLabel: 'Einladen',
-    }, () => view.attempt(model.action, () => model.invite()), 'Einladung verschickt.');
+    await view.confirm(
+      {
+        title: 'Einladung verschicken',
+        message: `Die Einladung mit Tagesordnung geht per E-Mail und App an ${who}. Danach steht der Termin fest.`,
+        confirmLabel: 'Einladen',
+      },
+      () => view.attempt(model.action, () => model.invite()),
+      'Einladung verschickt.',
+    );
   }
 
   useCommands(commands, {
@@ -78,16 +82,26 @@
   });
 
   async function close() {
-    await view.confirm({
-      title: 'Sitzung beenden',
-      message: 'Danach lassen sich Protokoll und Anwesenheit nicht mehr ändern.',
-      confirmLabel: 'Beenden',
-    }, () => view.attempt(model.action, () => model.close(protocol)), 'Sitzung beendet.');
+    await view.confirm(
+      {
+        title: 'Sitzung beenden',
+        message: 'Danach lassen sich Protokoll und Anwesenheit nicht mehr ändern.',
+        confirmLabel: 'Beenden',
+      },
+      () => view.attempt(model.action, () => model.close(protocol)),
+      'Sitzung beendet.',
+    );
   }
 
   async function remove() {
-    if (await view.confirm({ title: 'Entwurf löschen', message: 'Die Sitzung wurde noch nicht eingeladen.', confirmLabel: 'Löschen', danger: true },
-      () => view.attempt(model.action, () => model.delete()), 'Entwurf gelöscht.')) view.leave();
+    if (
+      await view.confirm(
+        { title: 'Entwurf löschen', message: 'Die Sitzung wurde noch nicht eingeladen.', confirmLabel: 'Löschen', danger: true },
+        () => view.attempt(model.action, () => model.delete()),
+        'Entwurf gelöscht.',
+      )
+    )
+      view.leave();
   }
 
   async function addFollowUp(followUp: NewFollowUp): Promise<boolean> {
@@ -123,15 +137,19 @@
       <dl class="props">
         <dt>Wann</dt>
         <dd>{session.format.dateTime(m.startsAt)} – {session.format.time(m.endsAt)}</dd>
-        {#if m.location}<dt>Ort</dt><dd>{m.location}</dd>{/if}
-        {#if m.videoUrl}<dt>Videokonferenz</dt><dd><a href={m.videoUrl} target="_blank" rel="noopener noreferrer">{m.videoUrl}</a></dd>{/if}
+        {#if m.location}<dt>Ort</dt>
+          <dd>{m.location}</dd>{/if}
+        {#if m.videoUrl}<dt>Videokonferenz</dt>
+          <dd><a href={m.videoUrl} target="_blank" rel="noopener noreferrer">{m.videoUrl}</a></dd>{/if}
         {#if m.status === 'DRAFT'}
           <dt>Einladen bis</dt>
           <dd class:late={late(m)}>{session.format.dateTime(m.latestInvite)}{late(m) ? ' (Frist vorbei, Termin verschieben)' : ''}</dd>
         {:else if m.invitedAt}
-          <dt>Eingeladen</dt><dd>{session.format.dateTime(m.invitedAt)}</dd>
+          <dt>Eingeladen</dt>
+          <dd>{session.format.dateTime(m.invitedAt)}</dd>
         {/if}
-        {#if m.urgency}<dt>Dringlichkeit</dt><dd>{m.urgency}</dd>{/if}
+        {#if m.urgency}<dt>Dringlichkeit</dt>
+          <dd>{m.urgency}</dd>{/if}
       </dl>
 
       <h2>Tagesordnung</h2>
@@ -144,16 +162,25 @@
         <h2>Anwesenheit</h2>
         <p>
           <Tag tone={m.quorate ? 'green' : 'red'}>{m.quorate ? 'Beschlussfähig' : 'Nicht beschlussfähig'}</Tag>
-          <span class="muted small">{presentVoters(m)} von {m.electorate.length} Stimmberechtigten da · nötig: {meetingTypes.get(m.kind) ? quorumText(meetingTypes.get(m.kind)!) : '…'}</span>
+          <span class="muted small"
+            >{presentVoters(m)} von {m.electorate.length} Stimmberechtigten da · nötig: {meetingTypes.get(m.kind)
+              ? quorumText(meetingTypes.get(m.kind)!)
+              : '…'}</span
+          >
         </p>
         <ul class="people">
           {#each m.electorate as person (person.memberId)}
             <li>
               <RecordLink kind="member" id={person.memberId} allowed={permissions.canSeeMember(person.memberId)}>{person.name}</RecordLink>
               {#if m.canManage && m.status !== 'CLOSED'}
-                <ChoiceGroup name="presence-{person.memberId}" label="Anwesenheit von {person.name}" size="sm" options={ATTENDANCE}
+                <ChoiceGroup
+                  name="presence-{person.memberId}"
+                  label="Anwesenheit von {person.name}"
+                  size="sm"
+                  options={ATTENDANCE}
                   disabled={model.action.busy}
-                  bind:value={() => attendance(m, person.memberId), (v) => v && void model.setPresence(person.memberId, v === 'NONE' ? null : v)} />
+                  bind:value={() => attendance(m, person.memberId), (v) => v && void model.setPresence(person.memberId, v === 'NONE' ? null : v)}
+                />
               {:else}
                 <span class="muted small">{ATTENDANCE.find((a) => a.value === attendance(m, person.memberId))?.label}</span>
               {/if}
@@ -174,7 +201,12 @@
         <div class="stack">
           {#if m.canManage}
             <label class="check">
-              <input type="checkbox" checked={m.autoTasks} disabled={model.action.busy} onchange={(e) => void model.setAutoTasks(e.currentTarget.checked)} />
+              <input
+                type="checkbox"
+                checked={m.autoTasks}
+                disabled={model.action.busy}
+                onchange={(e) => void model.setAutoTasks(e.currentTarget.checked)}
+              />
               Angenommene Beschlüsse erzeugen automatisch Aufgaben
             </label>
           {/if}

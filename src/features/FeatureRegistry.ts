@@ -51,19 +51,43 @@ export class FeatureRegistry {
     const items = allowed.flatMap((r): NavItem[] => {
       if (!r.nav) return [];
       const badge = r.badge?.() ?? 0;
-      return [{ key: r.path, path: r.path, label: r.nav, ...(r.icon ? { icon: r.icon } : {}), ...(badge > 0 ? { badge } : {}), ...(r.navFooter ? { footer: true } : {}) }];
+      return [
+        {
+          key: r.path,
+          path: r.path,
+          label: r.nav,
+          ...(r.icon ? { icon: r.icon } : {}),
+          ...(badge > 0 ? { badge } : {}),
+          ...(r.navFooter ? { footer: true } : {}),
+        },
+      ];
     });
-    const main = this.layout.arrange(items.filter((i) => !i.footer), order).map((row): NavItem => {
-      if (!row.group) return { ...row.entries[0], key: row.key };
-      const badge = row.entries.reduce((sum, e) => sum + (e.badge ?? 0), 0);
-      return { key: row.key, path: row.entries[0].path, label: row.group.label, icon: row.group.icon, ...(badge > 0 ? { badge } : {}), children: row.entries };
-    });
+    const main = this.layout
+      .arrange(
+        items.filter((i) => !i.footer),
+        order,
+      )
+      .map((row): NavItem => {
+        if (!row.group) return { ...row.entries[0], key: row.key };
+        const badge = row.entries.reduce((sum, e) => sum + (e.badge ?? 0), 0);
+        return {
+          key: row.key,
+          path: row.entries[0].path,
+          label: row.group.label,
+          icon: row.group.icon,
+          ...(badge > 0 ? { badge } : {}),
+          children: row.entries,
+        };
+      });
     return [...main, ...items.filter((i) => i.footer)];
   }
 
   /** Main sidebar entries for the reorder setting. */
   registerNavigation(catalog: NavCatalog): void {
-    catalog.set(this.routes.filter((r) => r.nav && !r.navFooter).map((r) => ({ path: r.path, label: r.nav!, roles: r.roles })), this.layout);
+    catalog.set(
+      this.routes.filter((r) => r.nav && !r.navFooter).map((r) => ({ path: r.path, label: r.nav!, roles: r.roles })),
+      this.layout,
+    );
   }
 
   registerMessages(errors: ErrorMessages): void {

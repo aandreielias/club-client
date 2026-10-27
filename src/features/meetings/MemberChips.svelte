@@ -43,7 +43,15 @@
 
 <div class="chips-field" role="group" aria-label={label}>
   {#each value as id (id)}
-    <span class="chip">{nameOf(id)}{#if !disabled}<Button size="sm" variant="ghost" icon="close" tooltip="Entfernen" onclick={() => set(value.filter((v) => v !== id))} />{/if}</span>
+    <span class="chip"
+      >{nameOf(id)}{#if !disabled}<Button
+          size="sm"
+          variant="ghost"
+          icon="close"
+          tooltip="Entfernen"
+          onclick={() => set(value.filter((v) => v !== id))}
+        />{/if}</span
+    >
   {/each}
   {#if !disabled}
     {#if candidates.length}

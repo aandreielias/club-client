@@ -21,7 +21,9 @@
 </script>
 
 <div class="stack section">
-  <p class="muted">Abschnitte der Startseite ein- und ausschalten und an die gewünschte Stelle ziehen. Was du nicht sehen darfst, fehlt in der Liste.</p>
+  <p class="muted">
+    Abschnitte der Startseite ein- und ausschalten und an die gewünschte Stelle ziehen. Was du nicht sehen darfst, fehlt in der Liste.
+  </p>
   <SortableList {items} label="Abschnitte der Startseite" onreorder={(ids) => preferences.set('homeOrder', ids)}>
     {#snippet extra(item)}
       <label class="check">

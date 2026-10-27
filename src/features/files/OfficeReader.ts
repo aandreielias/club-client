@@ -62,7 +62,12 @@ export class OfficeReader {
       const doc = await OfficeReader.xml(zip, path);
       const paragraphs = OfficeReader.all(doc, 'p')
         .filter((p) => p.namespaceURI?.includes('drawingml'))
-        .map((p) => OfficeReader.all(p, 't').map((t) => t.textContent ?? '').join('').trim())
+        .map((p) =>
+          OfficeReader.all(p, 't')
+            .map((t) => t.textContent ?? '')
+            .join('')
+            .trim(),
+        )
         .filter(Boolean);
       slides.push({ title: paragraphs[0] ?? '', lines: paragraphs.slice(1) });
     }
@@ -75,7 +80,12 @@ export class OfficeReader {
     const doc = await OfficeReader.xml(zip, 'word/document.xml');
     return OfficeReader.all(doc, 'p')
       .filter((p) => p.namespaceURI?.includes('wordprocessingml'))
-      .map((p) => OfficeReader.all(p, 't').map((t) => t.textContent ?? '').join('').trim())
+      .map((p) =>
+        OfficeReader.all(p, 't')
+          .map((t) => t.textContent ?? '')
+          .join('')
+          .trim(),
+      )
       .filter(Boolean);
   }
 
@@ -100,7 +110,10 @@ export class OfficeReader {
     const type = cell.getAttribute('t');
     const raw = OfficeReader.first(cell, 'v')?.textContent ?? '';
     if (type === 's') return shared[Number(raw)] ?? '';
-    if (type === 'inlineStr') return OfficeReader.all(cell, 't').map((t) => t.textContent ?? '').join('');
+    if (type === 'inlineStr')
+      return OfficeReader.all(cell, 't')
+        .map((t) => t.textContent ?? '')
+        .join('');
     if (type === 'b') return raw === '1' ? 'WAHR' : 'FALSCH';
     if (type === 'str' || type === 'e') return raw;
     const number = Number(raw);
@@ -124,7 +137,11 @@ export class OfficeReader {
   private static async sharedStrings(zip: JSZip): Promise<string[]> {
     if (!zip.file('xl/sharedStrings.xml')) return [];
     const doc = await OfficeReader.xml(zip, 'xl/sharedStrings.xml');
-    return OfficeReader.all(doc, 'si').map((si) => OfficeReader.all(si, 't').map((t) => t.textContent ?? '').join(''));
+    return OfficeReader.all(doc, 'si').map((si) =>
+      OfficeReader.all(si, 't')
+        .map((t) => t.textContent ?? '')
+        .join(''),
+    );
   }
 
   /** Relationship id → part path inside the package. */

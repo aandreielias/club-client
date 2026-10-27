@@ -96,7 +96,12 @@ export class EditSession<F> {
     private readonly bus: EventBus,
     backStack?: BackStack,
   ) {
-    backStack?.while(() => this.editing, () => void this.cancel(), () => this.mayDiscard(), () => this.dirty);
+    backStack?.while(
+      () => this.editing,
+      () => void this.cancel(),
+      () => this.mayDiscard(),
+      () => this.dirty,
+    );
   }
 
   get editing(): boolean {

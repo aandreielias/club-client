@@ -33,16 +33,18 @@
   } = $props();
 
   // Day edges only where days are the length (all-day or across days): on a timed one-day chip they would catch the grab for moving.
-  const spansDays = $derived(!!entry.end && (entry.allDay || before || after
-    || session.clock.localDate(entry.start) !== session.clock.localDate(new Date(Date.parse(entry.end) - 1))));
+  const spansDays = $derived(
+    !!entry.end &&
+      (entry.allDay || before || after || session.clock.localDate(entry.start) !== session.clock.localDate(new Date(Date.parse(entry.end) - 1))),
+  );
   const handles = $derived(!!resizer && !!resize && entry.resizable && !!entry.end && (resize === 'time' || spansDays));
   // A bar that runs on beyond the week has no edge there to pull.
-  const edges = $derived<ResizeEdge[]>(resize === 'time' ? ['start', 'end'] : [...(before ? [] : ['start' as const]), ...(after ? [] : ['end' as const])]);
+  const edges = $derived<ResizeEdge[]>(
+    resize === 'time' ? ['start', 'end'] : [...(before ? [] : ['start' as const]), ...(after ? [] : ['end' as const])],
+  );
 
   const time = $derived(showTime ? session.format.time(entry.start) : '');
-  const hint = $derived(
-    `${entry.label}: ${entry.title}\n${when()}`,
-  );
+  const hint = $derived(`${entry.label}: ${entry.title}\n${when()}`);
   /** A record opens in the window; absences and offices have pages instead. */
   function open() {
     if (entry.window) bus.publish(WINDOW_OPEN, { kind: entry.window.kind, id: entry.window.id });
@@ -81,10 +83,15 @@
   {#if handles}
     {#each edges as edge (edge)}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <span class="handle {resize} {edge}" aria-hidden="true" title={edge === 'start' ? 'Beginn ziehen' : 'Ende ziehen'}
-        onmousedown={(e) => e.stopPropagation()} ondragstart={(e) => e.preventDefault()}
+      <span
+        class="handle {resize} {edge}"
+        aria-hidden="true"
+        title={edge === 'start' ? 'Beginn ziehen' : 'Ende ziehen'}
+        onmousedown={(e) => e.stopPropagation()}
+        ondragstart={(e) => e.preventDefault()}
         onclick={(e) => e.stopPropagation()}
-        onpointerdown={(e) => resizer!.begin(e, entry, edge, resize!)}></span>
+        onpointerdown={(e) => resizer!.begin(e, entry, edge, resize!)}
+      ></span>
     {/each}
   {/if}
   <span class="title">{entry.title}</span>

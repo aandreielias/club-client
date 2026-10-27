@@ -45,8 +45,14 @@
   /** Changes between the two versions, loaded when that tab is shown. */
   const changes = new Resource(async () => {
     const file = data.value!.file;
-    const [before, after] = await Promise.all([a, b].map(async (id) =>
-      (await filePreviews.lines(await filePreviews.versionContent(file.id, id, file.contentType), file.contentType)).slice(0, settings.files.compareMaxLines)));
+    const [before, after] = await Promise.all(
+      [a, b].map(async (id) =>
+        (await filePreviews.lines(await filePreviews.versionContent(file.id, id, file.contentType), file.contentType)).slice(
+          0,
+          settings.files.compareMaxLines,
+        ),
+      ),
+    );
     return LineDiff.fold(LineDiff.lines(before, after), settings.files.compareContextLines);
   });
   $effect(() => {
@@ -66,12 +72,23 @@
         </div>
       {/snippet}
       {#snippet contextEnd()}
-        <ChoiceGroup name="compare-mode-{file.id}" label="Ansicht" size="sm" disabled={!comparable}
-          options={[{ value: 'preview', label: 'Vorschau' }, { value: 'changes', label: 'Änderungen' }]} bind:value={mode} />
+        <ChoiceGroup
+          name="compare-mode-{file.id}"
+          label="Ansicht"
+          size="sm"
+          disabled={!comparable}
+          options={[
+            { value: 'preview', label: 'Vorschau' },
+            { value: 'changes', label: 'Änderungen' },
+          ]}
+          bind:value={mode}
+        />
       {/snippet}
 
       {#if mode === 'preview' || !comparable}
-        {#if !comparable}<p class="muted note">Änderungen lassen sich nur bei Word, Excel, PowerPoint und Text anzeigen. Hier die beiden Versionen nebeneinander.</p>{/if}
+        {#if !comparable}<p class="muted note">
+            Änderungen lassen sich nur bei Word, Excel, PowerPoint und Text anzeigen. Hier die beiden Versionen nebeneinander.
+          </p>{/if}
         <div class="sides">
           {#each [a, b] as id, side (side)}
             <section>

@@ -33,6 +33,8 @@
     menu={(i) => windowMenu(bus, windows, router, 'item', i.id)}
     selected={windows.current?.kind === 'item' ? windows.current.id : null}
     emptyText="Noch nichts im Inventar."
-    emptyAction={permissions.isPrivileged ? { label: 'Neuer Gegenstand', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'item-new', id: '-' }) } : null}
+    emptyAction={permissions.isPrivileged
+      ? { label: 'Neuer Gegenstand', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'item-new', id: '-' }) }
+      : null}
   />
 </Page>

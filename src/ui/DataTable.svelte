@@ -53,7 +53,13 @@
     /** Shows only the first rows (start page sections); the toolbar and counts still see all. */
     limit?: number;
     /** Checkbox column (choosing people etc.): checked state, toggle and optional lock per row. */
-    check?: { checked: (item: T) => boolean; toggle: (item: T) => void; disabled?: (item: T) => boolean; hidden?: (item: T) => boolean; label: (item: T) => string };
+    check?: {
+      checked: (item: T) => boolean;
+      toggle: (item: T) => void;
+      disabled?: (item: T) => boolean;
+      hidden?: (item: T) => boolean;
+      label: (item: T) => string;
+    };
     /** Drag rows onto other rows (e.g. files onto folders): the payload travels as `type`. */
     drag?: RowDrag<T>;
     /** The record a row stands for, so it can be dragged onto anything that links records (a message, Benötigt). */
@@ -125,13 +131,23 @@
             <tr>
               {#if check}<th class="check" scope="col"><span class="visually-hidden">Auswahl</span></th>{/if}
               {#each model.columns as column (column.key)}
-                <th scope="col" style:width={column.width} class:end={column.align === 'end'} class:optional={column.hideOnCompact}
-                  aria-sort={sortState(column)}>
+                <th
+                  scope="col"
+                  style:width={column.width}
+                  class:end={column.align === 'end'}
+                  class:optional={column.hideOnCompact}
+                  aria-sort={sortState(column)}
+                >
                   {#if column.sortable === false}
                     {column.label}
                   {:else}
-                    <button type="button" class="sort" class:active={model.sort.key === column.key} onclick={() => model.toggleSort(column.key)}
-                      {@attach tooltip(() => (model.sort.key === column.key ? 'Sortierrichtung umkehren' : `Nach „${column.label}“ sortieren`))}>
+                    <button
+                      type="button"
+                      class="sort"
+                      class:active={model.sort.key === column.key}
+                      onclick={() => model.toggleSort(column.key)}
+                      {@attach tooltip(() => (model.sort.key === column.key ? 'Sortierrichtung umkehren' : `Nach „${column.label}“ sortieren`))}
+                    >
                       {column.label}
                       {#if model.sort.key === column.key}
                         <span class="direction" class:desc={model.sort.dir === 'desc'}><Icon name="expand" small /></span>
@@ -144,8 +160,12 @@
           </thead>
           <tbody>
             {#each limit === undefined ? shownRows : shownRows.slice(0, limit) as item, rowIndex (rowKey(item))}
-              <tr class:clickable={!!onopen} class:selected={selected === rowKey(item)} class:cursor={rowIndex === cursor}
-                in:motion.rise|global={{ delay: motion.stagger(rowIndex), distance: 4 }} animate:flip={{ duration: motion.ms('base') }}
+              <tr
+                class:clickable={!!onopen}
+                class:selected={selected === rowKey(item)}
+                class:cursor={rowIndex === cursor}
+                in:motion.rise|global={{ delay: motion.stagger(rowIndex), distance: 4 }}
+                animate:flip={{ duration: motion.ms('base') }}
                 class:checked={!!check?.checked(item)}
                 class:drop-target={dropKey === rowKey(item)}
                 class:movable={!!drag?.can(item)}
@@ -155,18 +175,29 @@
                 ondragleave={() => dropKey === rowKey(item) && (dropKey = null)}
                 ondrop={(e) => ((dropKey = null), drag && RowDragging.drop(drag, item, e))}
                 onclick={() => ((cursor = rowIndex), onopen ? onopen(item) : check && !check.disabled?.(item) && check.toggle(item))}
-                {@attach menu ? contextMenu(() => ((cursor = rowIndex), menu(item))) : undefined}>
+                {@attach menu ? contextMenu(() => ((cursor = rowIndex), menu(item))) : undefined}
+              >
                 {#if check}
                   <td class="check">
-                    {#if !check.hidden?.(item)}<input type="checkbox" checked={check.checked(item)} disabled={check.disabled?.(item)} aria-label={check.label(item)}
-                      onclick={(e) => e.stopPropagation()} onchange={() => check.toggle(item)} />{/if}
+                    {#if !check.hidden?.(item)}<input
+                        type="checkbox"
+                        checked={check.checked(item)}
+                        disabled={check.disabled?.(item)}
+                        aria-label={check.label(item)}
+                        onclick={(e) => e.stopPropagation()}
+                        onchange={() => check.toggle(item)}
+                      />{/if}
                   </td>
                 {/if}
                 {#each model.columns as column, index (column.key)}
                   <td data-label={column.label} class:end={column.align === 'end'} class:optional={column.hideOnCompact} class:primary={index === 0}>
                     {#if index === 0 && onopen}
-                      <button type="button" class="open" onclick={(e) => (e.stopPropagation(), onopen(item))}
-                        {@attach tooltip(menu ? 'Öffnen; Rechtsklick für weitere Aktionen' : 'Öffnen')}>
+                      <button
+                        type="button"
+                        class="open"
+                        onclick={(e) => (e.stopPropagation(), onopen(item))}
+                        {@attach tooltip(menu ? 'Öffnen; Rechtsklick für weitere Aktionen' : 'Öffnen')}
+                      >
                         {#if cell}{@render cell(item, column)}{:else}{model.display(item, column)}{/if}
                       </button>
                     {:else if cell}
@@ -181,8 +212,10 @@
           </tbody>
         </table>
       {:else}
-        <Empty text={model.total ? 'Keine Einträge passen zu Suche und Filtern.' : emptyText}
-          action={model.total ? (toolbar && model.activeFilters ? { label: 'Filter zurücksetzen', run: () => model.reset() } : null) : emptyAction} />
+        <Empty
+          text={model.total ? 'Keine Einträge passen zu Suche und Filtern.' : emptyText}
+          action={model.total ? (toolbar && model.activeFilters ? { label: 'Filter zurücksetzen', run: () => model.reset() } : null) : emptyAction}
+        />
       {/if}
     {/snippet}
   </AsyncView>

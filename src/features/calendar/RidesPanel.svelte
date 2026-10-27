@@ -25,13 +25,15 @@
     if (data.appointmentId === model.appointmentId && !model.action.busy) void model.load();
   });
 
-  const seatOptions = Array.from({ length: settings.calendar.rideMaxSeats }, (_, i) => ({ value: String(i + 1), label: `${i + 1} ${i ? 'Plätze' : 'Platz'}` }));
+  const seatOptions = Array.from({ length: settings.calendar.rideMaxSeats }, (_, i) => ({
+    value: String(i + 1),
+    label: `${i + 1} ${i ? 'Plätze' : 'Platz'}`,
+  }));
   let seats = $state('3');
   let note = $state('');
 
   /** Self and minors who could still get a seat in this car. */
-  const riders = (ride: Ride) =>
-    [me, ...session.wardIds].filter((id) => id !== ride.driverId && !RidesModel.has(ride, id));
+  const riders = (ride: Ride) => [me, ...session.wardIds].filter((id) => id !== ride.driverId && !RidesModel.has(ride, id));
   const mayRemove = (ride: Ride, memberId: string) =>
     memberId === me || ride.driverId === me || permissions.isManager || session.wardIds.includes(memberId);
   const riderLabel = (id: string) => (id === me ? 'Mitfahren' : `${directory.nameOf(id)} mitnehmen`);
@@ -74,7 +76,13 @@
                   <li>
                     {p.name}
                     {#if open && mayRemove(ride, p.memberId)}
-                      <Button size="sm" variant="ghost" icon="close" tooltip="{p.name} aussteigen lassen" onclick={() => model.leave(ride.id, p.memberId)} />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        icon="close"
+                        tooltip="{p.name} aussteigen lassen"
+                        onclick={() => model.leave(ride.id, p.memberId)}
+                      />
                     {/if}
                   </li>
                 {/each}
@@ -83,7 +91,12 @@
             {#if open && free}
               <div class="row">
                 {#each riders(ride) as id (id)}
-                  <Button size="sm" tooltip="Einen Platz in diesem Auto nehmen" busy={model.action.busy} onclick={() => model.join(ride.id, id === me ? null : id)}>{riderLabel(id)}</Button>
+                  <Button
+                    size="sm"
+                    tooltip="Einen Platz in diesem Auto nehmen"
+                    busy={model.action.busy}
+                    onclick={() => model.join(ride.id, id === me ? null : id)}>{riderLabel(id)}</Button
+                  >
                 {/each}
               </div>
             {/if}

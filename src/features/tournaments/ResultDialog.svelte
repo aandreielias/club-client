@@ -50,16 +50,24 @@
   /** Open matches are no mistake yet: they only block saving. */
   const open = $derived(problem?.code === 'tournament.match-open');
   const error = $derived(
-    half ? 'Bei jedem Satz beide Punkte eintragen.'
-    : problem?.code === 'tournament.set-invalid' ? `Satz ${problem.set} geht bis ${setTarget(format, problem.set - 1, setsToWin)}, mit 2 Punkten Vorsprung.`
-    : problem?.code === 'tournament.match-over' ? `Nach Satz ${problem.set} hat ein Team schon ${setsToWin} Sätze.`
-    : null,
+    half
+      ? 'Bei jedem Satz beide Punkte eintragen.'
+      : problem?.code === 'tournament.set-invalid'
+        ? `Satz ${problem.set} geht bis ${setTarget(format, problem.set - 1, setsToWin)}, mit 2 Punkten Vorsprung.`
+        : problem?.code === 'tournament.match-over'
+          ? `Nach Satz ${problem.set} hat ein Team schon ${setsToWin} Sätze.`
+          : null,
   );
 
   async function save(event: SubmitEvent) {
     event.preventDefault();
     if (error || open) return;
-    const result = { sets: simple ? [] : filled, outcome: simple ? outcome : null, startsAt: start ? session.clock.toInstant(start) : null, field: field.trim() || null };
+    const result = {
+      sets: simple ? [] : filled,
+      outcome: simple ? outcome : null,
+      startsAt: start ? session.clock.toInstant(start) : null,
+      field: field.trim() || null,
+    };
     if (await model.setResult(match.id, result)) onclose();
   }
 </script>
@@ -85,7 +93,8 @@
         {/each}
       </div>
       <div class="row between">
-        {#if sets.length < maxSets}<Button size="sm" icon="add" onclick={() => (sets = [...sets, { home: null, away: null }])}>Satz hinzufügen</Button>{:else}<span></span>{/if}
+        {#if sets.length < maxSets}<Button size="sm" icon="add" onclick={() => (sets = [...sets, { home: null, away: null }])}>Satz hinzufügen</Button
+          >{:else}<span></span>{/if}
         <span class="muted">Sätze <strong class="won">{won.homeSets ?? 0}:{won.awaySets ?? 0}</strong></span>
       </div>
       {#if error}<p class="error" role="alert">{error}</p>

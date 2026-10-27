@@ -8,7 +8,13 @@
     onclose,
     wide = false,
     children,
-  }: { open: boolean; title: string; onclose: () => void; /** Room for a list (e.g. choosing teams). */ wide?: boolean; children: Snippet } = $props();
+  }: {
+    open: boolean;
+    title: string;
+    onclose: () => void;
+    /** Room for a list (e.g. choosing teams). */ wide?: boolean;
+    children: Snippet;
+  } = $props();
 
   let element: HTMLDialogElement;
 

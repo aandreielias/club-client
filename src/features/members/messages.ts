@@ -5,7 +5,8 @@ import type { MessageCatalog } from '../../lib/errors/ErrorMessages';
 const limits = settings.members;
 
 export const MEMBER_MESSAGES: MessageCatalog = {
-  'member.several-kinds': 'Der Verein erlaubt nur eine Mitgliedsart pro Mitglied (Einstellungen › Mitgliedschaft). Wer mehrere hat, braucht zuerst eine.',
+  'member.several-kinds':
+    'Der Verein erlaubt nur eine Mitgliedsart pro Mitglied (Einstellungen › Mitgliedschaft). Wer mehrere hat, braucht zuerst eine.',
   'membership-kind.fixed': 'Die Ehrenmitgliedschaft bleibt: umbenennen und ihre Rechte einstellen geht, entfernen nicht.',
   'membership-kind.key-invalid': 'Der Schlüssel der Mitgliedschaftsart ist ungültig.',
   'member.not-a-guest': 'Nur Gastzugänge lassen sich löschen. Mitglieder bitte deaktivieren.',
@@ -56,7 +57,8 @@ export const MEMBER_MESSAGES: MessageCatalog = {
   'board-settings.term-invalid': 'Eine Funktionsperiode dauert 1 bis 10 Jahre.',
   'board-settings.chair-required': 'Den Vorsitz braucht jeder Verein.',
   'board-settings.board-invalid': 'Vorstand 1 bis 20 Personen, Kooptieren 0 bis 52 Wochen, Fristen 1 bis 365 Tage.',
-  'board-settings.ages-invalid': 'Erziehungsberechtigte bis 14 bis 21 Jahre, eigene Foto-Einwilligung ab 10 Jahren und höchstens bis zu diesem Alter.',
+  'board-settings.ages-invalid':
+    'Erziehungsberechtigte bis 14 bis 21 Jahre, eigene Foto-Einwilligung ab 10 Jahren und höchstens bis zu diesem Alter.',
   'member.consent-own': 'Ab diesem Alter entscheidet das Mitglied selbst über Fotos.',
   'member.consent-by-guardian': 'Die Foto-Einwilligung geben bei jüngeren Mitgliedern die Erziehungsberechtigten.',
 };
@@ -65,7 +67,13 @@ export const MEMBER_MESSAGES: MessageCatalog = {
 export function boardWarning(code: string, settings: BoardSettings | null): string {
   if (code === 'board.too-small') return `Der Vorstand braucht mindestens ${settings?.minBoardSize ?? 3} Personen.`;
   if (code === 'board.even') return 'Der Vorstand braucht eine ungerade Anzahl Personen.';
-  const kind = code === 'board.auditors-missing' ? 'AUDITOR' : code.replace(/^board\.|-missing$/g, '').replace('-', '_').toUpperCase();
+  const kind =
+    code === 'board.auditors-missing'
+      ? 'AUDITOR'
+      : code
+          .replace(/^board\.|-missing$/g, '')
+          .replace('-', '_')
+          .toUpperCase();
   const office = settings?.offices.find((o) => o.office === kind);
   if (!office) return code;
   return office.minHolders > 1 ? `${office.label}: es braucht ${office.minHolders} Personen.` : `${office.label} ist nicht besetzt.`;

@@ -30,20 +30,23 @@ const navLayout = new NavLayout(
  * Enabled features (feature order: home sections, calendar sources). A new feature = a folder with feature.ts (routes, messages),
  * its services/models/pages, optionally mock.ts (picked up automatically) + one entry here.
  */
-export const features = new FeatureRegistry([
-  homeFeature,
-  calendarFeature,
-  tasksFeature,
-  filesFeature,
-  inventoryFeature,
-  locationsFeature,
-  tournamentsFeature,
-  meetingsFeature,
-  teamsFeature,
-  notificationsFeature,
-  membersFeature,
-  activityFeature,
-  accountFeature,
-  settingsFeature,
-  searchFeature,
-], navLayout);
+export const features = new FeatureRegistry(
+  [
+    homeFeature,
+    calendarFeature,
+    tasksFeature,
+    filesFeature,
+    inventoryFeature,
+    locationsFeature,
+    tournamentsFeature,
+    meetingsFeature,
+    teamsFeature,
+    notificationsFeature,
+    membersFeature,
+    activityFeature,
+    accountFeature,
+    settingsFeature,
+    searchFeature,
+  ],
+  navLayout,
+);

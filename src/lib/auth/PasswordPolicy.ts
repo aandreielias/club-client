@@ -9,11 +9,7 @@ export class PasswordPolicy {
 
   accepts(password: string): boolean {
     return (
-      password.length >= this.minLength &&
-      /[a-z]/.test(password) &&
-      /[A-Z]/.test(password) &&
-      /\d/.test(password) &&
-      /[^A-Za-z0-9]/.test(password)
+      password.length >= this.minLength && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password) && /[^A-Za-z0-9]/.test(password)
     );
   }
 }

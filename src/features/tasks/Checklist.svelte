@@ -9,8 +9,7 @@
   {#each task.checklist as item (item.id)}
     <li>
       <label class:done={item.done}>
-        <input type="checkbox" checked={item.done} disabled={!editable || detail.pendingItem !== null}
-          onchange={() => detail.toggle(item)} />
+        <input type="checkbox" checked={item.done} disabled={!editable || detail.pendingItem !== null} onchange={() => detail.toggle(item)} />
         {item.text}
       </label>
     </li>

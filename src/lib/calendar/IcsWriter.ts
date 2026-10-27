@@ -48,12 +48,15 @@ export class IcsWriter {
   }
 
   static escape(text: string): string {
-    return text.replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+    return text.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
   }
 
   /** 2026-10-16T18:00:00.000Z → 20261016T180000Z */
   static time(iso: string): string {
-    return new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    return new Date(iso)
+      .toISOString()
+      .replace(/[-:]/g, '')
+      .replace(/\.\d{3}/, '');
   }
 
   /** Splits after 75 UTF-8 octets; continuation lines start with a space (never inside a character). */

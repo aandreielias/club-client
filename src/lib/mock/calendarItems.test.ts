@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Member } from '../types';
 import { items, move } from './calendarItems';
-import { directory, MockDirectory } from './core';
+import { directory } from './core';
 import { calendar } from '../../features/calendar/mock';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
@@ -11,7 +11,11 @@ describe('mock calendar items', () => {
   it('shows birthdays only to who sees the birth date', () => {
     const from = new Date(Date.UTC(year, 0, 1)).toISOString();
     const to = new Date(Date.UTC(year, 11, 31)).toISOString();
-    const birthdays = (id: string) => items(member(id), from, to).filter((i) => i.category === 'BIRTHDAY').map((i) => i.id).sort();
+    const birthdays = (id: string) =>
+      items(member(id), from, to)
+        .filter((i) => i.category === 'BIRTHDAY')
+        .map((i) => i.id)
+        .sort();
     expect(birthdays('eltern')).toEqual(['eltern', 'spieler']); // her son David
     expect(birthdays('spielerin')).toEqual(['spielerin']);
     expect(birthdays('admin').length).toBeGreaterThan(10);
@@ -32,6 +36,8 @@ describe('mock calendar items', () => {
     const end = new Date(Date.parse(directory.clock.startOfDay(start)) + 3 * 86_400_000).toISOString();
     move(member('spielerin'), 'absence', absence.id, directory.clock.startOfDay(start), end);
     expect(calendar.absences.data.find((a) => a.id === absence.id)!.to).toBe(directory.clock.localDate(new Date(Date.parse(end) - 1)));
-    expect(() => move(member('trainer'), 'absence', absence.id, directory.clock.startOfDay(start), end)).toThrow(expect.objectContaining({ code: 'absence.not-found' }));
+    expect(() => move(member('trainer'), 'absence', absence.id, directory.clock.startOfDay(start), end)).toThrow(
+      expect.objectContaining({ code: 'absence.not-found' }),
+    );
   });
 });

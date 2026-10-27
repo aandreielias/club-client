@@ -25,16 +25,28 @@
   <rect class="mirror" x="20" y="-3" width="5" height="6" rx="2.5" />
   <rect class="mirror" x="20" y={h - 3} width="5" height="6" rx="2.5" />
   <!-- body: narrower at the bonnet (left), rounder in front than at the back -->
-  <path class="body" d="M 0.5 13 V {h - 13} Q 0.5 {h - 1.5} 13 {h - 0.5} H {w - 11} Q {w - 0.5} {h - 0.5} {w - 0.5} {h - 11}
-    V 11 Q {w - 0.5} 0.5 {w - 11} 0.5 H 13 Q 0.5 1.5 0.5 13 Z" />
+  <path
+    class="body"
+    d="M 0.5 13 V {h - 13} Q 0.5 {h - 1.5} 13 {h - 0.5} H {w - 11} Q {w - 0.5} {h - 0.5} {w - 0.5} {h - 11}
+    V 11 Q {w - 0.5} 0.5 {w - 11} 0.5 H 13 Q 0.5 1.5 0.5 13 Z"
+  />
   <rect class="roof" x="22" y="3.5" width={w - 35} height={h - 7} rx="5" />
   <path class="glass" d="M 14 7 Q 9 {h / 2} 14 {h - 7} L 22 {h - 9} Q 19 {h / 2} 22 9 Z" />
   <path class="glass" d="M {w - 13} 9 Q {w - 15} {h / 2} {w - 13} {h - 9} L {w - 8} {h - 10} Q {w - 6} {h / 2} {w - 8} 10 Z" />
 
   {#each shape.seats as seat, i (i)}
     {@const taken = seat.offered && !seat.driver ? passenger(i) : null}
-    <rect class="seat" class:driver={seat.driver} class:taken={taken !== null} class:unoffered={!seat.offered}
-      x={seat.x} y={seat.y} width={SEAT} height={SEAT} rx="3.5">
+    <rect
+      class="seat"
+      class:driver={seat.driver}
+      class:taken={taken !== null}
+      class:unoffered={!seat.offered}
+      x={seat.x}
+      y={seat.y}
+      width={SEAT}
+      height={SEAT}
+      rx="3.5"
+    >
       <title>{seat.driver ? `${ride.driverName} (fährt)` : seat.offered ? (taken?.name ?? 'Frei') : 'Nicht angeboten'}</title>
     </rect>
   {/each}

@@ -7,8 +7,21 @@ import type { Task } from './model';
 import { TaskPolicy } from './TaskPolicy';
 
 const task = (assignees: string[]): Task => ({
-  id: 't', teamId: null, appointmentId: null, title: 't', description: null, status: 'OPEN', dueAt: null, createdBy: 'coach', assignees,
-  checklist: [], comments: [], createdAt: '2026-01-01T00:00:00Z', completedAt: null, repeatWeeks: null, source: null,
+  id: 't',
+  teamId: null,
+  appointmentId: null,
+  title: 't',
+  description: null,
+  status: 'OPEN',
+  dueAt: null,
+  createdBy: 'coach',
+  assignees,
+  checklist: [],
+  comments: [],
+  createdAt: '2026-01-01T00:00:00Z',
+  completedAt: null,
+  repeatWeeks: null,
+  source: null,
 });
 
 describe('TaskPolicy', () => {
@@ -16,7 +29,22 @@ describe('TaskPolicy', () => {
     const api = new ApiClient({ send: vi.fn(), upload: vi.fn(), url: (p) => p }, async () => false);
     const session = new SessionStore(api);
     session.me = {
-      member: { id: 'parent', email: 'p@x.at', firstName: 'P', lastName: 'P', birthDate: null, phone: null, photoConsent: true, active: true, membershipTypes: [], previousType: null, memberSince: null, voter: false, eligible: false, roles: ['PARENT'] },
+      member: {
+        id: 'parent',
+        email: 'p@x.at',
+        firstName: 'P',
+        lastName: 'P',
+        birthDate: null,
+        phone: null,
+        photoConsent: true,
+        active: true,
+        membershipTypes: [],
+        previousType: null,
+        memberSince: null,
+        voter: false,
+        eligible: false,
+        roles: ['PARENT'],
+      },
       teams: [],
       missing: [],
       wardIds: ['kid'],

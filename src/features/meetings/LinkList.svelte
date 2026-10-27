@@ -34,7 +34,10 @@
   /** server: MAX_LINKS of meetings and resolutions */
   const MAX_LINKS = 30;
   let draft = $state<RefList | null>(null);
-  backStack.while(() => draft !== null, () => (draft = null));
+  backStack.while(
+    () => draft !== null,
+    () => (draft = null),
+  );
 
   const allowed = (kind: string, id: string) => kind !== 'MEMBER' || permissions.canSeeMember(id);
 

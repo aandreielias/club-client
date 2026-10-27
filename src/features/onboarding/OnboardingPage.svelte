@@ -25,8 +25,7 @@
 <Centered title="Geburtsdatum" subtitle="Willkommen, {session.member.firstName}">
   <form class="stack" onsubmit={submit}>
     <p class="muted">
-      Wird für Altersklassen und Einverständnisse gebraucht. Sichtbar nur für dich, deine Erziehungsberechtigten, deine
-      Trainer:innen und Admins.
+      Wird für Altersklassen und Einverständnisse gebraucht. Sichtbar nur für dich, deine Erziehungsberechtigten, deine Trainer:innen und Admins.
     </p>
     <Field label="Geburtsdatum">
       <DateInput bind:value={birthDate} max={yesterday} required />

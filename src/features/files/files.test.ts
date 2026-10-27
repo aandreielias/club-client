@@ -13,7 +13,17 @@ import { UploadQueue } from './UploadQueue.svelte';
 const types = new FileTypes(settings.files.imageExtensions, settings.files.documentExtensions);
 
 const folder = (id: string, parentId: string | null, name = id): Folder => ({
-  id, parentId, name, kind: 'DOCUMENTS', scope: 'CLUB', teamIds: [], membersCanUpload: true, color: null, coverFileId: null, canUpload: true, canManage: false,
+  id,
+  parentId,
+  name,
+  kind: 'DOCUMENTS',
+  scope: 'CLUB',
+  teamIds: [],
+  membersCanUpload: true,
+  color: null,
+  coverFileId: null,
+  canUpload: true,
+  canManage: false,
 });
 
 describe('FileTypes', () => {
@@ -29,7 +39,9 @@ describe('FileTypes', () => {
 
 describe('FolderTree', () => {
   it('builds roots, children and paths from the flat list', async () => {
-    const api = { folders: async () => [folder('a', null, 'B-Root'), folder('b', 'a'), folder('c', 'b'), folder('orphan', 'hidden'), folder('z', null, 'A-Root')] };
+    const api = {
+      folders: async () => [folder('a', null, 'B-Root'), folder('b', 'a'), folder('c', 'b'), folder('orphan', 'hidden'), folder('z', null, 'A-Root')],
+    };
     const tree = new FolderTree(api as unknown as FilesApi, 3);
     await tree.load();
     expect(tree.children(null).map((f) => f.id)).toEqual(['z', 'a', 'orphan']);
@@ -76,8 +88,18 @@ describe('FileLinks', () => {
 
 describe('UploadQueue', () => {
   const stored = (name: string): StoredFile => ({
-    id: name, folderId: 'f', name, contentType: 'application/pdf', sizeBytes: 1, width: null, height: null, hasThumbnail: false,
-    uploadedBy: 'm', taggedMemberIds: [], createdAt: '', version: null,
+    id: name,
+    folderId: 'f',
+    name,
+    contentType: 'application/pdf',
+    sizeBytes: 1,
+    width: null,
+    height: null,
+    hasThumbnail: false,
+    uploadedBy: 'm',
+    taggedMemberIds: [],
+    createdAt: '',
+    version: null,
   });
 
   it('checks files before sending and uploads the rest one by one', async () => {
@@ -90,7 +112,14 @@ describe('UploadQueue', () => {
     });
     const uploaded: string[] = [];
     const errors = new ErrorMessages({}, '?').register({ 'file.infected': 'Virus' });
-    const queue = new UploadQueue({ upload } as unknown as FilesApi, types, errors, 10, () => folder('f', null), (f) => uploaded.push(f.name));
+    const queue = new UploadQueue(
+      { upload } as unknown as FilesApi,
+      types,
+      errors,
+      10,
+      () => folder('f', null),
+      (f) => uploaded.push(f.name),
+    );
     queue.add([
       new File(['x'], 'a.pdf'),
       new File(['x'.repeat(11)], 'big.pdf'),
@@ -102,7 +131,11 @@ describe('UploadQueue', () => {
     expect(order).toEqual(['a.pdf', 'bad.pdf', 'b.pdf']);
     expect(uploaded).toEqual(['a.pdf', 'b.pdf']);
     expect(queue.items.map((i) => [i.file.name, i.state])).toEqual([
-      ['a.pdf', 'done'], ['big.pdf', 'failed'], ['script.exe', 'failed'], ['bad.pdf', 'failed'], ['b.pdf', 'done'],
+      ['a.pdf', 'done'],
+      ['big.pdf', 'failed'],
+      ['script.exe', 'failed'],
+      ['bad.pdf', 'failed'],
+      ['b.pdf', 'done'],
     ]);
     expect(queue.items[3].error).toBe('Virus');
     queue.clearFinished();

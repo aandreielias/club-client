@@ -99,8 +99,13 @@
             {#each task.assignees as assignee (assignee)}<MemberName memberId={assignee} tag />{:else}<span class="muted">Niemand</span>{/each}
           </div>
           {#if policy.canWork(task)}
-            <ChoiceGroup name="task-status-{task.id}" label="Status" options={TASK_STATUSES} disabled={detail.statusAction.busy}
-              bind:value={() => task.status, (status) => status && detail.setStatus(status)} />
+            <ChoiceGroup
+              name="task-status-{task.id}"
+              label="Status"
+              options={TASK_STATUSES}
+              disabled={detail.statusAction.busy}
+              bind:value={() => task.status, (status) => status && detail.setStatus(status)}
+            />
           {/if}
         </div>
         <ErrorNote error={detail.statusAction.error} />
@@ -138,7 +143,11 @@
 
         <h2>Kommentare</h2>
         <Comments {task} {detail} />
-        <ActivitySection kind="TASK" id={task.id} describe={(e) => (e.action === 'STATUS' && e.detail ? `Status: ${statusLabel(e.detail as TaskStatus)}` : null)} />
+        <ActivitySection
+          kind="TASK"
+          id={task.id}
+          describe={(e) => (e.action === 'STATUS' && e.detail ? `Status: ${statusLabel(e.detail as TaskStatus)}` : null)}
+        />
       {/if}
     </Detail>
   {/snippet}

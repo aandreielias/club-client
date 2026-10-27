@@ -26,13 +26,14 @@
   );
 
   $effect(() => {
-    form.teamOrNull; // reload when the team changes
+    void form.teamOrNull; // reload when the team changes
     untrack(() => list.load().then(() => form.retainAssignees((list.data.value ?? []).map((c) => c.memberId))));
   });
 
   /** A member dragged in (a name, a list row): assigned when they may be. */
   function drop(memberId: string) {
-    if (!(list.data.value ?? []).some((c) => c.memberId === memberId)) bus.publish(TOAST, { text: `${directory.nameOf(memberId)} kann diese Aufgabe nicht bekommen.` });
+    if (!(list.data.value ?? []).some((c) => c.memberId === memberId))
+      bus.publish(TOAST, { text: `${directory.nameOf(memberId)} kann diese Aufgabe nicht bekommen.` });
     else if (!form.isAssigned(memberId)) form.toggleAssignee(memberId);
   }
 </script>

@@ -16,19 +16,36 @@ describe('tournament logic', () => {
   });
 
   it('gives 3:0 or 2:1 table points and ranks by points, wins, set ratio, then ball-point ratio', () => {
-    const teams = new Map([['a', 'A'], ['b', 'B'], ['c', 'C']]);
+    const teams = new Map([
+      ['a', 'A'],
+      ['b', 'B'],
+      ['c', 'C'],
+    ]);
     const result = (home: string, away: string, sets: { home: number; away: number }[]) => ({ home, away, ...tally(sets) });
     let table = standings(teams, [
-      result('c', 'b', [{ home: 25, away: 20 }, { home: 25, away: 10 }]),
-      result('a', 'b', [{ home: 25, away: 20 }, { home: 20, away: 25 }, { home: 15, away: 13 }]),
+      result('c', 'b', [
+        { home: 25, away: 20 },
+        { home: 25, away: 10 },
+      ]),
+      result('a', 'b', [
+        { home: 25, away: 20 },
+        { home: 20, away: 25 },
+        { home: 15, away: 13 },
+      ]),
       result('a', 'c', []),
     ]);
     expect(table.map((r) => r.name)).toEqual(['C', 'A', 'B']);
     expect(table.map((r) => r.points)).toEqual([3, 2, 1]);
     expect(table[1]).toMatchObject({ played: 1, won: 1, setsWon: 2, setsLost: 1, ballsWon: 60 });
     table = standings(teams, [
-      result('a', 'c', [{ home: 25, away: 20 }, { home: 25, away: 20 }]),
-      result('b', 'c', [{ home: 25, away: 15 }, { home: 25, away: 15 }]),
+      result('a', 'c', [
+        { home: 25, away: 20 },
+        { home: 25, away: 20 },
+      ]),
+      result('b', 'c', [
+        { home: 25, away: 15 },
+        { home: 25, away: 15 },
+      ]),
     ]);
     expect(table.map((r) => r.name)).toEqual(['B', 'A', 'C']);
   });
@@ -49,21 +66,61 @@ describe('tournament logic', () => {
   });
 
   it('scores beach sets to 21 and simple matches by outcome only', () => {
-    expect(setsProblem([{ home: 21, away: 19 }, { home: 18, away: 21 }, { home: 15, away: 13 }], 2, 'BEACH')).toBeNull();
-    expect(setsProblem([{ home: 25, away: 20 }, { home: 25, away: 20 }], 2, 'BEACH')).toEqual({ code: 'tournament.set-invalid', set: 1 });
+    expect(
+      setsProblem(
+        [
+          { home: 21, away: 19 },
+          { home: 18, away: 21 },
+          { home: 15, away: 13 },
+        ],
+        2,
+        'BEACH',
+      ),
+    ).toBeNull();
+    expect(
+      setsProblem(
+        [
+          { home: 25, away: 20 },
+          { home: 25, away: 20 },
+        ],
+        2,
+        'BEACH',
+      ),
+    ).toEqual({ code: 'tournament.set-invalid', set: 1 });
     expect(tablePoints('BEACH', 2, 0)).toEqual([2, 1]);
-    const teams = new Map([['a', 'A'], ['b', 'B'], ['c', 'C']]);
-    const table = standings(teams, [
-      { home: 'a', away: 'b', homeSets: 1, awaySets: 0, homePoints: 0, awayPoints: 0 },
-      { home: 'b', away: 'c', homeSets: 0, awaySets: 0, homePoints: 0, awayPoints: 0 },
-    ], 'SIMPLE');
-    expect(table.map((r) => [r.name, r.points, r.drawn])).toEqual([['A', 3, 0], ['B', 1, 1], ['C', 1, 1]]);
+    const teams = new Map([
+      ['a', 'A'],
+      ['b', 'B'],
+      ['c', 'C'],
+    ]);
+    const table = standings(
+      teams,
+      [
+        { home: 'a', away: 'b', homeSets: 1, awaySets: 0, homePoints: 0, awayPoints: 0 },
+        { home: 'b', away: 'c', homeSets: 0, awaySets: 0, homePoints: 0, awayPoints: 0 },
+      ],
+      'SIMPLE',
+    );
+    expect(table.map((r) => [r.name, r.points, r.drawn])).toEqual([
+      ['A', 3, 0],
+      ['B', 1, 1],
+      ['C', 1, 1],
+    ]);
   });
 
   it('seeds the knockout tree so a group meets itself late', () => {
-    const order = seeds([['a1', 'a2'], ['b1', 'b2']], 2);
+    const order = seeds(
+      [
+        ['a1', 'a2'],
+        ['b1', 'b2'],
+      ],
+      2,
+    );
     expect(order).toEqual(['a1', 'b1', 'a2', 'b2']);
-    expect(firstRound(order)).toEqual([{ slot: 0, home: 'a1', away: 'b2' }, { slot: 1, home: 'b1', away: 'a2' }]);
+    expect(firstRound(order)).toEqual([
+      { slot: 0, home: 'a1', away: 'b2' },
+      { slot: 1, home: 'b1', away: 'a2' },
+    ]);
     expect(firstRound(['x', 'y', 'z'])[0]).toEqual({ slot: 0, home: 'x', away: null });
     expect(koRounds(6)).toBe(3);
     expect([1, 2, 3].map((r) => roundName(r, 3))).toEqual(['Viertelfinale', 'Halbfinale', 'Finale']);
@@ -76,21 +133,68 @@ describe('mock tournaments', () => {
     const { tournaments } = await import('./mock');
     const member = (id: string) => directory.members.data.find((m) => m.id === id)!;
     directory.stepUp(member('trainer'), MockDirectory.PIN);
-    const t = tournaments.create(member('trainer'), { name: 'Testcup', startsOn: '2026-12-05', endsOn: '2026-12-05', groupCount: 2, advancePerGroup: 2 });
-    tournaments.setTeams(member('trainer'), t.id, ['A', 'B', 'C', 'D', 'E', 'F'].map((name) => ({ id: null, name, clubTeamId: null })));
+    const t = tournaments.create(member('trainer'), {
+      name: 'Testcup',
+      startsOn: '2026-12-05',
+      endsOn: '2026-12-05',
+      groupCount: 2,
+      advancePerGroup: 2,
+    });
+    tournaments.setTeams(
+      member('trainer'),
+      t.id,
+      ['A', 'B', 'C', 'D', 'E', 'F'].map((name) => ({ id: null, name, clubTeamId: null })),
+    );
     let state = tournaments.draw(member('trainer'), t.id);
     expect(state.groups).toHaveLength(2);
-    state.matches.forEach((m, i) => (state = tournaments.setResult(member('trainer'), t.id, m.id, { sets: Array.from({ length: 2 }, () => ({ home: 25, away: 20 - i })), startsAt: null, field: null })));
+    state.matches.forEach(
+      (m, i) =>
+        (state = tournaments.setResult(member('trainer'), t.id, m.id, {
+          sets: Array.from({ length: 2 }, () => ({ home: 25, away: 20 - i })),
+          startsAt: null,
+          field: null,
+        })),
+    );
     state = tournaments.startKnockout(member('trainer'), t.id);
     const semis = state.matches.filter((m) => m.stage === 'KO' && m.round === 1);
     expect(semis).toHaveLength(2);
-    expect(() => tournaments.setResult(member('trainer'), t.id, semis[0].id, { sets: [{ home: 25, away: 20 }, { home: 20, away: 25 }], startsAt: null, field: null }))
-      .toThrow(expect.objectContaining({ code: 'tournament.match-open' }));
-    tournaments.setResult(member('trainer'), t.id, semis[0].id, { sets: [{ home: 25, away: 20 }, { home: 25, away: 22 }], startsAt: null, field: null });
-    state = tournaments.setResult(member('trainer'), t.id, semis[1].id, { sets: [{ home: 20, away: 25 }, { home: 18, away: 25 }], startsAt: null, field: null });
+    expect(() =>
+      tournaments.setResult(member('trainer'), t.id, semis[0].id, {
+        sets: [
+          { home: 25, away: 20 },
+          { home: 20, away: 25 },
+        ],
+        startsAt: null,
+        field: null,
+      }),
+    ).toThrow(expect.objectContaining({ code: 'tournament.match-open' }));
+    tournaments.setResult(member('trainer'), t.id, semis[0].id, {
+      sets: [
+        { home: 25, away: 20 },
+        { home: 25, away: 22 },
+      ],
+      startsAt: null,
+      field: null,
+    });
+    state = tournaments.setResult(member('trainer'), t.id, semis[1].id, {
+      sets: [
+        { home: 20, away: 25 },
+        { home: 18, away: 25 },
+      ],
+      startsAt: null,
+      field: null,
+    });
     const final = state.matches.find((m) => m.stage === 'KO' && m.round === 2)!;
     expect([final.homeId, final.awayId]).toEqual([semis[0].homeId, semis[1].awayId]);
-    state = tournaments.setResult(member('trainer'), t.id, final.id, { sets: [{ home: 25, away: 20 }, { home: 23, away: 25 }, { home: 15, away: 12 }], startsAt: null, field: null });
+    state = tournaments.setResult(member('trainer'), t.id, final.id, {
+      sets: [
+        { home: 25, away: 20 },
+        { home: 23, away: 25 },
+        { home: 15, away: 12 },
+      ],
+      startsAt: null,
+      field: null,
+    });
     expect(state.status).toBe('DONE');
   });
 
@@ -99,9 +203,20 @@ describe('mock tournaments', () => {
     const { tournaments } = await import('./mock');
     const member = (id: string) => directory.members.data.find((m) => m.id === id)!;
     directory.stepUp(member('trainer'), MockDirectory.PIN);
-    const t = tournaments.create(member('trainer'), { name: 'Spielefest', startsOn: '2026-12-05', endsOn: '2026-12-05', groupCount: 1, advancePerGroup: 2, format: 'SIMPLE' });
+    const t = tournaments.create(member('trainer'), {
+      name: 'Spielefest',
+      startsOn: '2026-12-05',
+      endsOn: '2026-12-05',
+      groupCount: 1,
+      advancePerGroup: 2,
+      format: 'SIMPLE',
+    });
     expect(t.teamSize).toBeNull();
-    tournaments.setTeams(member('trainer'), t.id, ['A', 'B', 'C'].map((name) => ({ id: null, name, clubTeamId: null })));
+    tournaments.setTeams(
+      member('trainer'),
+      t.id,
+      ['A', 'B', 'C'].map((name) => ({ id: null, name, clubTeamId: null })),
+    );
     let state = tournaments.draw(member('trainer'), t.id);
     const result = (id: string, outcome: 'HOME' | 'AWAY' | 'DRAW' | null, sets: { home: number; away: number }[] = []) =>
       tournaments.setResult(member('trainer'), t.id, id, { sets, outcome, startsAt: null, field: null });
@@ -130,7 +245,19 @@ describe('mock tournaments', () => {
 
 describe('TournamentModel.winner', () => {
   const match = (round: number, homeId: string | null, awayId: string | null): TournamentMatch => ({
-    id: 'm', stage: 'KO', group: null, round, slot: 0, homeId, awayId, homeScore: null, awayScore: null, sets: [], startsAt: null, field: null, wave: null,
+    id: 'm',
+    stage: 'KO',
+    group: null,
+    round,
+    slot: 0,
+    homeId,
+    awayId,
+    homeScore: null,
+    awayScore: null,
+    sets: [],
+    startsAt: null,
+    field: null,
+    wave: null,
   });
 
   it('counts a missing opponent as a bye only in the first knockout round', () => {
@@ -175,23 +302,58 @@ describe('TournamentForm teams', () => {
 });
 
 describe('teamStats', () => {
-  const m = (stage: string, round: number, homeId: string, awayId: string | null, homeScore: number | null, awayScore: number | null,
-    sets: { home: number; away: number }[] = []) => ({ stage, round, homeId, awayId, homeScore, awayScore, sets });
+  const m = (
+    stage: string,
+    round: number,
+    homeId: string,
+    awayId: string | null,
+    homeScore: number | null,
+    awayScore: number | null,
+    sets: { home: number; away: number }[] = [],
+  ) => ({ stage, round, homeId, awayId, homeScore, awayScore, sets });
 
   it('adds group and knockout matches and names how far each team came', () => {
     const stats = teamStats({
       status: 'KO',
       format: 'VOLLEYBALL',
       teams: ['a', 'b', 'c', 'd'].map((id) => ({ id, name: id.toUpperCase(), group: 'A' })),
-      groups: [{ label: 'A', standings: [{ teamId: 'a', points: 9 }, { teamId: 'b', points: 6 }, { teamId: 'c', points: 3 }, { teamId: 'd', points: 0 }] }],
+      groups: [
+        {
+          label: 'A',
+          standings: [
+            { teamId: 'a', points: 9 },
+            { teamId: 'b', points: 6 },
+            { teamId: 'c', points: 3 },
+            { teamId: 'd', points: 0 },
+          ],
+        },
+      ],
       matches: [
-        m('GROUP', 1, 'a', 'b', 2, 1, [{ home: 25, away: 20 }, { home: 20, away: 25 }, { home: 15, away: 10 }]),
-        m('KO', 1, 'a', 'b', 2, 0, [{ home: 25, away: 10 }, { home: 25, away: 12 }]),
+        m('GROUP', 1, 'a', 'b', 2, 1, [
+          { home: 25, away: 20 },
+          { home: 20, away: 25 },
+          { home: 15, away: 10 },
+        ]),
+        m('KO', 1, 'a', 'b', 2, 0, [
+          { home: 25, away: 10 },
+          { home: 25, away: 12 },
+        ]),
         m('KO', 1, 'c', 'd', null, null),
       ],
     });
     const a = stats.find((s) => s.teamId === 'a')!;
-    expect(a).toMatchObject({ rank: 1, points: 9, played: 2, won: 2, lost: 0, setsWon: 4, setsLost: 1, ballsWon: 110, ballsLost: 77, knockout: 'Sieger' });
+    expect(a).toMatchObject({
+      rank: 1,
+      points: 9,
+      played: 2,
+      won: 2,
+      lost: 0,
+      setsWon: 4,
+      setsLost: 1,
+      ballsWon: 110,
+      ballsLost: 77,
+      knockout: 'Sieger',
+    });
     expect(stats.find((s) => s.teamId === 'b')).toMatchObject({ won: 0, lost: 2, knockout: '2. Platz' });
     expect(stats.find((s) => s.teamId === 'c')!.knockout).toBe('im Finale');
   });

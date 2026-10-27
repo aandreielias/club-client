@@ -9,7 +9,10 @@ export type MessageCatalog = Readonly<Record<string, string>>;
 export class ErrorMessages {
   readonly #messages = new Map<string, string>();
 
-  constructor(private readonly byStatus: Readonly<Record<number, string>>, private readonly unknown: string) {}
+  constructor(
+    private readonly byStatus: Readonly<Record<number, string>>,
+    private readonly unknown: string,
+  ) {}
 
   register(catalog: MessageCatalog): this {
     for (const [code, text] of Object.entries(catalog)) this.#messages.set(code, text);

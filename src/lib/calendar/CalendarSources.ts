@@ -89,7 +89,9 @@ export class CalendarSources {
   /** Entries overlapping [from, to) of the enabled categories (all when `enabled` is omitted), sorted by start. */
   async load(from: string, to: string, enabled?: ReadonlySet<string>): Promise<CalendarEntry[]> {
     const items = (await this.api.get<{ items: CalendarItem[] }>('/api/v1/calendar/items', { from, to })).items;
-    return items.filter((i) => !enabled || enabled.has(i.category)).map((i) => this.entry(i))
+    return items
+      .filter((i) => !enabled || enabled.has(i.category))
+      .map((i) => this.entry(i))
       .sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
   }
 

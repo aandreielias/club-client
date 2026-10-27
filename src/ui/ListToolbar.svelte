@@ -21,8 +21,13 @@
     {#if model.searchable}
       <label class="search">
         <Icon name="search" small />
-        <input type="search" bind:value={model.search} placeholder="Suchen" aria-label="Suchen"
-          onkeydown={(e) => e.key === 'Enter' && e.preventDefault()} />
+        <input
+          type="search"
+          bind:value={model.search}
+          placeholder="Suchen"
+          aria-label="Suchen"
+          onkeydown={(e) => e.key === 'Enter' && e.preventDefault()}
+        />
       </label>
     {/if}
     {#each model.filterDefinitions as filter (filter.key)}
@@ -38,8 +43,13 @@
         {@const chosen = (model.filters[filter.key] ?? '').split(',').filter(Boolean)}
         {@const options = filter.options?.(model.data.value ?? []) ?? []}
         {#each chosen as value (value)}
-          <Button size="sm" pressed icon="close" onclick={() => model.setFilter(filter.key, chosen.filter((v) => v !== value).join(','))}
-            tooltip="Filter entfernen">{options.find((o) => o.value === value)?.label ?? value}</Button>
+          <Button
+            size="sm"
+            pressed
+            icon="close"
+            onclick={() => model.setFilter(filter.key, chosen.filter((v) => v !== value).join(','))}
+            tooltip="Filter entfernen">{options.find((o) => o.value === value)?.label ?? value}</Button
+          >
         {/each}
         {#if options.some((o) => !chosen.includes(o.value))}
           <Select
@@ -51,8 +61,12 @@
           />
         {/if}
       {:else}
-        <Button size="sm" pressed={!!model.filters[filter.key]} onclick={() => model.setFilter(filter.key, model.filters[filter.key] ? '' : '1')}
-          tooltip="Filter „{filter.label}“ {model.filters[filter.key] ? 'ausschalten' : 'einschalten'}">
+        <Button
+          size="sm"
+          pressed={!!model.filters[filter.key]}
+          onclick={() => model.setFilter(filter.key, model.filters[filter.key] ? '' : '1')}
+          tooltip="Filter „{filter.label}“ {model.filters[filter.key] ? 'ausschalten' : 'einschalten'}"
+        >
           {filter.label}
         </Button>
       {/if}
@@ -63,10 +77,20 @@
   {/snippet}
   {#snippet end()}
     {#if sortOptions.length}
-      <Select inline aria-label="Sortieren nach" value={model.sort.key} options={sortOptions}
-        onchange={(key) => model.setSort({ key, dir: model.sort.dir })} />
-      <Button size="sm" variant="ghost" icon="sort" onclick={() => model.setSort({ key: model.sort.key, dir: model.sort.dir === 'asc' ? 'desc' : 'asc' })}
-        tooltip={model.sort.dir === 'asc' ? 'Aufsteigend, umkehren' : 'Absteigend, umkehren'} />
+      <Select
+        inline
+        aria-label="Sortieren nach"
+        value={model.sort.key}
+        options={sortOptions}
+        onchange={(key) => model.setSort({ key, dir: model.sort.dir })}
+      />
+      <Button
+        size="sm"
+        variant="ghost"
+        icon="sort"
+        onclick={() => model.setSort({ key: model.sort.key, dir: model.sort.dir === 'asc' ? 'desc' : 'asc' })}
+        tooltip={model.sort.dir === 'asc' ? 'Aufsteigend, umkehren' : 'Absteigend, umkehren'}
+      />
     {/if}
     {@render actions?.()}
   {/snippet}

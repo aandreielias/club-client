@@ -12,4 +12,3 @@ const ROLE_HUES: Readonly<Record<Role, Hue>> = {
 
 /** Tag colour of a club role. */
 export const roleHue = (role: Role): Hue => ROLE_HUES[role];
-

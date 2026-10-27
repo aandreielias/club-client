@@ -82,4 +82,3 @@ export class TaskListModel extends ListModel<Task> {
     return true;
   }
 }
-

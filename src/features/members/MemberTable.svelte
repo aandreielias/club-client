@@ -10,7 +10,12 @@
   import { roleHue } from './roles';
 
   /** Members as rows (members page, start page): roles and status as tags, opens in the window. */
-  let { list, toolbar = true, limit, emptyAction }: { list: MemberListModel; toolbar?: boolean; limit?: number; emptyAction?: EmptyAction | null } = $props();
+  let {
+    list,
+    toolbar = true,
+    limit,
+    emptyAction,
+  }: { list: MemberListModel; toolbar?: boolean; limit?: number; emptyAction?: EmptyAction | null } = $props();
 </script>
 
 <DataTable
@@ -27,7 +32,9 @@
 >
   {#snippet cell(member, column)}
     {#if column.key === 'roles'}
-      <span class="tags">{#each member.roles as role (role)}<Tag tone={roleHue(role)}>{ROLE_LABELS[role]}</Tag>{/each}</span>
+      <span class="tags"
+        >{#each member.roles as role (role)}<Tag tone={roleHue(role)}>{ROLE_LABELS[role]}</Tag>{/each}</span
+      >
     {:else if column.key === 'status'}
       <Tag tone={member.active ? 'green' : 'red'}>{member.active ? 'Aktiv' : 'Inaktiv'}</Tag>
     {:else if column.key === 'email'}

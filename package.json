@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "test": "vitest run",
-    "api:sync": "node scripts/sync-api.mjs"
+    "api:sync": "node scripts/sync-api.mjs",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write ."
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

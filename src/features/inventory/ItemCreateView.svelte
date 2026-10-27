@@ -15,7 +15,10 @@
   // svelte-ignore state_referenced_locally
   const create = new CreateController(bus, handle, 'Neuer Gegenstand');
   let categories = $state<string[]>([]);
-  inventoryApi.list().then((items) => (categories = InventoryListModel.categories(items)), () => {});
+  inventoryApi.list().then(
+    (items) => (categories = InventoryListModel.categories(items)),
+    () => {},
+  );
 
   const submit = () => create.submit(async () => (await inventoryApi.create(form.toNew())).id, 'item', 'Gegenstand angelegt.');
 </script>

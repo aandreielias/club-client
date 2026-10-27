@@ -19,7 +19,14 @@ describe('ContextMenuService', () => {
   const run = () => {};
   it('drops leading, trailing and doubled separators and opens only with actions', () => {
     const menu = new ContextMenuService();
-    const entries: MenuEntry[] = [{ separator: true }, { label: 'A', run }, { separator: true }, { separator: true }, { label: 'B', run }, { separator: true }];
+    const entries: MenuEntry[] = [
+      { separator: true },
+      { label: 'A', run },
+      { separator: true },
+      { separator: true },
+      { label: 'B', run },
+      { separator: true },
+    ];
     expect(ContextMenuService.clean(entries).map((e) => (isSeparator(e) ? '-' : e.label))).toEqual(['A', '-', 'B']);
     expect(menu.show(1, 2, [{ separator: true }])).toBe(false);
     expect(menu.current).toBeNull();

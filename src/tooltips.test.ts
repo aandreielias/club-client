@@ -10,7 +10,7 @@ describe('button tooltips', () => {
   it('cover every static Button label or come with their own tooltip', () => {
     const missing: string[] = [];
     for (const [file, source] of Object.entries(sources)) {
-      for (const match of source.matchAll(/<Button\b((?:[^>{]|\{[^}]*\})*)>(.*?)<\/Button>/gs)) {
+      for (const match of source.matchAll(/<Button\b((?:[^>{]|\{[^}]*\})*)>(.*?)<\/Button\s*>/gs)) {
         const [, attributes, body] = match;
         if (/\btooltip=/.test(attributes)) continue;
         const label = body.replace(/\s+/g, ' ').trim();

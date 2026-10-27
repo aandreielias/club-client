@@ -56,7 +56,11 @@ export type SetsProblem = { code: 'tournament.set-invalid' | 'tournament.match-o
  * Why sets are no finished match by the rules (server: Scoring.requireValid): a set goes to 25 (beach 21), the deciding
  * set to 15, with two points ahead; the match ends when a team has `setsToWin` sets. Null when fine or empty (no result).
  */
-export function setsProblem(sets: readonly { home: number; away: number }[], setsToWin: number, format: TournamentFormat = 'VOLLEYBALL'): SetsProblem | null {
+export function setsProblem(
+  sets: readonly { home: number; away: number }[],
+  setsToWin: number,
+  format: TournamentFormat = 'VOLLEYBALL',
+): SetsProblem | null {
   let home = 0;
   let away = 0;
   for (const [i, set] of sets.entries()) {
@@ -64,7 +68,8 @@ export function setsProblem(sets: readonly { home: number; away: number }[], set
     const target = setTarget(format, i, setsToWin);
     const winner = Math.max(set.home, set.away);
     const loser = Math.min(set.home, set.away);
-    if (!((winner === target && loser <= target - 2) || (winner > target && winner - loser === 2))) return { code: 'tournament.set-invalid', set: i + 1 };
+    if (!((winner === target && loser <= target - 2) || (winner > target && winner - loser === 2)))
+      return { code: 'tournament.set-invalid', set: i + 1 };
     if (set.home > set.away) home++;
     else away++;
   }
@@ -83,7 +88,10 @@ const ratio = (won: number, lost: number) => (lost ? won / lost : won ? Infinity
 /** Group table: points (see tablePoints), wins, set ratio, ball-point ratio, the direct match, then the name. */
 export function standings(teams: ReadonlyMap<string, string>, results: readonly Result[], format: TournamentFormat = 'VOLLEYBALL'): StandingRow[] {
   const rows = new Map<string, StandingRow>(
-    [...teams].map(([teamId, name]) => [teamId, { teamId, name, played: 0, won: 0, drawn: 0, lost: 0, setsWon: 0, setsLost: 0, ballsWon: 0, ballsLost: 0, points: 0 }]),
+    [...teams].map(([teamId, name]) => [
+      teamId,
+      { teamId, name, played: 0, won: 0, drawn: 0, lost: 0, setsWon: 0, setsLost: 0, ballsWon: 0, ballsLost: 0, points: 0 },
+    ]),
   );
   const add = (row: StandingRow, won: number, lost: number, balls: number, ballsAgainst: number) => {
     row.played++;
@@ -177,7 +185,7 @@ export function fieldPlan<M extends { id: string; round: number; slot: number; g
   for (let wave = firstWave; pending.length; wave++) {
     const busy = new Set<string>();
     let field = 0;
-    for (let i = 0; i < pending.length && field < fields; ) {
+    for (let i = 0; i < pending.length && field < fields;) {
       const m = pending[i];
       if ((m.homeId && busy.has(m.homeId)) || (m.awayId && busy.has(m.awayId))) {
         i++;
@@ -228,15 +236,37 @@ type StatsInput = {
   teams: readonly { id: string; name: string; group: string | null }[];
   groups: readonly { label: string; standings: readonly { teamId: string; points: number }[] }[];
   matches: readonly {
-    stage: string; round: number; homeId: string | null; awayId: string | null; homeScore: number | null; awayScore: number | null;
+    stage: string;
+    round: number;
+    homeId: string | null;
+    awayId: string | null;
+    homeScore: number | null;
+    awayScore: number | null;
     sets: readonly { home: number; away: number }[];
   }[];
 };
 
 export function teamStats(t: StatsInput): TeamStats[] {
   const stats = new Map<string, TeamStats>(
-    t.teams.map((team) => [team.id, { teamId: team.id, name: team.name, group: team.group, rank: null, played: 0, won: 0, drawn: 0, lost: 0,
-      setsWon: 0, setsLost: 0, ballsWon: 0, ballsLost: 0, points: null, knockout: null }]),
+    t.teams.map((team) => [
+      team.id,
+      {
+        teamId: team.id,
+        name: team.name,
+        group: team.group,
+        rank: null,
+        played: 0,
+        won: 0,
+        drawn: 0,
+        lost: 0,
+        setsWon: 0,
+        setsLost: 0,
+        ballsWon: 0,
+        ballsLost: 0,
+        points: null,
+        knockout: null,
+      },
+    ]),
   );
   for (const group of t.groups) {
     group.standings.forEach((row, i) => {
@@ -247,7 +277,10 @@ export function teamStats(t: StatsInput): TeamStats[] {
   const simple = t.format === 'SIMPLE'; // a simple score is the outcome (1:0), not sets
   for (const m of t.matches) {
     if (!m.homeId || !m.awayId || m.homeScore === null || m.awayScore === null) continue;
-    for (const [id, own, other, side] of [[m.homeId, m.homeScore, m.awayScore, 'home'], [m.awayId, m.awayScore, m.homeScore, 'away']] as const) {
+    for (const [id, own, other, side] of [
+      [m.homeId, m.homeScore, m.awayScore, 'home'],
+      [m.awayId, m.awayScore, m.homeScore, 'away'],
+    ] as const) {
       const s = stats.get(id);
       if (!s) continue;
       s.played++;
@@ -282,5 +315,7 @@ export function teamStats(t: StatsInput): TeamStats[] {
       else s.knockout = name.startsWith('Runde') ? `in ${name}` : `im ${name}`;
     }
   }
-  return [...stats.values()].sort((a, b) => (a.group ?? '~').localeCompare(b.group ?? '~') || (a.rank ?? 99) - (b.rank ?? 99) || a.name.localeCompare(b.name, 'de'));
+  return [...stats.values()].sort(
+    (a, b) => (a.group ?? '~').localeCompare(b.group ?? '~') || (a.rank ?? 99) - (b.rank ?? 99) || a.name.localeCompare(b.name, 'de'),
+  );
 }

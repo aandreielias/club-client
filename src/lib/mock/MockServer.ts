@@ -40,7 +40,14 @@ export class MockServer {
     return this;
   }
 
-  handle(method: HttpMethod, path: string, body: unknown, email: string | null, onProgress?: MockRequest['onProgress'], totpAt: number | null = null): unknown {
+  handle(
+    method: HttpMethod,
+    path: string,
+    body: unknown,
+    email: string | null,
+    onProgress?: MockRequest['onProgress'],
+    totpAt: number | null = null,
+  ): unknown {
     const url = new URL(path, 'http://mock');
     for (const route of this.#routes) {
       if (route.method !== method) continue;

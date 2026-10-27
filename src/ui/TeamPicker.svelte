@@ -4,8 +4,12 @@
   import DataTable from './DataTable.svelte';
 
   /** Choosing teams in the same list as the teams page (search, season filter, sorting), with checkboxes. */
-  let { list, chosen, ontoggle, error }: { list: TeamListModel; chosen: readonly string[]; ontoggle: (teamId: string) => void; error?: string | null } =
-    $props();
+  let {
+    list,
+    chosen,
+    ontoggle,
+    error,
+  }: { list: TeamListModel; chosen: readonly string[]; ontoggle: (teamId: string) => void; error?: string | null } = $props();
 
   const check = {
     checked: (t: Team) => chosen.includes(t.id),

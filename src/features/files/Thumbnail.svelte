@@ -21,8 +21,14 @@
 </script>
 
 {#if src && !failed}
-  <img {src} alt={file.name} loading="lazy" width={full ? file.width : undefined} height={full ? file.height : undefined}
-    onerror={() => (failed = true)} />
+  <img
+    {src}
+    alt={file.name}
+    loading="lazy"
+    width={full ? file.width : undefined}
+    height={full ? file.height : undefined}
+    onerror={() => (failed = true)}
+  />
 {:else}
   <span class="placeholder muted">{failed || !(full || file.hasThumbnail) ? fileTypes.label(file.contentType) : 'Laden …'}</span>
 {/if}

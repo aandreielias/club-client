@@ -14,7 +14,11 @@
 
   /** Six-week month grid starting Monday; empty space in a day creates an appointment there (managers, coaches). */
   let hoverDay = $state<string | null>(null);
-  let { model, drag, resizer }: {
+  let {
+    model,
+    drag,
+    resizer,
+  }: {
     model: CalendarModel;
     /** Moving entries by drag and drop (where allowed). */
     drag?: CalendarDrag;
@@ -25,7 +29,6 @@
   const max = settings.calendar.maxChipsPerDay;
   const weekdays = $derived(model.days.slice(0, 7));
   const weeks = $derived(Array.from({ length: model.days.length / 7 }, (_, i) => model.days.slice(i * 7, i * 7 + 7)));
-
 
   /** Right-click on a day: new appointment there, or the week around it. */
   function dayMenu(date: string) {
@@ -41,38 +44,61 @@
     {#each weekdays as day (day)}<div class="weekday">{session.format.weekday(day)}</div>{/each}
   </div>
   {#each weeks as week (week[0])}
-  {@const bars = model.spans(week)}
-  <div class="cells" style:--lanes={bars.lanes}>
-    <!-- Entries across several days: one bar per week row, above the day's own entries. -->
-    <SpanBars spans={bars.spans} top="calc(var(--space-xs) + 26px)" gap="var(--space-xs)" {drag} {resizer} />
-    {#each week as day (day)}
-      {@const entries = model.singleOn(day)}
-      {@const room = Math.max(max - bars.lanes, 1)}
-      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-      <div class="cell" data-day={day} class:outside={!model.inAnchorMonth(day)} class:today={day === model.today} class:creatable={policy.canCreate()}
-        role="group" aria-label={session.format.dayHeading(day)} ondblclick={() => createAppointment(model, day)} {@attach menu(() => dayMenu(day))}
-        class:drop-target={hoverDay === day}
-        ondragover={(e) => drag?.over(e) && (hoverDay = day)}
-        ondragleave={() => hoverDay === day && (hoverDay = null)}
-        ondrop={(e) => ((hoverDay = null), drag?.drop(e, model.entries.value ?? [], (entry) => drag.toDay(entry, day), () => void model.load()))}>
-        <div class="day-head">
-          <span class="number">{Number(day.slice(8))}</span>
-          {#if policy.canCreate()}
-            <button class="add" onclick={() => createAppointment(model, day)} aria-label="Termin am {session.format.dayHeading(day)} anlegen"
-              {@attach tooltip(`Termin am ${session.format.date(day)} anlegen`)}><Icon name="add" small /></button>
-          {/if}
+    {@const bars = model.spans(week)}
+    <div class="cells" style:--lanes={bars.lanes}>
+      <!-- Entries across several days: one bar per week row, above the day's own entries. -->
+      <SpanBars spans={bars.spans} top="calc(var(--space-xs) + 26px)" gap="var(--space-xs)" {drag} {resizer} />
+      {#each week as day (day)}
+        {@const entries = model.singleOn(day)}
+        {@const room = Math.max(max - bars.lanes, 1)}
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+        <div
+          class="cell"
+          data-day={day}
+          class:outside={!model.inAnchorMonth(day)}
+          class:today={day === model.today}
+          class:creatable={policy.canCreate()}
+          role="group"
+          aria-label={session.format.dayHeading(day)}
+          ondblclick={() => createAppointment(model, day)}
+          {@attach menu(() => dayMenu(day))}
+          class:drop-target={hoverDay === day}
+          ondragover={(e) => drag?.over(e) && (hoverDay = day)}
+          ondragleave={() => hoverDay === day && (hoverDay = null)}
+          ondrop={(e) => (
+            (hoverDay = null),
+            drag?.drop(
+              e,
+              model.entries.value ?? [],
+              (entry) => drag.toDay(entry, day),
+              () => void model.load(),
+            )
+          )}
+        >
+          <div class="day-head">
+            <span class="number">{Number(day.slice(8))}</span>
+            {#if policy.canCreate()}
+              <button
+                class="add"
+                onclick={() => createAppointment(model, day)}
+                aria-label="Termin am {session.format.dayHeading(day)} anlegen"
+                {@attach tooltip(`Termin am ${session.format.date(day)} anlegen`)}><Icon name="add" small /></button
+              >
+            {/if}
+          </div>
+          <div class="entries">
+            {#each entries.slice(0, room) as entry (entry.key)}
+              <EntryChip {entry} showTime={!entry.allDay} {drag} resize="days" {resizer} />
+            {/each}
+            {#if entries.length > room}
+              <button class="more" onclick={() => model.goTo(day, 'week')} {@attach tooltip('Alle Einträge dieser Woche anzeigen')}
+                >+{entries.length - room} weitere</button
+              >
+            {/if}
+          </div>
         </div>
-        <div class="entries">
-          {#each entries.slice(0, room) as entry (entry.key)}
-            <EntryChip {entry} showTime={!entry.allDay} {drag} resize="days" {resizer} />
-          {/each}
-          {#if entries.length > room}
-            <button class="more" onclick={() => model.goTo(day, 'week')} {@attach tooltip('Alle Einträge dieser Woche anzeigen')}>+{entries.length - room} weitere</button>
-          {/if}
-        </div>
-      </div>
-    {/each}
-  </div>
+      {/each}
+    </div>
   {/each}
 </div>
 

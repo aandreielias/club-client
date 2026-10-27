@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiClient } from '../../lib/http/ApiClient';
-import { directory, MockDirectory } from '../../lib/mock/core';
+import { directory } from '../../lib/mock/core';
 import { SessionStore } from '../../lib/session/SessionStore.svelte';
 import { ZonedClock } from '../../lib/time/ZonedClock';
 import type { Member, Role } from '../../lib/types';
@@ -43,7 +43,11 @@ describe('meeting rules', () => {
 
 describe('MeetingForm', () => {
   it('follows the type with its title and asks for the urgency where the type needs one', () => {
-    const form = new MeetingForm(new ZonedClock('Europe/Vienna'), '2026-12-01T19:00', SEEDED_TYPES.map((t) => t.label));
+    const form = new MeetingForm(
+      new ZonedClock('Europe/Vienna'),
+      '2026-12-01T19:00',
+      SEEDED_TYPES.map((t) => t.label),
+    );
     expect(form.end).toBe('2026-12-01T21:00');
     form.setType(type('EXTRA_BOARD'));
     expect(form.title).toBe('Außerordentliche Vorstandssitzung');
@@ -55,7 +59,12 @@ describe('MeetingForm', () => {
     form.title = 'Krisensitzung';
     form.setType(type('SIMPLE_BOARD'));
     expect(form.title).toBe('Krisensitzung'); // typed titles stay
-    expect(form.toNew()).toMatchObject({ kind: 'SIMPLE_BOARD', urgency: null, startsAt: '2026-12-01T18:00:00.000Z', endsAt: '2026-12-01T20:00:00.000Z' });
+    expect(form.toNew()).toMatchObject({
+      kind: 'SIMPLE_BOARD',
+      urgency: null,
+      startsAt: '2026-12-01T18:00:00.000Z',
+      endsAt: '2026-12-01T20:00:00.000Z',
+    });
   });
 });
 
@@ -104,8 +113,9 @@ describe('mock resolutions', () => {
     const voted = meetings.vote(member('vorstand'), draft.id, 'YES');
     expect(voted).toMatchObject({ voted: true, ballots: 1, yes: null });
     expect(() => meetings.vote(member('vorstand'), draft.id, 'NO')).toThrow(expect.objectContaining({ code: 'resolution.already-voted' }));
-    expect(() => meetings.analogVotes(member('vorstand'), draft.id, { yes: 1, no: 1, abstain: 0 }))
-      .toThrow(expect.objectContaining({ code: 'resolution.analog-exceeds-present' }));
+    expect(() => meetings.analogVotes(member('vorstand'), draft.id, { yes: 1, no: 1, abstain: 0 })).toThrow(
+      expect.objectContaining({ code: 'resolution.analog-exceeds-present' }),
+    );
     meetings.analogVotes(member('vorstand'), draft.id, { yes: 0, no: 1, abstain: 0 });
     expect(() => meetings.close(member('vorstand'), mv.id, null)).toThrow(expect.objectContaining({ code: 'meeting.votes-open' }));
     // 1:1 misses two thirds
@@ -132,10 +142,17 @@ describe('meeting links', () => {
   it('link records as the manager sees them, never the meeting itself', () => {
     directory.confirm(member('vorstand'));
     const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(25), endsAt: inDays(25.1) });
-    const linked = meetings.setLinks(member('vorstand'), mv.id, [{ kind: 'MEMBER', id: 'kassier' }, { kind: 'MEETING', id: 'mt-past' }]);
+    const linked = meetings.setLinks(member('vorstand'), mv.id, [
+      { kind: 'MEMBER', id: 'kassier' },
+      { kind: 'MEETING', id: 'mt-past' },
+    ]);
     expect(linked.links.map((l) => l.title)).toEqual(['Karin Kassier', 'Ordentliche Vorstandssitzung']);
-    expect(() => meetings.setLinks(member('vorstand'), mv.id, [{ kind: 'MEETING', id: mv.id }])).toThrow(expect.objectContaining({ code: 'meeting.ref-unknown' }));
-    expect(() => meetings.setLinks(member('vorstand'), mv.id, [{ kind: 'TASK', id: 'nope' }])).toThrow(expect.objectContaining({ code: 'meeting.ref-unknown' }));
+    expect(() => meetings.setLinks(member('vorstand'), mv.id, [{ kind: 'MEETING', id: mv.id }])).toThrow(
+      expect.objectContaining({ code: 'meeting.ref-unknown' }),
+    );
+    expect(() => meetings.setLinks(member('vorstand'), mv.id, [{ kind: 'TASK', id: 'nope' }])).toThrow(
+      expect.objectContaining({ code: 'meeting.ref-unknown' }),
+    );
     expect(meetings.get(member('helfer'), mv.id).links).toHaveLength(2);
   });
 });
@@ -148,7 +165,10 @@ describe('invitation document', () => {
     const first = await meetings.generateInvitation(member('vorstand'), mv.id);
     expect(first.links[0]).toMatchObject({ kind: 'FILE', title: expect.stringMatching(/^Einladung .* MV Test\.docx$/) });
     const folder = files.listFolders(member('helfer')).find((f) => f.id === first.links[0].parentId)!;
-    expect(files.listFolders(member('helfer')).find((f) => f.id === folder.parentId)).toMatchObject({ name: 'Mitgliederversammlungen', scope: 'ASSEMBLY' });
+    expect(files.listFolders(member('helfer')).find((f) => f.id === folder.parentId)).toMatchObject({
+      name: 'Mitgliederversammlungen',
+      scope: 'ASSEMBLY',
+    });
     expect(files.listFolders(member('spielerin')).some((f) => f.name === 'Mitgliederversammlungen')).toBe(false);
 
     const templates = files.listFolders(member('vorstand')).find((f) => f.name === 'Vorlagen')!;
@@ -176,14 +196,22 @@ describe('follow-up tasks', () => {
     for (const id of ['vorstand', 'kassier', 'schrift', 'beisitz', 'beisitz2', 'admin']) meetings.setPresence(member('vorstand'), mv.id, id, 'APP');
     const opened = meetings.open(member('vorstand'), mv.id);
     expect(opened.present.length * 2).toBeGreaterThanOrEqual(opened.electorate.length);
-    expect(() => meetings.createResolution(member('vorstand'), mv.id, { title: 'Statuten', majority: 'SIMPLE', action: 'STATUTES_CHANGE' }))
-      .toThrow(expect.objectContaining({ code: 'resolution.majority-mismatch' }));
-    const r = meetings.createResolution(member('vorstand'), mv.id,
-      { title: 'Ehrenmitglied Lena', majority: 'SIMPLE', action: 'HONORARY_GRANT', actionMemberId: 'spielerin', assigneeIds: ['schrift'] });
+    expect(() => meetings.createResolution(member('vorstand'), mv.id, { title: 'Statuten', majority: 'SIMPLE', action: 'STATUTES_CHANGE' })).toThrow(
+      expect.objectContaining({ code: 'resolution.majority-mismatch' }),
+    );
+    const r = meetings.createResolution(member('vorstand'), mv.id, {
+      title: 'Ehrenmitglied Lena',
+      majority: 'SIMPLE',
+      action: 'HONORARY_GRANT',
+      actionMemberId: 'spielerin',
+      assigneeIds: ['schrift'],
+    });
     meetings.openResolution(member('vorstand'), r.id);
     for (const id of ['vorstand', 'kassier', 'schrift']) meetings.vote(member(id), r.id, 'YES');
     const closed = meetings.closeResolution(member('vorstand'), r.id);
-    expect(closed.followUps).toEqual([expect.objectContaining({ kind: 'ENTER_HONORARY', title: 'Ehrenmitgliedschaft eintragen: Lena Spielerin', automatic: true })]);
+    expect(closed.followUps).toEqual([
+      expect.objectContaining({ kind: 'ENTER_HONORARY', title: 'Ehrenmitgliedschaft eintragen: Lena Spielerin', automatic: true }),
+    ]);
     const task = tasks.get(member('schrift'), closed.followUps[0].taskId!);
     expect(task).toMatchObject({ assignees: ['schrift'], status: 'OPEN', source: { kind: 'MEETING_FOLLOW_UP' } });
 
@@ -201,15 +229,25 @@ describe('follow-up tasks', () => {
     const manual = meetings.addFollowUp(member('vorstand'), { meetingId: mv.id }, { title: 'Protokoll verteilen' });
     expect(manual).toMatchObject({ kind: 'MANUAL', taskId: expect.any(String) });
     // only those present, and for tasks that need admin or board rights only admins and board members
-    expect(() => meetings.addFollowUp(member('vorstand'), { meetingId: mv.id }, { title: 'X', assigneeIds: ['spieler'] }))
-      .toThrow(expect.objectContaining({ code: 'meeting.assignee-not-allowed' }));
-    expect(() => meetings.createResolution(member('vorstand'), mv.id,
-      { title: 'Ehrenmitglied', majority: 'SIMPLE', action: 'HONORARY_GRANT', actionMemberId: 'neu', assigneeIds: ['trainer'] }))
-      .toThrow(expect.objectContaining({ code: 'meeting.assignee-not-allowed' }));
+    expect(() => meetings.addFollowUp(member('vorstand'), { meetingId: mv.id }, { title: 'X', assigneeIds: ['spieler'] })).toThrow(
+      expect.objectContaining({ code: 'meeting.assignee-not-allowed' }),
+    );
+    expect(() =>
+      meetings.createResolution(member('vorstand'), mv.id, {
+        title: 'Ehrenmitglied',
+        majority: 'SIMPLE',
+        action: 'HONORARY_GRANT',
+        actionMemberId: 'neu',
+        assigneeIds: ['trainer'],
+      }),
+    ).toThrow(expect.objectContaining({ code: 'meeting.assignee-not-allowed' }));
     const meetingNow = meetings.get(member('vorstand'), mv.id);
     expect(meetingNow.assignable.find((a) => a.memberId === 'admin')).toMatchObject({ manager: true });
 
-    const linked = meetings.setResolutionLinks(member('vorstand'), r.id, [{ kind: 'MEMBER', id: 'spielerin' }, { kind: 'MEETING', id: 'mt-past' }]);
+    const linked = meetings.setResolutionLinks(member('vorstand'), r.id, [
+      { kind: 'MEMBER', id: 'spielerin' },
+      { kind: 'MEETING', id: 'mt-past' },
+    ]);
     expect(linked.links.map((l) => l.title)).toEqual(['Lena Spielerin', 'Ordentliche Vorstandssitzung']);
   });
 });
@@ -229,7 +267,7 @@ describe('meeting types', () => {
     expect(form.toInput()).toMatchObject({ noticeHours: 48, dueBy: '02-28', needsReason: true });
   });
 
-  it('keep the steps around a meeting: the server reminders plus the club\'s own', () => {
+  it("keep the steps around a meeting: the server reminders plus the club's own", () => {
     const form = new MeetingTypeForm(type('ASSEMBLY'));
     expect(form.steps.map((s) => s.system ?? s.anchor)).toEqual(['INVITE_REMINDER', 'START_REMINDER', 'AFTER_END']);
     const i = form.addStep('BEFORE_START');

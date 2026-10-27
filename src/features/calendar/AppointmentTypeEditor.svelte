@@ -9,7 +9,14 @@
   import { HUES, type AppointmentTypeInput } from './model';
 
   /** Form of an appointment type: name, colour in the calendar, car pools and changing cabins. */
-  let { form, action, submitLabel, canArchive, oncancel, onsubmit }: {
+  let {
+    form,
+    action,
+    submitLabel,
+    canArchive,
+    oncancel,
+    onsubmit,
+  }: {
     form: AppointmentTypeInput;
     action: Action;
     submitLabel: string;
@@ -19,7 +26,14 @@
   } = $props();
 
   const HUE_LABELS: Readonly<Record<Hue, string>> = {
-    gray: 'Grau', brown: 'Braun', orange: 'Orange', yellow: 'Gelb', green: 'Grün', blue: 'Blau', purple: 'Violett', red: 'Rot',
+    gray: 'Grau',
+    brown: 'Braun',
+    orange: 'Orange',
+    yellow: 'Gelb',
+    green: 'Grün',
+    blue: 'Blau',
+    purple: 'Violett',
+    red: 'Rot',
   };
   const HUE_OPTIONS = HUES.map((h) => ({ value: h, label: HUE_LABELS[h] }));
 

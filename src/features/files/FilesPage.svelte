@@ -59,14 +59,17 @@
   });
 
   const folder = $derived(folderId ? tree.get(folderId) : undefined);
-  const canCreate = $derived(folderId ? !!folder && filePolicy.canCreateIn(folder, tree.depth(folder.id), tree.maxDepth) : filePolicy.canCreateRoot());
+  const canCreate = $derived(
+    folderId ? !!folder && filePolicy.canCreateIn(folder, tree.depth(folder.id), tree.maxDepth) : filePolicy.canCreateRoot(),
+  );
   // One view for all folders (Einstellungen remember it per browser).
   const shownView = $derived<View>(preferences.values.filesView);
   let creating = $state(false);
   useCommands(commands, { 'page.new': { run: () => (creating = true), when: () => canCreate } });
 
   /** Files can be dragged onto anything that links records (a message, Benötigt). */
-  const record = (item: FolderItem) => (item.kind === 'file' ? { kind: 'file', id: `${item.file.folderId}:${item.file.id}`, title: item.name } : null);
+  const record = (item: FolderItem) =>
+    item.kind === 'file' ? { kind: 'file', id: `${item.file.folderId}:${item.file.id}`, title: item.name } : null;
 
   /** A member dropped onto a photo tile opens the photo with them in its tag editor. */
   const tagDrop = {
@@ -116,7 +119,9 @@
   }
 
   // Empty folder: create a subfolder (uploading has its own panel below).
-  const emptyAction = $derived(canCreate ? { label: folderId ? 'Neuer Unterordner' : 'Neuer Ordner', icon: 'add' as const, run: () => (creating = true) } : null);
+  const emptyAction = $derived(
+    canCreate ? { label: folderId ? 'Neuer Unterordner' : 'Neuer Ordner', icon: 'add' as const, run: () => (creating = true) } : null,
+  );
 
   const fileActions = new FolderActions({
     bus,
@@ -193,7 +198,12 @@
   {#snippet actions()}
     <ChoiceGroup name="files-view" label="Ansicht" options={VIEWS} bind:value={() => shownView, (v) => v && preferences.set('filesView', v)} />
     {#if folder}
-      <Button icon="download" busy={fileActions.zipping} onclick={() => fileActions.zip(folder)} tooltip="Ordner mit Unterordnern als ZIP herunterladen" />
+      <Button
+        icon="download"
+        busy={fileActions.zipping}
+        onclick={() => fileActions.zip(folder)}
+        tooltip="Ordner mit Unterordnern als ZIP herunterladen"
+      />
       <Button icon="copy" onclick={() => LinkClipboard.copy(bus, `/files/${folder.id}`)} tooltip="Link zu diesem Ordner kopieren" />
     {/if}
     {#if folder?.canManage}
@@ -213,34 +223,91 @@
       <div class="selection" role="toolbar" aria-label="Auswahl">
         <span class="count">{fileActions.selectedFiles.length} ausgewählt</span>
         {#if folder.canManage}<Button size="sm" icon="move" onclick={() => (moving = true)}>Verschieben</Button>{/if}
-        <Button size="sm" icon="download" busy={fileActions.zipping} onclick={() => fileActions.zip(folder, fileActions.selectedFiles)} tooltip="Auswahl als ZIP herunterladen">Als ZIP</Button>
+        <Button
+          size="sm"
+          icon="download"
+          busy={fileActions.zipping}
+          onclick={() => fileActions.zip(folder, fileActions.selectedFiles)}
+          tooltip="Auswahl als ZIP herunterladen">Als ZIP</Button
+        >
         {#if fileActions.selectedFiles.every((f) => fileActions.canModify(f))}
-          <Button size="sm" variant="danger" icon="delete" onclick={() => fileActions.remove(fileActions.selectedFiles)} tooltip="Ausgewählte Dateien löschen">Löschen</Button>
+          <Button
+            size="sm"
+            variant="danger"
+            icon="delete"
+            onclick={() => fileActions.remove(fileActions.selectedFiles)}
+            tooltip="Ausgewählte Dateien löschen">Löschen</Button
+          >
         {/if}
         <Button size="sm" variant="ghost" onclick={() => fileActions.selected.clear()}>Auswahl aufheben</Button>
       </div>
     {/if}
     {#if shownView === 'gallery'}
-      <FolderGallery model={list} onopen={open} menu={itemMenu} emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'} {emptyAction} {drag} {record} {tagDrop}
-        selected={(item) => fileActions.selected.has(item.id)} onselect={(item) => fileActions.toggle(item.id)} />
+      <FolderGallery
+        model={list}
+        onopen={open}
+        menu={itemMenu}
+        emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'}
+        {emptyAction}
+        {drag}
+        {record}
+        {tagDrop}
+        selected={(item) => fileActions.selected.has(item.id)}
+        onselect={(item) => fileActions.toggle(item.id)}
+      />
     {:else}
-      <DataTable model={list} rowKey={(item) => item.id} onopen={open}
-        {record} menu={itemMenu} emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'} {emptyAction} {drag}
-        check={contents ? { checked: (item) => fileActions.selected.has(item.id), toggle: (item) => fileActions.toggle(item.id), hidden: (item) => item.kind === 'folder', label: (item) => `${item.name} auswählen` } : undefined}>
+      <DataTable
+        model={list}
+        rowKey={(item) => item.id}
+        onopen={open}
+        {record}
+        menu={itemMenu}
+        emptyText={folderId ? 'Noch nichts hochgeladen.' : 'Noch keine Ordner.'}
+        {emptyAction}
+        {drag}
+        check={contents
+          ? {
+              checked: (item) => fileActions.selected.has(item.id),
+              toggle: (item) => fileActions.toggle(item.id),
+              hidden: (item) => item.kind === 'folder',
+              label: (item) => `${item.name} auswählen`,
+            }
+          : undefined}
+      >
         {#snippet cell(item, column)}
           {#if column.key === 'actions'}
             {#if item.kind === 'file' && fileActions.canModify(item.file)}
               {@const file = item.file}
-              <Button size="sm" variant="ghost" icon="edit" onclick={(e) => (e.stopPropagation(), (editingFile = file))} tooltip="Umbenennen oder verschieben" />
-              <Button size="sm" variant="ghost" icon="delete" onclick={(e) => (e.stopPropagation(), fileActions.remove([file]))} tooltip="Datei löschen" />
+              <Button
+                size="sm"
+                variant="ghost"
+                icon="edit"
+                onclick={(e) => (e.stopPropagation(), (editingFile = file))}
+                tooltip="Umbenennen oder verschieben"
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                icon="delete"
+                onclick={(e) => (e.stopPropagation(), fileActions.remove([file]))}
+                tooltip="Datei löschen"
+              />
             {:else if item.kind === 'folder' && item.folder.canManage}
               {@const target = item.folder}
-              <Button size="sm" variant="ghost" icon="edit" onclick={(e) => (e.stopPropagation(), (editingFolder = target))} tooltip="Ordner bearbeiten" />
+              <Button
+                size="sm"
+                variant="ghost"
+                icon="edit"
+                onclick={(e) => (e.stopPropagation(), (editingFolder = target))}
+                tooltip="Ordner bearbeiten"
+              />
             {/if}
           {:else if column.key === 'name'}
             <span class="name-cell">
               {#if item.kind === 'folder'}
-                <span class="folder-icon" style:color={colorHue(item.folder.color) ? `var(--color-tag-${colorHue(item.folder.color)}-text)` : null}><Icon name="files" small /></span>
+                <span class="folder-icon" style:color={colorHue(item.folder.color) ? `var(--color-tag-${colorHue(item.folder.color)}-text)` : null}
+                  ><Icon name="files" small /></span
+                >
               {/if}
               <span>{item.name}</span>
             </span>
@@ -260,7 +327,13 @@
 </Page>
 
 {#if moving && folder}
-  <MoveFilesDialog files={fileActions.selectedFiles} {folder} {tree} onclose={() => (moving = false)} onmoved={() => ((moving = false), fileActions.moved())} />
+  <MoveFilesDialog
+    files={fileActions.selectedFiles}
+    {folder}
+    {tree}
+    onclose={() => (moving = false)}
+    onmoved={() => ((moving = false), fileActions.moved())}
+  />
 {/if}
 {#if editingFolder}
   <EditFolderDialog folder={editingFolder} onsaved={folderSaved} onclose={() => (editingFolder = null)} />

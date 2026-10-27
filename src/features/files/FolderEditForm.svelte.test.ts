@@ -3,8 +3,18 @@ import { FileEditForm, FolderEditForm } from './FolderEditForm.svelte';
 import type { Folder, StoredFile } from './model';
 
 const folder = (overrides: Partial<Folder> = {}): Folder => ({
-  id: 'f1', parentId: null, name: 'Fotos', kind: 'PHOTOS', scope: 'TEAM', teamIds: ['t1'], membersCanUpload: false,
-  color: 'BLUE', coverFileId: 'p1', canUpload: true, canManage: true, ...overrides,
+  id: 'f1',
+  parentId: null,
+  name: 'Fotos',
+  kind: 'PHOTOS',
+  scope: 'TEAM',
+  teamIds: ['t1'],
+  membersCanUpload: false,
+  color: 'BLUE',
+  coverFileId: 'p1',
+  canUpload: true,
+  canManage: true,
+  ...overrides,
 });
 
 describe('FolderEditForm', () => {

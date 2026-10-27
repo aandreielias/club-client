@@ -20,7 +20,9 @@
     {/each}
     <ul>
       {#each b.offices as o (o.id)}
-        <li><span>{boardSettings.label(o.office)}</span><span>{o.name}</span><span class="muted small">bis {session.format.date(o.termEndsOn)}</span></li>
+        <li>
+          <span>{boardSettings.label(o.office)}</span><span>{o.name}</span><span class="muted small">bis {session.format.date(o.termEndsOn)}</span>
+        </li>
       {:else}
         <li class="muted">Noch keine Funktionen eingetragen.</li>
       {/each}

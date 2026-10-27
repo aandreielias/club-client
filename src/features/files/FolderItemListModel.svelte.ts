@@ -34,7 +34,10 @@ export class FolderItemListModel extends ListModel<FolderItem> {
           {
             key: 'type',
             label: 'Typ',
-            value: (item) => (item.kind === 'folder' ? (FOLDER_KINDS.find((k) => k.value === item.folder.kind)?.label ?? 'Ordner') : types.label(item.file.contentType)),
+            value: (item) =>
+              item.kind === 'folder'
+                ? (FOLDER_KINDS.find((k) => k.value === item.folder.kind)?.label ?? 'Ordner')
+                : types.label(item.file.contentType),
             width: '9rem',
           },
           {

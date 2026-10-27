@@ -7,7 +7,12 @@
   import { membersApi } from './services';
 
   /** Who is guardian of whom, on both profiles, with what a guardian may do (server: every module's ward checks). */
-  let { memberId, firstName, self = false, parent = false }: {
+  let {
+    memberId,
+    firstName,
+    self = false,
+    parent = false,
+  }: {
     memberId: string;
     firstName: string;
     self?: boolean;
@@ -31,7 +36,9 @@
 
 {#snippet people(list: Relative[])}
   {#each list as relative (relative.memberId)}
-    <RecordLink kind="member" id={relative.memberId} allowed={relative.canOpen} hint="Profil öffnen"><Tag tone="purple">{relative.name}</Tag></RecordLink>
+    <RecordLink kind="member" id={relative.memberId} allowed={relative.canOpen} hint="Profil öffnen"
+      ><Tag tone="purple">{relative.name}</Tag></RecordLink
+    >
   {/each}
 {/snippet}
 
@@ -56,7 +63,8 @@
   </dl>
   <details class="rights">
     <summary {@attach tooltip('Was Erziehungsberechtigte in der App tun können')}>
-      {#if wards.length}{self ? 'Du kannst' : `${firstName} kann`} für {names(wards)} …{:else}{names(guardians)} {guardians.length > 1 ? 'können' : 'kann'} für {self ? 'dich' : firstName} …{/if}
+      {#if wards.length}{self ? 'Du kannst' : `${firstName} kann`} für {names(wards)} …{:else}{names(guardians)}
+        {guardians.length > 1 ? 'können' : 'kann'} für {self ? 'dich' : firstName} …{/if}
     </summary>
     <ul>
       {#each RIGHTS as right (right)}<li>{right}</li>{/each}

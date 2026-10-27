@@ -43,7 +43,15 @@
   });
   let subscribing = $state(false);
   const drag = new CalendarDrag(calendarSources, session.clock, settings.calendar.snapMinutes, bus);
-  const resizer = new CalendarResize(drag, calendarSources, (preview) => { model.preview = preview; }, () => void model.load(), bus);
+  const resizer = new CalendarResize(
+    drag,
+    calendarSources,
+    (preview) => {
+      model.preview = preview;
+    },
+    () => void model.load(),
+    bus,
+  );
   const exporting = new Action();
 
   /** Every upcoming appointment the member sees, as a file for any calendar app. */
@@ -102,8 +110,12 @@
 {#snippet filters()}
   <!-- Only the categories this range has (and hidden ones, so they can come back). -->
   {#each calendarSources.all.filter((c) => model.countOf(c.id) > 0 || !model.isShown(c.id)) as category (category.id)}
-    <Button size="sm" pressed={model.isShown(category.id)} onclick={() => model.toggleSource(category.id)}
-      tooltip="{category.label} im Kalender {model.isShown(category.id) ? 'ausblenden' : 'einblenden'}">
+    <Button
+      size="sm"
+      pressed={model.isShown(category.id)}
+      onclick={() => model.toggleSource(category.id)}
+      tooltip="{category.label} im Kalender {model.isShown(category.id) ? 'ausblenden' : 'einblenden'}"
+    >
       <span class="dot" style:--dot="var(--color-tag-{category.hue}-text)"></span>{category.label}
       <span class="count">{model.countOf(category.id)}</span>
     </Button>
@@ -112,8 +124,13 @@
     <Button size="sm" variant="ghost" onclick={() => model.showAll()} tooltip="Alle Arten wieder einblenden">Alle zeigen</Button>
   {/if}
   {#if teamOptions.length}
-    <Select inline aria-label="Team" value={model.teamId ?? ''} options={[{ value: '', label: 'Alle Teams' }, ...teamOptions]}
-      onchange={(team) => model.setTeam(team || null)} />
+    <Select
+      inline
+      aria-label="Team"
+      value={model.teamId ?? ''}
+      options={[{ value: '', label: 'Alle Teams' }, ...teamOptions]}
+      onchange={(team) => model.setTeam(team || null)}
+    />
   {/if}
 {/snippet}
 
@@ -125,26 +142,33 @@
 
 <Page title="Kalender">
   {#snippet actions()}
-    <ChoiceGroup name="calendar-view" label="Ansicht" options={CALENDAR_VIEWS}
-      bind:value={() => model.view, (view) => view && model.setView(view)} />
-    <LinkButton href="#/calendar/absences" tooltip="Urlaub oder Verletzung eintragen: Termine an diesen Tagen zählen als „Nein“">Abwesend melden</LinkButton>
-    <Button icon="download" busy={exporting.busy} tooltip="Termine exportieren oder den Kalender in einer Kalender-App abonnieren"
-      onclick={(e) => openMenuAt(e.currentTarget as Element, [
-        { label: 'Kommende Termine herunterladen (.ics)', icon: 'download', run: () => void exportIcs() },
-        { label: 'In Kalender-App abonnieren …', icon: 'link', run: () => (subscribing = true) },
-      ])}>Exportieren</Button>
+    <ChoiceGroup name="calendar-view" label="Ansicht" options={CALENDAR_VIEWS} bind:value={() => model.view, (view) => view && model.setView(view)} />
+    <LinkButton href="#/calendar/absences" tooltip="Urlaub oder Verletzung eintragen: Termine an diesen Tagen zählen als „Nein“"
+      >Abwesend melden</LinkButton
+    >
+    <Button
+      icon="download"
+      busy={exporting.busy}
+      tooltip="Termine exportieren oder den Kalender in einer Kalender-App abonnieren"
+      onclick={(e) =>
+        openMenuAt(e.currentTarget as Element, [
+          { label: 'Kommende Termine herunterladen (.ics)', icon: 'download', run: () => void exportIcs() },
+          { label: 'In Kalender-App abonnieren …', icon: 'link', run: () => (subscribing = true) },
+        ])}>Exportieren</Button
+    >
     {#if policy.canCreate()}<Button variant="primary" icon="add" onclick={newAppointment}>Neuer Termin</Button>{/if}
   {/snippet}
   {#snippet context()}
     <h2 class="period" aria-live="polite">{title}</h2>
   {/snippet}
 
-
   <div class="view" aria-busy={model.entries.loading}>
     <Toolbar start={filters} end={navigation} label="Filtern und blättern" />
     <AsyncView resource={model.entries}>
       {#snippet children()}
-        <div class="grid-view">{#if model.view === 'month'}<MonthView {model} {drag} {resizer} />{:else}<WeekView {model} {drag} {resizer} />{/if}</div>
+        <div class="grid-view">
+          {#if model.view === 'month'}<MonthView {model} {drag} {resizer} />{:else}<WeekView {model} {drag} {resizer} />{/if}
+        </div>
       {/snippet}
     </AsyncView>
   </div>

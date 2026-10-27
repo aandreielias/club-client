@@ -50,7 +50,10 @@ export const AUDIENCE_LABELS: Readonly<Record<StepAudience, string>> = {
   SECRETARY: 'Schriftführung',
 };
 export const ACTION_KIND_LABELS: Readonly<Record<StepAction, string>> = { NOTIFICATION: 'Benachrichtigung', TASK: 'Aufgabe' };
-export const SYSTEM_STEP_LABELS: Readonly<Record<SystemStep, string>> = { INVITE_REMINDER: 'Einladung fällig', START_REMINDER: 'Erinnerung an die Sitzung' };
+export const SYSTEM_STEP_LABELS: Readonly<Record<SystemStep, string>> = {
+  INVITE_REMINDER: 'Einladung fällig',
+  START_REMINDER: 'Erinnerung an die Sitzung',
+};
 
 /** server: MeetingsApi.MeetingTypeDto. */
 export interface MeetingType {
@@ -172,7 +175,8 @@ export interface Assignable extends Person {
 
 // --- follow-up tasks (server: MeetingsApi.FollowUpDto, FollowUpPlanner) ---
 
-export type ResolutionAction = 'GENERAL' | 'HONORARY_GRANT' | 'HONORARY_REVOKE' | 'ELECTION' | 'STATUTES_CHANGE' | 'DISSOLUTION' | 'EXCLUSION' | 'CONVENE_ASSEMBLY';
+export type ResolutionAction =
+  'GENERAL' | 'HONORARY_GRANT' | 'HONORARY_REVOKE' | 'ELECTION' | 'STATUTES_CHANGE' | 'DISSOLUTION' | 'EXCLUSION' | 'CONVENE_ASSEMBLY';
 
 export const ACTION_LABELS: Readonly<Record<ResolutionAction, string>> = {
   GENERAL: 'Sonstiger Beschluss',
@@ -214,7 +218,10 @@ export interface ActionRule {
 
 /** Follow-up kinds that finish themselves, each only after its own decision (server: FollowUpPlanner.OWN_ACTION). */
 export const OWN_ACTION: Partial<Record<FollowUpKind, ResolutionAction>> = {
-  ENTER_HONORARY: 'HONORARY_GRANT', REVOKE_HONORARY: 'HONORARY_REVOKE', ENTER_OFFICE: 'ELECTION', NOTIFY_EXCLUSION: 'EXCLUSION',
+  ENTER_HONORARY: 'HONORARY_GRANT',
+  REVOKE_HONORARY: 'HONORARY_REVOKE',
+  ENTER_OFFICE: 'ELECTION',
+  NOTIFY_EXCLUSION: 'EXCLUSION',
   CONVENE_ASSEMBLY: 'CONVENE_ASSEMBLY',
 };
 
@@ -286,7 +293,7 @@ export const CHOICE_LABELS: Readonly<Record<Choice, string>> = { YES: 'Ja', NO: 
 export const RESULT_LABELS: Readonly<Record<Result, string>> = { PASSED: 'Angenommen', FAILED: 'Abgelehnt', NOT_QUORATE: 'Zu wenig Beteiligung' };
 export const RESULT_TONES: Readonly<Record<Result, Hue>> = { PASSED: 'green', FAILED: 'red', NOT_QUORATE: 'orange' };
 
-/** server: MeetingRules.majorities — `null` = circular vote. */
+/** server: Resolution.majorities — `null` = circular vote. */
 export function majorities(type: MeetingType | null): Majority[] {
   return type ? (['SIMPLE', 'TWO_THIRDS', 'THREE_QUARTERS'] as const).filter((m) => type.majorities.includes(m)) : ['SIMPLE'];
 }

@@ -53,8 +53,13 @@
   {#snippet children(all)}
     <form class="link" onsubmit={submit}>
       <Field label="Erziehungsberechtigte:r">
-        <Select bind:value={guardianId} placeholder="Bitte wählen"
-          options={all.filter((m) => m.active && m.id !== member.id && !linked.value?.some((g) => g.memberId === m.id)).map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` }))} />
+        <Select
+          bind:value={guardianId}
+          placeholder="Bitte wählen"
+          options={all
+            .filter((m) => m.active && m.id !== member.id && !linked.value?.some((g) => g.memberId === m.id))
+            .map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` }))}
+        />
       </Field>
       <div><Button type="submit" busy={model.guardianAction.busy} disabled={!guardianId}>Zuordnen</Button></div>
     </form>

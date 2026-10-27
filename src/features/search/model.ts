@@ -36,7 +36,6 @@ export const HIT_KINDS: readonly { value: HitKind; label: string }[] = [
 export const kindLabel = (kind: HitKind): string => HIT_KINDS.find((k) => k.value === kind)?.label ?? kind;
 export const kindRank = (kind: HitKind): number => HIT_KINDS.findIndex((k) => k.value === kind);
 
-
 export function hitDetail(hit: SearchHit): string {
   if (hit.kind === 'TASK') return hit.detail ? (TASK_STATUS_LABELS[hit.detail as keyof typeof TASK_STATUS_LABELS] ?? hit.detail) : '';
   return hit.detail ?? '';

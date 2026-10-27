@@ -41,7 +41,11 @@
     const locationId = detail.appointment.value?.locationId;
     place = null;
     let current = true; // an older answer must not replace the place of a newer link
-    if (locationId) locationsApi.get(locationId).then((p) => current && (place = p), () => {});
+    if (locationId)
+      locationsApi.get(locationId).then(
+        (p) => current && (place = p),
+        () => {},
+      );
     return () => (current = false);
   });
   // svelte-ignore state_referenced_locally
@@ -98,7 +102,8 @@
 
   async function submit() {
     const original = edit.form?.original;
-    if (original && (await edit.submit((form) => calendarApi.update(original.id, form.toPatch()), 'Termin gespeichert.'))) void detail.appointment.load();
+    if (original && (await edit.submit((form) => calendarApi.update(original.id, form.toPatch()), 'Termin gespeichert.')))
+      void detail.appointment.load();
   }
 </script>
 
@@ -145,7 +150,8 @@
               <dt>Kabinen</dt>
               <dd>
                 {[appointment.cabinMen && `Herren: ${appointment.cabinMen}`, appointment.cabinWomen && `Damen: ${appointment.cabinWomen}`]
-                  .filter(Boolean).join(' · ')}
+                  .filter(Boolean)
+                  .join(' · ')}
               </dd>
             {/if}
             <dt>Für</dt>

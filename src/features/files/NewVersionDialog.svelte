@@ -23,8 +23,11 @@
   let submitted = $state(false);
   const action = new Action();
 
-  const labelError = $derived(!label.trim() || label.trim().length > settings.files.versionLabelMaxLength
-    ? `Versionsnummer mit 1 bis ${settings.files.versionLabelMaxLength} Zeichen.` : null);
+  const labelError = $derived(
+    !label.trim() || label.trim().length > settings.files.versionLabelMaxLength
+      ? `Versionsnummer mit 1 bis ${settings.files.versionLabelMaxLength} Zeichen.`
+      : null,
+  );
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
@@ -37,7 +40,11 @@
 
 <Dialog open title="Neue Version von „{file.name}“" {onclose}>
   <form class="stack" onsubmit={submit} novalidate>
-    <Field label="Datei" hint="Gleicher Dateityp wie bisher{extension ? ` (${extension})` : ''}." error={submitted && !chosen ? 'Datei auswählen.' : null}>
+    <Field
+      label="Datei"
+      hint="Gleicher Dateityp wie bisher{extension ? ` (${extension})` : ''}."
+      error={submitted && !chosen ? 'Datei auswählen.' : null}
+    >
       <input type="file" accept={extension} onchange={(e) => (chosen = e.currentTarget.files?.[0] ?? null)} />
     </Field>
     <div class="grid-2">

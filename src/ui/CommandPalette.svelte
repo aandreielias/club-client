@@ -26,7 +26,12 @@
     const fits = (text: string) => !needle || text.toLocaleLowerCase().includes(needle);
     const recent = recentRecords.items
       .filter((r) => windows.content(r.kind) && fits(r.title))
-      .map((r): Entry => ({ key: `recent:${r.kind}:${r.id}`, label: r.title, group: 'Zuletzt geöffnet', run: () => bus.publish(WINDOW_OPEN, { kind: r.kind, id: r.id }) }));
+      .map((r): Entry => ({
+        key: `recent:${r.kind}:${r.id}`,
+        label: r.title,
+        group: 'Zuletzt geöffnet',
+        run: () => bus.publish(WINDOW_OPEN, { kind: r.kind, id: r.id }),
+      }));
     const available = commands
       .available()
       .filter((c) => c.id !== 'palette.open' && fits(`${c.label} ${c.group}`))
@@ -77,24 +82,30 @@
   <div class="backdrop" onclick={close} transition:motion.fade></div>
   <div class="palette" role="dialog" aria-modal="true" aria-label="Befehlspalette" transition:motion.pop={{ origin: 'top' }}>
     <label class="query">
-    <Icon name="commands" />
-    <input
-      bind:this={input}
-      bind:value={query}
-      onkeydown={keydown}
-      placeholder="Befehl oder zuletzt geöffneten Eintrag suchen"
-      aria-label="Befehl suchen"
-      role="combobox"
-      aria-expanded="true"
-      aria-controls="palette-list"
-      aria-activedescendant={matches[active] ? `cmd-${active}` : undefined}
-    />
+      <Icon name="commands" />
+      <input
+        bind:this={input}
+        bind:value={query}
+        onkeydown={keydown}
+        placeholder="Befehl oder zuletzt geöffneten Eintrag suchen"
+        aria-label="Befehl suchen"
+        role="combobox"
+        aria-expanded="true"
+        aria-controls="palette-list"
+        aria-activedescendant={matches[active] ? `cmd-${active}` : undefined}
+      />
     </label>
     <ul id="palette-list" role="listbox">
       {#each matches as entry, index (entry.key)}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <li id="cmd-{index}" role="option" aria-selected={index === active} class:active={index === active}
-          onclick={() => run(entry)} onmousemove={() => (active = index)}>
+        <li
+          id="cmd-{index}"
+          role="option"
+          aria-selected={index === active}
+          class:active={index === active}
+          onclick={() => run(entry)}
+          onmousemove={() => (active = index)}
+        >
           <span class="label">{entry.label}</span>
           <span class="group muted">{entry.group}</span>
           {#if entry.command}<Kbd keys={keymap.keys(entry.command.id)} />{:else}<span></span>{/if}

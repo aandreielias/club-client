@@ -6,16 +6,51 @@ import { MockTable } from '../../lib/mock/MockTable';
 import { resolveRef } from '../../lib/mock/recordRefs';
 import { files } from '../files/mock';
 import { defaultTemplate, fill, TEMPLATE_NAME } from './invitationDocument';
-import type { LinkedRef, RefKind } from '../../lib/records/refs';
+import type { RefKind } from '../../lib/records/refs';
 import { ADMIN_BOARD, type Member } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
 import { tasks } from '../tasks/mock';
-import { ALL_MAJORITIES, BOARD_OFFICES, defaultSteps, seedMeetings, seededRules, seedResolutions, SEEDED_TYPES, type StoredFollowUp, type StoredMeeting,
-  type StoredResolution, type StoredType } from './mockSeeds';
 import {
-  actionNeedsMember, actions, isAssembly, quorumReached, SEEDED_CIRCULAR, type CircularRules, OWN_ACTION, type ActionRule, isDayOfYear, isQuorate, latestInvite, majorities, mayConvene, type Choice,
-  type FollowUp, type FollowUpKind, type Majority, type Meeting, type MeetingKind, type MeetingSummary, type MeetingType, type PresenceMode,
-  type MeetingStep, type Quorum, type Resolution, type ResolutionAction, type StepAnchor, type StepAudience,
+  ALL_MAJORITIES,
+  BOARD_OFFICES,
+  defaultSteps,
+  seedMeetings,
+  seededRules,
+  seedResolutions,
+  SEEDED_TYPES,
+  type StoredFollowUp,
+  type StoredMeeting,
+  type StoredResolution,
+  type StoredType,
+} from './mockSeeds';
+import {
+  actionNeedsMember,
+  actions,
+  isAssembly,
+  quorumReached,
+  SEEDED_CIRCULAR,
+  type CircularRules,
+  OWN_ACTION,
+  type ActionRule,
+  isDayOfYear,
+  isQuorate,
+  latestInvite,
+  majorities,
+  mayConvene,
+  type Choice,
+  type FollowUp,
+  type FollowUpKind,
+  type Majority,
+  type Meeting,
+  type MeetingKind,
+  type MeetingSummary,
+  type MeetingType,
+  type MeetingStep,
+  type Quorum,
+  type Resolution,
+  type ResolutionAction,
+  type StepAnchor,
+  type StepAudience,
 } from './model';
 
 const fail = MockServer.fail;
@@ -30,18 +65,36 @@ function checkedSteps(value: unknown): MeetingStep[] {
   if (!Array.isArray(value) || value.length > 30) return fail(400, 'meeting-step.too-many');
   const systems = new Set<string>();
   return value.map((s: Record<string, any>) => {
-    if (!ANCHORS.includes(s.anchor) || !AUDIENCES.includes(s.audience) || (s.action !== 'NOTIFICATION' && s.action !== 'TASK')) fail(400, 'meeting-step.invalid');
+    if (!ANCHORS.includes(s.anchor) || !AUDIENCES.includes(s.audience) || (s.action !== 'NOTIFICATION' && s.action !== 'TASK'))
+      fail(400, 'meeting-step.invalid');
     if (!Number.isInteger(s.offsetHours) || s.offsetHours < 0 || s.offsetHours > 8760) fail(400, 'meeting-step.offset-invalid');
     if (s.system) {
       if (systems.has(s.system)) fail(400, 'meeting-step.invalid');
       systems.add(s.system);
       const own = s.system === 'INVITE_REMINDER' ? 'BEFORE_INVITE' : 'BEFORE_START';
       if (s.anchor !== own || s.action !== 'NOTIFICATION') fail(400, 'meeting-step.system-fixed');
-      return { id: s.id ?? crypto.randomUUID(), anchor: s.anchor, offsetHours: s.offsetHours, action: s.action, audience: s.audience, title: null, body: null, system: s.system };
+      return {
+        id: s.id ?? crypto.randomUUID(),
+        anchor: s.anchor,
+        offsetHours: s.offsetHours,
+        action: s.action,
+        audience: s.audience,
+        title: null,
+        body: null,
+        system: s.system,
+      };
     }
     const title = text(s.title, 150, 'meeting-step.title-invalid') ?? fail(400, 'meeting-step.title-invalid');
-    return { id: s.id ?? crypto.randomUUID(), anchor: s.anchor, offsetHours: s.offsetHours, action: s.action, audience: s.audience, title,
-      body: text(s.body, 1000, 'meeting-step.title-invalid'), system: null };
+    return {
+      id: s.id ?? crypto.randomUUID(),
+      anchor: s.anchor,
+      offsetHours: s.offsetHours,
+      action: s.action,
+      audience: s.audience,
+      title,
+      body: text(s.body, 1000, 'meeting-step.title-invalid'),
+      system: null,
+    };
   });
 }
 
@@ -50,8 +103,16 @@ const ABOUT_MEMBER: readonly FollowUpKind[] = ['ENTER_HONORARY', 'REVOKE_HONORAR
 
 const QUORUMS: readonly Quorum[] = ['AT_LEAST_HALF', 'MORE_THAN_HALF', 'AT_LEAST_THREE_QUARTERS'];
 const OFFICES: readonly OfficeKind[] = [...BOARD_OFFICES, 'AUDITOR'];
-const ACTIONS: readonly ResolutionAction[] = ['GENERAL', 'HONORARY_GRANT', 'HONORARY_REVOKE', 'ELECTION', 'STATUTES_CHANGE', 'DISSOLUTION', 'EXCLUSION',
-  'CONVENE_ASSEMBLY'];
+const ACTIONS: readonly ResolutionAction[] = [
+  'GENERAL',
+  'HONORARY_GRANT',
+  'HONORARY_REVOKE',
+  'ELECTION',
+  'STATUTES_CHANGE',
+  'DISSOLUTION',
+  'EXCLUSION',
+  'CONVENE_ASSEMBLY',
+];
 
 const DAY_MS = 86_400_000;
 const AUTOMATIC: readonly FollowUpKind[] = ['ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'CONVENE_ASSEMBLY'];
@@ -110,14 +171,27 @@ export class MockMeetings {
     this.followUps.data.push(f);
     this.followUps.save();
     const assignees = assigneeIds.length ? [...assigneeIds] : this.people.electorate('BOARD');
-    mockServer.events.publish({ type: 'meetings.follow-up-created',
-      data: { followUpId: f.id, title: f.title, description, dueAt: f.dueAt, assignees, createdBy } });
+    mockServer.events.publish({
+      type: 'meetings.follow-up-created',
+      data: { followUpId: f.id, title: f.title, description, dueAt: f.dueAt, assignees, createdBy },
+    });
   }
 
   private followUpDtos(list: readonly StoredFollowUp[]): FollowUp[] {
-    const refs = tasks.sourced('MEETING_FOLLOW_UP', list.map((f) => f.id));
-    return list.map((f) => ({ id: f.id, resolutionId: f.resolutionId, kind: f.kind, title: f.title, automatic: AUTOMATIC.includes(f.kind),
-      dueAt: f.dueAt, taskId: refs[f.id]?.taskId ?? null, taskStatus: refs[f.id]?.status ?? null }));
+    const refs = tasks.sourced(
+      'MEETING_FOLLOW_UP',
+      list.map((f) => f.id),
+    );
+    return list.map((f) => ({
+      id: f.id,
+      resolutionId: f.resolutionId,
+      kind: f.kind,
+      title: f.title,
+      automatic: AUTOMATIC.includes(f.kind),
+      dueAt: f.dueAt,
+      taskId: refs[f.id]?.taskId ?? null,
+      taskStatus: refs[f.id]?.status ?? null,
+    }));
   }
 
   /** server: FollowUpPlanner.plan — the tasks a passed resolution brings, from the club's rules. */
@@ -129,10 +203,22 @@ export class MockMeetings {
     for (const rule of this.rules.data.find((x) => x.action === action)!.followUps) {
       const about = ABOUT_MEMBER.includes(rule.kind);
       const title = rule.title.replaceAll('{beschluss}', r.title).replaceAll('{mitglied}', name).replaceAll('{funktion}', office);
-      this.createFollowUp({ id: crypto.randomUUID(), meetingId: null, resolutionId: r.id, kind: rule.kind, memberId: about ? r.actionMemberId ?? null : null,
-        office: about ? r.actionOffice ?? null : null, title: title.slice(0, 150),
-        dueAt: rule.dueDays == null ? null : new Date(Date.now() + rule.dueDays * DAY_MS).toISOString(), doneAt: null }, context,
-        r.assigneeIds?.length ? r.assigneeIds : meeting ? this.assignable(r, meeting, true) : [], null);
+      this.createFollowUp(
+        {
+          id: crypto.randomUUID(),
+          meetingId: null,
+          resolutionId: r.id,
+          kind: rule.kind,
+          memberId: about ? (r.actionMemberId ?? null) : null,
+          office: about ? (r.actionOffice ?? null) : null,
+          title: title.slice(0, 150),
+          dueAt: rule.dueDays == null ? null : new Date(Date.now() + rule.dueDays * DAY_MS).toISOString(),
+          doneAt: null,
+        },
+        context,
+        r.assigneeIds?.length ? r.assigneeIds : meeting ? this.assignable(r, meeting, true) : [],
+        null,
+      );
     }
   }
 
@@ -141,7 +227,11 @@ export class MockMeetings {
   saveRules(viewer: Member, body: Record<string, any>): { items: ActionRule[]; circular: CircularRules } {
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const items: Record<string, any>[] = Array.isArray(body.items) ? body.items : [];
-    if (items.length !== ACTIONS.length || new Set(items.map((i) => i.action)).size !== ACTIONS.length || items.some((i) => !ACTIONS.includes(i.action))) {
+    if (
+      items.length !== ACTIONS.length ||
+      new Set(items.map((i) => i.action)).size !== ACTIONS.length ||
+      items.some((i) => !ACTIONS.includes(i.action))
+    ) {
       fail(400, 'action-rules.invalid');
     }
     const rules: ActionRule[] = ACTIONS.map((action) => {
@@ -150,13 +240,19 @@ export class MockMeetings {
       if (majority && !ALL_MAJORITIES.includes(majority)) fail(400, 'action-rules.invalid');
       const followUps: Record<string, any>[] = Array.isArray(item.followUps) ? item.followUps : fail(400, 'action-rules.invalid');
       if (followUps.length > 10) fail(400, 'action-rules.too-many');
-      return { action, majority, enabled: action === 'GENERAL' || item.enabled !== false, followUps: followUps.map((f) => {
-        if (!FOLLOW_UP_KINDS.includes(f.kind) || (OWN_ACTION[f.kind as FollowUpKind] && OWN_ACTION[f.kind as FollowUpKind] !== action)) fail(400, 'action-rules.kind-invalid');
-        const title = typeof f.title === 'string' ? f.title.trim() : '';
-        if (!title || title.length > 150) fail(400, 'action-rules.title-invalid');
-        if (f.dueDays != null && (!Number.isInteger(f.dueDays) || f.dueDays < 0 || f.dueDays > 365)) fail(400, 'action-rules.due-invalid');
-        return { id: f.id ?? crypto.randomUUID(), kind: f.kind, title, dueDays: f.dueDays ?? null };
-      }) };
+      return {
+        action,
+        majority,
+        enabled: action === 'GENERAL' || item.enabled !== false,
+        followUps: followUps.map((f) => {
+          if (!FOLLOW_UP_KINDS.includes(f.kind) || (OWN_ACTION[f.kind as FollowUpKind] && OWN_ACTION[f.kind as FollowUpKind] !== action))
+            fail(400, 'action-rules.kind-invalid');
+          const title = typeof f.title === 'string' ? f.title.trim() : '';
+          if (!title || title.length > 150) fail(400, 'action-rules.title-invalid');
+          if (f.dueDays != null && (!Number.isInteger(f.dueDays) || f.dueDays < 0 || f.dueDays > 365)) fail(400, 'action-rules.due-invalid');
+          return { id: f.id ?? crypto.randomUUID(), kind: f.kind, title, dueDays: f.dueDays ?? null };
+        }),
+      };
     });
     for (const rule of rules) {
       if (rule.enabled && rule.majority && this.types.data.some((t) => t.actions.includes(rule.action) && !t.majorities.includes(rule.majority!))) {
@@ -211,8 +307,17 @@ export class MockMeetings {
     const chosen = this.checkedAssignees(body.assigneeIds, allowed);
     const managers = this.people.audienceIds({ roles: ADMIN_BOARD });
     const assignees = chosen.length ? chosen : allowed.filter((id) => managers.includes(id));
-    const f: StoredFollowUp = { id: crypto.randomUUID(), meetingId, resolutionId, kind: 'MANUAL', memberId: null, office: null, title,
-      dueAt: typeof body.dueAt === 'string' && body.dueAt ? body.dueAt : null, doneAt: null };
+    const f: StoredFollowUp = {
+      id: crypto.randomUUID(),
+      meetingId,
+      resolutionId,
+      kind: 'MANUAL',
+      memberId: null,
+      office: null,
+      title,
+      dueAt: typeof body.dueAt === 'string' && body.dueAt ? body.dueAt : null,
+      doneAt: null,
+    };
     this.createFollowUp(f, text(body.description, 2000, 'request.invalid'), assignees, viewer.id);
     return this.followUpDtos([f])[0];
   }
@@ -222,11 +327,14 @@ export class MockMeetings {
     const r = this.managedResolution(viewer, id);
     if (!Array.isArray(refs) || refs.length > 30) return fail(400, 'resolution.too-many-refs');
     const kept = r.links ?? [];
-    r.links = (refs as { kind: RefKind; id: string }[]).map((ref) => kept.find((k) => k.kind === ref.kind && k.id === ref.id)
-      ?? resolveRef(viewer, ref, 'resolution', (other) => {
-        const m = this.meetings.data.find((x) => x.id === other);
-        return m && this.maySee(viewer, m) ? m.title : null;
-      }));
+    r.links = (refs as { kind: RefKind; id: string }[]).map(
+      (ref) =>
+        kept.find((k) => k.kind === ref.kind && k.id === ref.id) ??
+        resolveRef(viewer, ref, 'resolution', (other) => {
+          const m = this.meetings.data.find((x) => x.id === other);
+          return m && this.maySee(viewer, m) ? m.title : null;
+        }),
+    );
     this.resolutionChanged(r, 'UPDATED');
     return this.resolutionDto(viewer, r);
   }
@@ -280,8 +388,22 @@ export class MockMeetings {
     const kind = type.key;
     if (!this.mayConvene(viewer, kind)) fail(403, 'meeting.may-not-convene');
     const meeting: StoredMeeting = {
-      id: crypto.randomUUID(), kind, title: '', agenda: null, urgency: null, startsAt: '', endsAt: '', location: null, videoUrl: null,
-      status: 'DRAFT', invitedAt: null, openedAt: null, closedAt: null, protocol: null, presence: {}, links: [],
+      id: crypto.randomUUID(),
+      kind,
+      title: '',
+      agenda: null,
+      urgency: null,
+      startsAt: '',
+      endsAt: '',
+      location: null,
+      videoUrl: null,
+      status: 'DRAFT',
+      invitedAt: null,
+      openedAt: null,
+      closedAt: null,
+      protocol: null,
+      presence: {},
+      links: [],
     };
     this.apply(meeting, body);
     this.meetings.data.push(meeting);
@@ -318,8 +440,16 @@ export class MockMeetings {
     if (isAssembly(this.type(meeting.kind)) && !this.type(meeting.kind).dueBy) this.complete((f) => f.kind === 'CONVENE_ASSEMBLY');
     mockServer.events.publish({
       type: 'meetings.meeting-invited',
-      data: { meetingId: meeting.id, recipients: this.electorate(meeting.kind), kind: meeting.kind,
-        title: meeting.title, agenda: meeting.agenda, startsAt: meeting.startsAt, location: meeting.location, videoUrl: meeting.videoUrl },
+      data: {
+        meetingId: meeting.id,
+        recipients: this.electorate(meeting.kind),
+        kind: meeting.kind,
+        title: meeting.title,
+        agenda: meeting.agenda,
+        startsAt: meeting.startsAt,
+        location: meeting.location,
+        videoUrl: meeting.videoUrl,
+      },
     });
     return this.dto(viewer, meeting);
   }
@@ -360,11 +490,13 @@ export class MockMeetings {
     const kept = meeting.links ?? [];
     meeting.links = (refs as { kind: RefKind; id: string }[]).map((ref) => {
       if (ref.kind === 'MEETING' && ref.id === id) return fail(400, 'meeting.ref-unknown');
-      return kept.find((k) => k.kind === ref.kind && k.id === ref.id)
-        ?? resolveRef(viewer, ref, 'meeting', (other) => {
+      return (
+        kept.find((k) => k.kind === ref.kind && k.id === ref.id) ??
+        resolveRef(viewer, ref, 'meeting', (other) => {
           const m = this.meetings.data.find((x) => x.id === other);
           return m && this.maySee(viewer, m) ? m.title : null;
-        });
+        })
+      );
     });
     this.changed(meeting, 'UPDATED');
     return this.dto(viewer, meeting);
@@ -375,8 +507,9 @@ export class MockMeetings {
     const meeting = this.managed(viewer, id);
     const { default: JSZip } = await import('jszip');
     const request = (params: Record<string, string>, form: FormData) => ({ params, query: new URLSearchParams(), body: form, email: viewer.email });
-    const top = (name: string, scope: 'ASSEMBLY' | 'BOARD') => files.listFolders(viewer).find((f) => !f.parentId && f.name === name && f.scope === scope)
-      ?? files.createFolder(viewer, { name, kind: 'DOCUMENTS', scope, teamIds: [] });
+    const top = (name: string, scope: 'ASSEMBLY' | 'BOARD') =>
+      files.listFolders(viewer).find((f) => !f.parentId && f.name === name && f.scope === scope) ??
+      files.createFolder(viewer, { name, kind: 'DOCUMENTS', scope, teamIds: [] });
 
     const templates = top('Vorlagen', 'BOARD');
     let template = files.listFiles(viewer, templates.id).find((f) => f.name.toLowerCase() === TEMPLATE_NAME.toLowerCase());
@@ -388,16 +521,29 @@ export class MockMeetings {
     // Mock blobs live only for the session; after a reload the built-in template stands in.
     const templateBytes = files.blob(template.id) ?? (await defaultTemplate(JSZip));
     const type = this.type(meeting.kind);
-    const fmt = (iso: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('de-AT', { timeZone: this.people.club.timeZone, ...options }).format(new Date(iso));
-    const content = await fill(JSZip, templateBytes, {
-      Verein: this.people.clubInfo().name, Art: type.invitationLabel,
-      Titel: meeting.title.toLowerCase() === type.label.toLowerCase() ? null : meeting.title,
-      Wann: `${fmt(meeting.startsAt, { dateStyle: 'full', timeStyle: 'short' })} bis ${fmt(meeting.endsAt, { timeStyle: 'short' })} Uhr`,
-      Ort: meeting.location, Video: meeting.videoUrl, Dringlichkeit: meeting.urgency,
-      // A placeholder older templates still carry (server: AgendaDocument); empty, so its paragraph is dropped.
-      Statuten: null,
-      Versandt: fmt(meeting.invitedAt ?? new Date().toISOString(), { dateStyle: 'long' }),
-    }, (meeting.agenda ?? '').split('\n').map((l) => l.trim()).filter(Boolean).concat(meeting.agenda?.trim() ? [] : ['Keine Tagesordnung eingetragen.']));
+    const fmt = (iso: string, options: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat('de-AT', { timeZone: this.people.club.timeZone, ...options }).format(new Date(iso));
+    const content = await fill(
+      JSZip,
+      templateBytes,
+      {
+        Verein: this.people.clubInfo().name,
+        Art: type.invitationLabel,
+        Titel: meeting.title.toLowerCase() === type.label.toLowerCase() ? null : meeting.title,
+        Wann: `${fmt(meeting.startsAt, { dateStyle: 'full', timeStyle: 'short' })} bis ${fmt(meeting.endsAt, { timeStyle: 'short' })} Uhr`,
+        Ort: meeting.location,
+        Video: meeting.videoUrl,
+        Dringlichkeit: meeting.urgency,
+        // A placeholder older templates still carry (server: AgendaDocument); empty, so its paragraph is dropped.
+        Statuten: null,
+        Versandt: fmt(meeting.invitedAt ?? new Date().toISOString(), { dateStyle: 'long' }),
+      },
+      (meeting.agenda ?? '')
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .concat(meeting.agenda?.trim() ? [] : ['Keine Tagesordnung eingetragen.']),
+    );
 
     const stored = this.documents.data[id];
     const day = meeting.startsAt.slice(0, 10);
@@ -413,8 +559,10 @@ export class MockMeetings {
     } else {
       const assembly = isAssembly(type);
       const parent = top(assembly ? 'Mitgliederversammlungen' : 'Vorstandssitzungen', assembly ? 'ASSEMBLY' : 'BOARD');
-      folderId = stored && files.listFolders(viewer).some((f) => f.id === stored.folderId) ? stored.folderId
-        : files.createFolder(viewer, { parentId: parent.id, name: `${day} ${meeting.title}`.slice(0, 100), kind: 'DOCUMENTS' }).id;
+      folderId =
+        stored && files.listFolders(viewer).some((f) => f.id === stored.folderId)
+          ? stored.folderId
+          : files.createFolder(viewer, { parentId: parent.id, name: `${day} ${meeting.title}`.slice(0, 100), kind: 'DOCUMENTS' }).id;
       const form = new FormData();
       form.append('file', new File([content], `Einladung ${day} ${meeting.title}.docx`));
       fileId = (await files.upload(request({ folderId }, form))).id;
@@ -422,7 +570,10 @@ export class MockMeetings {
     this.documents.data[id] = { folderId, fileId };
     this.documents.save();
     const name = files.files.data.find((f) => f.id === fileId)!.name;
-    meeting.links = [{ kind: 'FILE' as const, id: fileId, title: name, parentId: folderId }, ...(meeting.links ?? []).filter((l) => l.id !== fileId)].slice(0, 30);
+    meeting.links = [
+      { kind: 'FILE' as const, id: fileId, title: name, parentId: folderId },
+      ...(meeting.links ?? []).filter((l) => l.id !== fileId),
+    ].slice(0, 30);
     this.changed(meeting, 'UPDATED');
     return this.dto(viewer, meeting);
   }
@@ -432,7 +583,12 @@ export class MockMeetings {
   listResolutions(viewer: Member, meetingId: string | null): { items: Resolution[] } {
     if (meetingId === null) {
       if (!this.people.hasRole(viewer, ADMIN_BOARD)) fail(403, 'access.denied');
-      return { items: this.resolutions.data.filter((r) => r.meetingId === null).reverse().map((r) => this.resolutionDto(viewer, r)) };
+      return {
+        items: this.resolutions.data
+          .filter((r) => r.meetingId === null)
+          .reverse()
+          .map((r) => this.resolutionDto(viewer, r)),
+      };
     }
     this.visible(viewer, meetingId);
     return { items: this.resolutions.data.filter((r) => r.meetingId === meetingId).map((r) => this.resolutionDto(viewer, r)) };
@@ -453,17 +609,40 @@ export class MockMeetings {
     if (!actions(type).includes(action)) fail(400, 'resolution.action-not-here');
     if (actionNeedsMember(action) !== !!body.actionMemberId) fail(400, 'resolution.action-member-missing');
     if ((action === 'ELECTION') !== !!body.actionOffice) fail(400, 'resolution.action-office-missing');
-    const requested = (meeting ? body.majority ?? null : 'SIMPLE') as Majority | null;
+    const requested = (meeting ? (body.majority ?? null) : 'SIMPLE') as Majority | null;
     const implied = this.rules.data.find((x) => x.action === action)?.majority ?? requested;
     if (requested && implied !== requested) fail(400, 'resolution.majority-mismatch');
     const majority = implied && majorities(type).includes(implied) ? implied : fail(400, 'resolution.majority-invalid');
     const assigneeIds = this.checkedAssignees(body.assigneeIds, this.assignable(null, meeting, action !== 'GENERAL'));
     const title = text(body.title, 200, 'resolution.title-invalid') ?? fail(400, 'resolution.title-invalid');
-    const deadline = meeting ? null : typeof body.deadline === 'string' ? new Date(body.deadline).toISOString() : fail(400, 'resolution.deadline-invalid');
+    const deadline = meeting
+      ? null
+      : typeof body.deadline === 'string'
+        ? new Date(body.deadline).toISOString()
+        : fail(400, 'resolution.deadline-invalid');
     const r: StoredResolution = {
-      id: crypto.randomUUID(), meetingId, title, text: text(body.text, 4000, 'resolution.text-too-long'), majority, status: 'DRAFT', deadline,
-      voters: null, analogYes: null, analogNo: null, analogAbstain: null, result: null, openedAt: null, closedAt: null, yes: 0, no: 0, abstain: 0, ballots: [],
-      action, actionMemberId: body.actionMemberId ?? null, actionOffice: body.actionOffice ?? null, assigneeIds,
+      id: crypto.randomUUID(),
+      meetingId,
+      title,
+      text: text(body.text, 4000, 'resolution.text-too-long'),
+      majority,
+      status: 'DRAFT',
+      deadline,
+      voters: null,
+      analogYes: null,
+      analogNo: null,
+      analogAbstain: null,
+      result: null,
+      openedAt: null,
+      closedAt: null,
+      yes: 0,
+      no: 0,
+      abstain: 0,
+      ballots: [],
+      action,
+      actionMemberId: body.actionMemberId ?? null,
+      actionOffice: body.actionOffice ?? null,
+      assigneeIds,
     };
     this.resolutions.data.push(r);
     this.resolutionChanged(r, 'CREATED');
@@ -489,7 +668,10 @@ export class MockMeetings {
     this.resolutionChanged(r, 'OPENED');
     if (!meeting) {
       this.circularTask(r, viewer.id);
-      mockServer.events.publish({ type: 'meetings.circular-opened', data: { resolutionId: r.id, recipients: voters, title: r.title, text: r.text, deadline: r.deadline } });
+      mockServer.events.publish({
+        type: 'meetings.circular-opened',
+        data: { resolutionId: r.id, recipients: voters, title: r.title, text: r.text, deadline: r.deadline },
+      });
     }
     return this.resolutionDto(viewer, r);
   }
@@ -500,8 +682,8 @@ export class MockMeetings {
     if (r.meetingId) fail(409, 'resolution.not-circular');
     if (r.status !== 'OPEN') fail(409, 'resolution.not-open');
     const next = typeof deadline === 'string' ? deadline : fail(400, 'request.invalid');
-    if (next <= r.deadline! || Date.parse(next) <= Date.now()
-      || Date.parse(next) < Date.parse(r.openedAt!) + this.circular.data.minHours * 3_600_000) fail(400, 'resolution.deadline-too-short');
+    if (next <= r.deadline! || Date.parse(next) <= Date.now() || Date.parse(next) < Date.parse(r.openedAt!) + this.circular.data.minHours * 3_600_000)
+      fail(400, 'resolution.deadline-too-short');
     r.deadline = next;
     tasks.deadline(`deadline-circular-${r.id}`, `Umlaufbeschluss: ${r.title}`, 'Der Umlaufbeschluss schließt dann von selbst.', next, [viewer.id]);
     this.resolutionChanged(r, 'UPDATED');
@@ -535,7 +717,9 @@ export class MockMeetings {
     if (!r.meetingId) fail(409, 'resolution.circular');
     if (r.status !== 'OPEN') fail(409, 'resolution.not-open');
     if (r.analogYes !== null) fail(409, 'resolution.analog-already-entered');
-    const [yes, no, abstain] = [body.yes, body.no, body.abstain].map((v) => (Number.isInteger(v) && v >= 0 ? (v as number) : fail(400, 'resolution.analog-invalid')));
+    const [yes, no, abstain] = [body.yes, body.no, body.abstain].map((v) =>
+      Number.isInteger(v) && v >= 0 ? (v as number) : fail(400, 'resolution.analog-invalid'),
+    );
     if (yes + no + abstain > this.analogPresent(r)) fail(409, 'resolution.analog-exceeds-present');
     Object.assign(r, { analogYes: yes, analogNo: no, analogAbstain: abstain });
     this.resolutionChanged(r, 'VOTED');
@@ -557,8 +741,10 @@ export class MockMeetings {
     if (r.status !== 'OPEN') fail(409, 'resolution.not-open');
     const yes = r.yes + (r.analogYes ?? 0);
     const valid = yes + r.no + (r.analogNo ?? 0);
-    const passes = valid > 0 && (r.majority === 'SIMPLE' ? yes * 2 > valid : r.majority === 'TWO_THIRDS' ? yes * 3 >= valid * 2 : yes * 4 >= valid * 3);
-    const result = !r.meetingId && !quorumReached(this.circular.data.quorum, r.ballots.length, r.voters ?? 0) ? 'NOT_QUORATE' : passes ? 'PASSED' : 'FAILED';
+    const passes =
+      valid > 0 && (r.majority === 'SIMPLE' ? yes * 2 > valid : r.majority === 'TWO_THIRDS' ? yes * 3 >= valid * 2 : yes * 4 >= valid * 3);
+    const result =
+      !r.meetingId && !quorumReached(this.circular.data.quorum, r.ballots.length, r.voters ?? 0) ? 'NOT_QUORATE' : passes ? 'PASSED' : 'FAILED';
     Object.assign(r, { status: 'CLOSED', closedAt: new Date().toISOString(), result });
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null;
     if (result === 'PASSED' && (!meeting || meeting.autoTasks !== false)) this.planFollowUps(r, meeting);
@@ -580,7 +766,7 @@ export class MockMeetings {
   }
 
   private runsCircular(viewer: Member): boolean {
-    // server: MeetingRules.runsBoard
+    // server: Resolution.runsCircular
     return viewer.roles.includes('ADMIN') || this.offices(viewer).some((o) => o !== 'AUDITOR');
   }
 
@@ -618,21 +804,35 @@ export class MockMeetings {
     };
     return {
       ...rest,
-      yes: closed ? yes : null, no: closed ? no : null, abstain: closed ? abstain : null,
-      analogYes: closed ? r.analogYes : null, analogNo: closed ? r.analogNo : null, analogAbstain: closed ? r.analogAbstain : null,
-      analogEntered: r.analogYes !== null, analogPresent: this.analogPresent(r), ballots: ballots.length,
+      yes: closed ? yes : null,
+      no: closed ? no : null,
+      abstain: closed ? abstain : null,
+      analogYes: closed ? r.analogYes : null,
+      analogNo: closed ? r.analogNo : null,
+      analogAbstain: closed ? r.analogAbstain : null,
+      analogEntered: r.analogYes !== null,
+      analogPresent: this.analogPresent(r),
+      ballots: ballots.length,
       voted: ballots.includes(viewer.id),
       canVote: r.status === 'OPEN' && !ballots.includes(viewer.id) && voters.includes(viewer.id) && mode === 'APP',
       canManage: manages,
-      pending: !r.meetingId && r.status === 'OPEN' && manages ? voters.filter((id) => !ballots.includes(id)).map((id) => ({ memberId: id, name: name(id) })) : [],
+      pending:
+        !r.meetingId && r.status === 'OPEN' && manages
+          ? voters.filter((id) => !ballots.includes(id)).map((id) => ({ memberId: id, name: name(id) }))
+          : [],
       action: r.action ?? 'GENERAL',
       actionMember: r.actionMemberId ? { memberId: r.actionMemberId, name: name(r.actionMemberId) } : null,
       actionOffice: r.actionOffice ?? null,
       assignees: (r.assigneeIds ?? []).map((id) => ({ memberId: id, name: name(id) })),
       followUps: this.followUpDtos(this.followUps.data.filter((f) => f.resolutionId === r.id)),
       assignable: manages
-        ? this.assignable(r, r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null, r.status !== 'CLOSED' && (r.action ?? 'GENERAL') !== 'GENERAL')
-          .map((id) => ({ memberId: id, name: name(id) })).sort((a, b) => a.name.localeCompare(b.name))
+        ? this.assignable(
+            r,
+            r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null,
+            r.status !== 'CLOSED' && (r.action ?? 'GENERAL') !== 'GENERAL',
+          )
+            .map((id) => ({ memberId: id, name: name(id) }))
+            .sort((a, b) => a.name.localeCompare(b.name))
         : [],
       links: r.links ?? [],
     };
@@ -641,8 +841,11 @@ export class MockMeetings {
   private resolutionChanged(r: StoredResolution, change: string): void {
     this.resolutions.save();
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId) : null;
-    mockServer.events.publish({ type: 'meetings.resolution-changed', data: { resolutionId: r.id, meetingId: r.meetingId, change },
-      audience: meeting && isAssembly(this.type(meeting.kind)) ? { everyone: true } : { roles: ADMIN_BOARD } });
+    mockServer.events.publish({
+      type: 'meetings.resolution-changed',
+      data: { resolutionId: r.id, meetingId: r.meetingId, change },
+      audience: meeting && isAssembly(this.type(meeting.kind)) ? { everyone: true } : { roles: ADMIN_BOARD },
+    });
   }
 
   /** server: Meeting record validation */
@@ -682,27 +885,44 @@ export class MockMeetings {
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
     if (key && !this.types.data.some((t) => t.key === key)) fail(404, 'meeting-type.not-found');
     const label = text(body.label, 80, 'meeting-type.label-invalid') ?? fail(400, 'meeting-type.label-invalid');
-    const invitationLabel = text(body.invitationLabel, 120, 'meeting-type.invitation-label-invalid') ?? fail(400, 'meeting-type.invitation-label-invalid');
-    const subset = <T,>(value: unknown, all: readonly T[]): T[] => (Array.isArray(value) && value.every((v) => all.includes(v)) ? [...new Set(value as T[])] : fail(400, 'request.invalid'));
+    const invitationLabel =
+      text(body.invitationLabel, 120, 'meeting-type.invitation-label-invalid') ?? fail(400, 'meeting-type.invitation-label-invalid');
+    const subset = <T>(value: unknown, all: readonly T[]): T[] =>
+      Array.isArray(value) && value.every((v) => all.includes(v)) ? [...new Set(value as T[])] : fail(400, 'request.invalid');
     const majorities = subset(body.majorities, ALL_MAJORITIES);
     const conveners = subset(body.conveners, OFFICES);
     const actions = subset(body.actions, ACTIONS);
     if (body.electorate !== 'BOARD' && body.electorate !== 'ASSEMBLY') fail(400, 'meeting-type.electorate-invalid');
     if (!Number.isInteger(body.noticeHours) || body.noticeHours < 0 || body.noticeHours > 8760) fail(400, 'meeting-type.notice-invalid');
     if (!QUORUMS.includes(body.quorum)) fail(400, 'meeting-type.quorum-invalid');
-    if (body.graceMinutes != null && (!Number.isInteger(body.graceMinutes) || body.graceMinutes < 1 || body.graceMinutes > 1440)) fail(400, 'meeting-type.grace-invalid');
+    if (body.graceMinutes != null && (!Number.isInteger(body.graceMinutes) || body.graceMinutes < 1 || body.graceMinutes > 1440))
+      fail(400, 'meeting-type.grace-invalid');
     if (!majorities.length) fail(400, 'meeting-type.majorities-missing');
     if (!conveners.length || conveners.includes('AUDITOR')) fail(400, 'meeting-type.conveners-invalid');
     if (!actions.includes('GENERAL')) fail(400, 'meeting-type.actions-invalid');
-    if (this.rules.data.some((r) => r.majority && actions.includes(r.action) && !majorities.includes(r.majority))) fail(400, 'meeting-type.majority-for-action');
+    if (this.rules.data.some((r) => r.majority && actions.includes(r.action) && !majorities.includes(r.majority)))
+      fail(400, 'meeting-type.majority-for-action');
     if (this.rules.data.some((r) => r.enabled === false && actions.includes(r.action))) fail(400, 'meeting-type.action-removed');
     const dueBy = body.dueBy || null;
-    if (dueBy && (!/^\d{2}-\d{2}$/.test(dueBy) || !isDayOfYear(Number(dueBy.slice(0, 2)), Number(dueBy.slice(3))))) fail(400, 'meeting-type.due-by-invalid');
+    if (dueBy && (!/^\d{2}-\d{2}$/.test(dueBy) || !isDayOfYear(Number(dueBy.slice(0, 2)), Number(dueBy.slice(3)))))
+      fail(400, 'meeting-type.due-by-invalid');
     const type: StoredType = {
-      key: key ?? generatedKey('TYPE'), label, invitationLabel,
-      electorate: body.electorate, noticeHours: body.noticeHours,
-      quorum: body.quorum, graceMinutes: body.graceMinutes ?? null, majorities, conveners, actions, needsReason: !!body.needsReason, dueBy,
-      sort: Number.isInteger(body.sort) ? body.sort : 0, archived: !!body.archived, inUse: false, steps: checkedSteps(body.steps),
+      key: key ?? generatedKey('TYPE'),
+      label,
+      invitationLabel,
+      electorate: body.electorate,
+      noticeHours: body.noticeHours,
+      quorum: body.quorum,
+      graceMinutes: body.graceMinutes ?? null,
+      majorities,
+      conveners,
+      actions,
+      needsReason: !!body.needsReason,
+      dueBy,
+      sort: Number.isInteger(body.sort) ? body.sort : 0,
+      archived: !!body.archived,
+      inUse: false,
+      steps: checkedSteps(body.steps),
     };
     const index = this.types.data.findIndex((t) => t.key === type.key);
     if (index >= 0) this.types.data[index] = type;
@@ -785,24 +1005,36 @@ export class MockMeetings {
       followUps: this.followUpDtos(this.followUps.data.filter((f) => f.meetingId === m.id && !f.resolutionId)),
       latestInvite: latestInvite(this.type(m.kind), m.startsAt),
       electorate: voters.map((id) => ({ memberId: id, name: name(id) })).sort(byName),
-      present: Object.entries(presence).map(([id, mode]) => ({ memberId: id, name: name(id), mode })).sort(byName),
+      present: Object.entries(presence)
+        .map(([id, mode]) => ({ memberId: id, name: name(id), mode }))
+        .sort(byName),
       quorate: this.quorate(m, voters),
       canManage: this.mayConvene(viewer, m.kind) || this.offices(viewer).includes('SECRETARY'),
-      assignable: this.mayConvene(viewer, m.kind) || this.offices(viewer).includes('SECRETARY')
-        ? this.assignable(null, m, false).map((id) => ({ memberId: id, name: name(id), manager: this.assignable(null, m, true).includes(id) })).sort(byName)
-        : [],
+      assignable:
+        this.mayConvene(viewer, m.kind) || this.offices(viewer).includes('SECRETARY')
+          ? this.assignable(null, m, false)
+              .map((id) => ({ memberId: id, name: name(id), manager: this.assignable(null, m, true).includes(id) }))
+              .sort(byName)
+          : [],
     };
   }
 
   /** server: MeetingReminders.inviteTask — a draft's invitation deadline as a task for the board, moved with the draft. */
   private inviteTask(m: StoredMeeting): void {
-    tasks.deadline(`deadline-invite-${m.id}`, `Einladen: ${m.title}`, 'Rechtzeitig einladen, sonst ist die Einladungsfrist nicht mehr einzuhalten.',
-      latestInvite(this.type(m.kind), m.startsAt), this.people.audienceIds({ roles: ['BOARD'] }));
+    tasks.deadline(
+      `deadline-invite-${m.id}`,
+      `Einladen: ${m.title}`,
+      'Rechtzeitig einladen, sonst ist die Einladungsfrist nicht mehr einzuhalten.',
+      latestInvite(this.type(m.kind), m.startsAt),
+      this.people.audienceIds({ roles: ['BOARD'] }),
+    );
   }
 
   /** server: MeetingReminders.circularTask — the vote's deadline as a task for whoever started it. */
   private circularTask(r: StoredResolution, startedBy: string): void {
-    tasks.deadline(`deadline-circular-${r.id}`, `Umlaufbeschluss: ${r.title}`, 'Der Umlaufbeschluss schließt dann von selbst.', r.deadline!, [startedBy]);
+    tasks.deadline(`deadline-circular-${r.id}`, `Umlaufbeschluss: ${r.title}`, 'Der Umlaufbeschluss schließt dann von selbst.', r.deadline!, [
+      startedBy,
+    ]);
   }
 
   private changed(m: StoredMeeting, change: string): void {
@@ -810,8 +1042,11 @@ export class MockMeetings {
     if (change === 'DELETED') tasks.deadlineDrop(`deadline-invite-${m.id}`);
     else if (m.status === 'DRAFT') this.inviteTask(m);
     else tasks.deadlineDone(`deadline-invite-${m.id}`);
-    mockServer.events.publish({ type: 'meetings.meeting-changed', data: { meetingId: m.id, change },
-      audience: isAssembly(this.type(m.kind)) ? { everyone: true } : { roles: ADMIN_BOARD } });
+    mockServer.events.publish({
+      type: 'meetings.meeting-changed',
+      data: { meetingId: m.id, change },
+      audience: isAssembly(this.type(m.kind)) ? { everyone: true } : { roles: ADMIN_BOARD },
+    });
   }
 }
 
@@ -820,7 +1055,11 @@ const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer
   .on('GET', '/api/v1/meetings', (req) => meetings.list(actor(req), req.query.get('from'), req.query.get('to')))
-  .on('GET', '/api/v1/meetings/resolution-rules', (req) => (actor(req), { items: meetings.rules.data.map((r) => ({ ...r, enabled: r.enabled !== false })), circular: meetings.circular.data }))
+  .on(
+    'GET',
+    '/api/v1/meetings/resolution-rules',
+    (req) => (actor(req), { items: meetings.rules.data.map((r) => ({ ...r, enabled: r.enabled !== false })), circular: meetings.circular.data }),
+  )
   .on('PUT', '/api/v1/meetings/resolution-rules', (req) => meetings.saveRules(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/meetings/types', (req) => (actor(req), meetings.listTypes()))
   .on('POST', '/api/v1/meetings/types', (req) => meetings.saveType(actor(req), null, req.body ?? {}))
@@ -852,4 +1091,6 @@ mockServer
   .on('PUT', '/api/v1/resolutions/:id/links', (req) => meetings.setResolutionLinks(actor(req), req.params.id, req.body?.refs))
   .on('PUT', '/api/v1/resolutions/:id/assignees', (req) => meetings.setResolutionAssignees(actor(req), req.params.id, req.body ?? {}))
   .on('PUT', '/api/v1/meetings/:id/links', (req) => meetings.setLinks(actor(req), req.params.id, req.body?.refs))
-  .on('PUT', '/api/v1/meetings/:id/presence/:memberId', (req) => meetings.setPresence(actor(req), req.params.id, req.params.memberId, req.body?.mode));
+  .on('PUT', '/api/v1/meetings/:id/presence/:memberId', (req) =>
+    meetings.setPresence(actor(req), req.params.id, req.params.memberId, req.body?.mode),
+  );

@@ -1,6 +1,21 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
 import type { RefKind } from '../../lib/records/refs';
-import type { Choice, FollowUp, Meeting, MeetingPatch, MeetingType, MeetingTypeInput, MeetingSummary, NewFollowUp, NewMeeting, NewResolution, PresenceMode, Resolution, ResolutionRules, ResolutionAction } from './model';
+import type {
+  Choice,
+  FollowUp,
+  Meeting,
+  MeetingPatch,
+  MeetingType,
+  MeetingTypeInput,
+  MeetingSummary,
+  NewFollowUp,
+  NewMeeting,
+  NewResolution,
+  PresenceMode,
+  Resolution,
+  ResolutionRules,
+  ResolutionAction,
+} from './model';
 
 /** Typed access to the meetings endpoints. Every write needs a step-up and answers with the meeting. */
 export class MeetingsApi {
@@ -24,7 +39,9 @@ export class MeetingsApi {
 
   /** Admin/board with step-up; `key` null creates a type. */
   saveType(key: string | null, type: MeetingTypeInput): Promise<MeetingType> {
-    return key ? this.api.put<MeetingType>(`${MeetingsApi.BASE}/types/${encodeURIComponent(key)}`, type) : this.api.post<MeetingType>(`${MeetingsApi.BASE}/types`, type);
+    return key
+      ? this.api.put<MeetingType>(`${MeetingsApi.BASE}/types/${encodeURIComponent(key)}`, type)
+      : this.api.post<MeetingType>(`${MeetingsApi.BASE}/types`, type);
   }
 
   /** Only types no meeting uses (`meeting-type.in-use`); archive the others. */
@@ -101,7 +118,13 @@ export class MeetingsApi {
     return this.api.post<Resolution>(`${this.path(meetingId)}/resolutions`, resolution);
   }
 
-  createCircular(title: string, text: string | null, deadline: string, action: ResolutionAction = 'GENERAL', assigneeIds: string[] = []): Promise<Resolution> {
+  createCircular(
+    title: string,
+    text: string | null,
+    deadline: string,
+    action: ResolutionAction = 'GENERAL',
+    assigneeIds: string[] = [],
+  ): Promise<Resolution> {
     return this.api.post<Resolution>(MeetingsApi.RESOLUTIONS, { title, text, deadline, action, assigneeIds });
   }
 

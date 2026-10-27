@@ -38,7 +38,8 @@ export class MockTeams {
     const season = typeof body.season === 'string' ? body.season : team.season;
     if (!name || name.length > settings.teams.nameMaxLength) fail(400, 'team.name-invalid');
     if (!new RegExp(settings.teams.seasonPattern).test(season)) fail(400, 'team.season-invalid');
-    if (this.people.teams.data.some((t) => t.id !== teamId && t.name.toLowerCase() === name.toLowerCase() && t.season === season)) fail(409, 'team.exists');
+    if (this.people.teams.data.some((t) => t.id !== teamId && t.name.toLowerCase() === name.toLowerCase() && t.season === season))
+      fail(409, 'team.exists');
     Object.assign(team, { name, season });
     this.people.teams.save();
     return team;
@@ -95,6 +96,6 @@ mockServer
   .on('PATCH', '/api/v1/teams/:id', (req) => teams.updateTeam(directory.actor(req), req.params.id, req.body ?? {}))
   .on('DELETE', '/api/v1/teams/:id', (req) => teams.deleteTeam(directory.actor(req), req.params.id, teamInUse(req.params.id)))
   .on('PUT', '/api/v1/teams/:id/members/:memberId', (req) =>
-    teams.setTeamMember(directory.actor(req), req.params.id, req.params.memberId, req.body?.teamRole))
-  .on('DELETE', '/api/v1/teams/:id/members/:memberId', (req) =>
-    teams.removeTeamMember(directory.actor(req), req.params.id, req.params.memberId));
+    teams.setTeamMember(directory.actor(req), req.params.id, req.params.memberId, req.body?.teamRole),
+  )
+  .on('DELETE', '/api/v1/teams/:id/members/:memberId', (req) => teams.removeTeamMember(directory.actor(req), req.params.id, req.params.memberId));

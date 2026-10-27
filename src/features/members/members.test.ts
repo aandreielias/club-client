@@ -10,7 +10,21 @@ import type { MembersApi } from './MembersApi';
 const TODAY = '2026-10-15';
 
 const member = (id: string, roles: Role[], extra: Partial<Member> = {}): Member => ({
-  id, email: `${id}@x.at`, firstName: id, lastName: 'Test', birthDate: '2000-01-01', phone: null, photoConsent: true, active: true, membershipTypes: [], previousType: null, memberSince: null, voter: false, eligible: false, roles, ...extra,
+  id,
+  email: `${id}@x.at`,
+  firstName: id,
+  lastName: 'Test',
+  birthDate: '2000-01-01',
+  phone: null,
+  photoConsent: true,
+  active: true,
+  membershipTypes: [],
+  previousType: null,
+  memberSince: null,
+  voter: false,
+  eligible: false,
+  roles,
+  ...extra,
 });
 
 function policyFor(roles: Role[]): MemberPolicy {
@@ -35,8 +49,15 @@ describe('InviteForm', () => {
     expect(Object.keys(form.errors)).toEqual(['phone']);
     form.phone = ' +43 660 1234567 ';
     expect(form.toInvitation()).toEqual({
-      email: 'joerg@verein.at', firstName: 'Jörg', lastName: 'Muster', birthDate: null, phone: '+43 660 1234567',
-      photoConsent: false, guardianId: null, roles: ['PLAYER'], membershipType: 'ORDINARY',
+      email: 'joerg@verein.at',
+      firstName: 'Jörg',
+      lastName: 'Muster',
+      birthDate: null,
+      phone: '+43 660 1234567',
+      photoConsent: false,
+      guardianId: null,
+      roles: ['PLAYER'],
+      membershipType: 'ORDINARY',
     });
   });
 });
@@ -56,8 +77,14 @@ describe('ProfileForm', () => {
 
 describe('MemberListModel', () => {
   it('filters by search, role and activity', async () => {
-    const api = { list: async () => ({ items: [member('anna', ['ADMIN']), member('bert', ['PLAYER']), member('carl', ['PLAYER'], { active: false })],
-      minorIds: ['bert'], wardIds: ['bert'], guardianIds: ['anna'] }) };
+    const api = {
+      list: async () => ({
+        items: [member('anna', ['ADMIN']), member('bert', ['PLAYER']), member('carl', ['PLAYER'], { active: false })],
+        minorIds: ['bert'],
+        wardIds: ['bert'],
+        guardianIds: ['anna'],
+      }),
+    };
     const list = new MemberListModel(api as unknown as MembersApi);
     await list.load();
     expect(list.rows.map((m) => m.id)).toEqual(['anna', 'bert']);

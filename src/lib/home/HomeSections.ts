@@ -29,7 +29,10 @@ export class HomeSections {
   /** Every section the member may see, in their order (for the settings). */
   ordered(order: readonly string[], hasRole: (...roles: readonly Role[]) => boolean): HomeSection[] {
     const visible = this.#sections.filter((s) => !s.roles || hasRole(...s.roles));
-    return NavCatalog.sort(visible.map((s) => ({ ...s, path: s.id })), order);
+    return NavCatalog.sort(
+      visible.map((s) => ({ ...s, path: s.id })),
+      order,
+    );
   }
 
   /** What the start page shows: ordered, switched on by the member or by default. */

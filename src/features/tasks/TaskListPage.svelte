@@ -41,16 +41,26 @@
     ];
   }
 
-  useCommands(commands, { 'page.new': { run: () => bus.publish(WINDOW_OPEN, { kind: 'task-new', id: list.filters.team || '-' }), when: () => taskPolicy.canCreate() } });
+  useCommands(commands, {
+    'page.new': { run: () => bus.publish(WINDOW_OPEN, { kind: 'task-new', id: list.filters.team || '-' }), when: () => taskPolicy.canCreate() },
+  });
 </script>
 
 <Page title="Aufgaben">
   {#snippet actions()}
     {#if taskPolicy.canCreate()}
-      <Button variant="primary" icon="add" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'task-new', id: list.filters.team || '-' })}>Neue Aufgabe</Button>
+      <Button variant="primary" icon="add" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'task-new', id: list.filters.team || '-' })}
+        >Neue Aufgabe</Button
+      >
     {/if}
   {/snippet}
 
-  <TaskTable {list} menu={taskMenu} emptyText={list.filters.mine ? 'Dir ist keine offene Aufgabe zugewiesen.' : 'Keine Aufgaben.'}
-    emptyAction={taskPolicy.canCreate() ? { label: 'Neue Aufgabe', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'task-new', id: list.filters.team || '-' }) } : null} />
+  <TaskTable
+    {list}
+    menu={taskMenu}
+    emptyText={list.filters.mine ? 'Dir ist keine offene Aufgabe zugewiesen.' : 'Keine Aufgaben.'}
+    emptyAction={taskPolicy.canCreate()
+      ? { label: 'Neue Aufgabe', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'task-new', id: list.filters.team || '-' }) }
+      : null}
+  />
 </Page>

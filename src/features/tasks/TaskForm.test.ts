@@ -22,7 +22,9 @@ const existing: Task = {
   ],
   comments: [],
   createdAt: '2026-06-01T10:00:00.000Z',
-  completedAt: null, repeatWeeks: null, source: null,
+  completedAt: null,
+  repeatWeeks: null,
+  source: null,
 };
 
 describe('TaskForm', () => {
@@ -52,7 +54,8 @@ describe('TaskForm', () => {
       description: null,
       dueAt: '2026-01-10T17:00:00.000Z',
       assignees: ['m1'],
-      checklist: ['Pumpe holen'], repeatWeeks: null,
+      checklist: ['Pumpe holen'],
+      repeatWeeks: null,
     });
   });
 

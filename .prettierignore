@@ -1,4 +1,5 @@
 dist
 node_modules
 src/lib/api/schema.d.ts
+src/lib/api/error-codes.json
 package-lock.json

@@ -26,7 +26,10 @@ class Viewer {
   /** The member plus their minors. */
   readonly self: Set<string>;
 
-  constructor(readonly member: Member, people: MockDirectory) {
+  constructor(
+    readonly member: Member,
+    people: MockDirectory,
+  ) {
     const own = people.teamRoles(member.id);
     this.board = people.isManager(member);
     this.teamIds = new Set(Object.keys(own));
@@ -69,10 +72,19 @@ export class MockTasks {
       const managers = this.people.audienceIds({ roles: ADMIN_BOARD }).sort().slice(0, limits.maxAssignees);
       if (!managers.length) return;
       const task: StoredTask = {
-        id: crypto.randomUUID(), teamId: null, appointmentId: null,
+        id: crypto.randomUUID(),
+        teamId: null,
+        appointmentId: null,
         title: `Kontoänderung: ${data.memberName} – ${CHANGE_FIELD_LABELS[data.field as ChangeField]}`.slice(0, limits.titleMaxLength),
-        description: `Neuer Wert: ${data.newValue}`, status: 'OPEN', dueAt: null, createdBy: managers[0], assignees: managers,
-        checklist: [], createdAt: new Date().toISOString(), completedAt: null, repeatWeeks: null,
+        description: `Neuer Wert: ${data.newValue}`,
+        status: 'OPEN',
+        dueAt: null,
+        createdBy: managers[0],
+        assignees: managers,
+        checklist: [],
+        createdAt: new Date().toISOString(),
+        completedAt: null,
+        repeatWeeks: null,
       };
       this.tasks.data.push(task);
       this.sources.data[task.id] = { kind: 'CHANGE_REQUEST', id: data.requestId };
@@ -84,13 +96,25 @@ export class MockTasks {
       this.finish('CHANGE_REQUEST', data.requestId);
     } else if (event.type === 'meetings.follow-up-created') {
       // server: TaskHandlers.onFollowUpCreated
-      const assignees = (data.assignees as string[]).filter((id) => this.people.members.data.some((m) => m.id === id && m.active)).sort()
+      const assignees = (data.assignees as string[])
+        .filter((id) => this.people.members.data.some((m) => m.id === id && m.active))
+        .sort()
         .slice(0, limits.maxAssignees);
       if (!assignees.length) return;
       const task: StoredTask = {
-        id: crypto.randomUUID(), teamId: null, appointmentId: null, title: String(data.title).slice(0, limits.titleMaxLength),
-        description: data.description ?? null, status: 'OPEN', dueAt: data.dueAt ?? null, createdBy: data.createdBy ?? assignees[0], assignees,
-        checklist: [], createdAt: new Date().toISOString(), completedAt: null, repeatWeeks: null,
+        id: crypto.randomUUID(),
+        teamId: null,
+        appointmentId: null,
+        title: String(data.title).slice(0, limits.titleMaxLength),
+        description: data.description ?? null,
+        status: 'OPEN',
+        dueAt: data.dueAt ?? null,
+        createdBy: data.createdBy ?? assignees[0],
+        assignees,
+        checklist: [],
+        createdAt: new Date().toISOString(),
+        completedAt: null,
+        repeatWeeks: null,
       };
       this.tasks.data.push(task);
       this.sources.data[task.id] = { kind: 'MEETING_FOLLOW_UP', id: data.followUpId };
@@ -124,11 +148,25 @@ export class MockTasks {
       this.changed(existing, 'UPDATED');
       return;
     }
-    const active = assignees.filter((id) => this.people.members.data.some((m) => m.id === id && m.active)).sort().slice(0, limits.maxAssignees);
+    const active = assignees
+      .filter((id) => this.people.members.data.some((m) => m.id === id && m.active))
+      .sort()
+      .slice(0, limits.maxAssignees);
     if (!active.length) return;
     const task: StoredTask = {
-      id: crypto.randomUUID(), teamId: null, appointmentId: null, title: title.slice(0, limits.titleMaxLength), description, status: 'OPEN', dueAt,
-      createdBy: active[0], assignees: active, checklist: [], createdAt: new Date().toISOString(), completedAt: null, repeatWeeks: null,
+      id: crypto.randomUUID(),
+      teamId: null,
+      appointmentId: null,
+      title: title.slice(0, limits.titleMaxLength),
+      description,
+      status: 'OPEN',
+      dueAt,
+      createdBy: active[0],
+      assignees: active,
+      checklist: [],
+      createdAt: new Date().toISOString(),
+      completedAt: null,
+      repeatWeeks: null,
     };
     this.tasks.data.push(task);
     this.sources.data[task.id] = { kind: 'MEETING_REMINDER', id: key };
@@ -183,7 +221,13 @@ export class MockTasks {
 
   /** "Benötigt" list and attachments (server: TaskHandlers.getLinks / setLinks). */
   readonly links = new MockLinks('task-links', () => ({
-    't-3': { needs: [{ itemId: 'i-pump', name: 'Ballpumpe mit Manometer', quantity: 1 }, { itemId: 'i-training-balls', name: 'Trainingsbälle', quantity: 30 }], files: [] },
+    't-3': {
+      needs: [
+        { itemId: 'i-pump', name: 'Ballpumpe mit Manometer', quantity: 1 },
+        { itemId: 'i-training-balls', name: 'Trainingsbälle', quantity: 30 },
+      ],
+      files: [],
+    },
   }));
 
   getLinks(member: Member, id: string) {
@@ -193,7 +237,8 @@ export class MockTasks {
   /** server: TaskHandlers.itemUses */
   itemUses(member: Member, itemId: string): ItemUse[] {
     const viewer = this.viewer(member);
-    return this.links.owners(itemId)
+    return this.links
+      .owners(itemId)
       .flatMap(([id, quantity]) => {
         const t = this.tasks.data.find((x) => x.id === id);
         return t && viewer.canSee(t) && t.status !== 'DONE' ? [{ kind: 'TASK' as const, id: t.id, title: t.title, at: t.dueAt, quantity }] : [];
@@ -211,7 +256,14 @@ export class MockTasks {
     return links;
   }
 
-  list(member: Member, mine: boolean, teamId: string | null, includeDone: boolean, dueFrom: string | null = null, dueTo: string | null = null): Task[] {
+  list(
+    member: Member,
+    mine: boolean,
+    teamId: string | null,
+    includeDone: boolean,
+    dueFrom: string | null = null,
+    dueTo: string | null = null,
+  ): Task[] {
     const viewer = this.viewer(member);
     if (teamId && !viewer.board && !viewer.teamIds.has(teamId)) fail(404, 'team.not-found');
     const [from, to] = [dueFrom ? Date.parse(dueFrom) : null, dueTo ? Date.parse(dueTo) : null];
@@ -220,7 +272,10 @@ export class MockTasks {
     const inRange = (t: StoredTask) =>
       (from === null || (t.dueAt !== null && Date.parse(t.dueAt) >= from)) && (to === null || (t.dueAt !== null && Date.parse(t.dueAt) < to));
     return this.tasks.data
-      .filter((t) => viewer.canSee(t) && (!mine || viewer.assigned(t)) && (!teamId || t.teamId === teamId) && (includeDone || t.status !== 'DONE') && inRange(t))
+      .filter(
+        (t) =>
+          viewer.canSee(t) && (!mine || viewer.assigned(t)) && (!teamId || t.teamId === teamId) && (includeDone || t.status !== 'DONE') && inRange(t),
+      )
       .sort((a, b) => MockTasks.compareDue(a, b))
       .map((t) => ({ ...t, comments: [], source: null }));
   }
@@ -423,7 +478,6 @@ export class MockTasks {
     return clock.toInstant(ZonedClock.addMinutes(clock.toLocal(dueAt), weeks * 7 * 24 * 60));
   }
 
-
   /** By date, undated last. */
   static compareAt(a: { at: string | null }, b: { at: string | null }): number {
     if (a.at === b.at) return 0;
@@ -448,20 +502,80 @@ export class MockTasks {
     const base = { appointmentId: null, completedAt: null, createdAt: at(-5), repeatWeeks: null as number | null };
     const items = (...entries: [string, boolean][]) => entries.map(([text, done], i) => ({ id: `ci-${text.length}-${i}`, text, done }));
     return [
-      { ...base, id: 't-1', teamId: 't-damen', title: 'Trikots waschen', description: 'Satz für das Heimspiel, bitte bis Freitag zurück in die Halle.',
-        status: 'OPEN', dueAt: at(0.5), createdBy: 'trainer', assignees: ['spielerin'], checklist: [] },
-      { ...base, id: 't-2', teamId: 't-damen', title: 'Fahrgemeinschaft Auswärtsspiel', description: null, status: 'IN_PROGRESS',
-        dueAt: at(6), createdBy: 'trainer', assignees: ['spielerin', 'neu'],
-        checklist: items(['Fahrer:innen fragen', true], ['Treffpunkt festlegen', false], ['Liste in die Gruppe schicken', false]) },
-      { ...base, id: 't-3', teamId: 't-u16', title: 'Bälle aufpumpen', description: null, status: 'OPEN', dueAt: at(-1), repeatWeeks: 1,
-        createdBy: 'trainer', assignees: ['spieler'], checklist: [] },
-      { ...base, id: 't-4', teamId: null, title: 'Kassenbericht vorbereiten', description: 'Für die Mitgliederversammlung.',
-        status: 'OPEN', dueAt: at(12), createdBy: 'admin', assignees: ['vorstand'],
-        checklist: items(['Belege sammeln', false], ['Bericht schreiben', false]) },
-      { ...base, id: 't-5', teamId: null, title: 'Hallenzeiten für die neue Saison anfragen', description: null, status: 'DONE',
-        dueAt: at(-10), createdBy: 'vorstand', assignees: ['vorstand'], checklist: [], completedAt: at(-11) },
-      { ...base, id: 't-6', teamId: 't-damen', title: 'Spielberichtsbogen besorgen', description: null, status: 'OPEN', dueAt: null,
-        createdBy: 'admin', assignees: ['trainer'], checklist: [] },
+      {
+        ...base,
+        id: 't-1',
+        teamId: 't-damen',
+        title: 'Trikots waschen',
+        description: 'Satz für das Heimspiel, bitte bis Freitag zurück in die Halle.',
+        status: 'OPEN',
+        dueAt: at(0.5),
+        createdBy: 'trainer',
+        assignees: ['spielerin'],
+        checklist: [],
+      },
+      {
+        ...base,
+        id: 't-2',
+        teamId: 't-damen',
+        title: 'Fahrgemeinschaft Auswärtsspiel',
+        description: null,
+        status: 'IN_PROGRESS',
+        dueAt: at(6),
+        createdBy: 'trainer',
+        assignees: ['spielerin', 'neu'],
+        checklist: items(['Fahrer:innen fragen', true], ['Treffpunkt festlegen', false], ['Liste in die Gruppe schicken', false]),
+      },
+      {
+        ...base,
+        id: 't-3',
+        teamId: 't-u16',
+        title: 'Bälle aufpumpen',
+        description: null,
+        status: 'OPEN',
+        dueAt: at(-1),
+        repeatWeeks: 1,
+        createdBy: 'trainer',
+        assignees: ['spieler'],
+        checklist: [],
+      },
+      {
+        ...base,
+        id: 't-4',
+        teamId: null,
+        title: 'Kassenbericht vorbereiten',
+        description: 'Für die Mitgliederversammlung.',
+        status: 'OPEN',
+        dueAt: at(12),
+        createdBy: 'admin',
+        assignees: ['vorstand'],
+        checklist: items(['Belege sammeln', false], ['Bericht schreiben', false]),
+      },
+      {
+        ...base,
+        id: 't-5',
+        teamId: null,
+        title: 'Hallenzeiten für die neue Saison anfragen',
+        description: null,
+        status: 'DONE',
+        dueAt: at(-10),
+        createdBy: 'vorstand',
+        assignees: ['vorstand'],
+        checklist: [],
+        completedAt: at(-11),
+      },
+      {
+        ...base,
+        id: 't-6',
+        teamId: 't-damen',
+        title: 'Spielberichtsbogen besorgen',
+        description: null,
+        status: 'OPEN',
+        dueAt: null,
+        createdBy: 'admin',
+        assignees: ['trainer'],
+        checklist: [],
+      },
     ];
   }
 
@@ -479,7 +593,9 @@ export class MockTasks {
 export const tasks = new MockTasks(directory);
 // server: TaskRepository.personalData
 personalData.set('tasks', (memberId) => ({
-  assigned: tasks.tasks.data.filter((t) => t.assignees.includes(memberId)).map(({ id, title, description, status, dueAt }) => ({ id, title, description, status, dueAt })),
+  assigned: tasks.tasks.data
+    .filter((t) => t.assignees.includes(memberId))
+    .map(({ id, title, description, status, dueAt }) => ({ id, title, description, status, dueAt })),
   created: tasks.tasks.data.filter((t) => t.createdBy === memberId).map(({ id, title, status }) => ({ id, title, status })),
 }));
 
@@ -490,14 +606,21 @@ const flag = (req: MockRequest, name: string) => req.query.get(name) === 'true';
 
 mockServer
   .on('GET', '/api/v1/tasks/:id/activity', (req) => activity.list(actor(req), 'TASK', tasks.get(actor(req), req.params.id).id))
-  .on('GET', '/api/v1/tasks', (req) =>
-    ({ items: tasks.list(actor(req), flag(req, 'mine'), req.query.get('teamId'), flag(req, 'includeDone'), req.query.get('dueFrom'), req.query.get('dueTo')) }))
+  .on('GET', '/api/v1/tasks', (req) => ({
+    items: tasks.list(
+      actor(req),
+      flag(req, 'mine'),
+      req.query.get('teamId'),
+      flag(req, 'includeDone'),
+      req.query.get('dueFrom'),
+      req.query.get('dueTo'),
+    ),
+  }))
   .on('POST', '/api/v1/tasks', (req) => tasks.create(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/tasks/:id', (req) => tasks.get(actor(req), req.params.id))
   .on('PATCH', '/api/v1/tasks/:id', (req) => tasks.update(actor(req), req.params.id, req.body ?? {}))
   .on('PUT', '/api/v1/tasks/:id/status', (req) => tasks.setStatus(actor(req), req.params.id, req.body?.status))
-  .on('PUT', '/api/v1/tasks/:id/checklist/:itemId', (req) =>
-    tasks.check(actor(req), req.params.id, req.params.itemId, req.body?.done))
+  .on('PUT', '/api/v1/tasks/:id/checklist/:itemId', (req) => tasks.check(actor(req), req.params.id, req.params.itemId, req.body?.done))
   .on('POST', '/api/v1/tasks/:id/comments', (req) => tasks.comment(actor(req), req.params.id, req.body?.text))
   .on('DELETE', '/api/v1/tasks/:id', (req) => tasks.delete(actor(req), req.params.id))
   .on('GET', '/api/v1/tasks/:id/links', (req) => tasks.getLinks(actor(req), req.params.id))

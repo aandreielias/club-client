@@ -29,7 +29,11 @@ describe('mock core', () => {
       expect.objectContaining({ code: 'auth.pin-wrong' }),
     );
     expect(mockServer.handle('POST', '/api/v1/me/step-up', { pin: MockDirectory.PIN }, trainer)).toMatchObject({ until: expect.any(String) });
-    expect(mockServer.handle('GET', '/api/v1/me/security', undefined, trainer)).toMatchObject({ clubPinSet: true, pinLocked: false, stepUpUntil: expect.any(String) });
+    expect(mockServer.handle('GET', '/api/v1/me/security', undefined, trainer)).toMatchObject({
+      clubPinSet: true,
+      pinLocked: false,
+      stepUpUntil: expect.any(String),
+    });
   });
 
   it('lets admin and board confirm only with their authenticator app', () => {
@@ -38,20 +42,32 @@ describe('mock core', () => {
     expect(() => mockServer.handle('POST', '/api/v1/me/step-up', { pin: MockDirectory.PIN }, as('vorstand'))).toThrow(
       expect.objectContaining({ code: 'auth.mfa-required' }),
     );
-    expect(() => mockServer.handle('POST', '/api/v1/me/step-up/mfa', undefined, as('vorstand'))).toThrow(expect.objectContaining({ code: 'auth.mfa-not-recent' }));
+    expect(() => mockServer.handle('POST', '/api/v1/me/step-up/mfa', undefined, as('vorstand'))).toThrow(
+      expect.objectContaining({ code: 'auth.mfa-not-recent' }),
+    );
     expect(() => mockServer.handle('POST', '/api/v1/me/step-up/mfa', undefined, as('vorstand'), undefined, now - 600)).toThrow(
       expect.objectContaining({ code: 'auth.mfa-not-recent' }),
     );
-    expect(mockServer.handle('POST', '/api/v1/me/step-up/mfa', undefined, as('vorstand'), undefined, now)).toMatchObject({ until: expect.any(String) });
+    expect(mockServer.handle('POST', '/api/v1/me/step-up/mfa', undefined, as('vorstand'), undefined, now)).toMatchObject({
+      until: expect.any(String),
+    });
   });
 
   it('lets only admin and board change the club PIN, always with a step-up', () => {
-    expect(() => mockServer.handle('PUT', '/api/v1/club/pin', { pin: 'k7m2q' }, as('trainer'))).toThrow(expect.objectContaining({ code: 'access.denied' }));
-    expect(() => mockServer.handle('PUT', '/api/v1/club/pin', { pin: 'k7m2q' }, as('admin'))).toThrow(expect.objectContaining({ code: 'auth.step-up-required' }));
+    expect(() => mockServer.handle('PUT', '/api/v1/club/pin', { pin: 'k7m2q' }, as('trainer'))).toThrow(
+      expect.objectContaining({ code: 'access.denied' }),
+    );
+    expect(() => mockServer.handle('PUT', '/api/v1/club/pin', { pin: 'k7m2q' }, as('admin'))).toThrow(
+      expect.objectContaining({ code: 'auth.step-up-required' }),
+    );
     directory.confirm(directory.members.data.find((m) => m.id === 'vorstand')!);
-    expect(() => mockServer.handle('PUT', '/api/v1/club/pin', { pin: '12345' }, as('vorstand'))).toThrow(expect.objectContaining({ code: 'auth.pin-too-simple' }));
+    expect(() => mockServer.handle('PUT', '/api/v1/club/pin', { pin: '12345' }, as('vorstand'))).toThrow(
+      expect.objectContaining({ code: 'auth.pin-too-simple' }),
+    );
     mockServer.handle('PUT', '/api/v1/club/pin', { pin: 'k7m2q' }, as('vorstand'));
-    expect(() => mockServer.handle('POST', '/api/v1/me/step-up', { pin: MockDirectory.PIN }, as('trainer'))).toThrow(expect.objectContaining({ code: 'auth.pin-wrong' }));
+    expect(() => mockServer.handle('POST', '/api/v1/me/step-up', { pin: MockDirectory.PIN }, as('trainer'))).toThrow(
+      expect.objectContaining({ code: 'auth.pin-wrong' }),
+    );
     directory.clubPin.data.pin = MockDirectory.PIN;
   });
 

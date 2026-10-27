@@ -13,7 +13,6 @@
   import ErrorNote from './ErrorNote.svelte';
   import SearchSelect from './SearchSelect.svelte';
   import Tag from './Tag.svelte';
-  import { tooltip } from './tooltip';
   import { recordDrop } from './recordDrop';
 
   /**
@@ -27,7 +26,6 @@
     if (!model.editing && !model.save.busy) void model.load();
   });
 
-
   async function download(file: FileRef) {
     try {
       await openTab(model.downloadUrl(file));
@@ -39,7 +37,10 @@
   async function save() {
     if (await model.commit()) bus.publish(TOAST, { text: 'Benötigt und Dateien gespeichert.' });
   }
-  backStack.while(() => model.editing, () => model.cancel());
+  backStack.while(
+    () => model.editing,
+    () => model.cancel(),
+  );
 
   // Items and files dragged in from a list, the other pane or a name (record windows: `item`, `folderId:fileId`).
   function dropItem(itemId: string, name: string) {
@@ -62,7 +63,9 @@
             <li class:deleted={need.deleted}>
               <span class="name">
                 <!-- Members see what is needed; only admin, board and coaches open the inventory. -->
-                <RecordLink kind="item" id={need.itemId} allowed={!need.deleted && permissions.isPrivileged} hint="Gegenstand öffnen">{need.name}</RecordLink>
+                <RecordLink kind="item" id={need.itemId} allowed={!need.deleted && permissions.isPrivileged} hint="Gegenstand öffnen"
+                  >{need.name}</RecordLink
+                >
               </span>
               {#if need.deleted}<Tag tone="danger">Gelöscht</Tag>{:else}<span></span>{/if}
               <input
@@ -149,7 +152,12 @@
                     <span class="place">
                       {#if place.kind === 'LOCATION' && place.id && place.name}<RecordLink kind="location" id={place.id}>{place.name}</RecordLink>
                       {:else if place.kind === 'PERSON' && place.id === session.member.id}<strong>bei dir</strong>
-                      {:else if place.kind === 'PERSON' && place.id && place.name}<RecordLink kind="member" id={place.id} allowed={permissions.canSeeMember(place.id)} hint="Profil öffnen">{place.name}</RecordLink>
+                      {:else if place.kind === 'PERSON' && place.id && place.name}<RecordLink
+                          kind="member"
+                          id={place.id}
+                          allowed={permissions.canSeeMember(place.id)}
+                          hint="Profil öffnen">{place.name}</RecordLink
+                        >
                       {:else}{placeName(place)}{/if}
                       {place.quantity}
                     </span>
@@ -177,7 +185,13 @@
               <span class="name"><RecordLink kind="file" id="{file.folderId}:{file.id}" hint="Vorschau öffnen">{file.name}</RecordLink></span>
               <span></span>
             {/if}
-            {#if file.deleted}<span></span>{:else}<Button size="sm" variant="ghost" icon="download" onclick={() => download(file)} tooltip="{file.name} herunterladen" />{/if}
+            {#if file.deleted}<span></span>{:else}<Button
+                size="sm"
+                variant="ghost"
+                icon="download"
+                onclick={() => download(file)}
+                tooltip="{file.name} herunterladen"
+              />{/if}
             <span></span>
             <span></span>
           </li>

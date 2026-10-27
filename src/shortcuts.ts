@@ -52,7 +52,12 @@ export const SHORTCUTS = {
   'nav.back': { label: 'Zurück', group: 'Navigation', context: 'global', keys: 'Alt+ArrowLeft' },
 
   // ---- Fenster ----
-  'view.back': { label: 'Eine Ansicht zurück (Bearbeiten beenden, vorheriger Eintrag, Fenster schließen)', group: 'Fenster', context: 'global', keys: 'Escape' },
+  'view.back': {
+    label: 'Eine Ansicht zurück (Bearbeiten beenden, vorheriger Eintrag, Fenster schließen)',
+    group: 'Fenster',
+    context: 'global',
+    keys: 'Escape',
+  },
   'window.close': { label: 'Fenster schließen', group: 'Fenster', context: 'window', keys: 'Shift+Escape' },
   'window.center': { label: 'Fenster in die Mitte', group: 'Fenster', context: 'window', keys: 'w m' },
   'window.side': { label: 'Fenster an die Seite', group: 'Fenster', context: 'window', keys: 'w s' },

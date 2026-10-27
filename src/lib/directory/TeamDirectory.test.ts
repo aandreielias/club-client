@@ -7,7 +7,22 @@ import type { Me, Roster } from '../types';
 import { TeamDirectory } from './TeamDirectory.svelte';
 
 const me: Me = {
-  member: { id: 'm1', email: 'c@x.at', firstName: 'Clara', lastName: 'Coach', birthDate: null, phone: null, photoConsent: true, active: true, membershipTypes: [], previousType: null, memberSince: null, voter: false, eligible: false, roles: ['COACH'] },
+  member: {
+    id: 'm1',
+    email: 'c@x.at',
+    firstName: 'Clara',
+    lastName: 'Coach',
+    birthDate: null,
+    phone: null,
+    photoConsent: true,
+    active: true,
+    membershipTypes: [],
+    previousType: null,
+    memberSince: null,
+    voter: false,
+    eligible: false,
+    roles: ['COACH'],
+  },
   teams: [
     { id: 'a', name: 'Team A', season: '2026/27' },
     { id: 'b', name: 'Team B', season: '2026/27' },
@@ -18,7 +33,13 @@ const me: Me = {
 };
 
 const rosters: Record<string, Roster> = {
-  a: { team: me.teams[0], entries: [{ memberId: 'm1', name: 'Clara Coach', teamRole: 'COACH' }, { memberId: 'm2', name: 'Pia Player', teamRole: 'PLAYER' }] },
+  a: {
+    team: me.teams[0],
+    entries: [
+      { memberId: 'm1', name: 'Clara Coach', teamRole: 'COACH' },
+      { memberId: 'm2', name: 'Pia Player', teamRole: 'PLAYER' },
+    ],
+  },
   b: { team: me.teams[1], entries: [{ memberId: 'm1', name: 'Clara Coach', teamRole: 'PLAYER' }] },
 };
 

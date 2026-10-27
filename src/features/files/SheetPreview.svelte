@@ -12,8 +12,13 @@
 
 {#if sheets.length > 1}
   <div class="tabs">
-    <ChoiceGroup name="sheet" label="Tabellenblatt" size="sm" options={sheets.map((s) => ({ value: s.name, label: s.name }))}
-      bind:value={() => sheet?.name ?? null, (name) => (chosen = name)} />
+    <ChoiceGroup
+      name="sheet"
+      label="Tabellenblatt"
+      size="sm"
+      options={sheets.map((s) => ({ value: s.name, label: s.name }))}
+      bind:value={() => sheet?.name ?? null, (name) => (chosen = name)}
+    />
   </div>
 {/if}
 {#if sheet && sheet.rows.length}

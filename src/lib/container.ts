@@ -88,10 +88,7 @@ const transport: Transport =
   runtime.apiMode === 'http'
     ? new HttpTransport(runtime.apiUrl, auth.token)
     : // Loaded on first use, so mock code and seed data never ship in an http build.
-      new LazyTransport(
-        async () => (await import('./mock')).createMockTransport(auth.token),
-        settings.api.mockOrigin,
-      );
+      new LazyTransport(async () => (await import('./mock')).createMockTransport(auth.token), settings.api.mockOrigin);
 
 export const stepUp: StepUpService = new StepUpService({
   usesTotp: () => session.hasRole(...ADMIN_BOARD),
@@ -103,7 +100,11 @@ export const stepUp: StepUpService = new StepUpService({
 });
 
 // 401: the login is gone (expired, revoked); AppController sees the signed-out state and clears the session.
-export const api: ApiClient = new ApiClient(transport, () => stepUp.request(), () => void auth.signOut());
+export const api: ApiClient = new ApiClient(
+  transport,
+  () => stepUp.request(),
+  () => void auth.signOut(),
+);
 
 export const session = new SessionStore(api);
 
@@ -117,7 +118,11 @@ export const documentTitle = new DocumentTitle(() => session.club?.name ?? '');
 /** Escape steps (edit modes, panels) of whatever is open; see the `view.back` command. */
 export const backStack = new BackStack();
 
-export const router = new Router(bus, (change) => motion.transition(change), () => backStack.mayLeave());
+export const router = new Router(
+  bus,
+  (change) => motion.transition(change),
+  () => backStack.mayLeave(),
+);
 
 export const links = new LinkResolver();
 
@@ -126,7 +131,14 @@ export const split = new SplitView(router, store, bus, settings.split);
 export const mainPane = new MainPane(router, split);
 export const splitPane = new SplitPane(split);
 
-export const windows = new WindowService(router, store, settings.window.defaultDock, bus, () => backStack.mayLeave(), (roles) => session.hasRole(...roles));
+export const windows = new WindowService(
+  router,
+  store,
+  settings.window.defaultDock,
+  bus,
+  () => backStack.mayLeave(),
+  (roles) => session.hasRole(...roles),
+);
 /** Page switches from the sidebar and shortcuts: the split and a docked window stay. */
 export const pageNavigator = new PageNavigator(split, mainPane, splitPane, windows);
 
@@ -170,22 +182,17 @@ export const errors = new ErrorMessages(STATUS_MESSAGES, UNKNOWN_MESSAGE).regist
 new ErrorReporter(bus, errors);
 
 const openSocket: SocketFactory =
-  runtime.apiMode === 'http'
-    ? webSocketFactory(runtime.apiUrl, settings.live.path)
-    : async () => (await import('./mock')).createMockSocket();
+  runtime.apiMode === 'http' ? webSocketFactory(runtime.apiUrl, settings.live.path) : async () => (await import('./mock')).createMockSocket();
 
 export const live = new LiveUpdates(openSocket, auth.token, settings.live, bus, () => {
   // 4403: the server says access ended. Confirm with /me before ending the session; if /me still works
   // (e.g. birth date still missing), try live updates again later, never in a tight loop.
   const retryLater = () => setTimeout(() => live.start(), settings.live.reconnectMaxMs);
-  api.get('/api/v1/me').then(
-    retryLater,
-    (error) => {
-      if (!(error instanceof ProblemError) || (error.status !== 401 && error.status !== 403)) return void retryLater();
-      bus.publish(TOAST, { text: 'Dein Zugang ist nicht mehr aktiv.', tone: 'error' });
-      void auth.signOut();
-    },
-  );
+  api.get('/api/v1/me').then(retryLater, (error) => {
+    if (!(error instanceof ProblemError) || (error.status !== 401 && error.status !== 403)) return void retryLater();
+    bus.publish(TOAST, { text: 'Dein Zugang ist nicht mehr aktiv.', tone: 'error' });
+    void auth.signOut();
+  });
 });
 
 // Dev only: this module holds the app's singletons (session, router, bus …). A hot update must not create a second

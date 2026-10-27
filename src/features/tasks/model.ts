@@ -77,8 +77,7 @@ export const REPEAT_OPTIONS: readonly { value: string; label: string }[] = [
   { value: '4', label: 'Alle 4 Wochen' },
 ];
 
-export const repeatLabel = (weeks: number | null): string | null =>
-  weeks === null ? null : weeks === 1 ? 'Jede Woche' : `Alle ${weeks} Wochen`;
+export const repeatLabel = (weeks: number | null): string | null => (weeks === null ? null : weeks === 1 ? 'Jede Woche' : `Alle ${weeks} Wochen`);
 
 export interface TaskQuery {
   /** Only tasks assigned to the member or their minors. */
@@ -90,9 +89,10 @@ export interface TaskQuery {
   dueTo?: string;
 }
 
-export const TASK_STATUSES: readonly { value: TaskStatus; label: string }[] = (Object.keys(TASK_STATUS_LABELS) as TaskStatus[]).map(
-  (value) => ({ value, label: TASK_STATUS_LABELS[value] }),
-);
+export const TASK_STATUSES: readonly { value: TaskStatus; label: string }[] = (Object.keys(TASK_STATUS_LABELS) as TaskStatus[]).map((value) => ({
+  value,
+  label: TASK_STATUS_LABELS[value],
+}));
 
 /** Not done and past its due time; the one rule behind tags, the "überfällig" filter and reminders. */
 export const isOverdue = (task: Task, now: Date): boolean => task.status !== 'DONE' && task.dueAt !== null && Date.parse(task.dueAt) < now.getTime();

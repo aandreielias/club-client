@@ -57,13 +57,20 @@
   <ul class="versions">
     {#each versions.value ?? [] as version (version.id)}
       <li>
-        <input type="checkbox" checked={picked.includes(version.id)} onchange={() => toggle(version.id)} aria-label="Version {version.label} zum Vergleichen wählen" />
+        <input
+          type="checkbox"
+          checked={picked.includes(version.id)}
+          onchange={() => toggle(version.id)}
+          aria-label="Version {version.label} zum Vergleichen wählen"
+        />
         <span class="label">
           <Tag tone={version.current ? 'blue' : 'gray'}>{version.label}</Tag>
           {#if version.current}<span class="muted small">aktuell</span>{/if}
         </span>
         <span class="muted">Stand {session.format.date(version.date)}</span>
-        <span class="muted who">{#if version.uploadedBy}<MemberName memberId={version.uploadedBy} />{/if}</span>
+        <span class="muted who"
+          >{#if version.uploadedBy}<MemberName memberId={version.uploadedBy} />{/if}</span
+        >
         <span class="muted size">{session.format.bytes(version.sizeBytes)}</span>
         <Button size="sm" variant="ghost" icon="download" tooltip="Version {version.label} herunterladen" onclick={() => download(version.id)} />
       </li>

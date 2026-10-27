@@ -12,12 +12,14 @@ const member = (id: string): Member => directory.members.data.find((m) => m.id =
 const as = (id: string) => `${id}@example.at`;
 
 describe('mock access requests and audit log', () => {
-  it('exports own and wards\' data, nobody else\'s', () => {
+  it("exports own and wards' data, nobody else's", () => {
     const own = mockServer.handle('GET', '/api/v1/me/export', undefined, as('spieler')) as { data: Record<string, Record<string, unknown[]>> };
     expect(own.data.members.profile).toHaveLength(1);
     expect(Object.keys(own.data)).toEqual(expect.arrayContaining(['members', 'attendance', 'calendar', 'tasks', 'notifications']));
     expect(mockServer.handle('GET', '/api/v1/me/export?memberId=spieler', undefined, as('eltern'))).toMatchObject({ memberId: 'spieler' });
-    expect(() => mockServer.handle('GET', '/api/v1/me/export?memberId=spieler', undefined, as('trainer'))).toThrow(expect.objectContaining({ status: 404 }));
+    expect(() => mockServer.handle('GET', '/api/v1/me/export?memberId=spieler', undefined, as('trainer'))).toThrow(
+      expect.objectContaining({ status: 404 }),
+    );
   });
 
   it('logs privileged writes and member reads for admins only', () => {

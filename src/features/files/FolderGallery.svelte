@@ -59,25 +59,43 @@
       {#if model.rows.some((item) => !pendingDeletes.isHidden(item.id))}
         <ul class="tiles">
           {#each model.rows.filter((item) => !pendingDeletes.isHidden(item.id)) as item (item.id)}
-            <li class="cell" class:chosen={selected?.(item)} class:drop-target={dropId === item.id}
+            <li
+              class="cell"
+              class:chosen={selected?.(item)}
+              class:drop-target={dropId === item.id}
               class:movable={!!drag?.can(item)}
               draggable={drag?.can(item) || record?.(item) ? 'true' : undefined}
               ondragstart={(e) => dragStart(item, e)}
-              {@attach recordDrop(['member'], (ref) => tagDrop?.drop(item, ref.id), () => !!tagDrop?.accepts(item))}
+              {@attach recordDrop(
+                ['member'],
+                (ref) => tagDrop?.drop(item, ref.id),
+                () => !!tagDrop?.accepts(item),
+              )}
               ondragover={(e) => drag && RowDragging.over(drag, item, e) && (dropId = item.id)}
               ondragleave={() => dropId === item.id && (dropId = null)}
-              ondrop={(e) => ((dropId = null), drag && RowDragging.drop(drag, item, e))}>
+              ondrop={(e) => ((dropId = null), drag && RowDragging.drop(drag, item, e))}
+            >
               {#if selected && onselect && item.kind === 'file'}
                 <input type="checkbox" class="select" checked={selected(item)} onchange={() => onselect(item)} aria-label="{item.name} auswählen" />
               {/if}
-              <button class="tile" onclick={() => onopen(item)} aria-label={item.kind === 'folder' ? `Ordner ${item.name} öffnen` : `${item.name} öffnen`}
-                {@attach tooltip(item.name)} {@attach menu ? contextMenu(() => menu(item)) : undefined}>
+              <button
+                class="tile"
+                onclick={() => onopen(item)}
+                aria-label={item.kind === 'folder' ? `Ordner ${item.name} öffnen` : `${item.name} öffnen`}
+                {@attach tooltip(item.name)}
+                {@attach menu ? contextMenu(() => menu(item)) : undefined}
+              >
                 <span class="preview">
                   {#if item.kind === 'file'}
                     <Thumbnail file={item.file} />
                   {:else}
                     {#snippet folderIcon()}
-                      <span class="folder" style:--hue={item.kind === 'folder' && colorHue(item.folder.color) ? `var(--color-tag-${colorHue(item.folder.color)}-text)` : null}>
+                      <span
+                        class="folder"
+                        style:--hue={item.kind === 'folder' && colorHue(item.folder.color)
+                          ? `var(--color-tag-${colorHue(item.folder.color)}-text)`
+                          : null}
+                      >
                         <Icon name="files" />
                       </span>
                     {/snippet}
@@ -89,7 +107,10 @@
                   {/if}
                 </span>
                 <span class="name">
-                  {#if item.kind === 'folder' && colorHue(item.folder.color)}<span class="dot" style:background="var(--color-tag-{colorHue(item.folder.color)}-text)"></span>{/if}
+                  {#if item.kind === 'folder' && colorHue(item.folder.color)}<span
+                      class="dot"
+                      style:background="var(--color-tag-{colorHue(item.folder.color)}-text)"
+                    ></span>{/if}
                   {item.name}
                 </span>
               </button>
@@ -97,8 +118,10 @@
           {/each}
         </ul>
       {:else}
-        <Empty text={model.total ? 'Keine Einträge passen zu Suche und Filtern.' : emptyText}
-          action={model.total ? (model.activeFilters ? { label: 'Filter zurücksetzen', run: () => model.reset() } : null) : emptyAction} />
+        <Empty
+          text={model.total ? 'Keine Einträge passen zu Suche und Filtern.' : emptyText}
+          action={model.total ? (model.activeFilters ? { label: 'Filter zurücksetzen', run: () => model.reset() } : null) : emptyAction}
+        />
       {/if}
     {/snippet}
   </AsyncView>

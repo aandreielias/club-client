@@ -32,8 +32,16 @@ export class MockBoard {
     if (!label || label.length > 40) fail(400, 'membership-kind.label-invalid');
     if (!Number.isInteger(body.sort) || body.sort < 0 || body.sort > 1000) fail(400, 'membership-kind.sort-invalid');
     if (key === HONORARY && body.archived) fail(409, 'membership-kind.fixed');
-    const kind: MembershipKind = { key: key ?? generatedKey('KIND'), label,
-      votes: !!body.votes, eligible: !!body.eligible, sort: body.sort, archived: !!body.archived, inUse: false, fixed: key === HONORARY };
+    const kind: MembershipKind = {
+      key: key ?? generatedKey('KIND'),
+      label,
+      votes: !!body.votes,
+      eligible: !!body.eligible,
+      sort: body.sort,
+      archived: !!body.archived,
+      inUse: false,
+      fixed: key === HONORARY,
+    };
     const next = [...this.people.membershipKinds.data.filter((k) => k.key !== kind.key), kind];
     this.people.requireHoldersEligible(next);
     this.people.membershipKinds.data.splice(0, this.people.membershipKinds.data.length, ...next);
@@ -77,7 +85,11 @@ export class MockBoard {
   saveBoardSettings(viewer: Member, body: Record<string, any>): BoardSettings {
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const list: Record<string, any>[] = Array.isArray(body.offices) ? body.offices : [];
-    if (list.length !== OFFICES.length || new Set(list.map((o) => o.office)).size !== OFFICES.length || list.some((o) => !OFFICES.includes(o.office))) {
+    if (
+      list.length !== OFFICES.length ||
+      new Set(list.map((o) => o.office)).size !== OFFICES.length ||
+      list.some((o) => !OFFICES.includes(o.office))
+    ) {
       fail(400, 'board-settings.offices-invalid');
     }
     const int = (v: unknown, min: number, max: number) => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
@@ -86,7 +98,7 @@ export class MockBoard {
       const label = typeof o.label === 'string' ? o.label.trim() : '';
       if (!label || label.length > 40) fail(400, 'board-settings.label-invalid');
       const max = o.maxHolders ?? null;
-      if (!int(o.minHolders, 0, 20) || (max != null && (!int(max, Math.max(1, o.minHolders), 20))) || (!o.enabled && o.minHolders > 0)) {
+      if (!int(o.minHolders, 0, 20) || (max != null && !int(max, Math.max(1, o.minHolders), 20)) || (!o.enabled && o.minHolders > 0)) {
         fail(400, 'board-settings.holders-invalid');
       }
       if (!int(o.termYears, 1, 10)) fail(400, 'board-settings.term-invalid');
@@ -106,9 +118,18 @@ export class MockBoard {
     }
     if (!body.multipleKinds && this.people.members.data.some((m) => m.membershipTypes.length > 1)) fail(409, 'member.several-kinds');
     this.people.requireHoldersEligible(this.people.membershipKinds.data);
-    Object.assign(this.people.boardSettings.data, { offices, minBoardSize: body.minBoardSize, oddBoardSize: !!body.oddBoardSize, cooptWeeks: body.cooptWeeks,
-      termWarningDays: body.termWarningDays, byElectionDays: body.byElectionDays, combinations: combinations.map(({ a, b }) => ({ a, b })),
-      multipleKinds: !!body.multipleKinds, guardianUntilAge: body.guardianUntilAge, ownConsentAge: body.ownConsentAge });
+    Object.assign(this.people.boardSettings.data, {
+      offices,
+      minBoardSize: body.minBoardSize,
+      oddBoardSize: !!body.oddBoardSize,
+      cooptWeeks: body.cooptWeeks,
+      termWarningDays: body.termWarningDays,
+      byElectionDays: body.byElectionDays,
+      combinations: combinations.map(({ a, b }) => ({ a, b })),
+      multipleKinds: !!body.multipleKinds,
+      guardianUntilAge: body.guardianUntilAge,
+      ownConsentAge: body.ownConsentAge,
+    });
     this.people.boardSettings.save();
     this.people.saveMembers();
     mockServer.events.publish({ type: 'members.board-settings-changed', data: {} });
@@ -130,9 +151,18 @@ export class MockBoard {
     if (setting.maxHolders != null && running.filter((o) => o.office === office).length >= setting.maxHolders) fail(409, 'office.taken');
     const held = running.filter((o) => o.memberId === holder.id).map((o) => o.office);
     if (held.includes(office)) fail(409, 'office.already-held');
-    const allowed = (x: string, y: string) => this.people.boardSettings.data.combinations.some((p) => (p.a === x && p.b === y) || (p.a === y && p.b === x));
+    const allowed = (x: string, y: string) =>
+      this.people.boardSettings.data.combinations.some((p) => (p.a === x && p.b === y) || (p.a === y && p.b === x));
     if (held.some((h) => !allowed(h, office))) fail(409, 'office.combination');
-    const row: OfficeRow = { id: crypto.randomUUID(), memberId: holder.id, office, startsOn: body.startsOn, termEndsOn, endedOn: null, coopted: body.coopted === true };
+    const row: OfficeRow = {
+      id: crypto.randomUUID(),
+      memberId: holder.id,
+      office,
+      startsOn: body.startsOn,
+      termEndsOn,
+      endedOn: null,
+      coopted: body.coopted === true,
+    };
     this.people.offices.data.push(row);
     this.people.offices.save();
     this.people.syncBoardRole(holder);
@@ -164,12 +194,17 @@ mockServer
   .on('POST', '/api/v1/members/:id/guardians', (req) => directory.linkGuardian(directory.actor(req), req.params.id, req.body?.guardianId))
   .on('GET', '/api/v1/members/:id/family', (req) => directory.family(directory.actor(req), req.params.id))
   .on('GET', '/api/v1/members/:id/guardians', (req) => directory.listGuardians(directory.actor(req), req.params.id))
-  .on('DELETE', '/api/v1/members/:id/guardians/:guardianId', (req) => directory.unlinkGuardian(directory.actor(req), req.params.id, req.params.guardianId))
+  .on('DELETE', '/api/v1/members/:id/guardians/:guardianId', (req) =>
+    directory.unlinkGuardian(directory.actor(req), req.params.id, req.params.guardianId),
+  )
   .on('POST', '/api/v1/members/:id/reactivate', (req) => directory.reactivate(directory.actor(req), req.params.id))
   .on('POST', '/api/v1/members/:id/erase', (req) => {
     directory.erase(directory.actor(req), req.params.id);
     // server: MemberHandlers.erase publishes MEMBER_ERASED with the deleted change requests; every module drops its data
-    mockServer.events.publish({ type: 'members.member-erased', data: { memberId: req.params.id, changeRequestIds: changeRequests.deleteOf(req.params.id) } });
+    mockServer.events.publish({
+      type: 'members.member-erased',
+      data: { memberId: req.params.id, changeRequestIds: changeRequests.deleteOf(req.params.id) },
+    });
   })
   .on('POST', '/api/v1/members/:id/security/reset', (req) => directory.resetSecurity(directory.actor(req), req.params.id))
   .on('PUT', '/api/v1/members/:id/membership', (req) => directory.setMembership(directory.actor(req), req.params.id, req.body ?? {}))
@@ -210,8 +245,15 @@ export class MockChangeRequests {
     if (field === 'EMAIL' && newValue !== member.email && this.people.members.data.some((m) => m.email === newValue)) fail(409, 'member.email-taken');
     if (this.requests.data.some((r) => r.memberId === member.id && r.field === field && r.status === 'OPEN')) fail(409, 'change-request.open-exists');
     const row: ChangeRequestRow = {
-      id: crypto.randomUUID(), memberId: member.id, field, newValue, note, status: 'OPEN', decidedBy: null,
-      createdAt: new Date().toISOString(), decidedAt: null,
+      id: crypto.randomUUID(),
+      memberId: member.id,
+      field,
+      newValue,
+      note,
+      status: 'OPEN',
+      decidedBy: null,
+      createdAt: new Date().toISOString(),
+      decidedAt: null,
     };
     this.requests.data.unshift(row);
     this.requests.save();

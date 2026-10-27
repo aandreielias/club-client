@@ -12,5 +12,11 @@
 </script>
 
 <SectionHeading title="Logs" href="#/activity" />
-<DataTable model={list} toolbar={false} limit={settings.home.listRows} rowKey={entryKey}
-  onopen={(e) => openRecord(bus, e)} emptyText="Noch keine Änderungen aufgezeichnet." />
+<DataTable
+  model={list}
+  toolbar={false}
+  limit={settings.home.listRows}
+  rowKey={entryKey}
+  onopen={(e) => openRecord(bus, e)}
+  emptyText="Noch keine Änderungen aufgezeichnet."
+/>

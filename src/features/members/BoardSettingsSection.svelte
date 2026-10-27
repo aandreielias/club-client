@@ -38,8 +38,8 @@
   {#snippet children(value)}
     <form class="stack section" onsubmit={(e) => save(e, value)}>
       <p class="muted">
-        Wie die Funktionen im Verein heißen, wie viele sie innehaben, wie lange eine Funktionsperiode dauert und welche Funktionen eine
-        Person zugleich innehaben darf.
+        Wie die Funktionen im Verein heißen, wie viele sie innehaben, wie lange eine Funktionsperiode dauert und welche Funktionen eine Person
+        zugleich innehaben darf.
       </p>
       <div class="cards">
         {#each value.offices as office (office.office)}
@@ -50,18 +50,28 @@
             </div>
             {#if office.enabled}
               <div class="row facts">
-                <label>Personen
+                <label
+                  >Personen
                   <input type="number" min="0" max="20" bind:value={office.minHolders} aria-label="Mindestens: {office.label}" />
                   bis
-                  <input type="number" min="1" max="20" placeholder="beliebig" aria-label="Höchstens: {office.label}"
-                    bind:value={() => office.maxHolders ?? '', (v) => (office.maxHolders = v === '' || v == null ? null : Math.round(Number(v)))} />
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    placeholder="beliebig"
+                    aria-label="Höchstens: {office.label}"
+                    bind:value={() => office.maxHolders ?? '', (v) => (office.maxHolders = v === '' || v == null ? null : Math.round(Number(v)))}
+                  />
                 </label>
                 <label>Periode <input type="number" min="1" max="10" bind:value={office.termYears} aria-label="Jahre: {office.label}" /> Jahre</label>
               </div>
               <div class="stack tight">
                 <span class="muted small">Zugleich mit</span>
-                <ChipToggle label="{office.label} zugleich mit" bind:value={() => partners(value, office.office), (next) => setPartners(value, office.office, next)}
-                  options={value.offices.filter((o) => o.enabled && o.office !== office.office).map((o) => ({ value: o.office, label: o.label }))} />
+                <ChipToggle
+                  label="{office.label} zugleich mit"
+                  bind:value={() => partners(value, office.office), (next) => setPartners(value, office.office, next)}
+                  options={value.offices.filter((o) => o.enabled && o.office !== office.office).map((o) => ({ value: o.office, label: o.label }))}
+                />
               </div>
             {/if}
           </section>
@@ -83,7 +93,9 @@
           <input type="number" min="1" max="365" bind:value={value.byElectionDays} class="short" />
         </Field>
       </div>
-      <label class="check"><input type="checkbox" bind:checked={value.oddBoardSize} /> Ungerade Zahl an Personen im Vorstand (Hinweis bei gerader)</label>
+      <label class="check"
+        ><input type="checkbox" bind:checked={value.oddBoardSize} /> Ungerade Zahl an Personen im Vorstand (Hinweis bei gerader)</label
+      >
 
       <ErrorNote error={action.error} />
       <div><Button type="submit" variant="primary" busy={action.busy}>Speichern</Button></div>

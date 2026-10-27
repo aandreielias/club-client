@@ -30,8 +30,19 @@
 
 <!-- ARIA window splitter: a focusable separator with a value is interactive. -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
-<div class="divider" bind:this={element} role="separator" aria-orientation="vertical" aria-label="Breite der Seiten ändern"
-  aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(split.ratio * 100)} tabindex="0" onpointerdown={start} onkeydown={key}></div>
+<div
+  class="divider"
+  bind:this={element}
+  role="separator"
+  aria-orientation="vertical"
+  aria-label="Breite der Seiten ändern"
+  aria-valuemin="0"
+  aria-valuemax="100"
+  aria-valuenow={Math.round(split.ratio * 100)}
+  tabindex="0"
+  onpointerdown={start}
+  onkeydown={key}
+></div>
 
 <style>
   .divider {

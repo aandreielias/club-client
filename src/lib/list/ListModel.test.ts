@@ -95,7 +95,9 @@ describe('ListModel multi filters', () => {
         load: async () => tagged,
         defaultSort: { key: 'id', dir: 'asc' },
         columns: [{ key: 'id', label: 'Id', value: (p) => p.id }],
-        filters: [{ key: 'people', label: 'Personen', kind: 'multi', transient: true, test: (p, v) => v.split(',').every((id) => p.people.includes(id)) }],
+        filters: [
+          { key: 'people', label: 'Personen', kind: 'multi', transient: true, test: (p, v) => v.split(',').every((id) => p.people.includes(id)) },
+        ],
       },
       store,
     );

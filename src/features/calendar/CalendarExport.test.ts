@@ -4,8 +4,20 @@ import { CalendarExport } from './CalendarExport';
 import type { Appointment } from './model';
 
 const appointment = (id: string, startsAt: string): Appointment => ({
-  id, seriesId: null, teamId: null, type: 'TRAINING', title: `Training ${id}`, description: null, location: 'Halle 1', locationId: null, cabinMen: null, cabinWomen: null,
-  startsAt, endsAt: startsAt.replace('T16', 'T18'), cancelled: false, rides: false,
+  id,
+  seriesId: null,
+  teamId: null,
+  type: 'TRAINING',
+  title: `Training ${id}`,
+  description: null,
+  location: 'Halle 1',
+  locationId: null,
+  cabinMen: null,
+  cabinWomen: null,
+  startsAt,
+  endsAt: startsAt.replace('T16', 'T18'),
+  cancelled: false,
+  rides: false,
 });
 
 describe('CalendarExport', () => {

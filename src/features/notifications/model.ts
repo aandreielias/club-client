@@ -1,6 +1,7 @@
 // Mirrors of the club-server notifications DTOs.
 
-export type NotificationKind = 'TASK_ASSIGNED' | 'TASK_DUE' | 'APPOINTMENT_CANCELLED' | 'SECURITY' | 'CHANGE_DECIDED' | 'MESSAGE' | 'ITEM_REMINDER' | 'MEETING';
+export type NotificationKind =
+  'TASK_ASSIGNED' | 'TASK_DUE' | 'APPOINTMENT_CANCELLED' | 'SECURITY' | 'CHANGE_DECIDED' | 'MESSAGE' | 'ITEM_REMINDER' | 'MEETING';
 
 import type { LinkedRef, RefKind } from '../../lib/records/refs';
 

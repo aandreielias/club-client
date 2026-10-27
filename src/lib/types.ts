@@ -56,7 +56,10 @@ export interface Club {
 }
 
 /** What admins and the board edit (server: PUT /club); empty values fall back to club.yml. */
-export type ClubEdit = Pick<Club, 'name' | 'shortName' | 'website' | 'contactEmail' | 'address' | 'registerNumber' | 'seasonStartMonth' | 'ridesEnabled'>;
+export type ClubEdit = Pick<
+  Club,
+  'name' | 'shortName' | 'website' | 'contactEmail' | 'address' | 'registerNumber' | 'seasonStartMonth' | 'ridesEnabled'
+>;
 
 export interface Member {
   id: string;
@@ -80,7 +83,6 @@ export interface Member {
   /** May be elected into an office. */
   eligible: boolean;
 }
-
 
 export interface MemberList {
   items: Member[];

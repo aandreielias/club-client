@@ -12,7 +12,6 @@ import CalendarPage from './CalendarPage.svelte';
 import EventsPage from './EventsPage.svelte';
 import AbsencesPage from './AbsencesPage.svelte';
 import { CALENDAR_MESSAGES } from './messages';
-import { calendarApi } from './services';
 
 export const calendarFeature: Feature = {
   id: 'calendar',
@@ -33,7 +32,10 @@ export const calendarFeature: Feature = {
   calendar: {
     // The reason comes only for who may see it (self, guardians, coaches, admin, board).
     ABSENCE: (item) => ({ title: item.detail ? `${item.title} – ${item.detail}` : item.title, label: 'Abwesend' }),
-    APPOINTMENT: (item) => ({ hue: appointmentTypes.hue(item.detail ?? ''), label: item.inactive ? 'Abgesagt' : appointmentTypes.label(item.detail ?? '') }),
+    APPOINTMENT: (item) => ({
+      hue: appointmentTypes.hue(item.detail ?? ''),
+      label: item.inactive ? 'Abgesagt' : appointmentTypes.label(item.detail ?? ''),
+    }),
   },
   messages: CALENDAR_MESSAGES,
   home: { id: 'calendar', label: 'Termine', component: CalendarHome },

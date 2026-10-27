@@ -37,7 +37,19 @@ const PALETTES = {
 };
 
 /** Clutter Apple Maps leaves out at street level. */
-const HIDDEN = ['natural_earth', 'building-3d', 'park_outline', 'road_one_way_arrow', 'road_one_way_arrow_opposite', 'poi_r20', 'poi_r7', 'highway-shield-non-us', 'highway-shield-us-interstate', 'road_shield_us', 'road_area_pattern'];
+const HIDDEN = [
+  'natural_earth',
+  'building-3d',
+  'park_outline',
+  'road_one_way_arrow',
+  'road_one_way_arrow_opposite',
+  'poi_r20',
+  'poi_r7',
+  'highway-shield-non-us',
+  'highway-shield-us-interstate',
+  'road_shield_us',
+  'road_area_pattern',
+];
 
 /**
  * Restyles OpenFreeMap's "liberty" style in place: soft land, white streets, yellow main roads, light
@@ -48,10 +60,17 @@ export function applyMapLook(map: MapLibreMap, dark: boolean): void {
   const paint = (match: (id: string) => boolean, property: keyof AllPaintProperties, value: string) => {
     // Only layers of the property's type (`line-color` on line layers, `text-…` on symbols); a `waterway` label is a symbol.
     const prefix = (type: string) => (type === 'symbol' ? 'text-' : `${type}-`);
-    for (const layer of map.getStyle().layers) if (property.startsWith(prefix(layer.type)) && match(layer.id)) map.setPaintProperty(layer.id, property, value);
+    for (const layer of map.getStyle().layers)
+      if (property.startsWith(prefix(layer.type)) && match(layer.id)) map.setPaintProperty(layer.id, property, value);
   };
-  const is = (...ids: string[]) => (id: string) => ids.includes(id);
-  const ends = (suffix: string, ...parts: string[]) => (id: string) => id.endsWith(suffix) && parts.some((p) => id.includes(p));
+  const is =
+    (...ids: string[]) =>
+    (id: string) =>
+      ids.includes(id);
+  const ends =
+    (suffix: string, ...parts: string[]) =>
+    (id: string) =>
+      id.endsWith(suffix) && parts.some((p) => id.includes(p));
 
   for (const id of HIDDEN) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
   paint(is('background'), 'background-color', c.land);

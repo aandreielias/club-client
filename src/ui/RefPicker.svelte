@@ -26,8 +26,16 @@
 <div class="stack refs">
   <span class="label">{label} <span class="muted">– suchen oder Einträge aus Listen, Kalender und Namen hierher ziehen</span></span>
   {#if form.refs.length < form.max}
-    <SearchSelect {search} onpick={(value) => { const ref = found.get(value); if (ref) form.addRef(ref); }}
-      placeholder="Termin, Aufgabe, Person, Team, Ort, Turnier, Sitzung, Inventar oder Datei suchen" aria-label="Datensatz zum Verknüpfen suchen" debounceMs={200} />
+    <SearchSelect
+      {search}
+      onpick={(value) => {
+        const ref = found.get(value);
+        if (ref) form.addRef(ref);
+      }}
+      placeholder="Termin, Aufgabe, Person, Team, Ort, Turnier, Sitzung, Inventar oder Datei suchen"
+      aria-label="Datensatz zum Verknüpfen suchen"
+      debounceMs={200}
+    />
   {/if}
   {#if form.refs.length}
     <ul class="chips">

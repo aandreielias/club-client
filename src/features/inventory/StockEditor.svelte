@@ -14,17 +14,23 @@
 
   let places = $state<Location[]>([]);
   let people = $state<{ memberId: string; name: string }[]>([]);
-  locationsApi.list().then((list) => (places = list), () => {});
+  locationsApi.list().then(
+    (list) => (places = list),
+    () => {},
+  );
   // Admin and board pick anyone; coaches the members of their teams (the server accepts any active member).
-  background((async () => {
-    await directory.loadRosters();
-    const lists = permissions.isManager
-      ? [await directory.candidates(null)]
-      : await Promise.all(permissions.manageableTeams().map((t) => directory.candidates(t.id)));
-    const unique = new Map(lists.flat().map((p) => [p.memberId, p]));
-    if (!unique.has(session.member.id)) unique.set(session.member.id, { memberId: session.member.id, name: `${session.member.firstName} ${session.member.lastName}` });
-    people = [...unique.values()].sort((a, b) => a.name.localeCompare(b.name, 'de'));
-  })());
+  background(
+    (async () => {
+      await directory.loadRosters();
+      const lists = permissions.isManager
+        ? [await directory.candidates(null)]
+        : await Promise.all(permissions.manageableTeams().map((t) => directory.candidates(t.id)));
+      const unique = new Map(lists.flat().map((p) => [p.memberId, p]));
+      if (!unique.has(session.member.id))
+        unique.set(session.member.id, { memberId: session.member.id, name: `${session.member.firstName} ${session.member.lastName}` });
+      people = [...unique.values()].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    })(),
+  );
 
   /** Lines may name a place or person that is no longer offered (deleted place, other team): keep it selectable. */
   const options = $derived([
@@ -32,7 +38,9 @@
     ...places.map((l) => ({ value: `location:${l.id}`, label: `Ort · ${l.name}` })),
     ...people.map((p) => ({ value: `person:${p.memberId}`, label: `Person · ${p.name}` })),
     ...form.lines
-      .filter((l) => l.place !== 'none' && !places.some((p) => `location:${p.id}` === l.place) && !people.some((p) => `person:${p.memberId}` === l.place))
+      .filter(
+        (l) => l.place !== 'none' && !places.some((p) => `location:${p.id}` === l.place) && !people.some((p) => `person:${p.memberId}` === l.place),
+      )
       .map((l) => ({ value: l.place, label: l.place.startsWith('person:') ? `Person · ${directory.nameOf(l.place.slice(7))}` : 'Ort · (gelöscht)' })),
   ]);
 
@@ -47,9 +55,16 @@
   <ul class="lines">
     {#each form.lines as line, i (line.key)}
       <li>
-        <Select bind:value={line.place} options={options} aria-label="Ort oder Person, Zeile {i + 1}" />
+        <Select bind:value={line.place} {options} aria-label="Ort oder Person, Zeile {i + 1}" />
         <input type="number" bind:value={line.quantity} min="1" aria-label="Anzahl, Zeile {i + 1}" />
-        <Button size="sm" variant="ghost" icon="close" tooltip="Zeile entfernen" disabled={form.lines.length === 1} onclick={() => form.remove(line.key)} />
+        <Button
+          size="sm"
+          variant="ghost"
+          icon="close"
+          tooltip="Zeile entfernen"
+          disabled={form.lines.length === 1}
+          onclick={() => form.remove(line.key)}
+        />
       </li>
     {/each}
   </ul>

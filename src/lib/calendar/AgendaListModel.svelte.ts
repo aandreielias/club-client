@@ -15,7 +15,14 @@ export interface AgendaOptions {
 
 /** The next days from the calendar sources (appointments, due tasks) as a list; used on the start page. */
 export class AgendaListModel extends ListModel<CalendarEntry> {
-  constructor(sources: CalendarSources, clock: ZonedClock, options: AgendaOptions, format: () => Formatter, directory: TeamDirectory, store: LocalStore | null) {
+  constructor(
+    sources: CalendarSources,
+    clock: ZonedClock,
+    options: AgendaOptions,
+    format: () => Formatter,
+    directory: TeamDirectory,
+    store: LocalStore | null,
+  ) {
     const days = options.days;
     super(
       {
@@ -30,7 +37,13 @@ export class AgendaListModel extends ListModel<CalendarEntry> {
           { key: 'title', label: 'Titel', value: (e) => e.title },
           { key: 'start', label: 'Wann', value: (e) => e.start, format: (e) => format().dateTime(e.start), width: '12rem' },
           { key: 'label', label: 'Art', value: (e) => e.label, width: '9rem' },
-          { key: 'team', label: 'Für', value: (e) => (e.teamId ? (directory.teamName(e.teamId) ?? 'Team') : 'Verein'), width: '9rem', hideOnCompact: true },
+          {
+            key: 'team',
+            label: 'Für',
+            value: (e) => (e.teamId ? (directory.teamName(e.teamId) ?? 'Team') : 'Verein'),
+            width: '9rem',
+            hideOnCompact: true,
+          },
         ],
         filters: [
           {

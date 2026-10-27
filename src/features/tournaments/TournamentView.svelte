@@ -1,3 +1,13 @@
+<script lang="ts" module>
+  export class TournamentView {
+    /** Where a tournament opens: teams while planning, the running phase afterwards. */
+    static firstTab(t: Tournament | undefined): 'overview' | 'groups' | 'ko' | 'teams' {
+      if (!t || t.status === 'DRAFT') return 'teams';
+      return t.status === 'GROUPS' ? 'groups' : 'ko';
+    }
+  }
+</script>
+
 <script lang="ts">
   import { bus, pendingDeletes, session } from '../../lib/container';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
@@ -44,11 +54,14 @@
     changed: () => void model.load(),
   });
 
-  const days = (t: Tournament) => (t.startsOn === t.endsOn ? session.format.date(t.startsOn) : `${session.format.date(t.startsOn)} – ${session.format.date(t.endsOn)}`);
+  const days = (t: Tournament) =>
+    t.startsOn === t.endsOn ? session.format.date(t.startsOn) : `${session.format.date(t.startsOn)} – ${session.format.date(t.endsOn)}`;
   const rules = (t: Tournament) =>
-    t.format === 'SIMPLE' ? 'Sieg 3 Punkte, Unentschieden 1, Niederlage 0'
-    : t.format === 'BEACH' ? 'Zwei Gewinnsätze bis 21 (dritter bis 15); Sieg 2 Punkte, Niederlage 1'
-    : `${t.setsToWin === 3 ? 'Drei' : 'Zwei'} Gewinnsätze bis 25; Sieg ${t.setsToWin}:${t.setsToWin - 1} gibt 2:1 Punkte, sonst 3:0`;
+    t.format === 'SIMPLE'
+      ? 'Sieg 3 Punkte, Unentschieden 1, Niederlage 0'
+      : t.format === 'BEACH'
+        ? 'Zwei Gewinnsätze bis 21 (dritter bis 15); Sieg 2 Punkte, Niederlage 1'
+        : `${t.setsToWin === 3 ? 'Drei' : 'Zwei'} Gewinnsätze bis 25; Sieg ${t.setsToWin}:${t.setsToWin - 1} gibt 2:1 Punkte, sonst 3:0`;
   // In plan order: the next Durchgang first, then by field.
   const upcoming = (t: Tournament) =>
     t.matches
@@ -65,27 +78,26 @@
   let editing = $state(false);
 </script>
 
-<script lang="ts" module>
-  export class TournamentView {
-    /** Where a tournament opens: teams while planning, the running phase afterwards. */
-    static firstTab(t: Tournament | undefined): 'overview' | 'groups' | 'ko' | 'teams' {
-      if (!t || t.status === 'DRAFT') return 'teams';
-      return t.status === 'GROUPS' ? 'groups' : 'ko';
-    }
-  }
-</script>
-
 <AsyncView resource={model.tournament}>
   {#snippet children(t)}
     <Detail title={t.name}>
       {#snippet actions()}
         {#if policy.canManage()}
           {#if t.status === 'DRAFT'}
-            <Button variant="primary" busy={model.action.busy} disabled={t.teams.length < 2} onclick={() => model.draw().then((ok) => ok && (tab = 'groups'))}>Auslosen</Button>
+            <Button
+              variant="primary"
+              busy={model.action.busy}
+              disabled={t.teams.length < 2}
+              onclick={() => model.draw().then((ok) => ok && (tab = 'groups'))}>Auslosen</Button
+            >
           {:else if t.status === 'GROUPS'}
-            <Button variant="primary" busy={model.action.busy} disabled={model.openGroupMatches > 0}
+            <Button
+              variant="primary"
+              busy={model.action.busy}
+              disabled={model.openGroupMatches > 0}
               tooltip={model.openGroupMatches ? `Noch ${model.openGroupMatches} Gruppenspiele ohne Ergebnis` : undefined}
-              onclick={() => model.startKnockout().then((ok) => ok && (tab = 'ko'))}>KO-Runde starten</Button>
+              onclick={() => model.startKnockout().then((ok) => ok && (tab = 'ko'))}>KO-Runde starten</Button
+            >
           {/if}
         {/if}
         {#if policy.canManage()}<Button icon="edit" onclick={() => (editing = true)}>Bearbeiten</Button>{/if}
@@ -111,7 +123,11 @@
             <dd><RecordLink kind="location" id={t.locationId}>Ort öffnen</RecordLink></dd>
           {/if}
           <dt>Modus</dt>
-          <dd>{t.groupCount} {t.groupCount === 1 ? 'Gruppe' : 'Gruppen'}, je {t.advancePerGroup} weiter in die KO-Runde, {t.fieldCount} {t.fieldCount === 1 ? 'Feld' : 'Felder'}</dd>
+          <dd>
+            {t.groupCount}
+            {t.groupCount === 1 ? 'Gruppe' : 'Gruppen'}, je {t.advancePerGroup} weiter in die KO-Runde, {t.fieldCount}
+            {t.fieldCount === 1 ? 'Feld' : 'Felder'}
+          </dd>
           <dt>Spielart</dt>
           <dd>{FORMAT_LABELS[t.format]}{t.teamSize ? `, Teams zu ${t.teamSize}` : ''}</dd>
           <dt>Wertung</dt>

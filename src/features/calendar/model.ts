@@ -85,7 +85,6 @@ export type AppointmentPatch = Partial<
   Pick<Appointment, 'type' | 'title' | 'description' | 'location' | 'locationId' | 'cabinMen' | 'cabinWomen' | 'startsAt' | 'endsAt' | 'rides'>
 > & { clearLocationId?: boolean };
 
-
 export interface AttendanceEntry {
   memberId: string;
   name: string;
@@ -128,7 +127,6 @@ export const RESPONSE_OPTIONS: readonly { value: ResponseStatus; label: string }
 const RESPONSE_HUES: Readonly<Record<ResponseStatus, Hue>> = { YES: 'green', MAYBE: 'yellow', NO: 'red' };
 
 export const responseHue = (status: ResponseStatus | null): Hue => (status ? RESPONSE_HUES[status] : 'gray');
-
 
 export const responseLabel = (status: ResponseStatus | null): string =>
   status ? (RESPONSE_OPTIONS.find((o) => o.value === status)?.label ?? status) : 'Offen';

@@ -46,17 +46,41 @@ export interface DevAccount {
 
 const fail = MockServer.fail;
 
-function seedMember(id: string, firstName: string, lastName: string, roles: Role[], birthDate: string | null,
-  membershipType: MembershipType | null = null): Member {
+function seedMember(
+  id: string,
+  firstName: string,
+  lastName: string,
+  roles: Role[],
+  birthDate: string | null,
+  membershipType: MembershipType | null = null,
+): Member {
   return {
-    id, email: `${id}@example.at`, firstName, lastName, birthDate, phone: null, photoConsent: true, active: true, roles,
-    membershipTypes: membershipType ? [membershipType] : [], previousType: null, memberSince: membershipType ? '2024-09-01' : null,
-    voter: false, eligible: false,
+    id,
+    email: `${id}@example.at`,
+    firstName,
+    lastName,
+    birthDate,
+    phone: null,
+    photoConsent: true,
+    active: true,
+    roles,
+    membershipTypes: membershipType ? [membershipType] : [],
+    previousType: null,
+    memberSince: membershipType ? '2024-09-01' : null,
+    voter: false,
+    eligible: false,
   };
 }
 
-const seedOffice = (id: string, memberId: string, office: OfficeRow['office']): OfficeRow =>
-  ({ id, memberId, office, startsOn: '2024-09-01', termEndsOn: '2027-09-01', endedOn: null, coopted: false });
+const seedOffice = (id: string, memberId: string, office: OfficeRow['office']): OfficeRow => ({
+  id,
+  memberId,
+  office,
+  startsOn: '2024-09-01',
+  termEndsOn: '2027-09-01',
+  endedOn: null,
+  coopted: false,
+});
 
 /** Bump when the seed changes in a way stored mock data should pick up (see MockDirectory.upgradeSeed). */
 const SEED_VERSION = 3;
@@ -85,9 +109,18 @@ const SEEDED_BOARD_SETTINGS: BoardSettings = {
     { office: 'BOARD_MEMBER', label: 'Vorstandsmitglied', enabled: true, minHolders: 0, maxHolders: null, termYears: 3 },
     { office: 'AUDITOR', label: 'Rechnungsprüfung', enabled: true, minHolders: 2, maxHolders: 2, termYears: 3 },
   ],
-  minBoardSize: 3, oddBoardSize: true, cooptWeeks: 4, termWarningDays: 60, byElectionDays: 7,
-  combinations: [{ a: 'TREASURER', b: 'VICE_CHAIR' }, { a: 'SECRETARY', b: 'VICE_CHAIR' }], multipleKinds: false,
-  guardianUntilAge: 18, ownConsentAge: 14,
+  minBoardSize: 3,
+  oddBoardSize: true,
+  cooptWeeks: 4,
+  termWarningDays: 60,
+  byElectionDays: 7,
+  combinations: [
+    { a: 'TREASURER', b: 'VICE_CHAIR' },
+    { a: 'SECRETARY', b: 'VICE_CHAIR' },
+  ],
+  multipleKinds: false,
+  guardianUntilAge: 18,
+  ownConsentAge: 14,
 };
 
 /** Members, teams and security state of the mock club, plus the server's authorization helpers. */
@@ -186,14 +219,17 @@ export class MockDirectory {
     for (const m of this.members.data as (Member & { membershipType?: MembershipType | null; honorary?: boolean })[]) {
       if (m.membershipTypes) continue;
       m.membershipTypes = m.honorary ? ['HONORARY'] : m.membershipType ? [m.membershipType] : [];
-      m.previousType = m.honorary ? m.membershipType ?? null : null;
+      m.previousType = m.honorary ? (m.membershipType ?? null) : null;
       delete m.membershipType;
       delete m.honorary;
     }
   }
 
   /** server: MembershipRules — votes / may be elected when any of the member's kinds does. */
-  rights(m: Pick<Member, 'active' | 'membershipTypes'>, kinds: readonly MembershipKind[] = this.membershipKinds.data): { voter: boolean; eligible: boolean } {
+  rights(
+    m: Pick<Member, 'active' | 'membershipTypes'>,
+    kinds: readonly MembershipKind[] = this.membershipKinds.data,
+  ): { voter: boolean; eligible: boolean } {
     const own = kinds.filter((k) => m.membershipTypes.includes(k.key));
     return { voter: m.active && own.some((k) => k.votes), eligible: m.active && own.some((k) => k.eligible) };
   }
@@ -227,12 +263,14 @@ export class MockDirectory {
     if (this.#seed.data.version >= SEED_VERSION) return;
     for (const seeded of MockDirectory.seedMembers()) {
       const stored = this.members.data.find((m) => m.id === seeded.id);
-      if (stored && stored.roles.length) Object.assign(stored, { membershipTypes: seeded.membershipTypes, previousType: null, memberSince: seeded.memberSince });
+      if (stored && stored.roles.length)
+        Object.assign(stored, { membershipTypes: seeded.membershipTypes, previousType: null, memberSince: seeded.memberSince });
     }
     for (const office of MockDirectory.seedOffices()) {
       const max = SEEDED_BOARD_SETTINGS.offices.find((o) => o.office === office.office)!.maxHolders;
       const taken = max != null && this.running().filter((o) => o.office === office.office).length >= max;
-      if (!this.offices.data.some((o) => o.id === office.id) && !this.officesOf(office.memberId).includes(office.office) && !taken) this.offices.data.push(office);
+      if (!this.offices.data.some((o) => o.id === office.id) && !this.officesOf(office.memberId).includes(office.office) && !taken)
+        this.offices.data.push(office);
     }
     for (const [memberId, teams] of Object.entries(MockDirectory.seedMemberships())) this.memberships.data[memberId] ??= teams;
     for (const [guardian, minors] of Object.entries(SEED_WARDS)) this.wards.data[guardian] ??= [...minors];
@@ -287,7 +325,9 @@ export class MockDirectory {
   }
 
   /** guardianId → minor ids */
-  readonly wards = new MockTable<Record<string, string[]>>('wards', () => Object.fromEntries(Object.entries(SEED_WARDS).map(([g, m]) => [g, [...m]])));
+  readonly wards = new MockTable<Record<string, string[]>>('wards', () =>
+    Object.fromEntries(Object.entries(SEED_WARDS).map(([g, m]) => [g, [...m]])),
+  );
 
   readonly security = new MockTable<Record<string, PinState>>('security', () => ({}));
 
@@ -325,9 +365,7 @@ export class MockDirectory {
 
   /** Active members an audience reaches (server: MembersApi.AUDIENCE_IDS). */
   audienceIds(audience: MockAudience): string[] {
-    return this.members.data
-      .filter((m) => m.active && MockEventBus.includes(audience, m.id, m.roles))
-      .map((m) => m.id);
+    return this.members.data.filter((m) => m.active && MockEventBus.includes(audience, m.id, m.roles)).map((m) => m.id);
   }
 
   guardiansOf(memberIds: readonly string[]): string[] {
@@ -444,8 +482,11 @@ export class MockDirectory {
   /** server: ActorArgumentResolver.allowsGuest - deny by default. */
   static allowsGuest(request: MockRequest): boolean {
     const path = request.path ?? '';
-    return (request.method === 'GET' && (path === '/api/v1/me' || path === '/api/v1/tournaments' || path.startsWith('/api/v1/tournaments/')))
-      || path.startsWith('/api/v1/me/notifications') || path.startsWith('/api/v1/me/notification-preferences');
+    return (
+      (request.method === 'GET' && (path === '/api/v1/me' || path === '/api/v1/tournaments' || path.startsWith('/api/v1/tournaments/'))) ||
+      path.startsWith('/api/v1/me/notifications') ||
+      path.startsWith('/api/v1/me/notification-preferences')
+    );
   }
 
   missing(member: Member): MissingProfileField[] {
@@ -470,9 +511,18 @@ export class MockDirectory {
 
   clubInfo(): Club {
     const e = this.clubEdits.data;
-    return { ...this.club, name: e.name || this.club.name, shortName: e.shortName || this.club.shortName, website: e.website || null,
-      contactEmail: e.contactEmail || null, address: e.address || null, registerNumber: e.registerNumber || null,
-      seasonStartMonth: e.seasonStartMonth ?? this.club.seasonStartMonth, ridesEnabled: e.ridesEnabled ?? true, configured: Object.keys(e).length > 0 };
+    return {
+      ...this.club,
+      name: e.name || this.club.name,
+      shortName: e.shortName || this.club.shortName,
+      website: e.website || null,
+      contactEmail: e.contactEmail || null,
+      address: e.address || null,
+      registerNumber: e.registerNumber || null,
+      seasonStartMonth: e.seasonStartMonth ?? this.club.seasonStartMonth,
+      ridesEnabled: e.ridesEnabled ?? true,
+      configured: Object.keys(e).length > 0,
+    };
   }
 
   /** server: ClubController PUT - admin/board with step-up; blank fields fall back to club.yml. */
@@ -608,8 +658,18 @@ export class MockDirectory {
     this.requirePrivileged(viewer, ['ADMIN']);
     const target = this.members.data.find((m) => m.id === memberId) ?? fail(404, 'member.not-found');
     if (target.active) fail(409, 'member.erase-active');
-    Object.assign(target, { email: `geloescht-${target.id}@example.invalid`, firstName: 'Gelöschtes', lastName: 'Mitglied', birthDate: null, phone: null,
-      photoConsent: false, roles: [], membershipTypes: [], previousType: null, memberSince: null });
+    Object.assign(target, {
+      email: `geloescht-${target.id}@example.invalid`,
+      firstName: 'Gelöschtes',
+      lastName: 'Mitglied',
+      birthDate: null,
+      phone: null,
+      photoConsent: false,
+      roles: [],
+      membershipTypes: [],
+      previousType: null,
+      memberSince: null,
+    });
     delete this.wards.data[memberId];
     for (const wards of Object.values(this.wards.data)) wards.splice(0, wards.length, ...wards.filter((id) => id !== memberId));
     this.saveMembers();
@@ -627,10 +687,15 @@ export class MockDirectory {
     if (!multiple && membershipTypes.length > 1) fail(400, 'member.several-kinds');
     const memberSince = membershipTypes.length ? (typeof body.memberSince === 'string' && body.memberSince ? body.memberSince : null) : null;
     if (memberSince && memberSince > this.clock.today()) fail(400, 'member.member-since-in-future');
-    if (!this.rights({ ...target, membershipTypes }).eligible && this.running().some((o) => o.memberId === memberId)) fail(409, 'member.holds-office');
+    if (!this.rights({ ...target, membershipTypes }).eligible && this.running().some((o) => o.memberId === memberId))
+      fail(409, 'member.holds-office');
     // server: MembershipHandlers.previousType — with one kind, honouring remembers the former kind
     const honouredAlone = !multiple && membershipTypes.length === 1 && membershipTypes[0] === 'HONORARY';
-    const previousType = !honouredAlone ? null : target.membershipTypes.includes('HONORARY') ? target.previousType : target.membershipTypes[0] ?? null;
+    const previousType = !honouredAlone
+      ? null
+      : target.membershipTypes.includes('HONORARY')
+        ? target.previousType
+        : (target.membershipTypes[0] ?? null);
     Object.assign(target, { membershipTypes, previousType, memberSince });
     this.saveMembers();
     const honorary = membershipTypes.includes('HONORARY');
@@ -640,14 +705,20 @@ export class MockDirectory {
 
   electorate(body: 'ASSEMBLY' | 'BOARD' | 'CLUB'): string[] {
     if (body === 'BOARD') {
-      const board = new Set(this.running().filter((o) => o.office !== 'AUDITOR').map((o) => o.memberId));
+      const board = new Set(
+        this.running()
+          .filter((o) => o.office !== 'AUDITOR')
+          .map((o) => o.memberId),
+      );
       return this.members.data.filter((m) => m.active && board.has(m.id)).map((m) => m.id);
     }
     return this.members.data.filter((m) => (body === 'ASSEMBLY' ? this.rights(m).voter : m.active && m.membershipTypes.length > 0)).map((m) => m.id);
   }
 
   officesOf(memberId: string): OfficeRow['office'][] {
-    return this.running().filter((o) => o.memberId === memberId).map((o) => o.office);
+    return this.running()
+      .filter((o) => o.memberId === memberId)
+      .map((o) => o.office);
   }
 
   running(): OfficeRow[] {
@@ -677,10 +748,11 @@ export class MockDirectory {
   /** server: MemberHandlers.family (who may open the profile) */
   family(viewer: Member, memberId: string): { guardians: Relative[]; wards: Relative[] } {
     this.get(viewer, memberId);
-    const relatives = (ids: readonly string[]): Relative[] => this.members.data
-      .filter((m) => m.active && ids.includes(m.id))
-      .map((m) => ({ memberId: m.id, name: `${m.firstName} ${m.lastName}`, canOpen: this.mayOpen(viewer, m.id) }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const relatives = (ids: readonly string[]): Relative[] =>
+      this.members.data
+        .filter((m) => m.active && ids.includes(m.id))
+        .map((m) => ({ memberId: m.id, name: `${m.firstName} ${m.lastName}`, canOpen: this.mayOpen(viewer, m.id) }))
+        .sort((a, b) => a.name.localeCompare(b.name));
     return { guardians: relatives(this.guardiansOf([memberId])), wards: relatives(this.wardsOf(memberId)) };
   }
 
@@ -751,7 +823,11 @@ export class MockDirectory {
 
   /** Birth date only for self, admins, guardians and coaches of the member's teams. */
   private visibleTo(viewer: Member, member: Member): Member {
-    const sees = viewer.id === member.id || this.hasRole(viewer, ADMIN_BOARD) || this.wardsOf(viewer.id).includes(member.id) || this.isCoachOf(viewer.id, member.id);
+    const sees =
+      viewer.id === member.id ||
+      this.hasRole(viewer, ADMIN_BOARD) ||
+      this.wardsOf(viewer.id).includes(member.id) ||
+      this.isCoachOf(viewer.id, member.id);
     return sees ? member : { ...member, birthDate: null };
   }
 
@@ -934,14 +1010,19 @@ export const directory = new MockDirectory();
 
 /** server: platform.PersonalData.SOURCES - each mock module registers what it keeps about a member. */
 export const personalData = new Map<string, (memberId: string) => Record<string, unknown[]>>([
-  ['members', (memberId) => {
-    const member = directory.members.data.find((m) => m.id === memberId);
-    return {
-      profile: member ? [member] : [],
-      guardians: Object.entries(directory.wards.data).filter(([, minors]) => minors.includes(memberId)).map(([id]) => ({ guardianId: id, name: directory.displayName(id) })),
-      wards: directory.wardsOf(memberId).map((id) => ({ minorId: id, name: directory.displayName(id) })),
-    };
-  }],
+  [
+    'members',
+    (memberId) => {
+      const member = directory.members.data.find((m) => m.id === memberId);
+      return {
+        profile: member ? [member] : [],
+        guardians: Object.entries(directory.wards.data)
+          .filter(([, minors]) => minors.includes(memberId))
+          .map(([id]) => ({ guardianId: id, name: directory.displayName(id) })),
+        wards: directory.wardsOf(memberId).map((id) => ({ minorId: id, name: directory.displayName(id) })),
+      };
+    },
+  ],
 ]);
 
 /** server: platform_audit (gateway AuditLog), newest first */
@@ -958,8 +1039,16 @@ mockServer.onHandled((req) => {
   const member = directory.findActive(req.email);
   const route = req.pattern.replace(/:(\w+)/g, '{$1}');
   if (!member || !req.method || !audited(member, req.method, route)) return;
-  auditLog.data.unshift({ id: (auditLog.data[0]?.id ?? 0) + 1, at: new Date().toISOString(), actorId: member.id, actorName: null, method: req.method,
-    route, params: { ...req.params }, status: 200 });
+  auditLog.data.unshift({
+    id: (auditLog.data[0]?.id ?? 0) + 1,
+    at: new Date().toISOString(),
+    actorId: member.id,
+    actorName: null,
+    method: req.method,
+    route,
+    params: { ...req.params },
+    status: 200,
+  });
   auditLog.save();
 });
 
@@ -967,22 +1056,36 @@ mockServer
   .on('GET', '/api/v1/audit', (req) => {
     directory.requireRole(directory.actor(req), ['ADMIN']);
     const before = Number(req.query.get('before') ?? Infinity);
-    return { items: auditLog.data.filter((e) => e.id < before).slice(0, 100).map((e) => ({ ...e, actorName: directory.displayName(e.actorId) })) };
+    return {
+      items: auditLog.data
+        .filter((e) => e.id < before)
+        .slice(0, 100)
+        .map((e) => ({ ...e, actorName: directory.displayName(e.actorId) })),
+    };
   })
   // server: PersonalDataController - the member's own data or a ward's; others 404
   .on('GET', '/api/v1/me/export', (req) => {
     const asker = directory.actor(req, true);
     const memberId = req.query.get('memberId') ?? asker.id;
     if (memberId !== asker.id && !directory.wardsOf(asker.id).includes(memberId)) fail(404, 'member.not-found');
-    return { exportedAt: new Date().toISOString(), memberId, data: Object.fromEntries([...personalData].map(([module, rows]) => [module, rows(memberId)])) };
+    return {
+      exportedAt: new Date().toISOString(),
+      memberId,
+      data: Object.fromEntries([...personalData].map(([module, rows]) => [module, rows(memberId)])),
+    };
   })
   .on('GET', '/api/v1/club', () => directory.clubInfo())
   .on('PUT', '/api/v1/club', (req) => directory.updateClub(directory.actor(req), req.body ?? {}))
   .on('GET', '/api/v1/me', (req) => {
     const member = directory.actor(req, true);
     const own = directory.teamRoles(member.id);
-    return { member, teams: directory.teams.data.filter((t) => t.id in own), missing: directory.missing(member), wardIds: directory.wardsOf(member.id),
-      wardNames: Object.fromEntries(directory.wardsOf(member.id).map((id) => [id, directory.name(id) ?? ''])) };
+    return {
+      member,
+      teams: directory.teams.data.filter((t) => t.id in own),
+      missing: directory.missing(member),
+      wardIds: directory.wardsOf(member.id),
+      wardNames: Object.fromEntries(directory.wardsOf(member.id).map((id) => [id, directory.name(id) ?? ''])),
+    };
   })
   // Own profile also works before onboarding is complete (birth date step).
   .on('PATCH', '/api/v1/members/:id', (req) => {

@@ -11,7 +11,12 @@
   import type { FollowUp, NewFollowUp, Person } from './model';
 
   /** The tasks of a meeting or resolution, each opening its task; who runs the meeting adds more by hand. */
-  let { followUps, canAdd, candidates, add }: {
+  let {
+    followUps,
+    canAdd,
+    candidates,
+    add,
+  }: {
     followUps: readonly FollowUp[];
     canAdd: boolean;
     /** Who may take the task: those present. */

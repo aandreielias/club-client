@@ -64,7 +64,10 @@
     if (!form.hasTargets) return void (reach = null);
     let current = true; // a slow older answer must not overwrite a newer one
     const timer = setTimeout(() => {
-      notificationsApi.preview(untrack(() => form.toMessage())).then((n) => current && (reach = n), () => current && (reach = null));
+      notificationsApi.preview(untrack(() => form.toMessage())).then(
+        (n) => current && (reach = n),
+        () => current && (reach = null),
+      );
     }, limits.previewDebounceMs);
     return () => {
       current = false;

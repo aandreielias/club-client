@@ -23,7 +23,10 @@ export class NavCatalog {
   /** Top-level rows (groups and tabs) the member may see, in the given order of row keys. */
   ordered(order: readonly string[], hasRole: (...roles: readonly Role[]) => boolean): { key: string; label: string }[] {
     return this.#layout
-      .arrange(this.#entries.filter((e) => !e.roles || hasRole(...e.roles)), order)
+      .arrange(
+        this.#entries.filter((e) => !e.roles || hasRole(...e.roles)),
+        order,
+      )
       .map((row) => ({ key: row.key, label: row.group?.label ?? row.entries[0].label }));
   }
 
@@ -32,6 +35,9 @@ export class NavCatalog {
       const index = order.indexOf(path);
       return index < 0 ? order.length : index;
     };
-    return items.map((item, i) => ({ item, i })).sort((a, b) => rank(a.item.path) - rank(b.item.path) || a.i - b.i).map((x) => x.item);
+    return items
+      .map((item, i) => ({ item, i }))
+      .sort((a, b) => rank(a.item.path) - rank(b.item.path) || a.i - b.i)
+      .map((x) => x.item);
   }
 }

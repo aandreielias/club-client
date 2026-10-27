@@ -77,12 +77,12 @@ export class CalendarModel {
     this.hidden = store?.get<string[]>(HIDDEN_KEY) ?? [];
     this.range = $derived(CalendarModel.rangeOf(this.view, this.anchor));
     this.days = $derived(CalendarModel.daysOf(this.range));
-    this.entries = new Resource(() =>
-      this.sources.load(this.clock.startOfDay(this.range.from), this.clock.startOfDay(this.range.to)),
+    this.entries = new Resource(() => this.sources.load(this.clock.startOfDay(this.range.from), this.clock.startOfDay(this.range.to)));
+    this.inTeam = $derived(
+      (this.entries.value ?? [])
+        .map((e) => (this.preview?.key === e.key ? { ...e, start: this.preview.start, end: this.preview.end } : e))
+        .filter((e) => !this.teamId || e.teamId === this.teamId),
     );
-    this.inTeam = $derived((this.entries.value ?? [])
-      .map((e) => (this.preview?.key === e.key ? { ...e, start: this.preview.start, end: this.preview.end } : e))
-      .filter((e) => !this.teamId || e.teamId === this.teamId));
     this.visible = $derived(this.inTeam.filter((e) => this.isShown(e.source)));
     this.byDay = $derived(this.bucket(this.visible));
   }
@@ -159,7 +159,11 @@ export class CalendarModel {
 
   /** Entries running across several days within `days` (one week), as bars in lanes. */
   spans(days: readonly LocalDate[]): { spans: Span[]; lanes: number } {
-    return CalendarModel.layoutSpans(this.visible.filter((e) => CalendarModel.multiDay(e, this.clock)), days, this.clock);
+    return CalendarModel.layoutSpans(
+      this.visible.filter((e) => CalendarModel.multiDay(e, this.clock)),
+      days,
+      this.clock,
+    );
   }
 
   /** Timed single-day entries of one day placed on the week grid between `startHour` and `endHour`. */

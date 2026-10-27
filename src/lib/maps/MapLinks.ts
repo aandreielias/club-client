@@ -22,5 +22,4 @@ export class MapLinks {
     const at = place.lat !== null && place.lng !== null ? `&ll=${place.lat},${place.lng}` : '';
     return `https://maps.apple.com/?q=${encodeURIComponent(MapLinks.query(place))}${at}`;
   }
-
 }

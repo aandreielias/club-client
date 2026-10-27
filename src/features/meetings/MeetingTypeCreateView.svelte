@@ -14,11 +14,16 @@
   // svelte-ignore state_referenced_locally
   const create = new CreateController(bus, handle, 'Neue Sitzungsart');
 
-  const submit = () => create.submit(async () => {
-    const saved = await meetingsApi.saveType(null, form.toInput());
-    await meetingTypes.load();
-    return saved.key;
-  }, 'meeting-type', 'Sitzungsart angelegt.');
+  const submit = () =>
+    create.submit(
+      async () => {
+        const saved = await meetingsApi.saveType(null, form.toInput());
+        await meetingTypes.load();
+        return saved.key;
+      },
+      'meeting-type',
+      'Sitzungsart angelegt.',
+    );
 </script>
 
 <Detail title="Neue Sitzungsart">

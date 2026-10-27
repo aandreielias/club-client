@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { board } from './mock';
-import { directory, MockDirectory } from '../../lib/mock/core';
+import { directory } from '../../lib/mock/core';
 import type { Member } from '../../lib/types';
 import { meetings } from '../meetings/mock';
 import { boardWarning } from './messages';
@@ -28,10 +28,18 @@ describe('club rules for offices and resolutions', () => {
     const before = structuredClone(meetings.rules.data);
     const exclusion = before.map((r) => (r.action === 'EXCLUSION' ? { ...r, majority: 'SIMPLE' as const } : r));
     expect(() => meetings.saveRules(member('vorstand'), { items: exclusion, circular: meetings.circular.data })).toThrow(); // the extraordinary board meeting needs three quarters
-    const wrongKind = before.map((r) => (r.action === 'GENERAL' ? { ...r, followUps: [{ id: null, kind: 'ENTER_OFFICE', title: 'x', dueDays: null }] } : r));
+    const wrongKind = before.map((r) =>
+      r.action === 'GENERAL' ? { ...r, followUps: [{ id: null, kind: 'ENTER_OFFICE', title: 'x', dueDays: null }] } : r,
+    );
     expect(() => meetings.saveRules(member('vorstand'), { items: wrongKind, circular: meetings.circular.data })).toThrow();
-    const extra = before.map((r) => (r.action === 'GENERAL' ? { ...r, followUps: [...r.followUps, { id: null, kind: 'IMPLEMENT', title: 'Protokoll: {beschluss}', dueDays: 3 }] } : r));
-    expect(meetings.saveRules(member('vorstand'), { items: extra, circular: meetings.circular.data }).items.find((r) => r.action === 'GENERAL')!.followUps).toHaveLength(2);
+    const extra = before.map((r) =>
+      r.action === 'GENERAL'
+        ? { ...r, followUps: [...r.followUps, { id: null, kind: 'IMPLEMENT', title: 'Protokoll: {beschluss}', dueDays: 3 }] }
+        : r,
+    );
+    expect(
+      meetings.saveRules(member('vorstand'), { items: extra, circular: meetings.circular.data }).items.find((r) => r.action === 'GENERAL')!.followUps,
+    ).toHaveLength(2);
     expect(() => meetings.saveRules(member('vorstand'), { items: before, circular: { minHours: 0, quorum: 'MORE_THAN_HALF' } })).toThrow();
     meetings.saveRules(member('vorstand'), { items: before, circular: meetings.circular.data });
   });
@@ -45,7 +53,9 @@ describe('club rules for offices and resolutions', () => {
     expect(saved.items.find((r) => r.action === 'GENERAL')!.enabled).toBe(true);
     expect(meetings.types.data.some((t) => t.actions.includes('EXCLUSION'))).toBe(false);
     const extraBoard = types.find((t) => t.key === 'EXTRA_BOARD')!;
-    expect(() => meetings.saveType(member('vorstand'), 'EXTRA_BOARD', extraBoard)).toThrow(expect.objectContaining({ code: 'meeting-type.action-removed' }));
+    expect(() => meetings.saveType(member('vorstand'), 'EXTRA_BOARD', extraBoard)).toThrow(
+      expect.objectContaining({ code: 'meeting-type.action-removed' }),
+    );
     meetings.saveRules(member('vorstand'), { items: before, circular: meetings.circular.data });
     meetings.types.data.splice(0, meetings.types.data.length, ...types);
   });
@@ -54,7 +64,10 @@ describe('club rules for offices and resolutions', () => {
     directory.confirm(member('vorstand'));
     const supporter = board.saveMembershipKind(member('vorstand'), null, { label: 'Unterstützend', votes: true, eligible: false, sort: 5 });
     const target = member('spielerin');
-    expect(directory.setMembership(member('vorstand'), target.id, { membershipTypes: [supporter.key] })).toMatchObject({ voter: true, eligible: false });
+    expect(directory.setMembership(member('vorstand'), target.id, { membershipTypes: [supporter.key] })).toMatchObject({
+      voter: true,
+      eligible: false,
+    });
     expect(() => directory.setMembership(member('vorstand'), target.id, { membershipTypes: ['NOPE'] })).toThrow();
     expect(() => board.deleteMembershipKind(member('vorstand'), supporter.key)).toThrow();
     const settings = structuredClone(directory.boardSettings.data);
@@ -67,21 +80,26 @@ describe('club rules for offices and resolutions', () => {
   });
 });
 
-
 describe('membership kinds per member', () => {
   it('honour with one kind and restore it, or hold several when the club allows it', () => {
     directory.confirm(member('vorstand'));
     directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['ORDINARY'] });
-    expect(directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['HONORARY'] }))
-      .toMatchObject({ membershipTypes: ['HONORARY'], previousType: 'ORDINARY', voter: true });
-    expect(() => directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['HONORARY', 'ORDINARY'] }))
-      .toThrow(expect.objectContaining({ code: 'member.several-kinds' }));
+    expect(directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['HONORARY'] })).toMatchObject({
+      membershipTypes: ['HONORARY'],
+      previousType: 'ORDINARY',
+      voter: true,
+    });
+    expect(() => directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['HONORARY', 'ORDINARY'] })).toThrow(
+      expect.objectContaining({ code: 'member.several-kinds' }),
+    );
     expect(directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['ORDINARY'] })).toMatchObject({ previousType: null });
 
     const settings = structuredClone(directory.boardSettings.data);
     board.saveBoardSettings(member('vorstand'), { ...settings, multipleKinds: true });
-    expect(directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['HONORARY', 'ORDINARY'] }))
-      .toMatchObject({ membershipTypes: ['ORDINARY', 'HONORARY'], previousType: null });
+    expect(directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['HONORARY', 'ORDINARY'] })).toMatchObject({
+      membershipTypes: ['ORDINARY', 'HONORARY'],
+      previousType: null,
+    });
     expect(() => board.saveBoardSettings(member('vorstand'), settings)).toThrow(expect.objectContaining({ code: 'member.several-kinds' }));
     directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['ORDINARY'] });
     board.saveBoardSettings(member('vorstand'), settings);

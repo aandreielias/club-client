@@ -76,7 +76,9 @@
         <div class="row">
           {#if factor}
             <Tag tone="green">Eingerichtet</Tag>
-            <span class="muted">Admin und Vorstand bestätigen Änderungen mit einem Code aus ihrer App. Neues Handy? Ein Admin setzt die Sicherheit zurück.</span>
+            <span class="muted"
+              >Admin und Vorstand bestätigen Änderungen mit einem Code aus ihrer App. Neues Handy? Ein Admin setzt die Sicherheit zurück.</span
+            >
           {:else}
             <span class="muted">Admin und Vorstand bestätigen Änderungen mit einem Code aus einer Authenticator-App.</span>
             <Button size="sm" onclick={confirmNow}>Jetzt einrichten</Button>

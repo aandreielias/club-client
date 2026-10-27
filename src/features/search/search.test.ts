@@ -18,7 +18,12 @@ describe('global search (mock)', () => {
   });
 
   it('finds only member profiles the searcher may open', async () => {
-    expect((await search('trainer', 'spieler')).filter((h) => h.kind === 'MEMBER').map((h) => h.id).sort()).toEqual(['spieler', 'spielerin']);
+    expect(
+      (await search('trainer', 'spieler'))
+        .filter((h) => h.kind === 'MEMBER')
+        .map((h) => h.id)
+        .sort(),
+    ).toEqual(['spieler', 'spielerin']);
     expect((await search('spielerin', 'spieler')).filter((h) => h.kind === 'MEMBER').map((h) => h.id)).toEqual(['spielerin']);
     expect((await search('eltern', 'david')).filter((h) => h.kind === 'MEMBER').map((h) => h.id)).toEqual(['spieler']); // own minor
   });

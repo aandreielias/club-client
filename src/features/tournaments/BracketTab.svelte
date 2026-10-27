@@ -32,8 +32,14 @@
           {#each inRound(round) as m, i (m.id)}
             {@const winner = TournamentModel.winner(m)}
             <div class="slot" class:upper={i % 2 === 0}>
-              <button type="button" class="match" class:played={m.homeScore !== null} disabled={!editable(m)} onclick={() => (editing = m)}
-                {@attach tooltip(editable(m) ? 'Ergebnis eintragen' : null)}>
+              <button
+                type="button"
+                class="match"
+                class:played={m.homeScore !== null}
+                disabled={!editable(m)}
+                onclick={() => (editing = m)}
+                {@attach tooltip(editable(m) ? 'Ergebnis eintragen' : null)}
+              >
                 {#each [[m.homeId, m.awayId, m.homeScore], [m.awayId, m.homeId, m.awayScore]] as [team, other, score], side (side)}
                   <span class="line" class:winner={!!winner && winner === team} class:open={!team}>
                     <span class="name">{teamLabel(m, team as string | null, other as string | null)}</span>
@@ -140,7 +146,9 @@
     color: inherit;
     font: inherit;
     text-align: left;
-    transition: border-color var(--motion-fast) var(--motion-easing), box-shadow var(--motion-fast) var(--motion-easing);
+    transition:
+      border-color var(--motion-fast) var(--motion-easing),
+      box-shadow var(--motion-fast) var(--motion-easing);
   }
   .match:not(:disabled) {
     cursor: pointer;

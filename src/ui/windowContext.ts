@@ -11,4 +11,3 @@ export function provideWindowHandle(handle: WindowHandle): void {
 export function windowHandle(): WindowHandle | undefined {
   return getContext<WindowHandle | undefined>(KEY);
 }
-

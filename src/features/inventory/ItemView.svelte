@@ -91,7 +91,9 @@
         <h2 class="heading">
           Wo ist es?
           {#if !stockEdit.form && permissions.isPrivileged}
-            <Button size="sm" variant="ghost" onclick={() => stockEdit.edit(new StockForm(value.stock))} tooltip="Auf Orte und Personen verteilen">Bearbeiten</Button>
+            <Button size="sm" variant="ghost" onclick={() => stockEdit.edit(new StockForm(value.stock))} tooltip="Auf Orte und Personen verteilen"
+              >Bearbeiten</Button
+            >
           {/if}
         </h2>
         {#if stockEdit.form}
@@ -125,10 +127,15 @@
               <ul class="uses">
                 {#each list as use (use.kind + use.id)}
                   <li>
-                    <button type="button" onclick={() => view.open(use.kind === 'APPOINTMENT' ? 'appointment' : 'task', use.id)}
-                      {@attach tooltip(use.kind === 'APPOINTMENT' ? 'Termin öffnen' : 'Aufgabe öffnen')}>
+                    <button
+                      type="button"
+                      onclick={() => view.open(use.kind === 'APPOINTMENT' ? 'appointment' : 'task', use.id)}
+                      {@attach tooltip(use.kind === 'APPOINTMENT' ? 'Termin öffnen' : 'Aufgabe öffnen')}
+                    >
                       <span class="title">{use.title}</span>
-                      <span class="muted">{use.kind === 'APPOINTMENT' ? 'Termin' : 'Aufgabe'}{use.at ? `, ${session.format.dateTime(use.at)}` : ''}</span>
+                      <span class="muted"
+                        >{use.kind === 'APPOINTMENT' ? 'Termin' : 'Aufgabe'}{use.at ? `, ${session.format.dateTime(use.at)}` : ''}</span
+                      >
                       <span class="quantity" class:short={use.quantity > value.quantity}>{use.quantity}</span>
                     </button>
                   </li>

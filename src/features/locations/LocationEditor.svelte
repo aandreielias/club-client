@@ -8,8 +8,13 @@
   import type { LocationForm } from './LocationForm.svelte';
   import { locationsApi } from './services';
 
-  let { form, action, submitLabel, oncancel, onsubmit }: { form: LocationForm; action: Action; submitLabel: string; oncancel: () => void; onsubmit: () => void } =
-    $props();
+  let {
+    form,
+    action,
+    submitLabel,
+    oncancel,
+    onsubmit,
+  }: { form: LocationForm; action: Action; submitLabel: string; oncancel: () => void; onsubmit: () => void } = $props();
 
   const limits = settings.locations;
   const search = new Action();

@@ -3,7 +3,7 @@
   import MemberName from '../../ui/MemberName.svelte';
   import { settings } from '../../settings';
   import { tick } from 'svelte';
-  import { bus, directory, pendingDeletes, session } from '../../lib/container';
+  import { bus, pendingDeletes, session } from '../../lib/container';
   import { recordDrop } from '../../ui/recordDrop';
   import { APP_ERROR, TOAST } from '../../channels';
   import { Resource } from '../../lib/state/Resource.svelte';
@@ -11,7 +11,6 @@
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
-  import Tag from '../../ui/Tag.svelte';
   import { FolderContents } from './FolderContents.svelte';
   import { FolderTree } from './FolderTree.svelte';
   import type { Folder, StoredFile } from './model';
@@ -84,75 +83,94 @@
 <AsyncView resource={data}>
   {#snippet children({ folder })}
     {#if file}
-      <div class="drop" {@attach recordDrop(['member'], (ref) => void tagDropped(ref.id), () => image && filePolicy.canTag(file, folder))}>
-      <Detail title={file.name}>
-        {#snippet actions()}
-          <Button icon="download" onclick={() => download(file)}>Herunterladen</Button>
-          {#if filePolicy.canModify(file, folder)}<Button icon="edit" onclick={() => (editing = true)} tooltip="Umbenennen oder verschieben">Bearbeiten</Button>{/if}
-          {#if folder.kind === 'DOCUMENTS' && !image && filePolicy.canModify(file, folder)}<Button icon="upload" onclick={() => (versioning = true)}>Neue Version</Button>{/if}
-          {#if image && filePolicy.canTag(file, folder) && !tagging}<Button onclick={() => (tagging = true)}>Personen markieren</Button>{/if}
-          {#if filePolicy.canModify(file, folder)}
-            <Button variant="danger" onclick={() => remove(file)} tooltip="{image ? 'Foto' : 'Datei'} endgültig löschen">Löschen</Button>
-          {/if}
-        {/snippet}
+      <div
+        class="drop"
+        {@attach recordDrop(
+          ['member'],
+          (ref) => void tagDropped(ref.id),
+          () => image && filePolicy.canTag(file, folder),
+        )}
+      >
+        <Detail title={file.name}>
+          {#snippet actions()}
+            <Button icon="download" onclick={() => download(file)}>Herunterladen</Button>
+            {#if filePolicy.canModify(file, folder)}<Button icon="edit" onclick={() => (editing = true)} tooltip="Umbenennen oder verschieben"
+                >Bearbeiten</Button
+              >{/if}
+            {#if folder.kind === 'DOCUMENTS' && !image && filePolicy.canModify(file, folder)}<Button icon="upload" onclick={() => (versioning = true)}
+                >Neue Version</Button
+              >{/if}
+            {#if image && filePolicy.canTag(file, folder) && !tagging}<Button onclick={() => (tagging = true)}>Personen markieren</Button>{/if}
+            {#if filePolicy.canModify(file, folder)}
+              <Button variant="danger" onclick={() => remove(file)} tooltip="{image ? 'Foto' : 'Datei'} endgültig löschen">Löschen</Button>
+            {/if}
+          {/snippet}
 
-        {#if image}<div class="image"><Thumbnail {file} full /></div>{/if}
-        {#if !image && filePreviews.kind(file.contentType)}
-          {#key file.version}<DocumentPreview {file} />{/key}
-        {/if}
-
-        <dl class="props">
-          <dt>Ordner</dt>
-          <dd>{folder.name}</dd>
-          <dt>Typ</dt>
-          <dd>{fileTypes.label(file.contentType)}</dd>
-          {#if file.version}
-            <dt>Version</dt>
-            <dd>{file.version}</dd>
+          {#if image}<div class="image"><Thumbnail {file} full /></div>{/if}
+          {#if !image && filePreviews.kind(file.contentType)}
+            {#key file.version}<DocumentPreview {file} />{/key}
           {/if}
-          <dt>Hochgeladen</dt>
-          <dd>{session.format.dateTime(file.createdAt)},&nbsp;<MemberName memberId={file.uploadedBy} /></dd>
-          <dt>Größe</dt>
-          <dd>{session.format.bytes(file.sizeBytes)}{file.width && file.height ? `, ${file.width} × ${file.height}` : ''}</dd>
-          {#if image}
-            <dt>Markiert</dt>
-            <dd>
-              {#each file.taggedMemberIds as member (member)}<MemberName memberId={member} tag />{:else}<span class="muted">Niemand</span>{/each}
-            </dd>
-          {/if}
-        </dl>
 
-        {#if tagging}
-          <h2>Personen markieren</h2>
-          <TagEditor bind:this={tagEditor} {file} {folder} {contents} ondone={() => (tagging = false)} />
-        {/if}
-        {#if folder.kind === 'DOCUMENTS'}<VersionsSection {file} onopencompare={(open) => (handle ? handle.close(open) : open())} />{/if}
-        <ActivitySection kind="FILE" id={file.id} describe={(e) => (e.action === 'UPDATED' ? 'umbenannt oder verschoben' : null)} />
-      </Detail>
+          <dl class="props">
+            <dt>Ordner</dt>
+            <dd>{folder.name}</dd>
+            <dt>Typ</dt>
+            <dd>{fileTypes.label(file.contentType)}</dd>
+            {#if file.version}
+              <dt>Version</dt>
+              <dd>{file.version}</dd>
+            {/if}
+            <dt>Hochgeladen</dt>
+            <dd>{session.format.dateTime(file.createdAt)},&nbsp;<MemberName memberId={file.uploadedBy} /></dd>
+            <dt>Größe</dt>
+            <dd>{session.format.bytes(file.sizeBytes)}{file.width && file.height ? `, ${file.width} × ${file.height}` : ''}</dd>
+            {#if image}
+              <dt>Markiert</dt>
+              <dd>
+                {#each file.taggedMemberIds as member (member)}<MemberName memberId={member} tag />{:else}<span class="muted">Niemand</span>{/each}
+              </dd>
+            {/if}
+          </dl>
+
+          {#if tagging}
+            <h2>Personen markieren</h2>
+            <TagEditor bind:this={tagEditor} {file} {folder} {contents} ondone={() => (tagging = false)} />
+          {/if}
+          {#if folder.kind === 'DOCUMENTS'}<VersionsSection {file} onopencompare={(open) => (handle ? handle.close(open) : open())} />{/if}
+          <ActivitySection kind="FILE" id={file.id} describe={(e) => (e.action === 'UPDATED' ? 'umbenannt oder verschoben' : null)} />
+        </Detail>
       </div>
     {/if}
   {/snippet}
 </AsyncView>
 
 {#if versioning && file}
-  <NewVersionDialog {file} onclose={() => (versioning = false)}
+  <NewVersionDialog
+    {file}
+    onclose={() => (versioning = false)}
     onsaved={() => {
       versioning = false;
       bus.publish(TOAST, { text: 'Neue Version hochgeladen.' });
       fileLinks.forget(fileId);
       void contents.load();
-    }} />
+    }}
+  />
 {/if}
 
 {#if editing && file && data.value}
-  <EditFileDialog {file} folder={data.value.folder} {tree} onclose={() => (editing = false)}
+  <EditFileDialog
+    {file}
+    folder={data.value.folder}
+    {tree}
+    onclose={() => (editing = false)}
     onsaved={(saved) => {
       editing = false;
       bus.publish(TOAST, { text: 'Datei gespeichert.' });
       // A moved file lives under a new window id.
       if (saved.folderId !== folderId) handle?.replace('file', `${saved.folderId}:${saved.id}`);
       else void contents.load();
-    }} />
+    }}
+  />
 {/if}
 
 <style>

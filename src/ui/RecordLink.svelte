@@ -30,8 +30,14 @@
 </script>
 
 {#if allowed}
-  <button type="button" class="record-link" onclick={open} draggable="true"
-    ondragstart={(e) => RecordDrag.set(e, { kind, id, title: (e.currentTarget as HTMLElement).textContent?.trim() ?? '' })} {@attach tooltip(hint ?? 'Öffnen')}>{@render children()}</button>
+  <button
+    type="button"
+    class="record-link"
+    onclick={open}
+    draggable="true"
+    ondragstart={(e) => RecordDrag.set(e, { kind, id, title: (e.currentTarget as HTMLElement).textContent?.trim() ?? '' })}
+    {@attach tooltip(hint ?? 'Öffnen')}>{@render children()}</button
+  >
 {:else}
   <span class="record-text">{@render children()}</span>
 {/if}

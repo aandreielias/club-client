@@ -1,7 +1,7 @@
 <script lang="ts">
   import MemberName from '../../ui/MemberName.svelte';
   import { settings } from '../../settings';
-  import { directory, session } from '../../lib/container';
+  import { session } from '../../lib/container';
   import Button from '../../ui/Button.svelte';
   import Empty from '../../ui/Empty.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';

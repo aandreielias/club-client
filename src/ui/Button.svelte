@@ -46,9 +46,20 @@
   }
 </script>
 
-<button bind:this={element} type="button" aria-label={children ? undefined : tooltip} {...rest}
-  class="button {variant} {size}" class:pressed class:square={!children} class:busy disabled={busy || rest.disabled}
-  aria-busy={busy} aria-pressed={pressed} {@attach showTooltip(text)}>
+<button
+  bind:this={element}
+  type="button"
+  aria-label={children ? undefined : tooltip}
+  {...rest}
+  class="button {variant} {size}"
+  class:pressed
+  class:square={!children}
+  class:busy
+  disabled={busy || rest.disabled}
+  aria-busy={busy}
+  aria-pressed={pressed}
+  {@attach showTooltip(text)}
+>
   {#if icon}<Icon name={icon} small={size === 'sm'} />{/if}
   {#if children}<span class="content">{@render children()}</span>{/if}
 </button>

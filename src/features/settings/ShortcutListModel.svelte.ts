@@ -22,12 +22,25 @@ export class ShortcutListModel extends ListModel<ShortcutRow> {
         searchText: (row) => `${row.label} ${row.group} ${KeySpec.text(keymap.keys(row.id), isMac)}`,
         columns: [
           { key: 'label', label: 'Befehl', value: (row) => row.label },
-          { key: 'group', label: 'Bereich', value: (row) => `${groups.indexOf(row.group)}`.padStart(3, '0'), format: (row) => row.group, width: '10rem' },
+          {
+            key: 'group',
+            label: 'Bereich',
+            value: (row) => `${groups.indexOf(row.group)}`.padStart(3, '0'),
+            format: (row) => row.group,
+            width: '10rem',
+          },
           { key: 'keys', label: 'Tasten', value: (row) => keymap.keys(row.id), sortable: false, width: '12rem' },
           { key: 'actions', label: 'Aktionen', value: () => null, sortable: false, width: '15rem', align: 'end' },
         ],
         filters: [
-          { key: 'group', label: 'Bereich', kind: 'select', allLabel: 'Alle Bereiche', options: () => groups.map((g) => ({ value: g, label: g })), test: (row, v) => row.group === v },
+          {
+            key: 'group',
+            label: 'Bereich',
+            kind: 'select',
+            allLabel: 'Alle Bereiche',
+            options: () => groups.map((g) => ({ value: g, label: g })),
+            test: (row, v) => row.group === v,
+          },
           { key: 'custom', label: 'Nur geänderte', kind: 'toggle', test: (row, on) => !on || keymap.isCustom(row.id) },
         ],
       },

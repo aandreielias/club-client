@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { directory, MockDirectory } from '../../lib/mock/core';
+import { directory } from '../../lib/mock/core';
 import type { Member } from '../../lib/types';
 import { tasks } from './mock';
 import type { NewTask } from './model';
@@ -42,7 +42,9 @@ describe('mock tasks', () => {
     expect(() => tasks.create(member('trainer'), draft('t-u16', ['spieler']))).toThrow(expect.objectContaining({ code: 'auth.step-up-required' }));
     stepUp('trainer');
     expect(tasks.create(member('trainer'), draft('t-u16', ['spieler'])).checklist).toHaveLength(2);
-    expect(() => tasks.create(member('trainer'), draft('t-u16', ['spielerin']))).toThrow(expect.objectContaining({ code: 'task.assignee-not-in-team' }));
+    expect(() => tasks.create(member('trainer'), draft('t-u16', ['spielerin']))).toThrow(
+      expect.objectContaining({ code: 'task.assignee-not-in-team' }),
+    );
     expect(() => tasks.create(member('trainer'), draft(null, ['spieler']))).toThrow(expect.objectContaining({ code: 'access.denied' }));
     expect(() => tasks.delete(member('spielerin'), 't-1')).toThrow(expect.objectContaining({ code: 'access.denied' }));
   });

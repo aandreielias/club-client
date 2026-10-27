@@ -7,7 +7,13 @@ const DOCUMENT_TYPE = 'wordprocessingml.document.main+xml';
 const AGENDA = 'Tagesordnung';
 
 const escape = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const unescape = (xml: string) => xml.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+const unescape = (xml: string) =>
+  xml
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
 
 const p = (style: string | null, text: string) =>
   `<w:p>${style ? `<w:pPr><w:pStyle w:val="${style}"/></w:pPr>` : ''}<w:r><w:t xml:space="preserve">${escape(text)}</w:t></w:r></w:p>`;
@@ -41,14 +47,24 @@ const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 const DOCUMENT_START = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>`;
 /** A4 portrait. */
-const SECTION = '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1417" w:bottom="1134" w:left="1417" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>';
+const SECTION =
+  '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1417" w:bottom="1134" w:left="1417" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>';
 
 /** server: AgendaDocument.defaultTemplate */
 export async function defaultTemplate(Zip: typeof JSZip): Promise<Blob> {
   const zip = new Zip();
-  const body = [p('Small', '{{Verein}}'), p('Title', 'Einladung zur {{Art}}'), p('Subtitle', '{{Titel}}'), p(null, 'Wann: {{Wann}}'), p(null, 'Wo: {{Ort}}'),
-    p(null, 'Videokonferenz: {{Video}}'), p(null, 'Grund der Dringlichkeit: {{Dringlichkeit}}'), p('Heading1', 'Tagesordnung'),
-    p('ListParagraph', '{{Tagesordnung}}'), p('Small', 'Einladung versandt am {{Versandt}}.')].join('');
+  const body = [
+    p('Small', '{{Verein}}'),
+    p('Title', 'Einladung zur {{Art}}'),
+    p('Subtitle', '{{Titel}}'),
+    p(null, 'Wann: {{Wann}}'),
+    p(null, 'Wo: {{Ort}}'),
+    p(null, 'Videokonferenz: {{Video}}'),
+    p(null, 'Grund der Dringlichkeit: {{Dringlichkeit}}'),
+    p('Heading1', 'Tagesordnung'),
+    p('ListParagraph', '{{Tagesordnung}}'),
+    p('Small', 'Einladung versandt am {{Versandt}}.'),
+  ].join('');
   zip.file('[Content_Types].xml', CONTENT_TYPES);
   zip.file('_rels/.rels', RELS);
   zip.file('word/_rels/document.xml.rels', DOCUMENT_RELS);
@@ -64,17 +80,19 @@ function fillParagraph(paragraph: string, values: Record<string, string | null>,
   const lines = text.includes(`{{${AGENDA}}}`) ? agenda : [''];
   const props = /<w:pPr>[\s\S]*?<\/w:pPr>/.exec(paragraph);
   const run = /<w:rPr>[\s\S]*?<\/w:rPr>/.exec(props ? paragraph.slice(props.index + props[0].length) : paragraph);
-  return lines.map((line) => {
-    let missing = false;
-    const filled = text.replace(/\{\{\s*(\p{L}+)\s*\}\}/gu, (whole, name: string) => {
-      if (name === AGENDA) return line;
-      if (!(name in values)) return whole;
-      const value = values[name];
-      if (!value?.trim()) missing = true;
-      return value ?? '';
-    });
-    return missing ? '' : `<w:p>${props?.[0] ?? ''}<w:r>${run?.[0] ?? ''}<w:t xml:space="preserve">${escape(filled)}</w:t></w:r></w:p>`;
-  }).join('');
+  return lines
+    .map((line) => {
+      let missing = false;
+      const filled = text.replace(/\{\{\s*(\p{L}+)\s*\}\}/gu, (whole, name: string) => {
+        if (name === AGENDA) return line;
+        if (!(name in values)) return whole;
+        const value = values[name];
+        if (!value?.trim()) missing = true;
+        return value ?? '';
+      });
+      return missing ? '' : `<w:p>${props?.[0] ?? ''}<w:r>${run?.[0] ?? ''}<w:t xml:space="preserve">${escape(filled)}</w:t></w:r></w:p>`;
+    })
+    .join('');
 }
 
 /** server: AgendaDocument.fill — the template's parts with placeholders filled, saved as a document. */
@@ -84,7 +102,10 @@ export async function fill(Zip: typeof JSZip, template: Blob, values: Record<str
     if (name === '[Content_Types].xml') zip.file(name, (await zip.file(name)!.async('string')).replace(TEMPLATE_TYPE, DOCUMENT_TYPE));
     else if (/^word\/(document|header\d*|footer\d*)\.xml$/.test(name)) {
       const xml = await zip.file(name)!.async('string');
-      zip.file(name, xml.replace(/<w:p[ >][\s\S]*?<\/w:p>|<w:p\/>/g, (para) => fillParagraph(para, values, agenda)));
+      zip.file(
+        name,
+        xml.replace(/<w:p[ >][\s\S]*?<\/w:p>|<w:p\/>/g, (para) => fillParagraph(para, values, agenda)),
+      );
     }
   }
   return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });

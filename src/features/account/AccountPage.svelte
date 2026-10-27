@@ -65,7 +65,6 @@
     <LinkButton href="#/calendar/absences" tooltip="Urlaub oder Verletzung eintragen">Abwesenheiten</LinkButton>
   {/snippet}
 
-
   <dl class="props">
     <dt>Vorname</dt>
     {@render changeable('FIRST_NAME', member.firstName)}
@@ -76,9 +75,13 @@
     <dt>Geburtsdatum</dt>
     {@render changeable('BIRTH_DATE', member.birthDate ? session.format.date(member.birthDate) : '–')}
     <dt>Rollen</dt>
-    <dd>{#each member.roles as role (role)}<Tag tone="gray">{ROLE_LABELS[role]}</Tag>{/each}</dd>
+    <dd>
+      {#each member.roles as role (role)}<Tag tone="gray">{ROLE_LABELS[role]}</Tag>{/each}
+    </dd>
     <dt>Teams</dt>
-    <dd>{#each session.teams as team (team.id)}<Tag tone="blue">{team.name}</Tag>{:else}–{/each}</dd>
+    <dd>
+      {#each session.teams as team (team.id)}<Tag tone="blue">{team.name}</Tag>{:else}–{/each}
+    </dd>
   </dl>
   <FamilySection memberId={member.id} firstName={member.firstName} self parent={member.roles.includes('PARENT')} />
 

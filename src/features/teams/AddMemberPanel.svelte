@@ -29,24 +29,27 @@
   }
 </script>
 
-  <AsyncView resource={members}>
-    {#snippet children(all)}
-      {@const candidates = all.filter((m) => m.active && !model.has(m.id))}
-      <form class="add" onsubmit={submit}>
-        <Field label="Mitglied">
-          <Select bind:value={memberId} placeholder="Bitte wählen"
-            options={candidates.map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` }))} />
-        </Field>
-        <Field label="Rolle im Team">
-          <Select bind:value={role} options={Object.entries(TEAM_ROLE_LABELS).map(([value, label]) => ({ value, label }))} />
-        </Field>
-        <div class="row">
-          <Button type="submit" variant="primary" busy={model.assignAction.busy} disabled={!memberId}>Hinzufügen</Button>
-          <Button variant="ghost" onclick={onclose}>Schließen</Button>
-        </div>
-      </form>
-    {/snippet}
-  </AsyncView>
+<AsyncView resource={members}>
+  {#snippet children(all)}
+    {@const candidates = all.filter((m) => m.active && !model.has(m.id))}
+    <form class="add" onsubmit={submit}>
+      <Field label="Mitglied">
+        <Select
+          bind:value={memberId}
+          placeholder="Bitte wählen"
+          options={candidates.map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` }))}
+        />
+      </Field>
+      <Field label="Rolle im Team">
+        <Select bind:value={role} options={Object.entries(TEAM_ROLE_LABELS).map(([value, label]) => ({ value, label }))} />
+      </Field>
+      <div class="row">
+        <Button type="submit" variant="primary" busy={model.assignAction.busy} disabled={!memberId}>Hinzufügen</Button>
+        <Button variant="ghost" onclick={onclose}>Schließen</Button>
+      </div>
+    </form>
+  {/snippet}
+</AsyncView>
 <ErrorNote error={model.assignAction.error} />
 
 <style>

@@ -13,5 +13,7 @@ export function createAppointment(model: CalendarModel, date: string): void {
 
 /** Right-click on a day: a new appointment there, for who may create one. */
 export function newAppointmentEntries(model: CalendarModel, date: string): MenuEntry[] {
-  return policy.canCreate() ? [{ label: `Neuer Termin am ${session.format.date(date)}`, run: () => createAppointment(model, date), command: 'page.new' }] : [];
+  return policy.canCreate()
+    ? [{ label: `Neuer Termin am ${session.format.date(date)}`, run: () => createAppointment(model, date), command: 'page.new' }]
+    : [];
 }

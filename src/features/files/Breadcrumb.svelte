@@ -10,16 +10,21 @@
 
 <nav aria-label="Ordnerpfad">
   <ol>
-    <li>{#if path.length}<a href="#/files">Dateien</a>{:else}<span aria-current="page">Dateien</span>{/if}</li>
+    <li>
+      {#if path.length}<a href="#/files">Dateien</a>{:else}<span aria-current="page">Dateien</span>{/if}
+    </li>
     {#each path as folder, index (folder.id)}
       <li>
         {#if index === path.length - 1}
           <span aria-current="page">{folder.name}</span>
         {:else}
-          <a href="#/files/{folder.id}" class:drop-target={dropId === folder.id}
+          <a
+            href="#/files/{folder.id}"
+            class:drop-target={dropId === folder.id}
             ondragover={(e) => drag && RowDragging.over(drag, folder, e) && (dropId = folder.id)}
             ondragleave={() => dropId === folder.id && (dropId = null)}
-            ondrop={(e) => ((dropId = null), drag && RowDragging.drop(drag, folder, e))}>{folder.name}</a>
+            ondrop={(e) => ((dropId = null), drag && RowDragging.drop(drag, folder, e))}>{folder.name}</a
+          >
         {/if}
       </li>
     {/each}

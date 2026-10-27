@@ -1,6 +1,18 @@
 import { FormState } from '../../lib/state/FormState.svelte';
 import type { OfficeKind } from '../members/MembersApi';
-import { ACTION_LABELS, isDayOfYear, MAJORITY_LABELS, type ActionRule, type Majority, type MeetingStep, type MeetingType, type MeetingTypeInput, type Quorum, type ResolutionAction, type StepAnchor } from './model';
+import {
+  ACTION_LABELS,
+  isDayOfYear,
+  MAJORITY_LABELS,
+  type ActionRule,
+  type Majority,
+  type MeetingStep,
+  type MeetingType,
+  type MeetingTypeInput,
+  type Quorum,
+  type ResolutionAction,
+  type StepAnchor,
+} from './model';
 
 export type MeetingTypeField = 'label' | 'invitationLabel' | 'notice' | 'grace' | 'majorities' | 'conveners' | 'actions' | 'dueBy' | 'steps';
 type Errors = Partial<Record<MeetingTypeField, string>>;
@@ -28,8 +40,26 @@ export class MeetingTypeForm extends FormState<Errors> {
   archived = $state(false);
   /** What happens around each meeting; a new type starts with the server's two reminders. */
   steps = $state<MeetingStep[]>([
-    { id: null, anchor: 'BEFORE_INVITE', offsetHours: 72, action: 'NOTIFICATION', audience: 'BOARD', title: null, body: null, system: 'INVITE_REMINDER' },
-    { id: null, anchor: 'BEFORE_START', offsetHours: 24, action: 'NOTIFICATION', audience: 'ELECTORATE', title: null, body: null, system: 'START_REMINDER' },
+    {
+      id: null,
+      anchor: 'BEFORE_INVITE',
+      offsetHours: 72,
+      action: 'NOTIFICATION',
+      audience: 'BOARD',
+      title: null,
+      body: null,
+      system: 'INVITE_REMINDER',
+    },
+    {
+      id: null,
+      anchor: 'BEFORE_START',
+      offsetHours: 24,
+      action: 'NOTIFICATION',
+      audience: 'ELECTORATE',
+      title: null,
+      body: null,
+      system: 'START_REMINDER',
+    },
   ]);
 
   constructor(
@@ -66,8 +96,16 @@ export class MeetingTypeForm extends FormState<Errors> {
   /** A new task on that side; returns its index. */
   addStep(anchor: StepAnchor): number {
     const offsetHours = anchor === 'AFTER_END' ? 168 : 72;
-    this.steps.push({ id: null, anchor, offsetHours, action: 'TASK', audience: 'BOARD', title: anchor === 'AFTER_END' ? 'Nachbereiten: {titel}' : 'Vorbereiten: {titel}',
-      body: null, system: null });
+    this.steps.push({
+      id: null,
+      anchor,
+      offsetHours,
+      action: 'TASK',
+      audience: 'BOARD',
+      title: anchor === 'AFTER_END' ? 'Nachbereiten: {titel}' : 'Vorbereiten: {titel}',
+      body: null,
+      system: null,
+    });
     return this.steps.length - 1;
   }
 
@@ -94,7 +132,9 @@ export class MeetingTypeForm extends FormState<Errors> {
       dueBy: this.yearly ? `${String(this.dueMonth).padStart(2, '0')}-${String(this.dueDay).padStart(2, '0')}` : null,
       sort: this.sort,
       archived: this.archived,
-      steps: this.steps.map((s) => (s.system ? { ...s, title: null, body: null } : { ...s, title: s.title?.trim() ?? '', body: s.body?.trim() || null })),
+      steps: this.steps.map((s) =>
+        s.system ? { ...s, title: null, body: null } : { ...s, title: s.title?.trim() ?? '', body: s.body?.trim() || null },
+      ),
     };
   }
 

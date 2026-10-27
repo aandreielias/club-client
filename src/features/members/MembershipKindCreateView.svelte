@@ -14,11 +14,16 @@
   // svelte-ignore state_referenced_locally
   const create = new CreateController(bus, handle, 'Neue Mitgliedsart');
 
-  const submit = () => create.submit(async () => {
-    const saved = await membersApi.saveMembershipKind(null, { ...form, label: form.label.trim() });
-    await membershipKinds.load();
-    return saved.key;
-  }, 'membership-kind', 'Mitgliedsart angelegt.');
+  const submit = () =>
+    create.submit(
+      async () => {
+        const saved = await membersApi.saveMembershipKind(null, { ...form, label: form.label.trim() });
+        await membershipKinds.load();
+        return saved.key;
+      },
+      'membership-kind',
+      'Mitgliedsart angelegt.',
+    );
 </script>
 
 <Detail title="Neue Mitgliedsart">

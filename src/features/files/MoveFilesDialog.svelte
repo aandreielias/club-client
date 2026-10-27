@@ -8,13 +8,24 @@
   import { fileMover } from './services';
 
   /** Moves the selected files into another folder the member manages (files take its visibility). */
-  let { files, folder, tree, onmoved, onclose }: { files: readonly StoredFile[]; folder: Folder; tree: FolderTree; onmoved: () => void; onclose: () => void } =
-    $props();
+  let {
+    files,
+    folder,
+    tree,
+    onmoved,
+    onclose,
+  }: { files: readonly StoredFile[]; folder: Folder; tree: FolderTree; onmoved: () => void; onclose: () => void } = $props();
 
   const targets = $derived(
     (tree.folders.value ?? [])
       .filter((f) => fileMover.canMove(files, folder, f))
-      .map((f) => ({ value: f.id, label: tree.path(f.id).map((p) => p.name).join(' / ') }))
+      .map((f) => ({
+        value: f.id,
+        label: tree
+          .path(f.id)
+          .map((p) => p.name)
+          .join(' / '),
+      }))
       .sort((a, b) => a.label.localeCompare(b.label, 'de')),
   );
   let targetId = $state('');

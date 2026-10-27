@@ -14,12 +14,8 @@
    * Marks members on a photo. Candidates: the folder's team, or for club folders the member list
    * (admin/board) or the member's own teams. Members without photo consent are refused by the server.
    */
-  let {
-    file,
-    folder,
-    contents,
-    ondone,
-  }: { file: StoredFile; folder: Folder; contents: FolderContents; ondone: (updated: StoredFile) => void } = $props();
+  let { file, folder, contents, ondone }: { file: StoredFile; folder: Folder; contents: FolderContents; ondone: (updated: StoredFile) => void } =
+    $props();
 
   // svelte-ignore state_referenced_locally
   let selected = $state<string[]>([...file.taggedMemberIds]);
@@ -37,7 +33,8 @@
   /** A member dragged onto the photo: chosen when they are a candidate here. */
   export async function addPerson(id: string) {
     await loaded;
-    if (!list.data.value?.some((p) => p.memberId === id)) bus.publish(TOAST, { text: `${directory.nameOf(id)} kann auf diesem Foto nicht markiert werden.` });
+    if (!list.data.value?.some((p) => p.memberId === id))
+      bus.publish(TOAST, { text: `${directory.nameOf(id)} kann auf diesem Foto nicht markiert werden.` });
     else if (!selected.includes(id)) selected = [...selected, id];
   }
 

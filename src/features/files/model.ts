@@ -108,7 +108,11 @@ export const FOLDER_SCOPES: readonly { value: FolderScope; label: string; hint: 
   { value: 'CLUB', label: 'Ganzer Verein', hint: 'Alle Mitglieder sehen den Ordner.' },
   { value: 'TEAM', label: 'Team', hint: 'Das Team, Erziehungsberechtigte der Mitglieder, Vorstand und Admins.' },
   { value: 'BOARD', label: 'Vorstand', hint: 'Nur Vorstand und Admins.' },
-  { value: 'ASSEMBLY', label: 'Stimmberechtigte', hint: 'Außerordentliche und Ehrenmitglieder, Vorstand und Admins (wie die Mitgliederversammlung).' },
+  {
+    value: 'ASSEMBLY',
+    label: 'Stimmberechtigte',
+    hint: 'Außerordentliche und Ehrenmitglieder, Vorstand und Admins (wie die Mitgliederversammlung).',
+  },
 ];
 
 export const scopeLabel = (scope: FolderScope): string => FOLDER_SCOPES.find((s) => s.value === scope)?.label ?? scope;

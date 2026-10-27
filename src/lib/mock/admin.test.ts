@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Member } from '../types';
 import { teams } from '../../features/teams/mock';
 import { board } from '../../features/members/mock';
-import { directory, MockDirectory } from './core';
+import { directory } from './core';
 import { mockServer } from './MockServer';
 import { MockSocket } from './MockSocket';
 
@@ -11,20 +11,25 @@ const stepUp = (id: string) => directory.confirm(member(id));
 
 describe('mock members admin', () => {
   it('invites with the server rules', () => {
-    expect(() => directory.invite(member('vorstand'), { email: 'a@b.at', firstName: 'A', lastName: 'B', roles: [] }))
-      .toThrow(expect.objectContaining({ code: 'auth.step-up-required' }));
+    expect(() => directory.invite(member('vorstand'), { email: 'a@b.at', firstName: 'A', lastName: 'B', roles: [] })).toThrow(
+      expect.objectContaining({ code: 'auth.step-up-required' }),
+    );
     stepUp('vorstand');
-    expect(() => directory.invite(member('vorstand'), { email: 'x@b.at', firstName: 'X', lastName: 'Y', roles: ['ADMIN'] }))
-      .toThrow(expect.objectContaining({ code: 'access.denied' }));
-    expect(() => directory.invite(member('vorstand'), { email: 'admin@example.at', firstName: 'X', lastName: 'Y', roles: [] }))
-      .toThrow(expect.objectContaining({ code: 'member.email-taken' }));
+    expect(() => directory.invite(member('vorstand'), { email: 'x@b.at', firstName: 'X', lastName: 'Y', roles: ['ADMIN'] })).toThrow(
+      expect.objectContaining({ code: 'access.denied' }),
+    );
+    expect(() => directory.invite(member('vorstand'), { email: 'admin@example.at', firstName: 'X', lastName: 'Y', roles: [] })).toThrow(
+      expect.objectContaining({ code: 'member.email-taken' }),
+    );
     const invited = directory.invite(member('vorstand'), { email: 'Neu@Verein.AT', firstName: ' Nina ', lastName: 'Neu', roles: ['PLAYER'] });
     expect(invited).toMatchObject({ email: 'neu@verein.at', firstName: 'Nina', photoConsent: false, active: true });
   });
 
   it('takes the whole application form: phone, photo consent and a guardian', () => {
     const body = { email: 'kind@verein.at', firstName: 'Kim', lastName: 'Kind', roles: ['PLAYER'], phone: '+43 1 234', photoConsent: true };
-    expect(() => directory.invite(member('vorstand'), { ...body, guardianId: 'nobody' })).toThrow(expect.objectContaining({ code: 'member.not-found' }));
+    expect(() => directory.invite(member('vorstand'), { ...body, guardianId: 'nobody' })).toThrow(
+      expect.objectContaining({ code: 'member.not-found' }),
+    );
     expect(directory.members.data.some((m) => m.email === 'kind@verein.at')).toBe(false);
     const kid = directory.invite(member('vorstand'), { ...body, guardianId: 'neu' });
     expect(kid).toMatchObject({ phone: '+43 1 234', photoConsent: true });
@@ -34,18 +39,22 @@ describe('mock members admin', () => {
   it('gives BOARD only with a board office (server: MembershipHandlers)', () => {
     stepUp('vorstand');
     const today = directory.clock.today();
-    expect(() => board.assignOffice(member('vorstand'), { memberId: 'spielerin', office: 'TREASURER', startsOn: today }))
-      .toThrow(expect.objectContaining({ code: 'office.not-eligible' }));
-    expect(() => board.assignOffice(member('vorstand'), { memberId: 'trainer', office: 'CHAIR', startsOn: today }))
-      .toThrow(expect.objectContaining({ code: 'office.taken' }));
-    expect(() => board.assignOffice(member('vorstand'), { memberId: 'admin', office: 'BOARD_MEMBER', startsOn: today }))
-      .toThrow(expect.objectContaining({ code: 'office.combination' }));
+    expect(() => board.assignOffice(member('vorstand'), { memberId: 'spielerin', office: 'TREASURER', startsOn: today })).toThrow(
+      expect.objectContaining({ code: 'office.not-eligible' }),
+    );
+    expect(() => board.assignOffice(member('vorstand'), { memberId: 'trainer', office: 'CHAIR', startsOn: today })).toThrow(
+      expect.objectContaining({ code: 'office.taken' }),
+    );
+    expect(() => board.assignOffice(member('vorstand'), { memberId: 'admin', office: 'BOARD_MEMBER', startsOn: today })).toThrow(
+      expect.objectContaining({ code: 'office.combination' }),
+    );
     expect(board.board().warnings).toEqual([]); // the seeded board of five is complete
     const office = board.assignOffice(member('vorstand'), { memberId: 'trainer', office: 'BOARD_MEMBER', startsOn: today });
     expect(member('trainer').roles).toContain('BOARD');
     expect(board.board().warnings).toEqual(['board.even']);
-    expect(() => directory.setMembership(member('vorstand'), 'trainer', { membershipTypes: ['ORDINARY'] }))
-      .toThrow(expect.objectContaining({ code: 'member.holds-office' }));
+    expect(() => directory.setMembership(member('vorstand'), 'trainer', { membershipTypes: ['ORDINARY'] })).toThrow(
+      expect.objectContaining({ code: 'member.holds-office' }),
+    );
     expect(() => directory.setRoles(member('admin'), 'trainer', ['COACH'])).toThrow(expect.objectContaining({ code: 'auth.step-up-required' }));
     stepUp('admin');
     expect(() => directory.setRoles(member('admin'), 'trainer', ['COACH'])).toThrow(expect.objectContaining({ code: 'member.board-by-office' }));
@@ -62,7 +71,9 @@ describe('mock members admin', () => {
 
   it('protects admin roles and self-deactivation', () => {
     stepUp('admin');
-    expect(() => directory.setRoles(member('admin'), 'admin', ['BOARD'])).toThrow(expect.objectContaining({ code: 'member.cannot-remove-own-admin' }));
+    expect(() => directory.setRoles(member('admin'), 'admin', ['BOARD'])).toThrow(
+      expect.objectContaining({ code: 'member.cannot-remove-own-admin' }),
+    );
     expect(() => directory.deactivate(member('admin'), 'admin')).toThrow(expect.objectContaining({ code: 'member.cannot-deactivate-self' }));
     stepUp('vorstand');
     expect(() => directory.deactivate(member('vorstand'), 'admin')).toThrow(expect.objectContaining({ code: 'access.denied' }));
@@ -95,9 +106,13 @@ describe('mock members admin', () => {
 describe('mock teams admin', () => {
   it('creates teams and manages rosters with the server rules', () => {
     stepUp('vorstand');
-    expect(() => teams.createTeam(member('vorstand'), { name: 'Herren', season: '2026-27' })).toThrow(expect.objectContaining({ code: 'team.season-invalid' }));
+    expect(() => teams.createTeam(member('vorstand'), { name: 'Herren', season: '2026-27' })).toThrow(
+      expect.objectContaining({ code: 'team.season-invalid' }),
+    );
     const team = teams.createTeam(member('vorstand'), { name: 'Herren', season: '2026/27' });
-    expect(() => teams.createTeam(member('vorstand'), { name: 'Herren', season: '2026/27' })).toThrow(expect.objectContaining({ code: 'team.exists' }));
+    expect(() => teams.createTeam(member('vorstand'), { name: 'Herren', season: '2026/27' })).toThrow(
+      expect.objectContaining({ code: 'team.exists' }),
+    );
     const roster = teams.setTeamMember(member('vorstand'), team.id, 'trainer', 'COACH');
     expect(roster.entries).toEqual([expect.objectContaining({ memberId: 'trainer', teamRole: 'COACH' })]);
 

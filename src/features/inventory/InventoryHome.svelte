@@ -14,5 +14,12 @@
 </script>
 
 <SectionHeading title="Inventar" href="#/inventory" />
-<DataTable model={list} toolbar={false} limit={settings.home.listRows} rowKey={(i) => i.id} onopen={(i) => bus.publish(WINDOW_OPEN, { kind: 'item', id: i.id })}
-  menu={(i) => windowMenu(bus, windows, router, 'item', i.id)} emptyText="Noch nichts im Inventar." />
+<DataTable
+  model={list}
+  toolbar={false}
+  limit={settings.home.listRows}
+  rowKey={(i) => i.id}
+  onopen={(i) => bus.publish(WINDOW_OPEN, { kind: 'item', id: i.id })}
+  menu={(i) => windowMenu(bus, windows, router, 'item', i.id)}
+  emptyText="Noch nichts im Inventar."
+/>

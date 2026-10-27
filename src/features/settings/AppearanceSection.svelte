@@ -25,8 +25,12 @@
 
 <div class="stack section">
   <Field label="Farbschema">
-    <ChoiceGroup name="scheme" label="Farbschema" options={SCHEMES}
-      bind:value={() => preferences.values.scheme, (v) => v && preferences.set('scheme', v)} />
+    <ChoiceGroup
+      name="scheme"
+      label="Farbschema"
+      options={SCHEMES}
+      bind:value={() => preferences.values.scheme, (v) => v && preferences.set('scheme', v)}
+    />
   </Field>
 
   <fieldset class="accents">
@@ -34,8 +38,7 @@
     <div class="swatches">
       {#each accents as [key, accent] (key)}
         <label class="swatch" class:checked={preferences.values.accent === key}>
-          <input type="radio" name="accent" value={key} checked={preferences.values.accent === key}
-            onchange={() => preferences.set('accent', key)} />
+          <input type="radio" name="accent" value={key} checked={preferences.values.accent === key} onchange={() => preferences.set('accent', key)} />
           <span class="dot" style:background={accent.color} aria-hidden="true"></span>
           {accent.label}
         </label>
@@ -45,12 +48,20 @@
 
   <div class="grid-2">
     <Field label="Schriftgröße">
-      <ChoiceGroup name="font-size" label="Schriftgröße" options={options(preferences.appearance.fontSizes)}
-        bind:value={() => preferences.values.fontSize, (v) => v && preferences.set('fontSize', v)} />
+      <ChoiceGroup
+        name="font-size"
+        label="Schriftgröße"
+        options={options(preferences.appearance.fontSizes)}
+        bind:value={() => preferences.values.fontSize, (v) => v && preferences.set('fontSize', v)}
+      />
     </Field>
     <Field label="Dichte">
-      <ChoiceGroup name="density" label="Dichte" options={options(preferences.appearance.densities)}
-        bind:value={() => preferences.values.density, (v) => v && preferences.set('density', v)} />
+      <ChoiceGroup
+        name="density"
+        label="Dichte"
+        options={options(preferences.appearance.densities)}
+        bind:value={() => preferences.values.density, (v) => v && preferences.set('density', v)}
+      />
     </Field>
   </div>
 

@@ -8,12 +8,44 @@ import { EventListModel } from './EventListModel.svelte';
 const vienna = new ZonedClock('Europe/Vienna');
 
 const entry = (key: string, start: string, end: string | null, extra: Partial<CalendarEntry> = {}): CalendarEntry => ({
-  key, source: 'APPOINTMENT', title: key, start, end, allDay: false, hue: 'blue', teamId: null, inactive: false, label: '', window: { kind: 'x', id: key },
-  path: null, item: { kind: 'x', id: key }, movable: false, resizable: false, ...extra,
+  key,
+  source: 'APPOINTMENT',
+  title: key,
+  start,
+  end,
+  allDay: false,
+  hue: 'blue',
+  teamId: null,
+  inactive: false,
+  label: '',
+  window: { kind: 'x', id: key },
+  path: null,
+  item: { kind: 'x', id: key },
+  movable: false,
+  resizable: false,
+  ...extra,
 });
 
-const item = (id: string, category: CalendarItem['category'], start: string, end: string | null, extra: Partial<CalendarItem> = {}): CalendarItem => ({
-  kind: 'appointment', id, title: id, start, end, allDay: false, category, teamId: null, inactive: false, detail: null, movable: false, resizable: false, ...extra,
+const item = (
+  id: string,
+  category: CalendarItem['category'],
+  start: string,
+  end: string | null,
+  extra: Partial<CalendarItem> = {},
+): CalendarItem => ({
+  kind: 'appointment',
+  id,
+  title: id,
+  start,
+  end,
+  allDay: false,
+  category,
+  teamId: null,
+  inactive: false,
+  detail: null,
+  movable: false,
+  resizable: false,
+  ...extra,
 });
 
 const api = (items: CalendarItem[]) => ({ get: async () => ({ items }) }) as unknown as ApiClient;
@@ -44,7 +76,10 @@ describe('CalendarModel week layout', () => {
         entry('b', vienna.toInstant('2026-10-20T20:00'), vienna.toInstant('2026-10-20T22:00')),
         entry('c', vienna.toInstant('2026-10-20T21:00'), vienna.toInstant('2026-10-20T22:00')),
       ],
-      '2026-10-20', 7, 23, vienna,
+      '2026-10-20',
+      7,
+      23,
+      vienna,
     );
     const byKey = Object.fromEntries(placed.map((p) => [p.entry.key, p]));
     expect(byKey.a.top).toBeCloseTo((12 / 16) * 100);
@@ -54,18 +89,26 @@ describe('CalendarModel week layout', () => {
   });
 
   it('clips entries to the visible hours', () => {
-    const [placed] = CalendarModel.place([entry('late', vienna.toInstant('2026-10-20T22:00'), vienna.toInstant('2026-10-21T01:00'))], '2026-10-20', 7, 23, vienna);
+    const [placed] = CalendarModel.place(
+      [entry('late', vienna.toInstant('2026-10-20T22:00'), vienna.toInstant('2026-10-21T01:00'))],
+      '2026-10-20',
+      7,
+      23,
+      vienna,
+    );
     expect(placed.top + placed.height).toBeCloseTo(100);
   });
 });
 
 describe('CalendarModel data', () => {
   it('loads every category, buckets multi-day entries and filters by category and team', async () => {
-    const sources = new CalendarSources(api([
-      item('camp', 'APPOINTMENT', vienna.toInstant('2026-10-16T09:00'), vienna.toInstant('2026-10-18T12:00'), { teamId: 't1' }),
-      item('club', 'APPOINTMENT', vienna.toInstant('2026-10-16T19:00'), vienna.toInstant('2026-10-16T20:00')),
-      item('due', 'TASK', vienna.toInstant('2026-10-17T18:00'), null, { allDay: true, kind: 'task' }),
-    ])).style('APPOINTMENT', () => ({ label: 'Training' }));
+    const sources = new CalendarSources(
+      api([
+        item('camp', 'APPOINTMENT', vienna.toInstant('2026-10-16T09:00'), vienna.toInstant('2026-10-18T12:00'), { teamId: 't1' }),
+        item('club', 'APPOINTMENT', vienna.toInstant('2026-10-16T19:00'), vienna.toInstant('2026-10-16T20:00')),
+        item('due', 'TASK', vienna.toInstant('2026-10-17T18:00'), null, { allDay: true, kind: 'task' }),
+      ]),
+    ).style('APPOINTMENT', () => ({ label: 'Training' }));
     const model = new CalendarModel(sources, vienna, null, { view: 'month', date: '2026-10-15' });
     await model.load();
     const titles = (day: string) => model.entriesOn(day).map((e) => e.title);

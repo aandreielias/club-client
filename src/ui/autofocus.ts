@@ -1,6 +1,7 @@
 import type { Attachment } from 'svelte/attachments';
 
-const FIELD = 'input:not([type="hidden"], [type="checkbox"], [type="radio"], :disabled), textarea:not(:disabled), select:not(:disabled), [role="combobox"]';
+const FIELD =
+  'input:not([type="hidden"], [type="checkbox"], [type="radio"], :disabled), textarea:not(:disabled), select:not(:disabled), [role="combobox"]';
 
 /**
  * Focuses the first field inside the element once it is shown (edit forms, create windows), so

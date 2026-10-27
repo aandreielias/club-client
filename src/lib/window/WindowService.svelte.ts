@@ -166,7 +166,8 @@ export class WindowService {
 
   /** A docked size within its limits for this viewport (the page next to it stays usable). */
   static clampSize(dock: Exclude<Dock, 'center'>, px: number, viewport: { width: number; height: number }, limits: ResizeLimits): number {
-    const [min, max] = dock === 'side' ? [limits.minSidePx, viewport.width - limits.pageMinWidthPx] : [limits.minBottomPx, viewport.height - limits.pageMinHeightPx];
+    const [min, max] =
+      dock === 'side' ? [limits.minSidePx, viewport.width - limits.pageMinWidthPx] : [limits.minBottomPx, viewport.height - limits.pageMinHeightPx];
     return Math.max(min, Math.min(px, max));
   }
 

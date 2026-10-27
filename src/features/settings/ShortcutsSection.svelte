@@ -26,8 +26,8 @@
 
 <div class="stack section">
   <p class="muted">
-    <Kbd keys="Mod+K" /> öffnet die Befehlspalette mit allen Befehlen. Folgen wie <Kbd keys="g k" /> bedeuten: erst G, dann K drücken.
-    Änderungen gelten nur in diesem Browser.
+    <Kbd keys="Mod+K" /> öffnet die Befehlspalette mit allen Befehlen. Folgen wie <Kbd keys="g k" /> bedeuten: erst G, dann K drücken. Änderungen gelten
+    nur in diesem Browser.
   </p>
   <DataTable model={list} rowKey={(row) => row.id} emptyText="Keine Befehle.">
     {#snippet actions()}
@@ -40,7 +40,9 @@
       {:else if column.key === 'actions'}
         <span class="actions">
           <Button size="sm" onclick={() => (recording = row.id)}>Ändern</Button>
-          {#if keymap.keys(row.id)}<Button size="sm" variant="ghost" onclick={() => keymap.clear(row.id)} tooltip="Tastenkürzel entfernen">Entfernen</Button>{/if}
+          {#if keymap.keys(row.id)}<Button size="sm" variant="ghost" onclick={() => keymap.clear(row.id)} tooltip="Tastenkürzel entfernen"
+              >Entfernen</Button
+            >{/if}
           {#if keymap.isCustom(row.id)}<Button size="sm" variant="ghost" onclick={() => keymap.reset(row.id)}>Standard</Button>{/if}
         </span>
       {:else}

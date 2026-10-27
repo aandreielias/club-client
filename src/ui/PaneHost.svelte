@@ -26,8 +26,15 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<section class="pane" class:split={split.isOpen} class:active={split.isOpen && pane.active} aria-label={pane.id === 'split' ? `Geteilte Ansicht: ${label ?? 'Seite'}` : undefined}
-  onfocusin={focus} onpointerdown={focus} onclickcapture={keepLinksInPane}>
+<section
+  class="pane"
+  class:split={split.isOpen}
+  class:active={split.isOpen && pane.active}
+  aria-label={pane.id === 'split' ? `Geteilte Ansicht: ${label ?? 'Seite'}` : undefined}
+  onfocusin={focus}
+  onpointerdown={focus}
+  onclickcapture={keepLinksInPane}
+>
   {#if pane.id === 'split'}
     <header class="bar">
       <span class="label">{label ?? 'Geteilte Ansicht'}</span>

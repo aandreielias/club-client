@@ -13,8 +13,11 @@ const fail = MockServer.fail;
 const DAY = 86_400_000;
 
 const base = { teamId: null, inactive: false, detail: null, movable: false, resizable: false };
-const allDay = (clock: ZonedClock, first: string, last: string) =>
-  ({ start: clock.startOfDay(first), end: clock.startOfDay(ZonedClock.addDays(last, 1)), allDay: true });
+const allDay = (clock: ZonedClock, first: string, last: string) => ({
+  start: clock.startOfDay(first),
+  end: clock.startOfDay(ZonedClock.addDays(last, 1)),
+  allDay: true,
+});
 const name = (id: string) => {
   const m = directory.members.data.find((x) => x.id === id);
   return m ? `${m.firstName} ${m.lastName}` : 'Mitglied';
@@ -34,13 +37,28 @@ export function items(viewer: Member, from: string, to: string): CalendarItem[] 
   const fromDay = clock.localDate(from);
   const toDay = clock.localDate(new Date(Date.parse(to) - 1));
   const board = directory.isManager(viewer);
-  const coached = Object.entries(directory.teamRoles(viewer.id)).filter(([, r]) => r === 'COACH').map(([t]) => t);
+  const coached = Object.entries(directory.teamRoles(viewer.id))
+    .filter(([, r]) => r === 'COACH')
+    .map(([t]) => t);
   const out: CalendarItem[] = [];
 
   for (const a of calendar.list(viewer, from, to, null)) {
     const editable = !a.cancelled && (board || (!!a.teamId && coached.includes(a.teamId)));
-    out.push({ ...base, kind: 'appointment', id: a.id, title: a.title, start: a.startsAt, end: a.endsAt, allDay: false, category: 'APPOINTMENT',
-      teamId: a.teamId, inactive: a.cancelled, detail: a.type, movable: editable, resizable: editable });
+    out.push({
+      ...base,
+      kind: 'appointment',
+      id: a.id,
+      title: a.title,
+      start: a.startsAt,
+      end: a.endsAt,
+      allDay: false,
+      category: 'APPOINTMENT',
+      teamId: a.teamId,
+      inactive: a.cancelled,
+      detail: a.type,
+      movable: editable,
+      resizable: editable,
+    });
   }
 
   // Absences: own and minors', a coach's team members', everyone's for admin and board.
@@ -48,22 +66,53 @@ export function items(viewer: Member, from: string, to: string): CalendarItem[] 
   const seen = new Set([...own, ...coached.flatMap((t) => directory.teamMembers(t))]);
   for (const a of calendar.absences.data.filter((x) => (board || seen.has(x.memberId)) && x.to >= fromDay && x.from <= toDay)) {
     const mine = own.has(a.memberId);
-    out.push({ ...base, kind: 'absence', id: a.id, title: `Abwesend: ${name(a.memberId)}`, ...allDay(clock, a.from, a.to), category: 'ABSENCE',
-      detail: board || viewer.roles.includes('COACH') || mine ? a.reason : null, movable: mine, resizable: mine });
+    out.push({
+      ...base,
+      kind: 'absence',
+      id: a.id,
+      title: `Abwesend: ${name(a.memberId)}`,
+      ...allDay(clock, a.from, a.to),
+      category: 'ABSENCE',
+      detail: board || viewer.roles.includes('COACH') || mine ? a.reason : null,
+      movable: mine,
+      resizable: mine,
+    });
   }
 
   for (const t of tasks.list(viewer, false, null, true, from, to)) {
     if (!t.dueAt) continue;
     const manages = !t.teamId ? board : coached.includes(t.teamId) || board;
     const followUp = Object.entries(tasks.sources.data).some(([id, s]) => id === t.id && s.kind !== 'CHANGE_REQUEST');
-    out.push({ ...base, kind: 'task', id: t.id, title: t.title, start: t.dueAt, end: null, allDay: true, category: followUp ? 'FOLLOW_UP' : 'TASK',
-      teamId: t.teamId, inactive: t.status === 'DONE', detail: t.status, movable: manages && t.status !== 'DONE' });
+    out.push({
+      ...base,
+      kind: 'task',
+      id: t.id,
+      title: t.title,
+      start: t.dueAt,
+      end: null,
+      allDay: true,
+      category: followUp ? 'FOLLOW_UP' : 'TASK',
+      teamId: t.teamId,
+      inactive: t.status === 'DONE',
+      detail: t.status,
+      movable: manages && t.status !== 'DONE',
+    });
   }
 
   const runsTournaments = directory.hasRole(viewer, PRIVILEGED);
   for (const t of tournaments.list(viewer).items.filter((x) => x.startsOn <= toDay && x.endsOn >= fromDay)) {
-    out.push({ ...base, kind: 'tournament', id: t.id, title: t.name, ...allDay(clock, t.startsOn, t.endsOn), category: 'TOURNAMENT',
-      inactive: t.status === 'DONE', detail: t.status, movable: runsTournaments, resizable: runsTournaments });
+    out.push({
+      ...base,
+      kind: 'tournament',
+      id: t.id,
+      title: t.name,
+      ...allDay(clock, t.startsOn, t.endsOn),
+      category: 'TOURNAMENT',
+      inactive: t.status === 'DONE',
+      detail: t.status,
+      movable: runsTournaments,
+      resizable: runsTournaments,
+    });
   }
 
   // Meetings; their deadlines are tasks.
@@ -71,8 +120,20 @@ export function items(viewer: Member, from: string, to: string): CalendarItem[] 
     const full = tryOr(() => meetings.get(viewer, m.id), null);
     if (m.startsAt < to && m.endsAt > from) {
       const editable = m.status === 'DRAFT' && !!full?.canManage;
-      out.push({ ...base, kind: 'meeting', id: m.id, title: m.title, start: m.startsAt, end: m.endsAt, allDay: false, category: 'MEETING',
-        inactive: m.status === 'CLOSED', detail: m.kind, movable: editable, resizable: editable });
+      out.push({
+        ...base,
+        kind: 'meeting',
+        id: m.id,
+        title: m.title,
+        start: m.startsAt,
+        end: m.endsAt,
+        allDay: false,
+        category: 'MEETING',
+        inactive: m.status === 'CLOSED',
+        detail: m.kind,
+        movable: editable,
+        resizable: editable,
+      });
     }
   }
 
@@ -81,8 +142,15 @@ export function items(viewer: Member, from: string, to: string): CalendarItem[] 
     for (let year = Number(fromDay.slice(0, 4)); year <= Number(toDay.slice(0, 4)); year++) {
       const day = `${year}${m.birthDate!.slice(4)}`;
       if (day >= fromDay && day <= toDay) {
-        out.push({ ...base, kind: 'member', id: m.id, title: `Geburtstag: ${m.firstName} ${m.lastName}`, ...allDay(clock, day, day), category: 'BIRTHDAY',
-          detail: String(year - Number(m.birthDate!.slice(0, 4))) });
+        out.push({
+          ...base,
+          kind: 'member',
+          id: m.id,
+          title: `Geburtstag: ${m.firstName} ${m.lastName}`,
+          ...allDay(clock, day, day),
+          category: 'BIRTHDAY',
+          detail: String(year - Number(m.birthDate!.slice(0, 4))),
+        });
       }
     }
   }

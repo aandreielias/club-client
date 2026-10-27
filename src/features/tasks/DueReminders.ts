@@ -52,7 +52,10 @@ export class DueReminders {
     const due = DueReminders.due(tasks, now, this.options.dueSoonHours).filter((t) => shown[t.id] !== today);
     if (!due.length) return;
     if (due.length > this.options.maxToasts) {
-      this.bus.publish(TOAST, { text: `${due.length} deiner Aufgaben sind bald oder schon fällig.`, action: { label: 'Anzeigen', run: () => this.bus.publish(NAVIGATE, { path: '/tasks' }) } });
+      this.bus.publish(TOAST, {
+        text: `${due.length} deiner Aufgaben sind bald oder schon fällig.`,
+        action: { label: 'Anzeigen', run: () => this.bus.publish(NAVIGATE, { path: '/tasks' }) },
+      });
     } else {
       for (const task of due) {
         const overdue = Date.parse(task.dueAt!) < now.getTime();
@@ -63,13 +66,14 @@ export class DueReminders {
       }
     }
     // Keep only today's marks, so the store does not grow.
-    this.store.set(DueReminders.KEY, Object.fromEntries([...Object.entries(shown).filter(([, day]) => day === today), ...due.map((t) => [t.id, today])]));
+    this.store.set(
+      DueReminders.KEY,
+      Object.fromEntries([...Object.entries(shown).filter(([, day]) => day === today), ...due.map((t) => [t.id, today])]),
+    );
   }
 
   /** Open tasks with a due date before `now + hours`, soonest first. */
   static due(tasks: readonly Task[], now: Date, hours: number): Task[] {
-    return tasks
-      .filter((t) => isOverdue(t, now) || isDueSoon(t, hours, now))
-      .sort((a, b) => a.dueAt!.localeCompare(b.dueAt!));
+    return tasks.filter((t) => isOverdue(t, now) || isDueSoon(t, hours, now)).sort((a, b) => a.dueAt!.localeCompare(b.dueAt!));
   }
 }

@@ -6,8 +6,29 @@ import type { Absence, AbsenceList, Appointment, AppointmentList, Attendance, Ri
 import type { DownloadLink, FileList, FilePatch, FolderList, FolderPatch } from '../../features/files/model';
 import type { Item, ItemList, ItemUse, OwnItem, StockInput } from '../../features/inventory/model';
 import type { GeocodeResult, Location } from '../../features/locations/model';
-import type { ActionRule, Assignable, CircularRules, FollowUpRule, Meeting, MeetingType, Person, Presence, Resolution } from '../../features/meetings/model';
-import type { Board, BoardSettings, ChangeRequest, Family, GuardianRef, MembershipKind, Office, OfficePair, OfficeSetting, Relative } from '../../features/members/MembersApi';
+import type {
+  ActionRule,
+  Assignable,
+  CircularRules,
+  FollowUpRule,
+  Meeting,
+  MeetingType,
+  Person,
+  Presence,
+  Resolution,
+} from '../../features/meetings/model';
+import type {
+  Board,
+  BoardSettings,
+  ChangeRequest,
+  Family,
+  GuardianRef,
+  MembershipKind,
+  Office,
+  OfficePair,
+  OfficeSetting,
+  Relative,
+} from '../../features/members/MembersApi';
 import type { Notification, NotificationList, Preference, Preferences } from '../../features/notifications/model';
 import type { SearchHit, SearchResult } from '../../features/search/model';
 import type { Task, TaskList } from '../../features/tasks/model';

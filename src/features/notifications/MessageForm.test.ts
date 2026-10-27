@@ -13,7 +13,13 @@ describe('MessageForm', () => {
     form.addRef({ kind: 'TASK', id: 'x', title: 'Bälle' });
     form.addRef({ kind: 'TASK', id: 'x', title: 'Bälle' });
     expect(form.toMessage()).toEqual({
-      title: 'Hallenwechsel', body: '', everyone: false, teamIds: ['t1'], memberIds: [], includeGuardians: true, refs: [{ kind: 'TASK', id: 'x' }],
+      title: 'Hallenwechsel',
+      body: '',
+      everyone: false,
+      teamIds: ['t1'],
+      memberIds: [],
+      includeGuardians: true,
+      refs: [{ kind: 'TASK', id: 'x' }],
     });
     form.audience = 'everyone';
     expect(form.errors.recipients).toBe('Nur Admin und Vorstand schreiben an alle.');

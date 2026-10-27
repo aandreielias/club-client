@@ -14,7 +14,14 @@
   import { boardSettings } from '../members/services';
   import MemberChips from './MemberChips.svelte';
   import {
-    ACTION_LABELS, actionNeedsMember, actions, MAJORITY_LABELS, majorities, type Majority, type Meeting, type Resolution,
+    ACTION_LABELS,
+    actionNeedsMember,
+    actions,
+    MAJORITY_LABELS,
+    majorities,
+    type Majority,
+    type Meeting,
+    type Resolution,
     type ResolutionAction,
   } from './model';
   import ResolutionCard from './ResolutionCard.svelte';
@@ -36,7 +43,9 @@
   // svelte-ignore state_referenced_locally
   let majority = $state<Majority>(majorityOptions[0].value);
   // svelte-ignore state_referenced_locally
-  const actionOptions = actions(meetingTypes.get(meeting.kind) ?? null).filter((a) => resolutionRules.enabled(a)).map((a) => ({ value: a, label: ACTION_LABELS[a] }));
+  const actionOptions = actions(meetingTypes.get(meeting.kind) ?? null)
+    .filter((a) => resolutionRules.enabled(a))
+    .map((a) => ({ value: a, label: ACTION_LABELS[a] }));
   let action = $state<ResolutionAction>('GENERAL');
   let actionMemberId = $state('');
   let actionOffice = $state<OfficeKind | ''>('');
@@ -45,8 +54,11 @@
   const members = new Resource(() => directory.allMembers());
   void members.load();
   // Elections need someone who may be elected; the other actions any active member.
-  const memberOptions = $derived((members.value ?? []).filter((m) => (action === 'ELECTION' ? m.eligible : m.active))
-    .map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` })));
+  const memberOptions = $derived(
+    (members.value ?? [])
+      .filter((m) => (action === 'ELECTION' ? m.eligible : m.active))
+      .map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` })),
+  );
   const implied = $derived(resolutionRules.fixedMajority(action));
   // server: ResolutionHandlers.assignable — those present; admins and board members only when its tasks need their rights.
   const candidates = $derived(meeting.assignable.filter((p) => action === 'GENERAL' || p.manager));
@@ -61,8 +73,12 @@
     event.preventDefault();
     if (!ready) return;
     const resolution = {
-      title: title.trim(), text: text.trim() || null, majority: implied ? null : majority, action,
-      actionMemberId: actionNeedsMember(action) ? actionMemberId : null, actionOffice: action === 'ELECTION' && actionOffice ? actionOffice : null,
+      title: title.trim(),
+      text: text.trim() || null,
+      majority: implied ? null : majority,
+      action,
+      actionMemberId: actionNeedsMember(action) ? actionMemberId : null,
+      actionOffice: action === 'ELECTION' && actionOffice ? actionOffice : null,
       assigneeIds: assignees,
     };
     if (await add.attempt(() => meetingsApi.createResolution(meeting.id, resolution))) {
@@ -121,7 +137,7 @@
         <Select bind:value={majority} options={majorityOptions} />
       </Field>
     {/if}
-    <MemberChips bind:value={assignees} candidates={candidates} label="Verantwortlich für die Umsetzung" placeholder="Verantwortlich (leer = Vorstand)" />
+    <MemberChips bind:value={assignees} {candidates} label="Verantwortlich für die Umsetzung" placeholder="Verantwortlich (leer = Vorstand)" />
     <ErrorNote error={add.error} />
     <div><Button type="submit" busy={add.busy} disabled={!ready}>Antrag hinzufügen</Button></div>
   </form>

@@ -8,10 +8,29 @@ import { InviteForm, type MemberField } from './MemberForms.svelte';
 import type { Invitation, Membership, MembersApi } from './MembersApi';
 
 /** Columns of the member CSV; the export writes all, the import reads all but "Status". */
-const HEADER = ['Vorname', 'Nachname', 'E-Mail', 'Geburtsdatum', 'Telefon', 'Fotoeinwilligung', 'Rollen', 'Mitgliedschaft', 'Ehrenmitglied', 'Mitglied seit', 'Status'] as const;
+const HEADER = [
+  'Vorname',
+  'Nachname',
+  'E-Mail',
+  'Geburtsdatum',
+  'Telefon',
+  'Fotoeinwilligung',
+  'Rollen',
+  'Mitgliedschaft',
+  'Ehrenmitglied',
+  'Mitglied seit',
+  'Status',
+] as const;
 type Column = (typeof HEADER)[number];
 const REQUIRED: readonly Column[] = ['Vorname', 'Nachname', 'E-Mail'];
-const FIELD_COLUMNS: Readonly<Record<MemberField, Column>> = { email: 'E-Mail', firstName: 'Vorname', lastName: 'Nachname', birthDate: 'Geburtsdatum', phone: 'Telefon', roles: 'Rollen' };
+const FIELD_COLUMNS: Readonly<Record<MemberField, Column>> = {
+  email: 'E-Mail',
+  firstName: 'Vorname',
+  lastName: 'Nachname',
+  birthDate: 'Geburtsdatum',
+  phone: 'Telefon',
+  roles: 'Rollen',
+};
 
 /** One valid import line: the invitation, plus membership values the invitation cannot carry. */
 export interface ImportRow {
@@ -52,7 +71,8 @@ export function membersToCsv(members: readonly Member[], labels: MembershipLabel
       m.roles.map((r) => ROLE_LABELS[r]).join(', '),
       // an honorary member's former kind (one kind per member) goes into the column, so an import restores both
       (m.membershipTypes.some((t) => t !== HONORARY) ? m.membershipTypes.filter((t) => t !== HONORARY) : m.previousType ? [m.previousType] : [])
-        .map((t) => labels[t] ?? t).join(', '),
+        .map((t) => labels[t] ?? t)
+        .join(', '),
       yesNo(m.membershipTypes.includes(HONORARY)),
       m.memberSince ?? '',
       m.active ? 'Aktiv' : 'Inaktiv',
@@ -60,7 +80,7 @@ export function membersToCsv(members: readonly Member[], labels: MembershipLabel
       .map(cell)
       .join(';'),
   );
-  return `﻿${[HEADER.join(';'), ...lines].join('\r\n')}\r\n`;
+  return `\uFEFF${[HEADER.join(';'), ...lines].join('\r\n')}\r\n`;
 }
 
 /** RFC 4180 records with the given separator; quoted cells may hold separators, quotes and line breaks. */
@@ -72,16 +92,21 @@ export function parseCsv(text: string, separator: string): string[][] {
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
     if (quoted) {
-      if (c === '"' && text[i + 1] === '"') (value += '"'), i++;
-      else if (c === '"') quoted = false;
+      if (c === '"' && text[i + 1] === '"') {
+        value += '"';
+        i++;
+      } else if (c === '"') quoted = false;
       else value += c;
     } else if (c === '"') quoted = true;
-    else if (c === separator) record.push(value), (value = '');
-    else if (c === '\n' || c === '\r') {
+    else if (c === separator) {
+      record.push(value);
+      value = '';
+    } else if (c === '\n' || c === '\r') {
       if (c === '\r' && text[i + 1] === '\n') i++;
       record.push(value);
       records.push(record);
-      (record = []), (value = '');
+      record = [];
+      value = '';
     } else value += c;
   }
   if (value || record.length) records.push([...record, value]);
@@ -104,9 +129,15 @@ function byLabel<K extends string>(labels: Readonly<Record<K, string>>, value: s
  * Reads new accounts from a member CSV (the export format; column order free, "Status" ignored).
  * E-mails already in `existing` or earlier in the file, and roles the importer may not grant, are problems.
  */
-export function parseMemberImport(text: string, today: string, existing: ReadonlySet<string>, grantable: readonly Role[],
-  labels: MembershipLabels = SEEDED_LABELS, multipleKinds = false): ParsedImport {
-  const body = text.replace(/^﻿/, '');
+export function parseMemberImport(
+  text: string,
+  today: string,
+  existing: ReadonlySet<string>,
+  grantable: readonly Role[],
+  labels: MembershipLabels = SEEDED_LABELS,
+  multipleKinds = false,
+): ParsedImport {
+  const body = text.replace(/^\uFEFF/, '');
   const first = body.split(/\r?\n/, 1)[0];
   const records = parseCsv(body, first.split(';').length >= first.split(',').length ? ';' : ',');
   const header = (records.shift() ?? []).map((h) => h.trim());
@@ -139,7 +170,10 @@ export function parseMemberImport(text: string, today: string, existing: Readonl
     const memberSince = since ? isoDate(since) : null;
     if (since && !memberSince) return fail(`"Mitglied seit" "${since}" nicht lesbar.`);
 
-    const roleCells = get('Rollen').split(',').map((r) => r.trim()).filter(Boolean);
+    const roleCells = get('Rollen')
+      .split(',')
+      .map((r) => r.trim())
+      .filter(Boolean);
     const roles = roleCells.map((r) => byLabel(ROLE_LABELS, r));
     const badRole = roleCells.find((r, i) => !roles[i] || !grantable.includes(roles[i]));
     if (badRole) return fail(`Rolle "${badRole}" unbekannt oder nicht vergebbar.`);

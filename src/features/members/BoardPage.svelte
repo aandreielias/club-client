@@ -70,7 +70,10 @@
     {#each offices as o (o.id)}
       <li>
         <span class="function">{boardSettings.label(o.office)}</span>
-        <span><RecordLink kind="member" id={o.memberId} allowed={permissions.canSeeMember(o.memberId)}>{o.name}</RecordLink>{#if o.coopted} <Tag tone="orange">Kooptiert</Tag>{/if}</span>
+        <span
+          ><RecordLink kind="member" id={o.memberId} allowed={permissions.canSeeMember(o.memberId)}>{o.name}</RecordLink>{#if o.coopted}
+            <Tag tone="orange">Kooptiert</Tag>{/if}</span
+        >
         <span class="muted small">{session.format.date(o.startsOn)} bis {session.format.date(o.termEndsOn)}</span>
         {#if policy.canManageOffices()}
           <Button size="sm" variant="ghost" busy={model.endAction.busy} onclick={() => end(o)}>Beenden</Button>
@@ -87,12 +90,21 @@
     {#snippet children(board)}
       {#if board.warnings.length}
         <ul class="warnings">
-          {#each board.warnings as code (code)}<li class:danger={SIZE_WARNINGS.includes(code)}><Icon name="alert" small /> {boardWarning(code, boardSettings.value)}</li>{/each}
+          {#each board.warnings as code (code)}<li class:danger={SIZE_WARNINGS.includes(code)}>
+              <Icon name="alert" small />
+              {boardWarning(code, boardSettings.value)}
+            </li>{/each}
         </ul>
       {/if}
-      {@render list(board.offices.filter((o) => o.office !== 'AUDITOR'), 'Noch keine Funktionen eingetragen.')}
+      {@render list(
+        board.offices.filter((o) => o.office !== 'AUDITOR'),
+        'Noch keine Funktionen eingetragen.',
+      )}
       <h2>Rechnungsprüfung</h2>
-      {@render list(board.offices.filter((o) => o.office === 'AUDITOR'), 'Noch keine Rechnungsprüfer:innen eingetragen.')}
+      {@render list(
+        board.offices.filter((o) => o.office === 'AUDITOR'),
+        'Noch keine Rechnungsprüfer:innen eingetragen.',
+      )}
       <ErrorNote error={model.endAction.error} />
     {/snippet}
   </AsyncView>

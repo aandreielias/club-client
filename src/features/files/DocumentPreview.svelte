@@ -40,7 +40,10 @@
     const blob = content.value;
     if (!blob || kind !== 'docx') return;
     const background = getComputedStyle(document.documentElement).getPropertyValue('--color-surface');
-    filePreviews.renderDocx(blob, background).then((html) => (docxHtml = html), (error) => (docxError = error));
+    filePreviews.renderDocx(blob, background).then(
+      (html) => (docxHtml = html),
+      (error) => (docxError = error),
+    );
   });
 </script>
 

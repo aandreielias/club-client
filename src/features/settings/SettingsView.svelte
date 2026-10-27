@@ -24,9 +24,19 @@
   let { id, handle }: { id: string; handle?: WindowHandle } = $props();
 
   const COMPONENTS: Record<SectionId, Component> = {
-    appearance: AppearanceSection, home: HomeSettingsSection, sidebar: SidebarSection, shortcuts: ShortcutsSection, security: SecuritySection,
-    general: GeneralSection, club: ClubSection, 'meeting-types': MeetingTypesSection, membership: MembershipSection, offices: BoardSettingsSection,
-    'resolution-rules': ResolutionRulesSection, 'appointment-types': AppointmentTypesSection, audit: AuditSection,
+    appearance: AppearanceSection,
+    home: HomeSettingsSection,
+    sidebar: SidebarSection,
+    shortcuts: ShortcutsSection,
+    security: SecuritySection,
+    general: GeneralSection,
+    club: ClubSection,
+    'meeting-types': MeetingTypesSection,
+    membership: MembershipSection,
+    offices: BoardSettingsSection,
+    'resolution-rules': ResolutionRulesSection,
+    'appointment-types': AppointmentTypesSection,
+    audit: AuditSection,
   };
   const { groups, tabs } = visibleSettings((roles) => session.hasRole(...roles));
 
@@ -63,9 +73,16 @@
 </script>
 
 {#snippet tab(item: SettingsTab)}
-  <button id="settings-tab-{item.id}" role="tab" aria-selected={current === item.id} aria-controls="settings-panel"
-    tabindex={current === item.id ? 0 : -1} class:active={current === item.id} onclick={() => (current = item.id)}
-    {@attach tooltip(`Einstellungen für ${item.label} anzeigen`)}>
+  <button
+    id="settings-tab-{item.id}"
+    role="tab"
+    aria-selected={current === item.id}
+    aria-controls="settings-panel"
+    tabindex={current === item.id ? 0 : -1}
+    class:active={current === item.id}
+    onclick={() => (current = item.id)}
+    {@attach tooltip(`Einstellungen für ${item.label} anzeigen`)}
+  >
     {item.label}
   </button>
 {/snippet}
@@ -76,9 +93,16 @@
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <nav class="tabs" aria-label="Bereiche" onkeydown={keydown}>
       {#each groups as group (group.id)}
-        <button id="settings-group-{group.id}" class="group" aria-expanded={!collapsed[group.id]} onclick={() => (collapsed[group.id] = !collapsed[group.id])}
-          {@attach tooltip(`${group.label} ${collapsed[group.id] ? 'aufklappen' : 'zuklappen'}`)}>
-          <Icon name={group.icon} small /><span>{group.label}</span><span class="chevron" class:open={!collapsed[group.id]}><Icon name="next" small /></span>
+        <button
+          id="settings-group-{group.id}"
+          class="group"
+          aria-expanded={!collapsed[group.id]}
+          onclick={() => (collapsed[group.id] = !collapsed[group.id])}
+          {@attach tooltip(`${group.label} ${collapsed[group.id] ? 'aufklappen' : 'zuklappen'}`)}
+        >
+          <Icon name={group.icon} small /><span>{group.label}</span><span class="chevron" class:open={!collapsed[group.id]}
+            ><Icon name="next" small /></span
+          >
         </button>
         {#if !collapsed[group.id]}
           {#each group.subgroups as sub (sub.label)}

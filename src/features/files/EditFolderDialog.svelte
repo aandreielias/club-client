@@ -30,7 +30,10 @@
   // Teams already on the folder stay listed even if the member could not choose them (e.g. admin-made shared folders).
   // svelte-ignore state_referenced_locally
   const teamList = new TeamListModel(
-    async () => [...teams, ...folder.teamIds.filter((id) => !teams.some((t) => t.id === id)).map((id) => ({ id, name: directory.teamName(id) ?? 'Team', season: '' }))],
+    async () => [
+      ...teams,
+      ...folder.teamIds.filter((id) => !teams.some((t) => t.id === id)).map((id) => ({ id, name: directory.teamName(id) ?? 'Team', season: '' })),
+    ],
     session,
     null,
     'folder-teams',
@@ -58,8 +61,14 @@
     </Field>
 
     {#if form.canChangeScope}
-      <FolderVisibility bind:scope={form.scope} bind:teamIds={form.teamIds} {scopes} {teamList} error={form.error('team')}
-        hintSuffix=" Unterordner und Dateien folgen." />
+      <FolderVisibility
+        bind:scope={form.scope}
+        bind:teamIds={form.teamIds}
+        {scopes}
+        {teamList}
+        error={form.error('team')}
+        hintSuffix=" Unterordner und Dateien folgen."
+      />
     {:else}
       <p class="muted hint">Sichtbar für: {scopeLabel(folder.scope)}. Unterordner übernehmen die Sichtbarkeit vom obersten Ordner.</p>
     {/if}
@@ -69,11 +78,24 @@
     <fieldset class="group">
       <legend>Farbe</legend>
       <div class="swatches">
-        <button type="button" class="swatch none" class:chosen={form.color === null} onclick={() => (form.color = null)}
-          aria-pressed={form.color === null} {@attach tooltip('Keine Farbe')}><span class="visually-hidden">Keine Farbe</span></button>
+        <button
+          type="button"
+          class="swatch none"
+          class:chosen={form.color === null}
+          onclick={() => (form.color = null)}
+          aria-pressed={form.color === null}
+          {@attach tooltip('Keine Farbe')}><span class="visually-hidden">Keine Farbe</span></button
+        >
         {#each FOLDER_COLORS as color (color.value)}
-          <button type="button" class="swatch" class:chosen={form.color === color.value} style:--swatch="var(--color-tag-{color.hue}-text)"
-            onclick={() => (form.color = color.value)} aria-pressed={form.color === color.value} {@attach tooltip(color.label)}>
+          <button
+            type="button"
+            class="swatch"
+            class:chosen={form.color === color.value}
+            style:--swatch="var(--color-tag-{color.hue}-text)"
+            onclick={() => (form.color = color.value)}
+            aria-pressed={form.color === color.value}
+            {@attach tooltip(color.label)}
+          >
             <span class="visually-hidden">{color.label}</span>
           </button>
         {/each}
@@ -86,11 +108,23 @@
         {#snippet children(list)}
           {#if list.length}
             <div class="covers">
-              <button type="button" class="cover none" class:chosen={form.coverFileId === null} onclick={() => (form.coverFileId = null)}
-                aria-pressed={form.coverFileId === null} {@attach tooltip('Kein Titelbild')}>Keins</button>
+              <button
+                type="button"
+                class="cover none"
+                class:chosen={form.coverFileId === null}
+                onclick={() => (form.coverFileId = null)}
+                aria-pressed={form.coverFileId === null}
+                {@attach tooltip('Kein Titelbild')}>Keins</button
+              >
               {#each list as photo (photo.id)}
-                <button type="button" class="cover" class:chosen={form.coverFileId === photo.id} onclick={() => (form.coverFileId = photo.id)}
-                  aria-pressed={form.coverFileId === photo.id} {@attach tooltip(photo.name)}>
+                <button
+                  type="button"
+                  class="cover"
+                  class:chosen={form.coverFileId === photo.id}
+                  onclick={() => (form.coverFileId = photo.id)}
+                  aria-pressed={form.coverFileId === photo.id}
+                  {@attach tooltip(photo.name)}
+                >
                   <Thumbnail file={photo} />
                 </button>
               {/each}

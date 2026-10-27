@@ -103,4 +103,5 @@ export class MockActivity {
 export const activity = new MockActivity(directory);
 
 mockServer.on('GET', '/api/v1/activity', (req) =>
-  activity.feed(directory.actor(req), req.query.get('kind'), req.query.get('before'), Number(req.query.get('limit') ?? 50)));
+  activity.feed(directory.actor(req), req.query.get('kind'), req.query.get('before'), Number(req.query.get('limit') ?? 50)),
+);

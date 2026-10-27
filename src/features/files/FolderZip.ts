@@ -38,7 +38,9 @@ export class FolderZip {
   async build(entries: readonly ZipEntry[], onProgress: (done: number, total: number) => void = () => {}): Promise<Blob> {
     const total = entries.reduce((sum, e) => sum + e.file.sizeBytes, 0);
     if (total > this.maxBytes) {
-      throw new Error(`Zu groß für ein ZIP im Browser (höchstens ${Math.round(this.maxBytes / 1024 / 1024)} MB). Bitte Unterordner einzeln herunterladen.`);
+      throw new Error(
+        `Zu groß für ein ZIP im Browser (höchstens ${Math.round(this.maxBytes / 1024 / 1024)} MB). Bitte Unterordner einzeln herunterladen.`,
+      );
     }
     const { default: JSZip } = await import('jszip');
     const zip = new JSZip();

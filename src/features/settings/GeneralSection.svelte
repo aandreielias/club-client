@@ -29,8 +29,12 @@
 
 <div class="stack section">
   <Field label="Kalender öffnet mit">
-    <ChoiceGroup name="calendar-view-pref" label="Kalender öffnet mit" options={VIEWS}
-      bind:value={() => preferences.values.calendarView, (v) => v && preferences.set('calendarView', v)} />
+    <ChoiceGroup
+      name="calendar-view-pref"
+      label="Kalender öffnet mit"
+      options={VIEWS}
+      bind:value={() => preferences.values.calendarView, (v) => v && preferences.set('calendarView', v)}
+    />
   </Field>
 
   {#if mockMode}

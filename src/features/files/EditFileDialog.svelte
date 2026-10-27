@@ -30,7 +30,13 @@
   const targets = $derived(
     (tree.folders.value ?? [])
       .filter((f) => f.id === folder.id || (f.canManage && (image || f.kind === 'DOCUMENTS')))
-      .map((f) => ({ value: f.id, label: tree.path(f.id).map((p) => p.name).join(' / ') }))
+      .map((f) => ({
+        value: f.id,
+        label: tree
+          .path(f.id)
+          .map((p) => p.name)
+          .join(' / '),
+      }))
       .sort((a, b) => a.label.localeCompare(b.label, 'de')),
   );
 

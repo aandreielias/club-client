@@ -16,7 +16,14 @@ export class MockTransport implements Transport {
     // JSON round trip like the real wire: no shared references, no Svelte proxies in the tables.
     const wire = body === undefined || body instanceof FormData ? body : JSON.parse(JSON.stringify(body));
     const token = await this.token();
-    const result = await this.server.handle(method, path, wire, DevAuthProvider.emailFromToken(token), undefined, DevAuthProvider.totpAtFromToken(token));
+    const result = await this.server.handle(
+      method,
+      path,
+      wire,
+      DevAuthProvider.emailFromToken(token),
+      undefined,
+      DevAuthProvider.totpAtFromToken(token),
+    );
     return result === undefined ? undefined : structuredClone(result);
   }
 

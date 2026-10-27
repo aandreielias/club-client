@@ -40,12 +40,22 @@
                   <span class="muted hint">{kind.hint}</span>
                 </th>
                 <td>
-                  <input type="checkbox" aria-label="{kind.label}: Push" checked={preference.push}
-                    disabled={isImportant(kind.value)} onchange={(e) => model.set(kind.value, 'push', e.currentTarget.checked)} />
+                  <input
+                    type="checkbox"
+                    aria-label="{kind.label}: Push"
+                    checked={preference.push}
+                    disabled={isImportant(kind.value)}
+                    onchange={(e) => model.set(kind.value, 'push', e.currentTarget.checked)}
+                  />
                 </td>
                 <td>
-                  <input type="checkbox" aria-label="{kind.label}: E-Mail" checked={preference.email}
-                    disabled={isImportant(kind.value)} onchange={(e) => model.set(kind.value, 'email', e.currentTarget.checked)} />
+                  <input
+                    type="checkbox"
+                    aria-label="{kind.label}: E-Mail"
+                    checked={preference.email}
+                    disabled={isImportant(kind.value)}
+                    onchange={(e) => model.set(kind.value, 'email', e.currentTarget.checked)}
+                  />
                 </td>
               </tr>
             {/if}

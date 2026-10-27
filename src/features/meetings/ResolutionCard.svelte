@@ -43,14 +43,38 @@
     if (await bus.request(CONFIRM, { title, message, confirmLabel })) await write(request, success);
   }
 
-  const open = () => confirmThen('Abstimmung öffnen', r.meetingId ? 'Stimmberechtigte in der App können jetzt abstimmen.'
-    : 'Der Antrag geht per E-Mail und App an den ganzen Vorstand.', 'Öffnen', () => meetingsApi.openResolution(r.id), 'Abstimmung geöffnet.');
-  const close = () => confirmThen('Abstimmung schließen', `${r.ballots} von ${r.voters} haben in der App abgestimmt.${r.analogPresent && !r.analogEntered ? ' Die Stimmen im Raum sind noch nicht erfasst.' : ''}`,
-    'Schließen', () => meetingsApi.closeResolution(r.id), 'Abstimmung geschlossen.');
-  const vote = (choice: Choice) => confirmThen('Stimme abgeben', `Deine Stimme: ${CHOICE_LABELS[choice]}. Sie ist geheim und lässt sich nicht ändern.`,
-    'Abstimmen', () => meetingsApi.vote(r.id, choice), 'Stimme abgegeben.');
-  const enterRoom = () => confirmThen('Stimmen im Raum erfassen', `Ja ${roomYes}, Nein ${roomNo}, Enthaltung ${roomAbstain}. Das lässt sich nur einmal eintragen.`,
-    'Erfassen', () => meetingsApi.analogVotes(r.id, roomYes, roomNo, roomAbstain), 'Stimmen im Raum erfasst.');
+  const open = () =>
+    confirmThen(
+      'Abstimmung öffnen',
+      r.meetingId ? 'Stimmberechtigte in der App können jetzt abstimmen.' : 'Der Antrag geht per E-Mail und App an den ganzen Vorstand.',
+      'Öffnen',
+      () => meetingsApi.openResolution(r.id),
+      'Abstimmung geöffnet.',
+    );
+  const close = () =>
+    confirmThen(
+      'Abstimmung schließen',
+      `${r.ballots} von ${r.voters} haben in der App abgestimmt.${r.analogPresent && !r.analogEntered ? ' Die Stimmen im Raum sind noch nicht erfasst.' : ''}`,
+      'Schließen',
+      () => meetingsApi.closeResolution(r.id),
+      'Abstimmung geschlossen.',
+    );
+  const vote = (choice: Choice) =>
+    confirmThen(
+      'Stimme abgeben',
+      `Deine Stimme: ${CHOICE_LABELS[choice]}. Sie ist geheim und lässt sich nicht ändern.`,
+      'Abstimmen',
+      () => meetingsApi.vote(r.id, choice),
+      'Stimme abgegeben.',
+    );
+  const enterRoom = () =>
+    confirmThen(
+      'Stimmen im Raum erfassen',
+      `Ja ${roomYes}, Nein ${roomNo}, Enthaltung ${roomAbstain}. Das lässt sich nur einmal eintragen.`,
+      'Erfassen',
+      () => meetingsApi.analogVotes(r.id, roomYes, roomNo, roomAbstain),
+      'Stimmen im Raum erfasst.',
+    );
 
   async function recordWritten() {
     if (!writtenBy || !writtenChoice) return;
@@ -92,16 +116,26 @@
     <strong>{r.title}</strong>
     <span class="tags">
       <Tag>{MAJORITY_LABELS[r.majority]}</Tag>
-      {#if r.result}<Tag tone={RESULT_TONES[r.result]}>{RESULT_LABELS[r.result]}</Tag>{:else if r.status === 'OPEN'}<Tag tone="green">Offen</Tag>{:else}<Tag tone="gray">Entwurf</Tag>{/if}
+      {#if r.result}<Tag tone={RESULT_TONES[r.result]}>{RESULT_LABELS[r.result]}</Tag>{:else if r.status === 'OPEN'}<Tag tone="green">Offen</Tag
+        >{:else}<Tag tone="gray">Entwurf</Tag>{/if}
     </span>
   </header>
   {#if r.text}<p class="text">{r.text}</p>{/if}
   {#if r.action !== 'GENERAL'}
-    <p class="small">{resolutionRules.label(r.action)}{#if r.actionMember}: {r.actionMember.name}{/if}{#if r.actionOffice} als {boardSettings.label(r.actionOffice)}{/if}</p>
+    <p class="small">
+      {resolutionRules.label(r.action)}{#if r.actionMember}: {r.actionMember.name}{/if}{#if r.actionOffice}
+        als {boardSettings.label(r.actionOffice)}{/if}
+    </p>
   {/if}
   {#if r.canManage && r.status !== 'CLOSED'}
-    <MemberChips value={r.assignees.map((a) => a.memberId)} candidates={r.assignable} known={r.assignees} label="Verantwortlich für die Umsetzung"
-      placeholder="Verantwortlich (leer = Vorstand)" onchange={setAssignees} />
+    <MemberChips
+      value={r.assignees.map((a) => a.memberId)}
+      candidates={r.assignable}
+      known={r.assignees}
+      label="Verantwortlich für die Umsetzung"
+      placeholder="Verantwortlich (leer = Vorstand)"
+      onchange={setAssignees}
+    />
   {:else if r.assignees.length}
     <p class="muted small">Verantwortlich: {r.assignees.map((a) => a.name).join(', ')}</p>
   {/if}
@@ -122,10 +156,14 @@
   {/if}
 
   {#if r.status === 'OPEN'}
-    <p class="muted small">{r.ballots} von {r.voters} abgestimmt{r.analogPresent ? ` · ${r.analogPresent} ohne App${r.analogEntered ? ' (erfasst)' : ''}` : ''}</p>
+    <p class="muted small">
+      {r.ballots} von {r.voters} abgestimmt{r.analogPresent ? ` · ${r.analogPresent} ohne App${r.analogEntered ? ' (erfasst)' : ''}` : ''}
+    </p>
     {#if r.canVote}
       <div class="row">
-        {#each choices as c (c.value)}<Button busy={action.busy} tooltip="Geheim mit „{c.label}“ abstimmen" onclick={() => vote(c.value)}>{c.label}</Button>{/each}
+        {#each choices as c (c.value)}<Button busy={action.busy} tooltip="Geheim mit „{c.label}“ abstimmen" onclick={() => vote(c.value)}
+            >{c.label}</Button
+          >{/each}
       </div>
     {:else if r.voted}
       <p class="small">Du hast abgestimmt.</p>
@@ -138,7 +176,13 @@
   {/if}
 
   {#if r.canManage && r.status === 'OPEN' && !r.meetingId && r.pending.length}
-    <form class="inline" onsubmit={(e) => { e.preventDefault(); void recordWritten(); }}>
+    <form
+      class="inline"
+      onsubmit={(e) => {
+        e.preventDefault();
+        void recordWritten();
+      }}
+    >
       <Field label="Schriftliche Stimme von">
         <Select bind:value={writtenBy} placeholder="Bitte wählen" options={r.pending.map((p) => ({ value: p.memberId, label: p.name }))} />
       </Field>
@@ -148,7 +192,13 @@
   {/if}
 
   {#if r.canManage && r.status === 'OPEN' && r.meetingId && r.analogPresent && !r.analogEntered}
-    <form class="inline" onsubmit={(e) => { e.preventDefault(); void enterRoom(); }}>
+    <form
+      class="inline"
+      onsubmit={(e) => {
+        e.preventDefault();
+        void enterRoom();
+      }}
+    >
       <Field label="Im Raum: Ja"><input type="number" min="0" bind:value={roomYes} /></Field>
       <Field label="Nein"><input type="number" min="0" bind:value={roomNo} /></Field>
       <Field label="Enthaltung"><input type="number" min="0" bind:value={roomAbstain} /></Field>
@@ -162,8 +212,13 @@
   {/if}
 
   {#if r.links.length || r.canManage}
-    <LinkList links={r.links} canEdit={r.canManage} busy={action.busy} self={{ kind: 'resolution', id: r.id }}
-      save={(refs) => action.run(() => meetingsApi.setResolutionLinks(r.id, refs).then(onchanged))} />
+    <LinkList
+      links={r.links}
+      canEdit={r.canManage}
+      busy={action.busy}
+      self={{ kind: 'resolution', id: r.id }}
+      save={(refs) => action.run(() => meetingsApi.setResolutionLinks(r.id, refs).then(onchanged))}
+    />
   {/if}
 
   {#if r.canManage && r.status !== 'CLOSED'}

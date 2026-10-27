@@ -21,7 +21,11 @@
 
   // svelte-ignore state_referenced_locally
   const create = new CreateController(bus, handle, 'Neue Sitzung');
-  const form = new MeetingForm(session.clock, `${session.clock.today()}T19:00`, meetingTypes.items.map((t) => t.label));
+  const form = new MeetingForm(
+    session.clock,
+    `${session.clock.today()}T19:00`,
+    meetingTypes.items.map((t) => t.label),
+  );
   const kinds = new Resource(async () => {
     const [offices, types] = await Promise.all([
       membersApi.board().then((b) => b.offices.filter((o) => o.memberId === session.member.id).map((o) => o.office)),

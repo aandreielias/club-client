@@ -91,7 +91,18 @@ export class MockInventory {
       let place = name ? locations.list().find((l) => l.name.toLowerCase() === name.toLowerCase()) : undefined;
       if (name && !place) {
         const now = new Date().toISOString();
-        const stored = { id: crypto.randomUUID(), name, street: null, zip: null, city: null, note: null, lat: null, lng: null, createdAt: now, updatedAt: now };
+        const stored = {
+          id: crypto.randomUUID(),
+          name,
+          street: null,
+          zip: null,
+          city: null,
+          note: null,
+          lat: null,
+          lng: null,
+          createdAt: now,
+          updatedAt: now,
+        };
         locations.locations.data.push(stored);
         place = MockLocations.dto(stored);
       }
@@ -225,8 +236,15 @@ export class MockInventory {
 
   private static seed(): StoredItem[] {
     const at = new Date(Date.now() - 20 * 86_400_000).toISOString();
-    const item = (id: string, name: string, category: string, quantity: number, description: string | null = null): StoredItem =>
-      ({ id, name, category, quantity, description, createdAt: at, updatedAt: at });
+    const item = (id: string, name: string, category: string, quantity: number, description: string | null = null): StoredItem => ({
+      id,
+      name,
+      category,
+      quantity,
+      description,
+      createdAt: at,
+      updatedAt: at,
+    });
     return [
       item('i-balls', 'Volleybälle Mikasa V200W', 'Bälle', 24),
       item('i-training-balls', 'Trainingsbälle', 'Bälle', 30),
@@ -259,7 +277,9 @@ export class MockInventory {
 export const inventory = new MockInventory(directory);
 
 linkRefs.items = (ids) =>
-  new Map(inventory.items.data.filter((i) => ids.includes(i.id)).map((i) => [i.id, { name: i.name, quantity: i.quantity, places: inventory.places(i.id) }]));
+  new Map(
+    inventory.items.data.filter((i) => ids.includes(i.id)).map((i) => [i.id, { name: i.name, quantity: i.quantity, places: inventory.places(i.id) }]),
+  );
 
 const actor = (req: MockRequest) => directory.actor(req);
 /** server: InventoryHandlers.requireMaySee - only admin, board and coaches see the inventory. */

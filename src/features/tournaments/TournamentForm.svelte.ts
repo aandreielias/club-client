@@ -54,7 +54,10 @@ export class TournamentForm extends FormState<Partial<Record<TournamentField, st
 
   /** Team names typed while creating, in order, without empty lines. */
   get teamNames(): string[] {
-    return this.teamsText.split('\n').map((line) => line.trim()).filter(Boolean);
+    return this.teamsText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
   }
 
   /** Teams so far, so the groups offered fit them: the entered lines, or the tournament's teams when editing. */

@@ -9,8 +9,11 @@
   import { notificationCenter as center } from './services';
 
   /** Notifications as a list: opening marks read and follows the link. Used by the inbox and the start page. */
-  let { list, toolbar = true, emptyText = 'Noch keine Benachrichtigungen.' }: { list: NotificationListModel; toolbar?: boolean; emptyText?: string } =
-    $props();
+  let {
+    list,
+    toolbar = true,
+    emptyText = 'Noch keine Benachrichtigungen.',
+  }: { list: NotificationListModel; toolbar?: boolean; emptyText?: string } = $props();
 
   async function open(notification: Notification) {
     await center.markRead(notification);
@@ -22,11 +25,17 @@
   }
 </script>
 
-<DataTable model={list} rowKey={(n) => n.id} onopen={open} {toolbar} {emptyText}
+<DataTable
+  model={list}
+  rowKey={(n) => n.id}
+  onopen={open}
+  {toolbar}
+  {emptyText}
   menu={(n) => [
     { label: 'Öffnen', run: () => void open(n) },
     { label: 'Als gelesen markieren', disabled: n.readAt !== null, run: () => void center.markRead(n) },
-  ]}>
+  ]}
+>
   {#snippet cell(notification, column)}
     {#if column.key === 'title'}
       <span class:unread={!notification.readAt}>{notification.title}</span>

@@ -42,9 +42,7 @@ export const meetingsFeature: Feature = {
     const stops = [meetingTypes.start(), resolutionRules.start()];
     return () => stops.forEach((stop) => stop());
   },
-  home: [
-    { id: 'meetings', label: 'Sitzungen', component: MeetingsHome },
-  ],
+  home: [{ id: 'meetings', label: 'Sitzungen', component: MeetingsHome }],
   messages: MEETING_MESSAGES,
   links: [
     { server: '/meetings/:id', to: ({ id }) => ({ window: { kind: 'meeting', id } }) },

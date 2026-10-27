@@ -10,9 +10,8 @@
 <Centered title="Willkommen" subtitle="Einrichten des Vereins">
   <div class="stack">
     <p class="muted">
-      Zuerst Name und Daten des Vereins eintragen. Mit dem Speichern geht die App auf. Danach in den Einstellungen prüfen, ob die
-      Vorgaben zum Verein passen: Sitzungsarten, Funktionen, Mitgliedschaft, Beschlüsse und Termine. Den Vereins-PIN unter Sicherheit
-      festlegen.
+      Zuerst Name und Daten des Vereins eintragen. Mit dem Speichern geht die App auf. Danach in den Einstellungen prüfen, ob die Vorgaben zum Verein
+      passen: Sitzungsarten, Funktionen, Mitgliedschaft, Beschlüsse und Termine. Den Vereins-PIN unter Sicherheit festlegen.
     </p>
     <ClubSection />
     <div><Button variant="ghost" onclick={onlogout}>Abmelden</Button></div>

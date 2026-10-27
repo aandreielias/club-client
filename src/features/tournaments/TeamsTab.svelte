@@ -26,7 +26,10 @@
   let shown = tournament.teams; // the teams the lines were last reset to
   let next = 0;
   let inviting = $state(false);
-  const clubTeams = $derived([{ value: '', label: 'Gastteam' }, ...permissions.filterableTeams().map((t) => ({ value: t.id, label: `Eigenes Team: ${t.name}` }))]);
+  const clubTeams = $derived([
+    { value: '', label: 'Gastteam' },
+    ...permissions.filterableTeams().map((t) => ({ value: t.id, label: `Eigenes Team: ${t.name}` })),
+  ]);
   const dirty = $derived(keyOf(lines) !== keyOf(tournament.teams));
 
   function add() {
@@ -120,7 +123,9 @@
     Gastzugänge
     {#if policy.canInviteGuests()}<Button size="sm" variant="ghost" icon="add" onclick={() => (inviting = true)}>Gastzugang anlegen</Button>{/if}
   </h2>
-  <p class="muted small">Gastteams sehen damit nur dieses Turnier: Tabellen, Spielplan und KO-Runde. Die Zugänge werden einen Monat nach dem Turnier gelöscht.</p>
+  <p class="muted small">
+    Gastteams sehen damit nur dieses Turnier: Tabellen, Spielplan und KO-Runde. Die Zugänge werden einen Monat nach dem Turnier gelöscht.
+  </p>
   {#if tournament.guests.length}
     <ul class="teams">
       {#each tournament.guests as guest (guest.memberId)}

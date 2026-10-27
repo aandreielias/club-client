@@ -17,13 +17,16 @@
     categories = [],
     oncancel,
     onsubmit,
-  }: { form: ItemForm; action: Action; submitLabel: string; categories?: readonly string[]; oncancel: () => void; onsubmit: () => void } =
-    $props();
+  }: { form: ItemForm; action: Action; submitLabel: string; categories?: readonly string[]; oncancel: () => void; onsubmit: () => void } = $props();
 
   const limits = settings.inventory;
   let places = $state<Location[]>([]);
   // svelte-ignore state_referenced_locally
-  if (!form.original) locationsApi.list().then((list) => (places = list), () => {});
+  if (!form.original)
+    locationsApi.list().then(
+      (list) => (places = list),
+      () => {},
+    );
   const placeOptions = $derived([{ value: '', label: 'Ohne Ort' }, ...places.map((l) => ({ value: l.id, label: l.name }))]);
 
   function submit(event: SubmitEvent) {

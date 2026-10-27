@@ -23,7 +23,11 @@ export class TeamListModel extends ListModel<Team> {
             label: 'Saison',
             kind: 'select',
             allLabel: 'Alle Saisonen',
-            options: (items) => [...new Set(items.map((t) => t.season))].sort().reverse().map((s) => ({ value: s, label: s })),
+            options: (items) =>
+              [...new Set(items.map((t) => t.season))]
+                .sort()
+                .reverse()
+                .map((s) => ({ value: s, label: s })),
             test: (t, value) => t.season === value,
           },
           { key: 'mine', label: 'Nur meine', kind: 'toggle', test: (t, on) => !on || session.isInTeam(t.id) },

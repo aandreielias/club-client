@@ -18,7 +18,17 @@ describe('LocationForm', () => {
 
   it('clears a removed pin and empty texts on edit', () => {
     const form = LocationForm.edit({
-      id: 'l', name: 'Halle', street: 'Weg 1', zip: null, city: null, address: 'Weg 1', note: 'Hinten', lat: 1, lng: 2, createdAt: '', updatedAt: '',
+      id: 'l',
+      name: 'Halle',
+      street: 'Weg 1',
+      zip: null,
+      city: null,
+      address: 'Weg 1',
+      note: 'Hinten',
+      lat: 1,
+      lng: 2,
+      createdAt: '',
+      updatedAt: '',
     });
     form.note = '';
     form.clearPin();

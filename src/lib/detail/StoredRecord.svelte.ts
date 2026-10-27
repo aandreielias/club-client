@@ -40,11 +40,17 @@ export class StoredRecord<T> {
 
   /** Asks, deletes through `remove` with `action`, reloads; the view then closes. */
   remove(label: string, title: string, success: string, action: Action, remove: () => Promise<unknown>): Promise<boolean> {
-    return this.view.confirm({ title, message: label, confirmLabel: 'Löschen', danger: true },
-      () => this.view.attempt(action, () => action.run(async () => {
-        this.#removed = true;
-        await remove();
-        await this.store.load();
-      })), success);
+    return this.view.confirm(
+      { title, message: label, confirmLabel: 'Löschen', danger: true },
+      () =>
+        this.view.attempt(action, () =>
+          action.run(async () => {
+            this.#removed = true;
+            await remove();
+            await this.store.load();
+          }),
+        ),
+      success,
+    );
   }
 }

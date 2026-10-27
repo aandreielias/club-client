@@ -13,7 +13,11 @@
   let secret = $state('');
 
   const title = $derived(
-    stepUp.mode === 'pin' ? 'Mit Vereins-PIN bestätigen' : stepUp.mode === 'enroll' ? 'Authenticator-App einrichten' : 'Mit Authenticator-App bestätigen',
+    stepUp.mode === 'pin'
+      ? 'Mit Vereins-PIN bestätigen'
+      : stepUp.mode === 'enroll'
+        ? 'Authenticator-App einrichten'
+        : 'Mit Authenticator-App bestätigen',
   );
 
   async function submit(event: SubmitEvent) {
@@ -37,8 +41,8 @@
     {:else}
       {#if stepUp.mode === 'enroll' && stepUp.enrollment}
         <p>
-          Admin und Vorstand bestätigen Änderungen mit einem Code aus einer Authenticator-App (z. B. Google Authenticator, Microsoft
-          Authenticator, 2FAS). Scanne den QR-Code mit der App und gib dann den angezeigten Code ein.
+          Admin und Vorstand bestätigen Änderungen mit einem Code aus einer Authenticator-App (z. B. Google Authenticator, Microsoft Authenticator,
+          2FAS). Scanne den QR-Code mit der App und gib dann den angezeigten Code ein.
         </p>
         {#if stepUp.enrollment.qrCode}
           <img class="qr" src={'data:image/svg+xml;utf-8,' + encodeURIComponent(stepUp.enrollment.qrCode)} alt="QR-Code für die Authenticator-App" />

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { directory, MockDirectory } from '../../lib/mock/core';
+import { directory } from '../../lib/mock/core';
 import type { Member } from '../../lib/types';
 import { notifications } from '../notifications/mock';
 import { tasks } from '../tasks/mock';
@@ -15,11 +15,16 @@ describe('mock change requests', () => {
   it('turns a request into a task for admin and board and finishes it on approval', () => {
     const request = changeRequests.request(member('spielerin'), { field: 'EMAIL', value: ' Lena@Neu.AT ', note: 'Neue Adresse' });
     expect(request).toMatchObject({ newValue: 'lena@neu.at', currentValue: 'spielerin@example.at', status: 'OPEN' });
-    expect(() => changeRequests.request(member('spielerin'), { field: 'EMAIL', value: 'x@neu.at' }))
-      .toThrow(expect.objectContaining({ code: 'change-request.open-exists' }));
+    expect(() => changeRequests.request(member('spielerin'), { field: 'EMAIL', value: 'x@neu.at' })).toThrow(
+      expect.objectContaining({ code: 'change-request.open-exists' }),
+    );
 
     const task = taskFor(request.id);
-    expect(task).toMatchObject({ title: 'Kontoänderung: Lena Spielerin – E-Mail', source: { kind: 'CHANGE_REQUEST', id: request.id }, status: 'OPEN' });
+    expect(task).toMatchObject({
+      title: 'Kontoänderung: Lena Spielerin – E-Mail',
+      source: { kind: 'CHANGE_REQUEST', id: request.id },
+      status: 'OPEN',
+    });
     expect(task.assignees.sort()).toEqual(['admin', 'beisitz', 'beisitz2', 'kassier', 'schrift', 'vorstand']); // admin and the board
     expect(() => tasks.get(member('spielerin'), task.id)).toThrow(expect.objectContaining({ status: 404 }));
 
@@ -33,10 +38,12 @@ describe('mock change requests', () => {
   });
 
   it('validates the value up front and leaves the member unchanged on rejection', () => {
-    expect(() => changeRequests.request(member('neu'), { field: 'BIRTH_DATE', value: '3000-01-01' }))
-      .toThrow(expect.objectContaining({ code: 'member.birth-date-in-future' }));
-    expect(() => changeRequests.request(member('neu'), { field: 'EMAIL', value: 'admin@example.at' }))
-      .toThrow(expect.objectContaining({ code: 'member.email-taken' }));
+    expect(() => changeRequests.request(member('neu'), { field: 'BIRTH_DATE', value: '3000-01-01' })).toThrow(
+      expect.objectContaining({ code: 'member.birth-date-in-future' }),
+    );
+    expect(() => changeRequests.request(member('neu'), { field: 'EMAIL', value: 'admin@example.at' })).toThrow(
+      expect.objectContaining({ code: 'member.email-taken' }),
+    );
     const request = changeRequests.request(member('neu'), { field: 'LAST_NAME', value: 'Neumann' });
     directory.confirm(member('admin'));
     changeRequests.decide(member('admin'), request.id, false);

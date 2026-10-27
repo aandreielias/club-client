@@ -37,24 +37,27 @@ export class CalendarExport {
   }
 
   ics(appointments: readonly Appointment[], clubName: string, now: Date = new Date()): string {
-    const events = appointments.map(
-      (a): IcsEvent => ({
-        uid: `${a.id}@club-calendar`,
-        start: a.startsAt,
-        end: a.endsAt,
-        summary: a.title,
-        description: a.description,
-        location: a.location,
-        categories: [this.typeLabel(a.type)],
-        cancelled: a.cancelled,
-      }),
-    );
+    const events = appointments.map((a): IcsEvent => ({
+      uid: `${a.id}@club-calendar`,
+      start: a.startsAt,
+      end: a.endsAt,
+      summary: a.title,
+      description: a.description,
+      location: a.location,
+      categories: [this.typeLabel(a.type)],
+      cancelled: a.cancelled,
+    }));
     return new IcsWriter('-//club-client//Kalender//DE', `${clubName} – Termine`).write(events, now);
   }
 
   /** File name like "soli-deo-gloria-termine.ics". */
   static fileName(clubName: string): string {
-    const slug = clubName.toLocaleLowerCase('de').normalize('NFKD').replace(/[^\w\s-]/g, '').trim().replace(/[\s_]+/g, '-');
+    const slug = clubName
+      .toLocaleLowerCase('de')
+      .normalize('NFKD')
+      .replace(/[^\w\s-]/g, '')
+      .trim()
+      .replace(/[\s_]+/g, '-');
     return `${slug || 'verein'}-termine.ics`;
   }
 }

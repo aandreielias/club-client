@@ -13,11 +13,7 @@
   import { FOLDER_KINDS, FOLDER_SCOPES, type Folder } from './model';
   import { filePolicy, filesApi } from './services';
 
-  let {
-    parent,
-    oncreated,
-    onclose,
-  }: { parent: Folder | null; oncreated: (folder: Folder) => void; onclose: () => void } = $props();
+  let { parent, oncreated, onclose }: { parent: Folder | null; oncreated: (folder: Folder) => void; onclose: () => void } = $props();
 
   const scopes = FOLDER_SCOPES.filter((s) => filePolicy.rootScopes().includes(s.value));
   const teams = filePolicy.rootTeams();

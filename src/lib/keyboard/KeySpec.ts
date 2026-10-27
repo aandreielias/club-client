@@ -109,7 +109,12 @@ export class KeySpec {
     const parts = combo.split('+').filter(Boolean);
     if (!parts.length) return '';
     const key = parts[parts.length - 1];
-    const mods = new Set(parts.slice(0, -1).map((m) => KeySpec.modifier(m)).filter((m): m is (typeof MODIFIER_ORDER)[number] => !!m));
+    const mods = new Set(
+      parts
+        .slice(0, -1)
+        .map((m) => KeySpec.modifier(m))
+        .filter((m): m is (typeof MODIFIER_ORDER)[number] => !!m),
+    );
     const keyName = key.length === 1 ? key.toUpperCase() : KeySpec.namedKey(key);
     if (!keyName) return '';
     return [...MODIFIER_ORDER.filter((m) => mods.has(m)), keyName].join('+');

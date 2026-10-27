@@ -74,7 +74,12 @@ export class CalendarDrag {
   }
 
   /** Moves the dropped entry to `target(entry)`, confirms it and reloads the calendar. */
-  async drop(event: DragEvent, entries: readonly CalendarEntry[], target: (entry: CalendarEntry) => { start: string; end: string | null }, reload: () => void): Promise<void> {
+  async drop(
+    event: DragEvent,
+    entries: readonly CalendarEntry[],
+    target: (entry: CalendarEntry) => { start: string; end: string | null },
+    reload: () => void,
+  ): Promise<void> {
     event.preventDefault();
     const entry = entries.find((e) => e.key === event.dataTransfer?.getData(CalendarDrag.TYPE));
     if (!entry) return;
@@ -130,7 +135,9 @@ export class CalendarDrag {
     const last = this.clock.localDate(new Date(Date.parse(entry.end) - 1));
     if (edge === 'end') {
       const day = spot.day < first ? first : spot.day;
-      const end = entry.allDay ? this.clock.startOfDay(ZonedClock.addDays(day, 1)) : this.clock.toInstant(`${day}T${this.clock.toLocal(entry.end).slice(11)}`);
+      const end = entry.allDay
+        ? this.clock.startOfDay(ZonedClock.addDays(day, 1))
+        : this.clock.toInstant(`${day}T${this.clock.toLocal(entry.end).slice(11)}`);
       if (Date.parse(end) <= Date.parse(entry.start)) return null;
       return end === entry.end ? null : { start: entry.start, end };
     }

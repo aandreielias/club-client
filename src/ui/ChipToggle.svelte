@@ -31,8 +31,15 @@
 <div class="chips" role="toolbar" aria-label={label} tabindex="-1" onkeydown={keydown}>
   {#each options as option (option.value)}
     {@const on = value.includes(option.value)}
-    <button type="button" class="chip" class:on aria-pressed={on} disabled={option.disabled} onclick={() => toggle(option.value)}
-      {@attach tooltip(`${option.label} ${on ? 'abwählen' : 'wählen'}`)}>
+    <button
+      type="button"
+      class="chip"
+      class:on
+      aria-pressed={on}
+      disabled={option.disabled}
+      onclick={() => toggle(option.value)}
+      {@attach tooltip(`${option.label} ${on ? 'abwählen' : 'wählen'}`)}
+    >
       {option.label}
     </button>
   {/each}

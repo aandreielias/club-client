@@ -26,7 +26,10 @@ export class FolderForm extends FormState<FolderFormErrors> {
   teamIds = $state<string[]>([]);
   membersCanUpload = $state(false);
 
-  constructor(readonly parent: Folder | null, defaults: { scope: FolderScope; teamIds: string[] }) {
+  constructor(
+    readonly parent: Folder | null,
+    defaults: { scope: FolderScope; teamIds: string[] },
+  ) {
     super();
     if (parent) this.kind = parent.kind;
     this.scope = defaults.scope;

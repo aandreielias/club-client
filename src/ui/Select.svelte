@@ -45,7 +45,12 @@
   let list: HTMLUListElement | undefined = $state();
   let typed = '';
   let typedTimer: ReturnType<typeof setTimeout> | undefined;
-  const popover = new AnchoredList(() => trigger, () => list, () => hide(false), 'min');
+  const popover = new AnchoredList(
+    () => trigger,
+    () => list,
+    () => hide(false),
+    'min',
+  );
 
   const selectedIndex = $derived(options.findIndex((o) => o.value === value));
   const selected = $derived(selectedIndex >= 0 ? options[selectedIndex] : undefined);

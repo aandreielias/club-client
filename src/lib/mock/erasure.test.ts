@@ -29,6 +29,10 @@ describe('mock GDPR erasure', () => {
     expect(calendar.rides.data.some((r) => r.driverId === player.id || r.passengers.includes(player.id))).toBe(false);
     expect(tasks.tasks.data.some((t) => t.id === requestTask!.id || t.assignees.includes(player.id))).toBe(false);
     expect(notifications.inbox.data[player.id]).toBeUndefined();
-    expect(Object.values(notifications.inbox.data).flat().some((n) => n.link === `/tasks/${requestTask!.id}`)).toBe(false);
+    expect(
+      Object.values(notifications.inbox.data)
+        .flat()
+        .some((n) => n.link === `/tasks/${requestTask!.id}`),
+    ).toBe(false);
   });
 });

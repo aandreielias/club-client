@@ -53,7 +53,12 @@
   /** The focused day in the calendar; its month is shown. */
   let active = $state('');
   let years = $state(false);
-  const popover = new AnchoredList(() => wrapper, () => panel, () => hide(false), 'own');
+  const popover = new AnchoredList(
+    () => wrapper,
+    () => panel,
+    () => hide(false),
+    'own',
+  );
 
   const today = $derived(session.clock.today());
   const grid = $derived(active ? DateText.monthGrid(active) : []);
@@ -203,7 +208,17 @@
     onblur={blurred}
     onkeydown={inputKey}
   />
-  <button type="button" class="open" {disabled} aria-label="Kalender öffnen" aria-haspopup="dialog" aria-expanded={popover.open} aria-controls={panelId} {@attach tooltip('Kalender öffnen (Alt+↓)')} onclick={() => (popover.open ? hide() : void show())}>
+  <button
+    type="button"
+    class="open"
+    {disabled}
+    aria-label="Kalender öffnen"
+    aria-haspopup="dialog"
+    aria-expanded={popover.open}
+    aria-controls={panelId}
+    {@attach tooltip('Kalender öffnen (Alt+↓)')}
+    onclick={() => (popover.open ? hide() : void show())}
+  >
     <Icon name="calendar" small />
   </button>
 </span>
@@ -211,13 +226,31 @@
 <div bind:this={panel} id={panelId} class="panel" popover="manual" role="dialog" aria-label="Datum wählen" tabindex="-1" onkeydown={panelKey}>
   {#if popover.open && active}
     <div class="head">
-      <button type="button" class="nav" aria-label={years ? 'Frühere Jahre' : 'Voriger Monat'} {@attach tooltip(() => (years ? 'Frühere Jahre' : 'Voriger Monat (Bild ↑)'))} onclick={() => (years ? (active = DateText.addMonths(active, -144)) : move(DateText.addMonths(active, -1)))}>
+      <button
+        type="button"
+        class="nav"
+        aria-label={years ? 'Frühere Jahre' : 'Voriger Monat'}
+        {@attach tooltip(() => (years ? 'Frühere Jahre' : 'Voriger Monat (Bild ↑)'))}
+        onclick={() => (years ? (active = DateText.addMonths(active, -144)) : move(DateText.addMonths(active, -1)))}
+      >
         <Icon name="back" small />
       </button>
-      <button type="button" class="title" aria-label={years ? 'Zurück zu den Tagen' : 'Jahr wählen'} {@attach tooltip(() => (years ? 'Zurück zu den Tagen' : 'Jahr wählen'))} onclick={() => (years ? ((years = false), focusActive()) : (years = true))}>
+      <button
+        type="button"
+        class="title"
+        aria-label={years ? 'Zurück zu den Tagen' : 'Jahr wählen'}
+        {@attach tooltip(() => (years ? 'Zurück zu den Tagen' : 'Jahr wählen'))}
+        onclick={() => (years ? ((years = false), focusActive()) : (years = true))}
+      >
         {years ? `${yearPage} – ${yearPage + 11}` : session.format.month(active)}
       </button>
-      <button type="button" class="nav" aria-label={years ? 'Spätere Jahre' : 'Nächster Monat'} {@attach tooltip(() => (years ? 'Spätere Jahre' : 'Nächster Monat (Bild ↓)'))} onclick={() => (years ? (active = DateText.addMonths(active, 144)) : move(DateText.addMonths(active, 1)))}>
+      <button
+        type="button"
+        class="nav"
+        aria-label={years ? 'Spätere Jahre' : 'Nächster Monat'}
+        {@attach tooltip(() => (years ? 'Spätere Jahre' : 'Nächster Monat (Bild ↓)'))}
+        onclick={() => (years ? (active = DateText.addMonths(active, 144)) : move(DateText.addMonths(active, 1)))}
+      >
         <Icon name="next" small />
       </button>
     </div>
@@ -226,7 +259,14 @@
       <div class="years">
         {#each Array.from({ length: 12 }, (_, i) => yearPage + i) as year (year)}
           {@const outside = (!!min && `${year}-12-31` < min) || (!!max && `${year}-01-01` > max)}
-          <button type="button" class="year" class:current={`${year}` === active.slice(0, 4)} disabled={outside} {@attach tooltip(`Jahr ${year}`)} onclick={() => pickYear(year)}>{year}</button>
+          <button
+            type="button"
+            class="year"
+            class:current={`${year}` === active.slice(0, 4)}
+            disabled={outside}
+            {@attach tooltip(`Jahr ${year}`)}
+            onclick={() => pickYear(year)}>{year}</button
+          >
         {/each}
       </div>
     {:else}
@@ -252,7 +292,13 @@
         {/each}
       </div>
       <div class="foot">
-        <button type="button" class="link" disabled={!allowed(today)} {@attach tooltip(`Heute wählen (${DateText.format(today)})`)} onclick={() => choose(today)}>Heute</button>
+        <button
+          type="button"
+          class="link"
+          disabled={!allowed(today)}
+          {@attach tooltip(`Heute wählen (${DateText.format(today)})`)}
+          onclick={() => choose(today)}>Heute</button
+        >
         {#if value && !required}<button type="button" class="link" {@attach tooltip('Datum entfernen')} onclick={clear}>Leeren</button>{/if}
       </div>
     {/if}
@@ -288,7 +334,9 @@
     color: var(--color-text-muted);
     transform: translateY(-50%);
     cursor: pointer;
-    transition: background var(--motion-fast), color var(--motion-fast);
+    transition:
+      background var(--motion-fast),
+      color var(--motion-fast);
   }
   .open:hover:not(:disabled) {
     background: var(--color-hover);
@@ -343,7 +391,9 @@
     background: transparent;
     color: inherit;
     cursor: pointer;
-    transition: background var(--motion-fast), color var(--motion-fast);
+    transition:
+      background var(--motion-fast),
+      color var(--motion-fast);
   }
   .nav {
     display: grid;

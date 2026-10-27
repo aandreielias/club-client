@@ -73,7 +73,10 @@
   const viewport = $derived({ width: innerWidth.current ?? 0, height: innerHeight.current ?? 0 });
   $effect(() => {
     const style = document.documentElement.style;
-    for (const [dock, property] of [['side', '--window-side-width'], ['bottom', '--window-bottom-height']] as const) {
+    for (const [dock, property] of [
+      ['side', '--window-side-width'],
+      ['bottom', '--window-bottom-height'],
+    ] as const) {
       const px = windows.size[dock];
       if (px === null) style.removeProperty(property);
       else style.setProperty(property, `${WindowService.clampSize(dock, px, viewport, settings.window.resize)}px`);
@@ -164,7 +167,11 @@
   }
 
   function trapFocus(event: KeyboardEvent, container: HTMLElement) {
-    const focusable = [...container.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')];
+    const focusable = [
+      ...container.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    ];
     if (!focusable.length) return;
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
@@ -208,29 +215,59 @@
     {#if !modal}
       <!-- ARIA window splitter: a focusable separator with a value is interactive. -->
       <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
-      <div class="resize" role="separator" tabindex="0" aria-orientation={windows.dock === 'side' ? 'vertical' : 'horizontal'}
+      <div
+        class="resize"
+        role="separator"
+        tabindex="0"
+        aria-orientation={windows.dock === 'side' ? 'vertical' : 'horizontal'}
         aria-label={windows.dock === 'side' ? 'Breite des Fensters ändern' : 'Höhe des Fensters ändern'}
         aria-valuenow={windows.size[windows.dock === 'side' ? 'side' : 'bottom'] ?? undefined}
-        onpointerdown={startResize} onkeydown={resizeKey} ondblclick={() => windows.setSize(windows.dock === 'side' ? 'side' : 'bottom', null)}
-        {@attach tooltip('Ziehen zum Ändern der Größe, Doppelklick: Standardgröße')}></div>
+        onpointerdown={startResize}
+        onkeydown={resizeKey}
+        ondblclick={() => windows.setSize(windows.dock === 'side' ? 'side' : 'bottom', null)}
+        {@attach tooltip('Ziehen zum Ändern der Größe, Doppelklick: Standardgröße')}
+      ></div>
     {/if}
     <header>
       <div class="heading">
         {#if windows.trailDepth}
-          <Button size="sm" variant="ghost" icon="back" onclick={() => windows.back()} tooltip={withKeys('Zurück zum vorherigen Eintrag', 'view.back')} />
+          <Button
+            size="sm"
+            variant="ghost"
+            icon="back"
+            onclick={() => windows.back()}
+            tooltip={withKeys('Zurück zum vorherigen Eintrag', 'view.back')}
+          />
         {/if}
         <h2 id="window-title">{windows.title || ' '}</h2>
       </div>
       <div class="controls">
         <div class="docks">
-          <ChoiceGroup name="window-dock" label="Fensterposition" size="sm" iconOnly options={DOCK_CHOICES}
-            bind:value={() => windows.dock, (dock) => dock && windows.setDock(dock)} />
+          <ChoiceGroup
+            name="window-dock"
+            label="Fensterposition"
+            size="sm"
+            iconOnly
+            options={DOCK_CHOICES}
+            bind:value={() => windows.dock, (dock) => dock && windows.setDock(dock)}
+          />
         </div>
         {#if content.page}
-          <Button size="sm" variant="ghost" icon="page" onclick={() => handle.navigate(content.page!(target.id))}
-            tooltip={withKeys('Als eigene Seite öffnen', 'window.page')} />
+          <Button
+            size="sm"
+            variant="ghost"
+            icon="page"
+            onclick={() => handle.navigate(content.page!(target.id))}
+            tooltip={withKeys('Als eigene Seite öffnen', 'window.page')}
+          />
         {/if}
-        <Button size="sm" variant="ghost" icon="close" onclick={() => bus.publish(WINDOW_CLOSE)} tooltip={withKeys('Fenster schließen', 'window.close')} />
+        <Button
+          size="sm"
+          variant="ghost"
+          icon="close"
+          onclick={() => bus.publish(WINDOW_CLOSE)}
+          tooltip={withKeys('Fenster schließen', 'window.close')}
+        />
       </div>
     </header>
     <div class="body">

@@ -7,7 +7,13 @@ const page = (() => {}) as never;
 
 describe('Sidebar order', () => {
   const registry = new FeatureRegistry([
-    { id: 'a', routes: [{ path: '/', component: page, nav: 'Start' }, { path: '/tasks', component: page, nav: 'Aufgaben' }] },
+    {
+      id: 'a',
+      routes: [
+        { path: '/', component: page, nav: 'Start' },
+        { path: '/tasks', component: page, nav: 'Aufgaben' },
+      ],
+    },
     { id: 'b', routes: [{ path: '/members', component: page, nav: 'Mitglieder', roles: ['ADMIN'] }] },
     { id: 'c', routes: [{ path: '/settings', component: page, nav: 'Einstellungen', navFooter: true }] },
   ]);

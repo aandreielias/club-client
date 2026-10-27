@@ -102,4 +102,3 @@ describe('AppointmentForm', () => {
     expect(edited.toPatch()).toEqual({ rides: true });
   });
 });
-

@@ -49,7 +49,13 @@ export class AnchoredList {
     const rect = anchor.getBoundingClientRect();
     const own = this.width === 'own';
     const height = own ? list.offsetHeight : Math.min(list.scrollHeight || AnchoredList.MAX_HEIGHT, AnchoredList.MAX_HEIGHT);
-    const at = dropdownPosition(rect, height, own ? list.offsetWidth : AnchoredList.MIN_WIDTH, { width: innerWidth, height: innerHeight }, AnchoredList.GAP);
+    const at = dropdownPosition(
+      rect,
+      height,
+      own ? list.offsetWidth : AnchoredList.MIN_WIDTH,
+      { width: innerWidth, height: innerHeight },
+      AnchoredList.GAP,
+    );
     if (!own) list.style[this.width === 'match' ? 'width' : 'minWidth'] = `${rect.width}px`;
     list.style.left = `${this.width === 'match' ? rect.left : at.x}px`;
     list.style.top = `${at.y}px`;

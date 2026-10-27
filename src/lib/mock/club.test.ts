@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { directory, MockDirectory } from './core';
+import { directory } from './core';
 import type { Member } from '../types';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
@@ -14,7 +14,11 @@ describe('mock club facts', () => {
     directory.confirm(member('vorstand'));
     expect(() => directory.updateClub(member('vorstand'), { seasonStartMonth: 13 })).toThrow();
     expect(directory.updateClub(member('vorstand'), { name: 'VC Beispiel', registerNumber: '123', seasonStartMonth: 8 })).toMatchObject({
-      name: 'VC Beispiel', shortName: 'Verein', registerNumber: '123', seasonStartMonth: 8 });
+      name: 'VC Beispiel',
+      shortName: 'Verein',
+      registerNumber: '123',
+      seasonStartMonth: 8,
+    });
     expect(directory.updateClub(member('vorstand'), { name: ' ' })).toMatchObject({ name: 'Mein Verein', registerNumber: null, seasonStartMonth: 7 });
   });
 });

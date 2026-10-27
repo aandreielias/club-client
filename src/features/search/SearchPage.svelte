@@ -16,7 +16,12 @@
   /** Results of the sidebar search (`/search?q=`); a result opens in the window, a folder on the files page. */
   const pane = usePane();
   const query = $derived(pane.query.get('q')?.trim() ?? '');
-  const list = new SearchListModel(searchApi, () => query, () => session.format, store);
+  const list = new SearchListModel(
+    searchApi,
+    () => query,
+    () => session.format,
+    store,
+  );
 
   $effect(() => {
     void query;
@@ -40,7 +45,10 @@
     <DataTable
       model={list}
       rowKey={(h) => `${h.kind}:${h.id}`}
-      record={(h) => { const target = hitTarget(h); return 'window' in target ? { ...target.window, title: h.title } : null; }}
+      record={(h) => {
+        const target = hitTarget(h);
+        return 'window' in target ? { ...target.window, title: h.title } : null;
+      }}
       onopen={open}
       menu={hitMenu}
       selected={windows.current ? `${windows.current.kind.toUpperCase()}:${windows.current.id}` : null}

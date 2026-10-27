@@ -32,7 +32,10 @@
   view.title(() => model.member.value && `${model.member.value.firstName} ${model.member.value.lastName}`);
 
   let editing = $state(false);
-  backStack.while(() => editing, () => (editing = false));
+  backStack.while(
+    () => editing,
+    () => (editing = false),
+  );
   useCommands(commands, {
     'member.edit': { run: () => (editing = true), when: () => !editing && !!model.member.value && policy.canEditProfile(model.member.value) },
   });
@@ -48,9 +51,7 @@
     }
   });
 
-  const rolesChanged = $derived(
-    !!model.member.value && [...roles].sort().join() !== [...model.member.value.roles].sort().join(),
-  );
+  const rolesChanged = $derived(!!model.member.value && [...roles].sort().join() !== [...model.member.value.roles].sort().join());
 
   async function saveRoles(member: Member) {
     if (await model.setRoles(roles)) {
@@ -70,7 +71,11 @@
   }
 
   async function reactivate(member: Member) {
-    const request = { title: 'Mitglied reaktivieren', message: `${member.firstName} ${member.lastName} kann sich wieder anmelden. Teams und Rollen bitte neu zuordnen.`, confirmLabel: 'Reaktivieren' };
+    const request = {
+      title: 'Mitglied reaktivieren',
+      message: `${member.firstName} ${member.lastName} kann sich wieder anmelden. Teams und Rollen bitte neu zuordnen.`,
+      confirmLabel: 'Reaktivieren',
+    };
     await view.confirm(request, () => view.attempt(model.reactivateAction, () => model.reactivate()), 'Mitglied reaktiviert.');
   }
 
@@ -114,7 +119,9 @@
           <dt>E-Mail</dt>
           <dd><a href="mailto:{member.email}">{member.email}</a></dd>
           <dt>Telefon</dt>
-          <dd>{#if member.phone}<a href="tel:{member.phone}">{member.phone}</a>{:else}–{/if}</dd>
+          <dd>
+            {#if member.phone}<a href="tel:{member.phone}">{member.phone}</a>{:else}–{/if}
+          </dd>
           <dt>Geburtsdatum</dt>
           <dd>{member.birthDate ? session.format.date(member.birthDate) : '–'}</dd>
           <dt>Foto-Einwilligung</dt>
@@ -126,7 +133,12 @@
             <dd>{session.format.date(member.memberSince)}</dd>
           {/if}
         </dl>
-        {#key member.id}<FamilySection memberId={member.id} firstName={member.firstName} self={policy.isSelf(member)} parent={member.roles.includes('PARENT')} />{/key}
+        {#key member.id}<FamilySection
+            memberId={member.id}
+            firstName={member.firstName}
+            self={policy.isSelf(member)}
+            parent={member.roles.includes('PARENT')}
+          />{/key}
         <HeldItems memberId={member.id} />
       {/if}
 
@@ -142,7 +154,11 @@
           <p class="muted small">Die Vorstandsrolle kommt mit einer Funktion auf der Seite <a href="/board">Vorstand</a>.</p>
           {#if policy.isSelf(member)}<p class="muted small">Die eigene Admin-Rolle lässt sich nicht entfernen.</p>{/if}
           <ErrorNote error={model.rolesAction.error} />
-          <div><Button variant="primary" busy={model.rolesAction.busy} disabled={!rolesChanged} onclick={() => saveRoles(member)}>Rollen speichern</Button></div>
+          <div>
+            <Button variant="primary" busy={model.rolesAction.busy} disabled={!rolesChanged} onclick={() => saveRoles(member)}
+              >Rollen speichern</Button
+            >
+          </div>
         </div>
       {/if}
 

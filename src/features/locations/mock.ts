@@ -33,8 +33,19 @@ export class MockLocations {
   create(member: Member, body: Partial<NewLocation>): Location {
     this.people.requirePrivileged(member, PRIVILEGED);
     const now = new Date().toISOString();
-    const location = this.validated({ id: crypto.randomUUID(), name: '', street: null, zip: null, city: null, note: null, lat: null, lng: null,
-      ...body, createdAt: now, updatedAt: now });
+    const location = this.validated({
+      id: crypto.randomUUID(),
+      name: '',
+      street: null,
+      zip: null,
+      city: null,
+      note: null,
+      lat: null,
+      lng: null,
+      ...body,
+      createdAt: now,
+      updatedAt: now,
+    });
     this.locations.data.push(location);
     this.locations.save();
     this.changed(location, 'CREATED');
@@ -80,7 +91,8 @@ export class MockLocations {
     const name = l.name?.trim() ?? '';
     if (!name || name.length > limits.nameMaxLength) fail(400, 'location.name-invalid');
     if (this.locations.data.some((o) => o.id !== l.id && o.name.toLowerCase() === name.toLowerCase())) fail(409, 'location.name-taken');
-    if ((l.lat === null) !== (l.lng === null) || (l.lat !== null && (Math.abs(l.lat) > 90 || Math.abs(l.lng!) > 180))) fail(400, 'location.coordinates-invalid');
+    if ((l.lat === null) !== (l.lng === null) || (l.lat !== null && (Math.abs(l.lat) > 90 || Math.abs(l.lng!) > 180)))
+      fail(400, 'location.coordinates-invalid');
     return {
       ...l,
       name,
@@ -92,7 +104,11 @@ export class MockLocations {
   }
 
   private changed(location: StoredLocation, change: 'CREATED' | 'UPDATED' | 'DELETED'): void {
-    mockServer.events.publish({ type: 'locations.location-changed', data: { locationId: location.id, change, name: location.name }, audience: { everyone: true } });
+    mockServer.events.publish({
+      type: 'locations.location-changed',
+      data: { locationId: location.id, change, name: location.name },
+      audience: { everyone: true },
+    });
   }
 
   private find(id: string): StoredLocation {
@@ -107,10 +123,27 @@ export class MockLocations {
 
   private static seed(): StoredLocation[] {
     const at = new Date().toISOString();
-    const place = (id: string, name: string, street: string | null, zip: string | null, city: string | null, lat: number | null, lng: number | null,
-      note: string | null = null): StoredLocation => ({ id, name, street, zip, city, note, lat, lng, createdAt: at, updatedAt: at });
+    const place = (
+      id: string,
+      name: string,
+      street: string | null,
+      zip: string | null,
+      city: string | null,
+      lat: number | null,
+      lng: number | null,
+      note: string | null = null,
+    ): StoredLocation => ({ id, name, street, zip, city, note, lat, lng, createdAt: at, updatedAt: at });
     return [
-      place('l-nord', 'Turnhalle Nord', 'Brigittenauer Lände 50', '1200', 'Wien', 48.2318, 16.3713, 'Eingang über den Hof, Schlüssel beim Schulwart.'),
+      place(
+        'l-nord',
+        'Turnhalle Nord',
+        'Brigittenauer Lände 50',
+        '1200',
+        'Wien',
+        48.2318,
+        16.3713,
+        'Eingang über den Hof, Schlüssel beim Schulwart.',
+      ),
       place('l-sued', 'Turnhalle Süd', 'Gudrunstraße 120', '1100', 'Wien', 48.1803, 16.3812),
       place('l-west', 'Sportzentrum West', 'Hütteldorfer Straße 2', '1150', 'Wien', 48.1975, 16.3264, 'Parkplatz hinter der Halle.'),
       place('l-heim', 'Vereinsheim', 'Praterstraße 12', '1020', 'Wien', 48.2147, 16.3842),

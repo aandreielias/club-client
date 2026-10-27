@@ -25,15 +25,12 @@
     'notifications.readAll': { run: () => void center.markAllRead(), when: () => center.unread > 0 },
     'page.new': { run: compose, when: () => permissions.isPrivileged },
   });
-
 </script>
 
 <Page title="Benachrichtigungen">
   {#snippet actions()}
     <LinkButton href="#/notifications/settings" tooltip="Festlegen, worüber und wie du benachrichtigt wirst">Einstellungen</LinkButton>
-    <Button busy={center.markAllAction.busy} disabled={center.unread === 0} onclick={() => center.markAllRead()}>
-      Alle als gelesen markieren
-    </Button>
+    <Button busy={center.markAllAction.busy} disabled={center.unread === 0} onclick={() => center.markAllRead()}>Alle als gelesen markieren</Button>
     {#if permissions.isPrivileged}<Button variant="primary" icon="send" onclick={compose}>Nachricht senden</Button>{/if}
   {/snippet}
 

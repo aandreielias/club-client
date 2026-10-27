@@ -62,7 +62,14 @@ export class MockTournaments {
       items: this.tournaments.data
         .filter((t) => own === null || t.id === own)
         .sort((a, b) => b.startsOn.localeCompare(a.startsOn))
-        .map((t) => ({ id: t.id, name: t.name, startsOn: t.startsOn, endsOn: t.endsOn, status: t.status, teams: (this.teams.data[t.id] ?? []).length })),
+        .map((t) => ({
+          id: t.id,
+          name: t.name,
+          startsOn: t.startsOn,
+          endsOn: t.endsOn,
+          status: t.status,
+          teams: (this.teams.data[t.id] ?? []).length,
+        })),
     };
   }
 
@@ -76,10 +83,20 @@ export class MockTournaments {
     this.people.requirePrivileged(viewer, PRIVILEGED);
     const now = new Date().toISOString();
     const t = MockTournaments.validated({
-      id: crypto.randomUUID(), name: body.name ?? '', startsOn: body.startsOn ?? '', endsOn: body.endsOn ?? '', locationId: body.locationId ?? null,
-      appointmentId: body.appointmentId ?? null, groupCount: body.groupCount ?? 2, advancePerGroup: body.advancePerGroup ?? 2,
-      format: body.format ?? 'VOLLEYBALL', setsToWin: body.setsToWin ?? 2, teamSize: body.teamSize ?? null, fieldCount: body.fieldCount ?? 1,
-      status: 'DRAFT', createdAt: now,
+      id: crypto.randomUUID(),
+      name: body.name ?? '',
+      startsOn: body.startsOn ?? '',
+      endsOn: body.endsOn ?? '',
+      locationId: body.locationId ?? null,
+      appointmentId: body.appointmentId ?? null,
+      groupCount: body.groupCount ?? 2,
+      advancePerGroup: body.advancePerGroup ?? 2,
+      format: body.format ?? 'VOLLEYBALL',
+      setsToWin: body.setsToWin ?? 2,
+      teamSize: body.teamSize ?? null,
+      fieldCount: body.fieldCount ?? 1,
+      status: 'DRAFT',
+      createdAt: now,
     });
     // server: teams entered with the tournament are checked first, so a bad name leaves nothing behind
     const teams = MockTournaments.teamsFrom(body.teams ?? [], new Set());
@@ -133,8 +150,22 @@ export class MockTournaments {
     for (let g = 0; g < t.groupCount; g++) {
       const members = teams.filter((team) => team.group === label(g)).map((team) => team.id);
       roundRobin(members).forEach((p, slot) =>
-        matches.push({ id: crypto.randomUUID(), stage: 'GROUP', group: label(g), round: p.round, slot, homeId: p.home, awayId: p.away,
-          homeScore: null, awayScore: null, sets: [], startsAt: null, field: null, wave: null }));
+        matches.push({
+          id: crypto.randomUUID(),
+          stage: 'GROUP',
+          group: label(g),
+          round: p.round,
+          slot,
+          homeId: p.home,
+          awayId: p.away,
+          homeScore: null,
+          awayScore: null,
+          sets: [],
+          startsAt: null,
+          field: null,
+          wave: null,
+        }),
+      );
     }
     this.matches.data[id] = fieldPlan(matches, t.fieldCount, 1);
     t.status = 'GROUPS';
@@ -148,10 +179,14 @@ export class MockTournaments {
     if (t.status !== 'GROUPS') fail(409, 'tournament.not-in-groups');
     const matches = this.matches.data[id] ?? [];
     if (matches.some((m) => m.stage === 'GROUP' && m.homeScore === null)) fail(409, 'tournament.groups-open');
-    const order = seeds(this.groups(t).map((g) => g.standings.map((s) => s.teamId)), t.advancePerGroup);
+    const order = seeds(
+      this.groups(t).map((g) => g.standings.map((s) => s.teamId)),
+      t.advancePerGroup,
+    );
     const rounds = koRounds(order.length);
     const tree: TournamentMatch[] = firstRound(order).map((p) => MockTournaments.ko(1, p.slot, p.home, p.away));
-    for (let round = 2; round <= rounds; round++) for (let slot = 0; slot < 2 ** (rounds - round); slot++) tree.push(MockTournaments.ko(round, slot, null, null));
+    for (let round = 2; round <= rounds; round++)
+      for (let slot = 0; slot < 2 ** (rounds - round); slot++) tree.push(MockTournaments.ko(round, slot, null, null));
     tree.filter((m) => m.round === 1 && m.homeId && !m.awayId).forEach((bye) => MockTournaments.advance(tree, bye));
     // server: planKnockout, round by round after the last group wave; byes get no field
     let wave = Math.max(0, ...matches.map((m) => m.wave ?? 0)) + 1;
@@ -191,8 +226,13 @@ export class MockTournaments {
       if (m.stage === 'KO' && home !== null && home === away) fail(400, 'tournament.ko-draw');
       if (m.stage === 'KO' && MockTournaments.next(matches, m)?.homeScore != null) fail(409, 'tournament.result-locked');
     }
-    Object.assign(m, { homeScore: home, awayScore: away, sets: sets.map((s) => ({ home: s.home, away: s.away })), startsAt: body.startsAt ?? m.startsAt,
-      field: body.field?.trim() || null });
+    Object.assign(m, {
+      homeScore: home,
+      awayScore: away,
+      sets: sets.map((s) => ({ home: s.home, away: s.away })),
+      startsAt: body.startsAt ?? m.startsAt,
+      field: body.field?.trim() || null,
+    });
     if (m.stage === 'KO' && scoring) MockTournaments.advance(matches, m);
     const rounds = Math.max(0, ...matches.filter((x) => x.stage === 'KO').map((x) => x.round));
     const finalPlayed = matches.some((x) => x.stage === 'KO' && x.round === rounds && MockTournaments.winner(x));
@@ -222,10 +262,13 @@ export class MockTournaments {
     return Array.from({ length: t.groupCount }, (_, g) => label(g))
       .map((group) => ({
         label: group,
-        standings: standings(new Map(teams.filter((team) => team.group === group).map((team) => [team.id, team.name])),
-          matches.filter((m) => m.stage === 'GROUP' && m.group === group)
+        standings: standings(
+          new Map(teams.filter((team) => team.group === group).map((team) => [team.id, team.name])),
+          matches
+            .filter((m) => m.stage === 'GROUP' && m.group === group)
             .map((m) => ({ home: m.homeId, away: m.awayId, ...tally(m.sets), homeSets: m.homeScore, awaySets: m.awayScore })),
-          t.format),
+          t.format,
+        ),
       }))
       .filter((g) => g.standings.length);
   }
@@ -233,9 +276,13 @@ export class MockTournaments {
   private dto(viewer: Member, t: StoredTournament): Tournament {
     const guests: Guest[] = this.people.hasRole(viewer, PRIVILEGED)
       ? Object.entries(this.guests.data)
-        .filter(([, g]) => g.tournamentId === t.id)
-        .map(([memberId, g]) => ({ memberId, name: this.people.name(memberId) ?? 'Gast', teamId: g.teamId,
-          deletedOn: new Date(Date.parse(t.endsOn) + (GUEST_RETENTION_DAYS + 1) * 86_400_000).toISOString().slice(0, 10) }))
+          .filter(([, g]) => g.tournamentId === t.id)
+          .map(([memberId, g]) => ({
+            memberId,
+            name: this.people.name(memberId) ?? 'Gast',
+            teamId: g.teamId,
+            deletedOn: new Date(Date.parse(t.endsOn) + (GUEST_RETENTION_DAYS + 1) * 86_400_000).toISOString().slice(0, 10),
+          }))
       : [];
     const { createdAt: _, ...rest } = t;
     return { ...rest, teams: this.teams.data[t.id] ?? [], groups: this.groups(t), matches: this.matches.data[t.id] ?? [], guests };
@@ -249,8 +296,14 @@ export class MockTournaments {
     this.tournaments.save();
     this.teams.save();
     this.matches.save();
-    const guests = Object.entries(this.guests.data).filter(([, g]) => g.tournamentId === id).map(([memberId]) => memberId);
-    mockServer.events.publish({ type: 'tournaments.tournament-changed', data: { tournamentId: id, change }, audience: { everyone: true, members: guests } });
+    const guests = Object.entries(this.guests.data)
+      .filter(([, g]) => g.tournamentId === id)
+      .map(([memberId]) => memberId);
+    mockServer.events.publish({
+      type: 'tournaments.tournament-changed',
+      data: { tournamentId: id, change },
+      audience: { everyone: true, members: guests },
+    });
   }
 
   private static winner(m: TournamentMatch): string | null {
@@ -327,14 +380,29 @@ export class MockTournaments {
   }
 
   private static ko(round: number, slot: number, homeId: string | null, awayId: string | null): TournamentMatch {
-    return { id: crypto.randomUUID(), stage: 'KO', group: null, round, slot, homeId, awayId, homeScore: null, awayScore: null, sets: [], startsAt: null, field: null, wave: null };
+    return {
+      id: crypto.randomUUID(),
+      stage: 'KO',
+      group: null,
+      round,
+      slot,
+      homeId,
+      awayId,
+      homeScore: null,
+      awayScore: null,
+      sets: [],
+      startsAt: null,
+      field: null,
+      wave: null,
+    };
   }
 
   /** server: Tournament constructor checks */
   private static validated(t: StoredTournament): StoredTournament {
     const name = t.name?.trim() ?? '';
     if (!name || name.length > 120) fail(400, 'tournament.name-invalid');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(t.startsOn) || !/^\d{4}-\d{2}-\d{2}$/.test(t.endsOn) || t.endsOn < t.startsOn) fail(400, 'tournament.dates-invalid');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(t.startsOn) || !/^\d{4}-\d{2}-\d{2}$/.test(t.endsOn) || t.endsOn < t.startsOn)
+      fail(400, 'tournament.dates-invalid');
     if (t.groupCount < 1 || t.groupCount > 8) fail(400, 'tournament.groups-invalid');
     const qualifiers = t.groupCount * t.advancePerGroup;
     if (t.advancePerGroup < 1 || t.advancePerGroup > 4 || qualifiers < 2 || qualifiers > 32) fail(400, 'tournament.advance-invalid');
@@ -355,31 +423,63 @@ export class MockTournaments {
    * bracket match what the app computes.
    */
   private static played(id: string, name: string, on: string, finished: boolean, groupNames: string[][]) {
-    const teams: TournamentTeam[] = groupNames.flatMap((names, g) => names.map((teamName, i) => ({
-      id: `${id}-t${g * 10 + i}`, name: teamName, clubTeamId: teamName === 'Damen 1' ? 't-damen' : teamName === 'U16' ? 't-u16' : null, group: label(g),
-    })));
+    const teams: TournamentTeam[] = groupNames.flatMap((names, g) =>
+      names.map((teamName, i) => ({
+        id: `${id}-t${g * 10 + i}`,
+        name: teamName,
+        clubTeamId: teamName === 'Damen 1' ? 't-damen' : teamName === 'U16' ? 't-u16' : null,
+        group: label(g),
+      })),
+    );
     const strength = (teamId: string) => teams.findIndex((t) => t.id === teamId) % 10; // lower index in its group: stronger
     let count = 0;
     const result = (home: string, away: string, homeStronger: boolean): Pick<TournamentMatch, 'sets' | 'homeScore' | 'awayScore'> => {
       const close = ++count % 3 === 0;
-      const won: [number, number][] = close ? [[25, 23], [21, 25], [15, 12]] : [[25, 19], [25, 21]];
+      const won: [number, number][] = close
+        ? [
+            [25, 23],
+            [21, 25],
+            [15, 12],
+          ]
+        : [
+            [25, 19],
+            [25, 21],
+          ];
       return MockTournaments.scores(won.map(([w, l]) => (homeStronger ? { home: w, away: l } : { home: l, away: w })));
     };
     const group: TournamentMatch[] = groupNames.flatMap((_, g) => {
       const members = teams.filter((t) => t.group === label(g)).map((t) => t.id);
-      return roundRobin(members).map((p, slot) => ({ id: `${id}-g${g}-${slot}`, stage: 'GROUP' as const, group: label(g), round: p.round, slot,
-        homeId: p.home, awayId: p.away, ...result(p.home, p.away, strength(p.home) < strength(p.away)), startsAt: null, field: null, wave: null }));
+      return roundRobin(members).map((p, slot) => ({
+        id: `${id}-g${g}-${slot}`,
+        stage: 'GROUP' as const,
+        group: label(g),
+        round: p.round,
+        slot,
+        homeId: p.home,
+        awayId: p.away,
+        ...result(p.home, p.away, strength(p.home) < strength(p.away)),
+        startsAt: null,
+        field: null,
+        wave: null,
+      }));
     });
     const fieldCount = 2;
     let matches: TournamentMatch[] = fieldPlan(group, fieldCount, 1);
     if (finished) {
-      const ranked = groupNames.map((_, g) => standings(new Map(teams.filter((t) => t.group === label(g)).map((t) => [t.id, t.name])),
-        matches.filter((m) => m.group === label(g)).map((m) => ({ home: m.homeId, away: m.awayId, ...tally(m.sets), homeSets: m.homeScore, awaySets: m.awayScore })),
-        'VOLLEYBALL').map((s) => s.teamId));
+      const ranked = groupNames.map((_, g) =>
+        standings(
+          new Map(teams.filter((t) => t.group === label(g)).map((t) => [t.id, t.name])),
+          matches
+            .filter((m) => m.group === label(g))
+            .map((m) => ({ home: m.homeId, away: m.awayId, ...tally(m.sets), homeSets: m.homeScore, awaySets: m.awayScore })),
+          'VOLLEYBALL',
+        ).map((s) => s.teamId),
+      );
       const order = seeds(ranked, 2);
       const rounds = koRounds(order.length);
       const tree: TournamentMatch[] = firstRound(order).map((p) => MockTournaments.ko(1, p.slot, p.home, p.away));
-      for (let round = 2; round <= rounds; round++) for (let slot = 0; slot < 2 ** (rounds - round); slot++) tree.push(MockTournaments.ko(round, slot, null, null));
+      for (let round = 2; round <= rounds; round++)
+        for (let slot = 0; slot < 2 ** (rounds - round); slot++) tree.push(MockTournaments.ko(round, slot, null, null));
       let wave = Math.max(...matches.map((m) => m.wave ?? 0)) + 1;
       for (let round = 1; round <= rounds; round++) {
         for (const m of tree.filter((x) => x.round === round)) {
@@ -388,14 +488,37 @@ export class MockTournaments {
           Object.assign(m, result(m.homeId!, m.awayId!, homeStronger));
           MockTournaments.advance(tree, m);
         }
-        const planned = fieldPlan(tree.filter((x) => x.round === round), fieldCount, wave);
-        planned.forEach((p) => Object.assign(tree.find((x) => x.id === p.id)!, { field: p.field, wave: p.wave }));
+        const planned = fieldPlan(
+          tree.filter((x) => x.round === round),
+          fieldCount,
+          wave,
+        );
+        planned.forEach((p) =>
+          Object.assign(
+            tree.find((x) => x.id === p.id)!,
+            { field: p.field, wave: p.wave },
+          ),
+        );
         wave = Math.max(...planned.map((p) => p.wave)) + 1;
       }
       matches = [...matches, ...tree];
     }
-    const tournament = { id, name, startsOn: on, endsOn: on, locationId: 'l-west', appointmentId: null, groupCount: groupNames.length, advancePerGroup: 2,
-      format: 'VOLLEYBALL', setsToWin: 2, teamSize: 6, fieldCount, status: finished ? 'DONE' : 'GROUPS', createdAt: new Date().toISOString() } as StoredTournament;
+    const tournament = {
+      id,
+      name,
+      startsOn: on,
+      endsOn: on,
+      locationId: 'l-west',
+      appointmentId: null,
+      groupCount: groupNames.length,
+      advancePerGroup: 2,
+      format: 'VOLLEYBALL',
+      setsToWin: 2,
+      teamSize: 6,
+      fieldCount,
+      status: finished ? 'DONE' : 'GROUPS',
+      createdAt: new Date().toISOString(),
+    } as StoredTournament;
     return { tournament, teams, matches };
   }
 
@@ -403,30 +526,83 @@ export class MockTournaments {
   private static seed(): { tournaments: StoredTournament[]; teams: Record<string, TournamentTeam[]>; matches: Record<string, TournamentMatch[]> } {
     const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
     const names: [string, string, string | null][] = [
-      ['tt-sdg1', 'Damen 1', 't-damen'], ['tt-sdgu', 'U16', 't-u16'], ['tt-uvc', 'UVC Graz', null],
-      ['tt-tsv', 'TSV Seeblick', null], ['tt-ask', 'ASK Bergdorf', null], ['tt-vcm', 'VC Musterstadt', null],
+      ['tt-sdg1', 'Damen 1', 't-damen'],
+      ['tt-sdgu', 'U16', 't-u16'],
+      ['tt-uvc', 'UVC Graz', null],
+      ['tt-tsv', 'TSV Seeblick', null],
+      ['tt-ask', 'ASK Bergdorf', null],
+      ['tt-vcm', 'VC Musterstadt', null],
     ];
     const teams: TournamentTeam[] = names.map(([id, name, clubTeamId], i) => ({ id, name, clubTeamId, group: i % 2 ? 'B' : 'A' }));
-    const match = (id: string, group: string, round: number, slot: number, home: string, away: string, sets: [number, number][]): TournamentMatch =>
-      ({ id, stage: 'GROUP', group, round, slot, homeId: home, awayId: away, ...MockTournaments.scores(sets.map(([h, a]) => ({ home: h, away: a }))),
-        startsAt: null, field: group === 'A' ? 'Feld 1' : 'Feld 2', wave: round });
-    const sommer = MockTournaments.played('tm-sommer', 'Sommerturnier 2026', day(-7), true,
-      [['Damen 1', 'UVC Graz', 'TSV Seeblick', 'ASK Bergdorf'], ['VC Musterstadt', 'U16', 'SV Talheim', 'VBC Ostend']]);
-    const fruehling = MockTournaments.played('tm-fruehling', 'Frühlingscup 2026', day(-1), false,
-      [['UVC Graz', 'Damen 1', 'SV Talheim'], ['TSV Seeblick', 'VC Musterstadt', 'ASK Bergdorf']]);
+    const match = (
+      id: string,
+      group: string,
+      round: number,
+      slot: number,
+      home: string,
+      away: string,
+      sets: [number, number][],
+    ): TournamentMatch => ({
+      id,
+      stage: 'GROUP',
+      group,
+      round,
+      slot,
+      homeId: home,
+      awayId: away,
+      ...MockTournaments.scores(sets.map(([h, a]) => ({ home: h, away: a }))),
+      startsAt: null,
+      field: group === 'A' ? 'Feld 1' : 'Feld 2',
+      wave: round,
+    });
+    const sommer = MockTournaments.played('tm-sommer', 'Sommerturnier 2026', day(-7), true, [
+      ['Damen 1', 'UVC Graz', 'TSV Seeblick', 'ASK Bergdorf'],
+      ['VC Musterstadt', 'U16', 'SV Talheim', 'VBC Ostend'],
+    ]);
+    const fruehling = MockTournaments.played('tm-fruehling', 'Frühlingscup 2026', day(-1), false, [
+      ['UVC Graz', 'Damen 1', 'SV Talheim'],
+      ['TSV Seeblick', 'VC Musterstadt', 'ASK Bergdorf'],
+    ]);
     return {
-      tournaments: [{ id: 'tm-herbst', name: 'Herbstcup 2026', startsOn: day(21), endsOn: day(21), locationId: 'l-west', appointmentId: null,
-        groupCount: 2, advancePerGroup: 2, format: 'VOLLEYBALL', setsToWin: 2, teamSize: 6, fieldCount: 2, status: 'GROUPS', createdAt: new Date().toISOString() } as StoredTournament,
-        sommer.tournament, fruehling.tournament],
+      tournaments: [
+        {
+          id: 'tm-herbst',
+          name: 'Herbstcup 2026',
+          startsOn: day(21),
+          endsOn: day(21),
+          locationId: 'l-west',
+          appointmentId: null,
+          groupCount: 2,
+          advancePerGroup: 2,
+          format: 'VOLLEYBALL',
+          setsToWin: 2,
+          teamSize: 6,
+          fieldCount: 2,
+          status: 'GROUPS',
+          createdAt: new Date().toISOString(),
+        } as StoredTournament,
+        sommer.tournament,
+        fruehling.tournament,
+      ],
       teams: { 'tm-herbst': teams, 'tm-sommer': sommer.teams, 'tm-fruehling': fruehling.teams },
       matches: {
         'tm-sommer': sommer.matches,
         'tm-fruehling': fruehling.matches,
         'tm-herbst': [
-          match('tg-1', 'A', 1, 0, 'tt-sdg1', 'tt-ask', [[25, 18], [25, 21]]),
-          match('tg-2', 'A', 2, 1, 'tt-uvc', 'tt-sdg1', [[25, 23], [19, 25], [12, 15]]),
+          match('tg-1', 'A', 1, 0, 'tt-sdg1', 'tt-ask', [
+            [25, 18],
+            [25, 21],
+          ]),
+          match('tg-2', 'A', 2, 1, 'tt-uvc', 'tt-sdg1', [
+            [25, 23],
+            [19, 25],
+            [12, 15],
+          ]),
           match('tg-3', 'A', 3, 2, 'tt-ask', 'tt-uvc', []),
-          match('tg-4', 'B', 1, 0, 'tt-sdgu', 'tt-vcm', [[22, 25], [20, 25]]),
+          match('tg-4', 'B', 1, 0, 'tt-sdgu', 'tt-vcm', [
+            [22, 25],
+            [20, 25],
+          ]),
           match('tg-5', 'B', 2, 1, 'tt-tsv', 'tt-sdgu', []),
           match('tg-6', 'B', 3, 2, 'tt-vcm', 'tt-tsv', []),
         ],
@@ -448,5 +624,7 @@ mockServer
   .on('PUT', '/api/v1/tournaments/:id/teams', (req) => tournaments.setTeams(actor(req), req.params.id, req.body?.teams))
   .on('POST', '/api/v1/tournaments/:id/draw', (req) => tournaments.draw(actor(req), req.params.id))
   .on('POST', '/api/v1/tournaments/:id/knockout', (req) => tournaments.startKnockout(actor(req), req.params.id))
-  .on('PUT', '/api/v1/tournaments/:id/matches/:matchId', (req) => tournaments.setResult(actor(req), req.params.id, req.params.matchId, req.body ?? {}))
+  .on('PUT', '/api/v1/tournaments/:id/matches/:matchId', (req) =>
+    tournaments.setResult(actor(req), req.params.id, req.params.matchId, req.body ?? {}),
+  )
   .on('POST', '/api/v1/tournaments/:id/guests', (req) => tournaments.inviteGuest(actor(req), req.params.id, req.body ?? {}));

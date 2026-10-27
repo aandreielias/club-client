@@ -5,7 +5,13 @@
   import EntryChip from './EntryChip.svelte';
 
   /** Entries across several days of one row: one bar each, in lanes above the days' own entries. */
-  let { spans, top, gap, drag, resizer }: {
+  let {
+    spans,
+    top,
+    gap,
+    drag,
+    resizer,
+  }: {
     spans: readonly Span[];
     /** Distance from the row's top (below the day numbers in the month). */
     top: string;
@@ -18,7 +24,13 @@
 
 <div class="bars" style:top style:--bar-gap={gap}>
   {#each spans as bar (bar.entry.key)}
-    <div class="bar" class:before={bar.before} class:after={bar.after} style:grid-column="{bar.from + 1} / {bar.to + 2}" style:grid-row={bar.lane + 1}>
+    <div
+      class="bar"
+      class:before={bar.before}
+      class:after={bar.after}
+      style:grid-column="{bar.from + 1} / {bar.to + 2}"
+      style:grid-row={bar.lane + 1}
+    >
       <EntryChip entry={bar.entry} showTime={!bar.entry.allDay && !bar.before} before={bar.before} after={bar.after} {drag} resize="days" {resizer} />
     </div>
   {/each}

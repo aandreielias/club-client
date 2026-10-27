@@ -7,15 +7,20 @@ npm install
 npm run dev      # http://localhost:5173, mock mode: fake API + dev login, no services needed
 npm run check    # svelte-check (types, a11y)
 npm test         # vitest
+npm run lint     # eslint (incl. feature boundaries) + prettier --check; `npm run format` rewrites
+npm run api:sync # after club-server changed its API: copy docs/api snapshots, regenerate src/lib/api/schema.d.ts
 npm run build    # dist/, deployed to GitHub Pages by .github/workflows/deploy.yml
 ```
 
 ## Modes
+
 `VITE_API_MODE` (see `.env.example`):
+
 - `mock` (default): the API is answered in the browser (`src/lib/mock`, `src/features/*/mock.ts`), and data is kept in localStorage. The login page lists test accounts. Coaches confirm with the club PIN `73915`; admin and board set up a simulated authenticator app, and any 6 digits count as its code. To reset the data, clear the site data.
 - `http`: real club-server + Supabase login. Needs `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`. Admin and board confirm with an authenticator app (Supabase TOTP, `SupabaseAuthProvider`), coaches with the club PIN.
 
 ## Event bus
+
 `src/lib/bus/` is a TypeScript port of the Java EventBus (`../EventBus`): hierarchical channels (`domain/tasks/task-changed`), priorities, `Subscription` handles, request/response with timeouts, dead letters and a debug history (`window.__bus` in dev). One app bus (`bus` in the container) carries everything that is an event or a command:
 
 - Server events: `LiveUpdates` publishes each pushed event on `domain/<module>/<event>`. Features declare typed tokens in `events.ts` (`TASK_CHANGED = liveEvent<TaskChanged>('tasks.task-changed')`) and subscribe with `useBus(bus, TASK_CHANGED, handler)`.
@@ -24,7 +29,12 @@ npm run build    # dist/, deployed to GitHub Pages by .github/workflows/deploy.y
 
 Reactive state is still read directly from services where it is rendered (`session`, `windows.current`); data access stays in the feature API classes.
 
+## Server contract
+
+`src/lib/api/schema.d.ts` is generated from club-server's OpenAPI snapshot (`docs/api/openapi.json`, kept current by its `ApiContractIT`). `src/lib/api/contract.ts` lists each client DTO against its server schema, so `npm run check` fails when a field the client reads was renamed, removed or retyped (nullability is not checked). New DTO → add a line there. Server error codes come from `src/lib/api/error-codes.json`; `errorCodes.test.ts` requires a German text for each.
+
 ## Structure
+
 - `src/settings.ts`: every website parameter in one place. That covers theme tokens (colours, radius, spacing, fonts, layout), the compact breakpoint, timing, server-mirrored limits and storage keys. `ThemeService` turns the theme into CSS custom properties at startup; stylesheets use only `var(--...)`.
 - `src/lib/container.ts`: composition root. It creates the `bus` first, then each shared service once (`api`, `auth`, `session`, `router`, `stepUp`, `toasts`, `errors`, `theme`, `motion`) and wires their dependencies.
 - `src/lib/`: framework-free core classes.
@@ -48,21 +58,23 @@ Reactive state is still read directly from services where it is rendered (`sessi
 - `src/lib/list/ListModel.svelte.ts`: the generic list (columns, client and server filters, sort, search, remembered state). Each list is a subclass with its own definition (e.g. `TaskListModel`).
 - `src/lib/window/WindowService.svelte.ts`: opens, closes and docks the detail window. Features register their window kinds in `Feature.windows`.
 - `src/lib/calendar/CalendarSources.ts`: features contribute calendar entries through `Feature.calendar` (appointments, task due dates) without importing each other.
-- `src/features/<name>/`: one folder per feature. Each has a `feature.ts` with routes and error messages, plus its API service, policy, view-model classes (`*.svelte.ts`), pages and `mock.ts`. Features import `lib/` and `ui/`, never each other.
+- `src/features/<name>/`: one folder per feature. Each has a `feature.ts` with routes and error messages, plus its API service, policy, view-model classes (`*.svelte.ts`), pages and `mock.ts`. Features import `lib/` and `ui/`, and other features only through their public parts: `services`, `model`/`*Api` (types), `events`, `*Section.svelte` (sections shown elsewhere) and, between mocks, `mock` (checked by `npm run lint`).
 - `src/AppController.svelte.ts`: start-up, screen selection (login, onboarding, shell) and page resolution.
 
 ## Adding a feature
+
 1. `src/features/<name>/feature.ts` exports a `Feature` with `routes` and optional `messages`. A route with `nav` appears in the sidebar; `roles` restricts it. List specific paths before parameter paths. Sidebar groups (flyouts such as Events, Verein, Ablage) and the default order live in `navLayout` in `src/features/index.ts`.
 2. Add a service class for the endpoints that takes `ApiClient`, with DTO types in `model.ts`. Instantiate it in `services.ts` from the container.
 3. Put page state in view-model classes (`Resource`, `Action`, `$state`/`$derived` fields). Keep pages thin.
 4. `mock.ts` registers fake endpoints with `mockServer.on(...)`. It is loaded automatically in mock mode. After a write, it publishes the server's event with `mockServer.events.publish({ type, data, audience })`. Events without an `audience` stay inside the mock server, for other mock modules.
    Start page sections: `Feature.home` (one or several `{ id, label, component, roles?, defaultShown? }`); every sidebar area offers one, members switch them on and order them in Einstellungen > Startseite.
 5. Access: routes and windows take `roles` (windows also `canOpen(id)` for per-record rules); a window the member may not open does not appear, also when opened by URL or notification link. The server decides as well, so restrict both.
-5. Lists extend `ListModel` and render with `DataTable`. Details are window contents (`{ id, handle }` props) registered in `Feature.windows`, plus an optional full-page route that wraps the same view in `DetailPage`.
-6. Live updates: declare the event in `events.ts` with `liveEvent<T>('<module>.<event>')`, then call `useBus(bus, EVENT, handler)` in a page and reload what it shows (record views use `DetailController.watch`). Commands go over the bus too: `bus.publish(TOAST, { text })`, `await bus.request(CONFIRM, {...})`.
+6. Lists extend `ListModel` and render with `DataTable`. Details are window contents (`{ id, handle }` props) registered in `Feature.windows`, plus an optional full-page route that wraps the same view in `DetailPage`.
+7. Live updates: declare the event in `events.ts` with `liveEvent<T>('<module>.<event>')`, then call `useBus(bus, EVENT, handler)` in a page and reload what it shows (record views use `DetailController.watch`). Commands go over the bus too: `bus.publish(TOAST, { text })`, `await bus.request(CONFIRM, {...})`.
    Escape means "one view back": any inner state (edit mode, inline editor, panel) registers `backStack.while(() => open, () => close())`; `EditSession` does this itself and asks before discarding typed changes. With no inner state left, Escape returns to the record previously shown in the window (opened from inside it with `DetailController.open`), then closes the window. Shift+Escape closes it directly; Mod+Enter submits the focused form. Optional `Feature` fields: `links` maps server links from notifications to routes, `start` runs while signed in, and a route's `badge` adds a count in the sidebar.
-7. Add the feature to `src/features/index.ts`. New tunable values go into `src/settings.ts`.
+8. Add the feature to `src/features/index.ts`. New tunable values go into `src/settings.ts`.
 
 ## Deploy (GitHub Pages)
+
 Repo Settings → Pages → Source: GitHub Actions. Push to `main` builds in mock mode and deploys.
 Going live later: set repo variables `VITE_API_MODE=http` and the three URLs/keys, add the Pages origin to the server's `CORS_ALLOWED_ORIGINS` and to the Supabase redirect URLs.

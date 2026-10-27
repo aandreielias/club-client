@@ -28,7 +28,9 @@
   let submitted = $state(false);
   let action = $state<ResolutionAction>('GENERAL');
   let assignees = $state<string[]>([]);
-  const actionOptions = actions(null).filter((a) => resolutionRules.enabled(a)).map((a) => ({ value: a, label: ACTION_LABELS[a] }));
+  const actionOptions = actions(null)
+    .filter((a) => resolutionRules.enabled(a))
+    .map((a) => ({ value: a, label: ACTION_LABELS[a] }));
   // server: circular votes run among the board, which also carries them out.
   const board = new Resource(async () => {
     const people = new Map((await membersApi.board()).offices.filter((o) => o.office !== 'AUDITOR').map((o) => [o.memberId, o.name]));
@@ -41,10 +43,14 @@
     event.preventDefault();
     submitted = true;
     if (!title.trim() || tooSoon) return;
-    await create.submit(async () => {
-      const draft = await meetingsApi.createCircular(title.trim(), text.trim() || null, session.clock.toInstant(deadline), action, assignees);
-      return (await meetingsApi.openResolution(draft.id)).id;
-    }, 'resolution', 'Umlaufbeschluss an den Vorstand verschickt.');
+    await create.submit(
+      async () => {
+        const draft = await meetingsApi.createCircular(title.trim(), text.trim() || null, session.clock.toInstant(deadline), action, assignees);
+        return (await meetingsApi.openResolution(draft.id)).id;
+      },
+      'resolution',
+      'Umlaufbeschluss an den Vorstand verschickt.',
+    );
   }
 </script>
 
@@ -56,13 +62,24 @@
     <Field label="Begründung (optional)">
       <textarea bind:value={text} rows="4" maxlength="4000"></textarea>
     </Field>
-    <Field label="Abstimmen bis" hint="Mindestens {noticeText(resolutionRules.value.circular.minHours)}; gültig, wenn {QUORUM_LABELS[resolutionRules.value.circular.quorum]} des Vorstands abstimmt." error={submitted && tooSoon ? `Mindestens ${noticeText(resolutionRules.value.circular.minHours)} ab jetzt.` : null}>
+    <Field
+      label="Abstimmen bis"
+      hint="Mindestens {noticeText(resolutionRules.value.circular.minHours)}; gültig, wenn {QUORUM_LABELS[
+        resolutionRules.value.circular.quorum
+      ]} des Vorstands abstimmt."
+      error={submitted && tooSoon ? `Mindestens ${noticeText(resolutionRules.value.circular.minHours)} ab jetzt.` : null}
+    >
       <DateTimeInput bind:value={deadline} min={earliest} required />
     </Field>
     <Field label="Art des Beschlusses" hint="Bestimmt die Aufgabe, die nach der Annahme entsteht.">
       <Select bind:value={action} options={actionOptions} />
     </Field>
-    <MemberChips bind:value={assignees} candidates={board.value ?? []} label="Verantwortlich für die Umsetzung" placeholder="Verantwortlich (leer = Vorstand)" />
+    <MemberChips
+      bind:value={assignees}
+      candidates={board.value ?? []}
+      label="Verantwortlich für die Umsetzung"
+      placeholder="Verantwortlich (leer = Vorstand)"
+    />
     <ErrorNote error={create.save.error} />
     <div class="row">
       <Button type="submit" variant="primary" busy={create.save.busy}>An den Vorstand schicken</Button>

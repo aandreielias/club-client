@@ -39,7 +39,8 @@ export class FileMover {
         break;
       }
     }
-    if (moved) this.bus.publish(TOAST, { text: moved === 1 ? `Nach „${target.name}“ verschoben.` : `${moved} Dateien nach „${target.name}“ verschoben.` });
+    if (moved)
+      this.bus.publish(TOAST, { text: moved === 1 ? `Nach „${target.name}“ verschoben.` : `${moved} Dateien nach „${target.name}“ verschoben.` });
     return moved === files.length;
   }
 

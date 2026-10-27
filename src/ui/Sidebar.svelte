@@ -87,35 +87,59 @@
 </script>
 
 {#snippet tab(item: NavItem)}
-  <a href="#{item.path}" class:active={isActive(item.path)} aria-current={isActive(item.path) ? 'page' : undefined}
-    {@attach tooltip(`Zu ${item.label}${navKeys(item.path)}`)} onclick={(e) => go(e, item.path)}
-    {@attach menu(() => [{ label: 'In geteilter Ansicht öffnen', icon: 'split', run: () => bus.publish(SPLIT_OPEN, { path: item.path }) }])}>
+  <a
+    href="#{item.path}"
+    class:active={isActive(item.path)}
+    aria-current={isActive(item.path) ? 'page' : undefined}
+    {@attach tooltip(`Zu ${item.label}${navKeys(item.path)}`)}
+    onclick={(e) => go(e, item.path)}
+    {@attach menu(() => [{ label: 'In geteilter Ansicht öffnen', icon: 'split', run: () => bus.publish(SPLIT_OPEN, { path: item.path }) }])}
+  >
     {#if item.icon}<Icon name={item.icon} />{/if}
     <span class="label">{item.label}</span>
     {#if item.badge}<span class="badge">{item.badge}<span class="visually-hidden"> neu</span></span>{/if}
   </a>
 {/snippet}
 
-<button class="toggle" aria-expanded={open} aria-controls="sidebar" onclick={() => (open = !open)}
-  {@attach tooltip(() => (open ? 'Navigation schließen' : 'Navigation öffnen'))}>
+<button
+  class="toggle"
+  aria-expanded={open}
+  aria-controls="sidebar"
+  onclick={() => (open = !open)}
+  {@attach tooltip(() => (open ? 'Navigation schließen' : 'Navigation öffnen'))}
+>
   <Icon name={open ? 'close' : 'menu'} />
   <span class="visually-hidden">{open ? 'Schließen' : 'Menü'}</span>
   {#if !open && pending}<span class="badge toggle-badge">{pending}<span class="visually-hidden"> neu</span></span>{/if}
 </button>
-{#if open}<button class="scrim" aria-label="Navigation schließen" tabindex="-1" onclick={() => (open = false)} {@attach tooltip('Navigation schließen')}></button>{/if}
+{#if open}<button
+    class="scrim"
+    aria-label="Navigation schließen"
+    tabindex="-1"
+    onclick={() => (open = false)}
+    {@attach tooltip('Navigation schließen')}
+  ></button>{/if}
 
 <nav id="sidebar" class:open class:collapsed aria-label="Hauptnavigation">
   <div class="title">
     <span class="mark" aria-hidden="true">{title.slice(0, 1)}</span>
     <span class="name">{title}</span>
-    <button class="icon-button collapse" onclick={() => preferences.set('sidebarCollapsed', !collapsed)} aria-label={collapsed ? 'Seitenleiste ausklappen' : 'Seitenleiste einklappen'}
-      {@attach tooltip(() => withKeys(collapsed ? 'Seitenleiste ausklappen' : 'Seitenleiste einklappen', 'sidebar.toggle'))}>
+    <button
+      class="icon-button collapse"
+      onclick={() => preferences.set('sidebarCollapsed', !collapsed)}
+      aria-label={collapsed ? 'Seitenleiste ausklappen' : 'Seitenleiste einklappen'}
+      {@attach tooltip(() => withKeys(collapsed ? 'Seitenleiste ausklappen' : 'Seitenleiste einklappen', 'sidebar.toggle'))}
+    >
       <Icon name="sidebar" />
     </button>
   </div>
   <!-- Collapsed (desktop): a search icon that expands the sidebar; the phone overlay always shows the field. -->
-  <button class="link search-icon" onclick={() => (preferences.set('sidebarCollapsed', false), keyboardSearch())} aria-label="Suchen"
-    {@attach tooltip(() => withKeys('Suchen', 'search.focus'))}><Icon name="search" /></button>
+  <button
+    class="link search-icon"
+    onclick={() => (preferences.set('sidebarCollapsed', false), keyboardSearch())}
+    aria-label="Suchen"
+    {@attach tooltip(() => withKeys('Suchen', 'search.focus'))}><Icon name="search" /></button
+  >
   <div class="search"><GlobalSearch /></div>
   <ul bind:this={list}>
     {#if indicator}
@@ -123,9 +147,21 @@
     {/if}
     {#each items.filter((i) => !i.footer) as item (item.key)}
       {#if item.children}
-        <li class="group" onpointerenter={() => flyout.show(item.key)} onpointerleave={(e) => flyout.leaveGroup(e, item.key)} onfocusout={(e) => flyout.leaveFocus(e)}>
-          <a href="#{item.path}" data-group={item.key} class:active={isRowActive(item)} aria-haspopup="true" aria-expanded={flyout.key === item.key}
-            onclick={(e) => go(e, item.path)} onkeydown={(e) => flyout.groupKeys(e, item.key)}>
+        <li
+          class="group"
+          onpointerenter={() => flyout.show(item.key)}
+          onpointerleave={(e) => flyout.leaveGroup(e, item.key)}
+          onfocusout={(e) => flyout.leaveFocus(e)}
+        >
+          <a
+            href="#{item.path}"
+            data-group={item.key}
+            class:active={isRowActive(item)}
+            aria-haspopup="true"
+            aria-expanded={flyout.key === item.key}
+            onclick={(e) => go(e, item.path)}
+            onkeydown={(e) => flyout.groupKeys(e, item.key)}
+          >
             {#if item.icon}<Icon name={item.icon} />{/if}
             <span class="label">{item.label}</span>
             {#if item.badge}<span class="badge">{item.badge}<span class="visually-hidden"> neu</span></span>{/if}
@@ -134,7 +170,13 @@
           <!-- Desktop: flyout to the right while hovered or focused. Compact (no hover): the tabs stay listed below the group. -->
           {#if flyout.key === item.key || compact.current}
             <!-- svelte-ignore a11y_no_noninteractive_element_interactions (arrow keys between the links inside, which bubble here) -->
-            <ul class="flyout" data-flyout={item.key} aria-label={item.label} onkeydown={(e) => flyout.flyoutKeys(e, item.key)} transition:motion.pop={{ origin: 'left' }}>
+            <ul
+              class="flyout"
+              data-flyout={item.key}
+              aria-label={item.label}
+              onkeydown={(e) => flyout.flyoutKeys(e, item.key)}
+              transition:motion.pop={{ origin: 'left' }}
+            >
               <li class="flyout-title" aria-hidden="true">{item.label}</li>
               {#each item.children as child, i (child.path)}
                 <li in:motion.rise={{ delay: motion.stagger(i), distance: 3 }}>{@render tab(child)}</li>
@@ -151,23 +193,43 @@
     {#if connection === 'reconnecting'}
       <span class="connection" role="status"><span class="pulse" aria-hidden="true"></span>Verbindung unterbrochen</span>
     {/if}
-    <button class="link" onclick={() => ((open = false), (commands.paletteOpen = true))}
-      {@attach tooltip(() => withKeys('Alle Befehle durchsuchen und ausführen', 'palette.open'))}>
+    <button
+      class="link"
+      onclick={() => ((open = false), (commands.paletteOpen = true))}
+      {@attach tooltip(() => withKeys('Alle Befehle durchsuchen und ausführen', 'palette.open'))}
+    >
       <Icon name="commands" />
       <span class="label">Befehle</span>
       <Kbd keys={keymap.keys('palette.open')} />
     </button>
     {#each items.filter((i) => i.footer) as item (item.path)}
-      <a href="#{item.path}" class:active={isActive(item.path)} aria-current={isActive(item.path) ? 'page' : undefined}
-        {@attach tooltip(`Zu ${item.label}${navKeys(item.path)}`)} onclick={(e) => go(e, item.path)}>
+      <a
+        href="#{item.path}"
+        class:active={isActive(item.path)}
+        aria-current={isActive(item.path) ? 'page' : undefined}
+        {@attach tooltip(`Zu ${item.label}${navKeys(item.path)}`)}
+        onclick={(e) => go(e, item.path)}
+      >
         {#if item.icon}<Icon name={item.icon} />{/if}
         <span class="label">{item.label}</span>
       </a>
     {/each}
     <div class="user">
-      <a class="profile" href="#/account" class:active={isActive('/account')} aria-current={isActive('/account') ? 'page' : undefined}
-        {@attach tooltip(`Mein Konto${navKeys('/account')}`)} onclick={(e) => go(e, '/account')}>
-        <span class="avatar" aria-hidden="true">{user.split(' ').map((w) => w[0]).join('').slice(0, 2)}</span>
+      <a
+        class="profile"
+        href="#/account"
+        class:active={isActive('/account')}
+        aria-current={isActive('/account') ? 'page' : undefined}
+        {@attach tooltip(`Mein Konto${navKeys('/account')}`)}
+        onclick={(e) => go(e, '/account')}
+      >
+        <span class="avatar" aria-hidden="true"
+          >{user
+            .split(' ')
+            .map((w) => w[0])
+            .join('')
+            .slice(0, 2)}</span
+        >
         <span class="label">{user}</span>
       </a>
       <button class="icon-button" onclick={onlogout} aria-label="Abmelden" {@attach tooltip('Auf diesem Gerät abmelden')}>

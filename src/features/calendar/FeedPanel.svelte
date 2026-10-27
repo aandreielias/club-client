@@ -20,8 +20,8 @@
 
 <section class="stack">
   <p class="muted">
-    Mit einem persönlichen Link zeigen Kalender-Apps (Google, Apple, Outlook) deine Termine an. Der Link wird nur einmal
-    angezeigt. Ein neuer Link macht den alten ungültig.
+    Mit einem persönlichen Link zeigen Kalender-Apps (Google, Apple, Outlook) deine Termine an. Der Link wird nur einmal angezeigt. Ein neuer Link
+    macht den alten ungültig.
   </p>
   {#if feed.url}
     <div class="row">

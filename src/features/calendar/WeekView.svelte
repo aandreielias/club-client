@@ -19,7 +19,11 @@
     return startHour * 60 + share * (endHour - startHour) * 60;
   }
 
-  let { model, drag, resizer }: {
+  let {
+    model,
+    drag,
+    resizer,
+  }: {
     model: CalendarModel;
     /** Moving entries by drag and drop (where allowed). */
     drag?: CalendarDrag;
@@ -30,8 +34,6 @@
   const { weekStartHour: startHour, weekEndHour: endHour } = settings.calendar;
   const hours = Array.from({ length: endHour - startHour }, (_, i) => startHour + i);
   const bars = $derived(model.spans(model.days));
-
-
 </script>
 
 <div class="week" style:--hours={hours.length}>
@@ -45,16 +47,31 @@
 
   <div class="lane-label muted">Ganztägig</div>
   <div class="all-day-row" style:--lanes={bars.lanes}>
-  {#each model.days as day (day)}
-    <div class="all-day" data-day={day} role="group" aria-label="Ganztägig {session.format.date(day)}" {@attach menu(() => newAppointmentEntries(model, day))} class:drop-target={hover === `all:${day}`}
-      ondragover={(e) => drag?.over(e) && (hover = `all:${day}`)}
-      ondragleave={() => hover === `all:${day}` && (hover = null)}
-      ondrop={(e) => ((hover = null), drag?.drop(e, model.entries.value ?? [], (entry) => drag.toDay(entry, day), () => void model.load()))}>
-      {#each model.singleOn(day).filter((e) => e.allDay) as entry (entry.key)}
-        <EntryChip {entry} {drag} resize="days" {resizer} />
-      {/each}
-    </div>
-  {/each}
+    {#each model.days as day (day)}
+      <div
+        class="all-day"
+        data-day={day}
+        role="group"
+        aria-label="Ganztägig {session.format.date(day)}"
+        {@attach menu(() => newAppointmentEntries(model, day))}
+        class:drop-target={hover === `all:${day}`}
+        ondragover={(e) => drag?.over(e) && (hover = `all:${day}`)}
+        ondragleave={() => hover === `all:${day}` && (hover = null)}
+        ondrop={(e) => (
+          (hover = null),
+          drag?.drop(
+            e,
+            model.entries.value ?? [],
+            (entry) => drag.toDay(entry, day),
+            () => void model.load(),
+          )
+        )}
+      >
+        {#each model.singleOn(day).filter((e) => e.allDay) as entry (entry.key)}
+          <EntryChip {entry} {drag} resize="days" {resizer} />
+        {/each}
+      </div>
+    {/each}
     <!-- Entries across several days (also timed ones, e.g. a circular vote): one bar each. -->
     <SpanBars spans={bars.spans} top="2px" gap="2px" {drag} {resizer} />
   </div>
@@ -64,7 +81,14 @@
   </div>
   {#each model.days as day (day)}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="column" data-day={day} data-start-hour={startHour} data-end-hour={endHour} class:today={day === model.today} ondblclick={() => createAppointment(model, day)} {@attach menu(() => newAppointmentEntries(model, day))}
+    <div
+      class="column"
+      data-day={day}
+      data-start-hour={startHour}
+      data-end-hour={endHour}
+      class:today={day === model.today}
+      ondblclick={() => createAppointment(model, day)}
+      {@attach menu(() => newAppointmentEntries(model, day))}
       class:drop-target={hover === day}
       ondragover={(e) => drag?.over(e) && (hover = day)}
       ondragleave={() => hover === day && (hover = null)}
@@ -72,12 +96,23 @@
         hover = null;
         const minutes = minutesAt(e);
         // Due dates (all-day) dropped on the grid keep their time; appointments take the dropped time.
-        void drag?.drop(e, model.entries.value ?? [], (entry) => (entry.allDay ? drag.toDay(entry, day) : drag.toTime(entry, day, minutes)), () => void model.load());
-      }}>
+        void drag?.drop(
+          e,
+          model.entries.value ?? [],
+          (entry) => (entry.allDay ? drag.toDay(entry, day) : drag.toTime(entry, day, minutes)),
+          () => void model.load(),
+        );
+      }}
+    >
       {#each hours as hour (hour)}<div class="slot"></div>{/each}
       {#each model.placeOn(day, startHour, endHour) as placed (placed.entry.key)}
-        <div class="event" style:top="{placed.top}%" style:height="{placed.height}%"
-          style:left="{(placed.lane / placed.lanes) * 100}%" style:width="{100 / placed.lanes}%">
+        <div
+          class="event"
+          style:top="{placed.top}%"
+          style:height="{placed.height}%"
+          style:left="{(placed.lane / placed.lanes) * 100}%"
+          style:width="{100 / placed.lanes}%"
+        >
           <EntryChip entry={placed.entry} fill {drag} resize="time" {resizer} />
         </div>
       {/each}

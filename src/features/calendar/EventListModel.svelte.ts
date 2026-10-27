@@ -30,14 +30,23 @@ export class EventListModel extends ListModel<Appointment> {
           { key: 'location', label: 'Ort', value: (a) => a.location, hideOnCompact: true },
         ],
         filters: [
-          { key: 'type', label: 'Art', kind: 'select', allLabel: 'Alle Arten', options: () => appointmentTypes.options(), test: (a, type) => a.type === type },
+          {
+            key: 'type',
+            label: 'Art',
+            kind: 'select',
+            allLabel: 'Alle Arten',
+            options: () => appointmentTypes.options(),
+            test: (a, type) => a.type === type,
+          },
           {
             key: 'team',
             label: 'Team',
             kind: 'select',
             allLabel: 'Alle Teams',
-            options: (items) => [...new Map(items.filter((a) => a.teamId).map((a) => [a.teamId!, EventListModel.audience(a, directory)])).entries()]
-              .map(([value, label]) => ({ value, label })),
+            options: (items) =>
+              [...new Map(items.filter((a) => a.teamId).map((a) => [a.teamId!, EventListModel.audience(a, directory)])).entries()].map(
+                ([value, label]) => ({ value, label }),
+              ),
             test: (a, team) => a.teamId === team,
           },
           { key: 'past', label: 'Vergangene', kind: 'toggle' },

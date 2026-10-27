@@ -25,8 +25,13 @@
   const upcoming = (all: MeetingSummary[]) => all.filter((m) => m.endsAt >= now && m.status !== 'CLOSED');
   const past = (all: MeetingSummary[]) => all.filter((m) => m.endsAt < now || m.status === 'CLOSED').reverse();
   const card = (m: MeetingSummary): RecordCard => ({
-    href: `#/meetings/${m.id}`, record: { kind: 'meeting', id: m.id, title: m.title }, icon: 'meetings', altIcon: !isAssembly(meetingTypes.get(m.kind)),
-    detail: meetingTypes.label(m.kind), meta: session.format.dateTime(m.startsAt), tag: { tone: STATUS_TONES[m.status], label: STATUS_LABELS[m.status] },
+    href: `#/meetings/${m.id}`,
+    record: { kind: 'meeting', id: m.id, title: m.title },
+    icon: 'meetings',
+    altIcon: !isAssembly(meetingTypes.get(m.kind)),
+    detail: meetingTypes.label(m.kind),
+    meta: session.format.dateTime(m.startsAt),
+    tag: { tone: STATUS_TONES[m.status], label: STATUS_LABELS[m.status] },
   });
 </script>
 
@@ -44,8 +49,10 @@
           <RecordCards cards={past(all).map(card)} />
         {/if}
       {:else}
-        <Empty text="Noch keine Sitzung. Mitgliederversammlungen sehen die stimmberechtigten Mitglieder, Vorstandssitzungen nur der Vorstand."
-          action={policy.canCreate() ? { label: 'Neue Sitzung', icon: 'add', run: create } : null} />
+        <Empty
+          text="Noch keine Sitzung. Mitgliederversammlungen sehen die stimmberechtigten Mitglieder, Vorstandssitzungen nur der Vorstand."
+          action={policy.canCreate() ? { label: 'Neue Sitzung', icon: 'add', run: create } : null}
+        />
       {/if}
     {/snippet}
   </AsyncView>

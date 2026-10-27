@@ -18,7 +18,13 @@
   const view = new DetailController(bus, handle, onclosed);
   const edit = new EditSession<AppointmentTypeInput>(bus, backStack);
   // svelte-ignore state_referenced_locally
-  const stored = new StoredRecord(view, appointmentTypes, () => id, 'Diese Terminart gibt es nicht mehr.', () => edit.save.busy);
+  const stored = new StoredRecord(
+    view,
+    appointmentTypes,
+    () => id,
+    'Diese Terminart gibt es nicht mehr.',
+    () => edit.save.busy,
+  );
   const type = $derived(stored.record);
   view.title(() => type?.label);
 
@@ -35,21 +41,40 @@
   <Detail title={edit.form ? 'Terminart bearbeiten' : type.label}>
     {#snippet actions()}
       {#if !edit.form && session.hasRole(...ADMIN_BOARD)}
-        <Button icon="edit" onclick={() => edit.edit({ label: type.label, hue: type.hue, rides: type.rides, cabins: type.cabins, sort: type.sort, archived: type.archived })}>Bearbeiten</Button>
+        <Button
+          icon="edit"
+          onclick={() =>
+            edit.edit({ label: type.label, hue: type.hue, rides: type.rides, cabins: type.cabins, sort: type.sort, archived: type.archived })}
+          >Bearbeiten</Button
+        >
         {#if !type.inUse}<Button variant="danger" icon="delete" onclick={() => remove(type.label)}>Löschen</Button>{/if}
       {/if}
     {/snippet}
 
     {#if edit.form}
       <div class="editing" {@attach edit.track}>
-        <AppointmentTypeEditor form={edit.form} action={edit.save} submitLabel="Speichern" canArchive oncancel={() => edit.cancel()} onsubmit={submit} />
+        <AppointmentTypeEditor
+          form={edit.form}
+          action={edit.save}
+          submitLabel="Speichern"
+          canArchive
+          oncancel={() => edit.cancel()}
+          onsubmit={submit}
+        />
       </div>
     {:else}
       <dl class="props">
-        <dt>Im Kalender</dt><dd><Tag tone={type.hue}>{type.label}</Tag>{#if type.archived} <Tag tone="gray">Archiviert</Tag>{/if}</dd>
-        <dt>Fahrgemeinschaften</dt><dd>{type.rides ? 'werden angeboten' : 'keine'}</dd>
-        <dt>Kabinen</dt><dd>{type.cabins ? 'werden angegeben' : 'keine'}</dd>
-        <dt>Verwendet</dt><dd>{type.inUse ? 'Es gibt Termine dieser Art.' : 'Noch keine Termine.'}</dd>
+        <dt>Im Kalender</dt>
+        <dd>
+          <Tag tone={type.hue}>{type.label}</Tag>{#if type.archived}
+            <Tag tone="gray">Archiviert</Tag>{/if}
+        </dd>
+        <dt>Fahrgemeinschaften</dt>
+        <dd>{type.rides ? 'werden angeboten' : 'keine'}</dd>
+        <dt>Kabinen</dt>
+        <dd>{type.cabins ? 'werden angegeben' : 'keine'}</dd>
+        <dt>Verwendet</dt>
+        <dd>{type.inUse ? 'Es gibt Termine dieser Art.' : 'Noch keine Termine.'}</dd>
       </dl>
     {/if}
   </Detail>

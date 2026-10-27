@@ -7,15 +7,23 @@
 
 <div class="toasts" aria-live="polite">
   {#each toasts.items as toast (toast.id)}
-    <div class="toast" class:error={toast.error} role={toast.error ? 'alert' : 'status'}
-      in:motion.rise={{ distance: 16 }} out:motion.pop={{ origin: 'bottom' }} animate:flip={{ duration: motion.ms('base') }}>
+    <div
+      class="toast"
+      class:error={toast.error}
+      role={toast.error ? 'alert' : 'status'}
+      in:motion.rise={{ distance: 16 }}
+      out:motion.pop={{ origin: 'bottom' }}
+      animate:flip={{ duration: motion.ms('base') }}
+    >
       <Icon name={toast.error ? 'alert' : 'check'} small />
       <span>{toast.text}</span>
       {#if toast.action}
         {@const action = toast.action}
         <button class="action" onclick={() => (toasts.dismiss(toast.id), action.run())} {@attach tooltip(action.label)}>{action.label}</button>
       {/if}
-      <button class="dismiss" aria-label="Schließen" onclick={() => toasts.dismiss(toast.id)} {@attach tooltip('Meldung schließen')}><Icon name="close" small /></button>
+      <button class="dismiss" aria-label="Schließen" onclick={() => toasts.dismiss(toast.id)} {@attach tooltip('Meldung schließen')}
+        ><Icon name="close" small /></button
+      >
     </div>
   {/each}
 </div>

@@ -32,7 +32,10 @@
   /** Places of the club, plus free text for one-off places (a beach court, the opponent's hall). */
   const OTHER = '';
   let places = $state<Location[]>([]);
-  locationsApi.list().then((list) => (places = list), () => {});
+  locationsApi.list().then(
+    (list) => (places = list),
+    () => {},
+  );
   const placeOptions = $derived([
     ...places.map((l) => ({ value: l.id, label: l.address ? `${l.name} · ${l.address}` : l.name })),
     { value: OTHER, label: 'Anderer Ort …' },
@@ -105,8 +108,7 @@
         <Field label="Alle … Wochen" error={form.error('intervalWeeks')}>
           <input type="number" bind:value={form.intervalWeeks} min="1" max={limits.maxIntervalWeeks} step="1" />
         </Field>
-        <Field label="Bis einschließlich" error={form.error('repeatUntil')}
-          hint={form.repeatUntil ? `${form.occurrences()} Termine` : undefined}>
+        <Field label="Bis einschließlich" error={form.error('repeatUntil')} hint={form.repeatUntil ? `${form.occurrences()} Termine` : undefined}>
           <DateInput bind:value={form.repeatUntil} min={form.start.slice(0, 10)} />
         </Field>
       </div>

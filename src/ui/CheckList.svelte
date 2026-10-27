@@ -22,8 +22,12 @@
   <div class="options">
     {#each options as option (option.value)}
       <label class="check">
-        <input type="checkbox" checked={value.includes(option.value)} disabled={option.disabled}
-          onchange={(e) => toggle(option.value, e.currentTarget.checked)} />
+        <input
+          type="checkbox"
+          checked={value.includes(option.value)}
+          disabled={option.disabled}
+          onchange={(e) => toggle(option.value, e.currentTarget.checked)}
+        />
         {option.label}
       </label>
     {/each}

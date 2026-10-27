@@ -19,8 +19,14 @@ async function list(req: MockRequest, path: string): Promise<Record<string, any>
 
 const contains = (needle: string, ...texts: (string | null | undefined)[]) => texts.some((t) => t?.toLocaleLowerCase().includes(needle));
 
-const hit = (kind: HitKind, id: string, title: string, detail: string | null = null, at: string | null = null, folderId: string | null = null): SearchHit =>
-  ({ kind, id, title, detail, at, folderId });
+const hit = (
+  kind: HitKind,
+  id: string,
+  title: string,
+  detail: string | null = null,
+  at: string | null = null,
+  folderId: string | null = null,
+): SearchHit => ({ kind, id, title, detail, at, folderId });
 
 /** server: MemberHandlers.search; non-board members find profiles they may open. */
 function members(req: MockRequest, needle: string, limit: number): SearchHit[] {
@@ -65,18 +71,39 @@ mockServer.on('GET', '/api/v1/search', async (req) => {
       ...appointments
         .filter((a) => contains(needle, a.title, a.location, a.description))
         .sort((a, b) => Number(past(a)) - Number(past(b)) || (past(a) ? b.startsAt.localeCompare(a.startsAt) : a.startsAt.localeCompare(b.startsAt)))
-        .filter((a) => !a.seriesId || !series.has(a.seriesId) && !!series.add(a.seriesId))
+        .filter((a) => !a.seriesId || (!series.has(a.seriesId) && !!series.add(a.seriesId)))
         .slice(0, limit)
         .map((a) => hit('APPOINTMENT', a.id, a.title, a.cancelled ? 'Abgesagt' : a.location, a.startsAt)),
-      ...tasks.filter((t) => contains(needle, t.title, t.description)).slice(0, limit).map((t) => hit('TASK', t.id, t.title, t.status, t.dueAt)),
+      ...tasks
+        .filter((t) => contains(needle, t.title, t.description))
+        .slice(0, limit)
+        .map((t) => hit('TASK', t.id, t.title, t.status, t.dueAt)),
       ...members(req, needle, limit),
-      ...teams.filter((t) => contains(needle, t.name, t.season)).slice(0, limit).map((t) => hit('TEAM', t.id, t.name, t.season)),
-      ...items.filter((i) => contains(needle, i.name, i.category, i.location, i.description)).slice(0, limit).map((i) => hit('ITEM', i.id, i.name, i.category)),
-      ...places.filter((l) => contains(needle, l.name, l.address)).slice(0, limit).map((l) => hit('LOCATION', l.id, l.name, l.address)),
-      ...cups.filter((t) => contains(needle, t.name)).slice(0, limit).map((t) => hit('TOURNAMENT', t.id, t.name)),
-      ...meetings.filter((m) => contains(needle, m.title, m.location)).sort((a, b) => b.startsAt.localeCompare(a.startsAt)).slice(0, limit)
+      ...teams
+        .filter((t) => contains(needle, t.name, t.season))
+        .slice(0, limit)
+        .map((t) => hit('TEAM', t.id, t.name, t.season)),
+      ...items
+        .filter((i) => contains(needle, i.name, i.category, i.location, i.description))
+        .slice(0, limit)
+        .map((i) => hit('ITEM', i.id, i.name, i.category)),
+      ...places
+        .filter((l) => contains(needle, l.name, l.address))
+        .slice(0, limit)
+        .map((l) => hit('LOCATION', l.id, l.name, l.address)),
+      ...cups
+        .filter((t) => contains(needle, t.name))
+        .slice(0, limit)
+        .map((t) => hit('TOURNAMENT', t.id, t.name)),
+      ...meetings
+        .filter((m) => contains(needle, m.title, m.location))
+        .sort((a, b) => b.startsAt.localeCompare(a.startsAt))
+        .slice(0, limit)
         .map((m) => hit('MEETING', m.id, m.title, m.location, m.startsAt)),
-      ...folders.filter((f) => contains(needle, f.name)).slice(0, limit).map((f) => hit('FOLDER', f.id, f.name, null, null, f.parentId)),
+      ...folders
+        .filter((f) => contains(needle, f.name))
+        .slice(0, limit)
+        .map((f) => hit('FOLDER', f.id, f.name, null, null, f.parentId)),
       ...files.map((f) => hit('FILE', f.id, f.name, f.folderName, null, f.folderId)),
     ],
   };
