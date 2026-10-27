@@ -5,7 +5,7 @@ import { calendar } from './mock';
 import type { NewAppointment } from './model';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
-const stepUp = (id: string) => directory.stepUp(member(id), MockDirectory.PIN);
+const stepUp = (id: string) => directory.confirm(member(id));
 const range = (days: number) => [new Date(Date.now() - 8 * 86_400_000).toISOString(), new Date(Date.now() + days * 86_400_000).toISOString()];
 
 const draft = (teamId: string | null, extra: Partial<NewAppointment> = {}): NewAppointment => ({
@@ -134,7 +134,7 @@ describe('mock appointment types', () => {
   it('are added by the board, offer cabins only where set, and are archived once used', async () => {
     const { appointmentTypes } = await import('./mock');
     const board = directory.members.data.find((m) => m.id === 'vorstand')!;
-    directory.stepUp(board, MockDirectory.PIN);
+    directory.confirm(board);
     expect(() => appointmentTypes.save(board, null, { label: 'Kurs', hue: 'pink', sort: 1 })).toThrow();
     const kurs = appointmentTypes.save(board, null, { label: 'Kurs', hue: 'green', rides: false, cabins: false, sort: 9 });
     const start = new Date(Date.now() + 3 * 86_400_000).toISOString();

@@ -9,7 +9,7 @@ const member = (id: string): Member => directory.members.data.find((m) => m.id =
 
 describe('club rules for offices and resolutions', () => {
   it('rename offices, change holders and word the board warnings with them', () => {
-    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    directory.confirm(member('vorstand'));
     const before = structuredClone(directory.boardSettings.data);
     const changed = structuredClone(before);
     changed.offices[0].label = 'Obfrau';
@@ -24,7 +24,7 @@ describe('club rules for offices and resolutions', () => {
   });
 
   it('fix majorities per decision only where every meeting type offers them', () => {
-    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    directory.confirm(member('vorstand'));
     const before = structuredClone(meetings.rules.data);
     const exclusion = before.map((r) => (r.action === 'EXCLUSION' ? { ...r, majority: 'SIMPLE' as const } : r));
     expect(() => meetings.saveRules(member('vorstand'), { items: exclusion, circular: meetings.circular.data })).toThrow(); // the extraordinary board meeting needs three quarters
@@ -37,7 +37,7 @@ describe('club rules for offices and resolutions', () => {
   });
 
   it('remove a decision from every meeting type, but never the general one', () => {
-    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    directory.confirm(member('vorstand'));
     const before = structuredClone(meetings.rules.data);
     const types = structuredClone(meetings.types.data);
     const removed = before.map((r) => (r.action === 'EXCLUSION' || r.action === 'GENERAL' ? { ...r, enabled: false } : r));
@@ -51,7 +51,7 @@ describe('club rules for offices and resolutions', () => {
   });
 
   it('let the club define membership kinds and office pairs, and keep office holders eligible', () => {
-    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    directory.confirm(member('vorstand'));
     const supporter = board.saveMembershipKind(member('vorstand'), null, { label: 'Unterstützend', votes: true, eligible: false, sort: 5 });
     const target = member('spielerin');
     expect(directory.setMembership(member('vorstand'), target.id, { membershipTypes: [supporter.key] })).toMatchObject({ voter: true, eligible: false });
@@ -70,7 +70,7 @@ describe('club rules for offices and resolutions', () => {
 
 describe('membership kinds per member', () => {
   it('honour with one kind and restore it, or hold several when the club allows it', () => {
-    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    directory.confirm(member('vorstand'));
     directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['ORDINARY'] });
     expect(directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['HONORARY'] }))
       .toMatchObject({ membershipTypes: ['HONORARY'], previousType: 'ORDINARY', voter: true });

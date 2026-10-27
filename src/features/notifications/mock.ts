@@ -19,7 +19,8 @@ const limits = settings.notifications.message;
 const SECURITY_TITLES: Record<string, string> = {
   CLUB_PIN_CHANGED: 'Der Vereins-PIN wurde geändert',
   PIN_LOCKED: 'Deine PIN-Eingabe wurde nach 5 Fehlversuchen gesperrt',
-  RESET_BY_ADMIN: 'Deine PIN-Sperre und Geräte wurden von einem Admin zurückgesetzt',
+  RESET_BY_ADMIN: 'Deine Sicherheitseinstellungen wurden von einem Admin zurückgesetzt',
+  PIN_CHANGE_DUE: 'Bitte den Vereins-PIN ändern',
   DEVICE_ADDED: 'Neues Gerät für Face ID / Fingerabdruck hinzugefügt',
   DEVICE_REMOVED: 'Gerät für Face ID / Fingerabdruck entfernt',
 };
@@ -172,7 +173,9 @@ export class MockNotifications {
         this.notify([data.memberId], 'SECURITY', SECURITY_TITLES[data.change] ?? 'Sicherheitsänderung',
           data.change === 'CLUB_PIN_CHANGED'
             ? 'Frag beim Vorstand nach dem neuen PIN. Wusstest du nichts davon? Melde dich beim Vorstand.'
-            : `Warst du das nicht? Melde dich sofort beim Vorstand von ${this.people.club.name}.`,
+            : data.change === 'PIN_CHANGE_DUE'
+              ? 'Ein Mitglied, das den Vereins-PIN kannte, hat seine Rolle nicht mehr. Ändere den PIN unter Einstellungen → Sicherheit.'
+              : `Warst du das nicht? Melde dich sofort beim Vorstand von ${this.people.club.name}.`,
           '/me/security');
         break;
     }

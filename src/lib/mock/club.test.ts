@@ -11,7 +11,7 @@ describe('mock club facts', () => {
     expect(directory.updateClub(member('admin'), { name: 'VC Beispiel' })).toMatchObject({ name: 'VC Beispiel', configured: true });
 
     expect(() => directory.updateClub(member('spieler'), { name: 'X' })).toThrow();
-    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    directory.confirm(member('vorstand'));
     expect(() => directory.updateClub(member('vorstand'), { seasonStartMonth: 13 })).toThrow();
     expect(directory.updateClub(member('vorstand'), { name: 'VC Beispiel', registerNumber: '123', seasonStartMonth: 8 })).toMatchObject({
       name: 'VC Beispiel', shortName: 'Verein', registerNumber: '123', seasonStartMonth: 8 });

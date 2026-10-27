@@ -28,7 +28,7 @@ describe('mock calendar items', () => {
     expect(of('vorstand')).toHaveLength(1);
     expect(of('neu')).toHaveLength(0);
 
-    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    directory.confirm(member('vorstand'));
     const end = new Date(Date.parse(directory.clock.startOfDay(start)) + 3 * 86_400_000).toISOString();
     move(member('spielerin'), 'absence', absence.id, directory.clock.startOfDay(start), end);
     expect(calendar.absences.data.find((a) => a.id === absence.id)!.to).toBe(directory.clock.localDate(new Date(Date.parse(end) - 1)));

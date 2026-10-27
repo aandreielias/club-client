@@ -16,6 +16,9 @@
   const policy = new PasswordPolicy(settings.auth.passwordMinLength);
   const security = new Resource(() => session.security());
   void security.load();
+  const usesTotp = session.hasRole(...ADMIN_BOARD);
+  const totp = new Resource(() => auth.totpFactor());
+  if (usesTotp) void totp.load();
 
   const canSetClubPin = session.hasRole(...ADMIN_BOARD);
   const pinAction = new Action();
@@ -58,22 +61,42 @@
   }
 
   async function confirmNow() {
-    if (await stepUp.request()) void security.load();
+    if (await stepUp.request()) {
+      void security.load();
+      if (usesTotp) void totp.load();
+    }
   }
 </script>
 
 <div class="stack section">
+  {#if usesTotp}
+    <h3>Authenticator-App</h3>
+    <AsyncView resource={totp}>
+      {#snippet children(factor)}
+        <div class="row">
+          {#if factor}
+            <Tag tone="green">Eingerichtet</Tag>
+            <span class="muted">Admin und Vorstand bestätigen Änderungen mit einem Code aus ihrer App. Neues Handy? Ein Admin setzt die Sicherheit zurück.</span>
+          {:else}
+            <span class="muted">Admin und Vorstand bestätigen Änderungen mit einem Code aus einer Authenticator-App.</span>
+            <Button size="sm" onclick={confirmNow}>Jetzt einrichten</Button>
+          {/if}
+        </div>
+      {/snippet}
+    </AsyncView>
+  {/if}
+
   <h3>Vereins-PIN</h3>
   <AsyncView resource={security}>
     {#snippet children(status)}
       <div class="stack">
         {#if !status.clubPinSet}
           {#if canSetClubPin}
-            <p>Es gibt noch keinen Vereins-PIN. Lege ihn fest und gib ihn persönlich an Admin, Vorstand und Trainer:innen weiter.</p>
+            <p>Es gibt noch keinen Vereins-PIN. Lege ihn fest und gib ihn persönlich an die Trainer:innen weiter.</p>
           {:else if session.isPrivileged}
             <p class="muted">Noch kein Vereins-PIN – frag den Vorstand.</p>
           {/if}
-        {:else if session.isPrivileged}
+        {:else if session.isPrivileged && !status.mfaRequired}
           <div class="row">
             {#if status.stepUpUntil}
               <Tag tone="green">Bestätigt bis {session.format.time(status.stepUpUntil)}</Tag>

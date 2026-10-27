@@ -305,6 +305,10 @@ export const settings = {
     pinLength: 5,
     stepUpMinutes: 10,
     maxPinAttempts: 5,
+    /** Digits of an authenticator-app code (TOTP). */
+    totpCodeLength: 6,
+    /** server: SecurityHandlers.CHALLENGE_VALIDITY, how old the token's authenticator-app check may be */
+    totpFreshSeconds: 120,
   },
 
   /** server: members module */

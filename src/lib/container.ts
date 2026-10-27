@@ -48,7 +48,7 @@ import { SplitView } from './split/SplitView.svelte';
 import { ContextMenuService } from './overlay/ContextMenuService.svelte';
 import { TooltipService } from './overlay/TooltipService.svelte';
 import { LINK_MESSAGES } from './links/messages';
-import type { StepUp } from './types';
+import { ADMIN_BOARD, type StepUp } from './types';
 
 const { runtime } = settings;
 
@@ -93,7 +93,14 @@ const transport: Transport =
         settings.api.mockOrigin,
       );
 
-export const stepUp: StepUpService = new StepUpService((pin) => api.post<StepUp>('/api/v1/me/step-up', { pin }));
+export const stepUp: StepUpService = new StepUpService({
+  usesTotp: () => session.hasRole(...ADMIN_BOARD),
+  verifyPin: (pin) => api.post<StepUp>('/api/v1/me/step-up', { pin }),
+  totpFactor: () => auth.totpFactor(),
+  enrollTotp: () => auth.enrollTotp(),
+  verifyTotp: (factorId, code) => auth.verifyTotp(factorId, code),
+  confirmTotp: () => api.post<StepUp>('/api/v1/me/step-up/mfa'),
+});
 
 // 401: the login is gone (expired, revoked); AppController sees the signed-out state and clears the session.
 export const api: ApiClient = new ApiClient(transport, () => stepUp.request(), () => void auth.signOut());

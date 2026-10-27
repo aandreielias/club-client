@@ -12,8 +12,8 @@ npm run build    # dist/, deployed to GitHub Pages by .github/workflows/deploy.y
 
 ## Modes
 `VITE_API_MODE` (see `.env.example`):
-- `mock` (default): the API is answered in the browser (`src/lib/mock`, `src/features/*/mock.ts`), and data is kept in localStorage. The login page lists test accounts. Privileged accounts confirm with the club PIN `73915`. To reset the data, clear the site data.
-- `http`: real club-server + Supabase login. Needs `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`. `src/lib/auth/SupabaseAuthProvider.ts` is still a stub.
+- `mock` (default): the API is answered in the browser (`src/lib/mock`, `src/features/*/mock.ts`), and data is kept in localStorage. The login page lists test accounts. Coaches confirm with the club PIN `73915`; admin and board set up a simulated authenticator app, and any 6 digits count as its code. To reset the data, clear the site data.
+- `http`: real club-server + Supabase login. Needs `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`. Admin and board confirm with an authenticator app (Supabase TOTP, `SupabaseAuthProvider`), coaches with the club PIN.
 
 ## Event bus
 `src/lib/bus/` is a TypeScript port of the Java EventBus (`../EventBus`): hierarchical channels (`domain/tasks/task-changed`), priorities, `Subscription` handles, request/response with timeouts, dead letters and a debug history (`window.__bus` in dev). One app bus (`bus` in the container) carries everything that is an event or a command:

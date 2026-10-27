@@ -5,7 +5,7 @@ import { tasks } from './mock';
 import type { NewTask } from './model';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
-const stepUp = (id: string) => directory.stepUp(member(id), MockDirectory.PIN);
+const stepUp = (id: string) => directory.confirm(member(id));
 const ids = (id: string, mine = false, includeDone = false) => tasks.list(member(id), mine, null, includeDone).map((t) => t.id);
 
 const draft = (teamId: string | null, assignees: string[]): NewTask => ({

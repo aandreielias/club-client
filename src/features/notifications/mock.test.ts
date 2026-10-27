@@ -52,7 +52,7 @@ describe('mock notifications', () => {
   });
 
   it('tells the other privileged members when the club PIN changes and keeps security messages on', () => {
-    directory.stepUp(member('admin'), MockDirectory.PIN);
+    directory.confirm(member('admin'));
     directory.setClubPin(member('admin'), 'k7m2q');
     directory.setClubPin(member('admin'), MockDirectory.PIN);
     const changed = (id: string) => notifications.list(id, true).items.filter((n) => n.title === 'Der Vereins-PIN wurde geändert');
@@ -68,7 +68,7 @@ describe('mock notifications', () => {
   });
 
   it('tells everyone affected when an admin cancels a team appointment, admin and board included, but not the admin', () => {
-    directory.stepUp(member('admin'), MockDirectory.PIN);
+    directory.confirm(member('admin'));
     const target = upcoming('t-u16');
     calendar.cancel(member('admin'), target.id, false);
     const title = `Abgesagt: ${target.title}`;
@@ -78,7 +78,7 @@ describe('mock notifications', () => {
   });
 
   it('tells every active member when a club-wide appointment is cancelled', () => {
-    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    directory.confirm(member('vorstand'));
     const target = upcoming(null);
     calendar.cancel(member('vorstand'), target.id, false);
     const title = `Abgesagt: ${target.title}`;

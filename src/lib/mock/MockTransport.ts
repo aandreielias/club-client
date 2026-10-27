@@ -15,8 +15,8 @@ export class MockTransport implements Transport {
     await new Promise((resolve) => setTimeout(resolve, this.latencyMs));
     // JSON round trip like the real wire: no shared references, no Svelte proxies in the tables.
     const wire = body === undefined || body instanceof FormData ? body : JSON.parse(JSON.stringify(body));
-    const email = DevAuthProvider.emailFromToken(await this.token());
-    const result = await this.server.handle(method, path, wire, email);
+    const token = await this.token();
+    const result = await this.server.handle(method, path, wire, DevAuthProvider.emailFromToken(token), undefined, DevAuthProvider.totpAtFromToken(token));
     return result === undefined ? undefined : structuredClone(result);
   }
 

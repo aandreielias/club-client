@@ -32,22 +32,36 @@ describe('mock core', () => {
     expect(mockServer.handle('GET', '/api/v1/me/security', undefined, trainer)).toMatchObject({ clubPinSet: true, pinLocked: false, stepUpUntil: expect.any(String) });
   });
 
-  it('lets only admin and board change the club PIN, with a step-up once one exists', () => {
+  it('lets admin and board confirm only with their authenticator app', () => {
+    const now = Math.floor(Date.now() / 1000);
+    expect(mockServer.handle('GET', '/api/v1/me/security', undefined, as('vorstand'))).toMatchObject({ mfaRequired: true });
+    expect(() => mockServer.handle('POST', '/api/v1/me/step-up', { pin: MockDirectory.PIN }, as('vorstand'))).toThrow(
+      expect.objectContaining({ code: 'auth.mfa-required' }),
+    );
+    expect(() => mockServer.handle('POST', '/api/v1/me/step-up/mfa', undefined, as('vorstand'))).toThrow(expect.objectContaining({ code: 'auth.mfa-not-recent' }));
+    expect(() => mockServer.handle('POST', '/api/v1/me/step-up/mfa', undefined, as('vorstand'), undefined, now - 600)).toThrow(
+      expect.objectContaining({ code: 'auth.mfa-not-recent' }),
+    );
+    expect(mockServer.handle('POST', '/api/v1/me/step-up/mfa', undefined, as('vorstand'), undefined, now)).toMatchObject({ until: expect.any(String) });
+  });
+
+  it('lets only admin and board change the club PIN, always with a step-up', () => {
     expect(() => mockServer.handle('PUT', '/api/v1/club/pin', { pin: 'k7m2q' }, as('trainer'))).toThrow(expect.objectContaining({ code: 'access.denied' }));
-    expect(() => mockServer.handle('PUT', '/api/v1/club/pin', { pin: 'k7m2q' }, as('vorstand'))).toThrow(expect.objectContaining({ code: 'auth.step-up-required' }));
-    mockServer.handle('POST', '/api/v1/me/step-up', { pin: MockDirectory.PIN }, as('vorstand'));
+    expect(() => mockServer.handle('PUT', '/api/v1/club/pin', { pin: 'k7m2q' }, as('admin'))).toThrow(expect.objectContaining({ code: 'auth.step-up-required' }));
+    directory.confirm(directory.members.data.find((m) => m.id === 'vorstand')!);
     expect(() => mockServer.handle('PUT', '/api/v1/club/pin', { pin: '12345' }, as('vorstand'))).toThrow(expect.objectContaining({ code: 'auth.pin-too-simple' }));
     mockServer.handle('PUT', '/api/v1/club/pin', { pin: 'k7m2q' }, as('vorstand'));
-    expect(() => mockServer.handle('POST', '/api/v1/me/step-up', { pin: MockDirectory.PIN }, as('admin'))).toThrow(expect.objectContaining({ code: 'auth.pin-wrong' }));
+    expect(() => mockServer.handle('POST', '/api/v1/me/step-up', { pin: MockDirectory.PIN }, as('trainer'))).toThrow(expect.objectContaining({ code: 'auth.pin-wrong' }));
     directory.clubPin.data.pin = MockDirectory.PIN;
   });
 
-  it('sets the first club PIN without a step-up and refuses PIN step-ups until then', () => {
+  it('refuses PIN step-ups until a club PIN exists', () => {
     directory.clubPin.data.pin = null;
     expect(() => mockServer.handle('POST', '/api/v1/me/step-up', { pin: MockDirectory.PIN }, as('trainer'))).toThrow(
       expect.objectContaining({ code: 'auth.club-pin-not-set' }),
     );
-    expect(mockServer.handle('GET', '/api/v1/me/security', undefined, as('trainer'))).toMatchObject({ clubPinSet: false });
+    expect(mockServer.handle('GET', '/api/v1/me/security', undefined, as('trainer'))).toMatchObject({ clubPinSet: false, mfaRequired: false });
+    directory.confirm(directory.members.data.find((m) => m.id === 'admin')!);
     mockServer.handle('PUT', '/api/v1/club/pin', { pin: MockDirectory.PIN }, as('admin'));
     expect(mockServer.handle('POST', '/api/v1/me/step-up', { pin: MockDirectory.PIN }, as('trainer'))).toMatchObject({ until: expect.any(String) });
   });
@@ -58,9 +72,8 @@ describe('mock core', () => {
     expect(() => directory.stepUp(trainer, 'wrong')).toThrow(expect.objectContaining({ code: 'auth.pin-locked' }));
     expect(() => directory.stepUp(trainer, MockDirectory.PIN)).toThrow(expect.objectContaining({ code: 'auth.pin-locked' }));
     expect(directory.securityStatus(trainer)).toMatchObject({ pinLocked: true });
-    expect(mockServer.handle('POST', '/api/v1/me/step-up', { pin: MockDirectory.PIN }, as('vorstand'))).toMatchObject({ until: expect.any(String) });
     const admin = directory.members.data.find((m) => m.id === 'admin')!;
-    directory.stepUp(admin, MockDirectory.PIN);
+    directory.confirm(admin);
     directory.resetSecurity(admin, 'trainer');
     expect(directory.securityStatus(trainer)).toMatchObject({ pinLocked: false, stepUpUntil: null });
     expect(directory.stepUp(trainer, MockDirectory.PIN)).toMatchObject({ until: expect.any(String) });

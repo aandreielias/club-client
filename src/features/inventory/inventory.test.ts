@@ -12,7 +12,7 @@ import { inventory } from './mock';
 import { mockServer } from '../../lib/mock/MockServer';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
-const stepUp = (id: string) => directory.stepUp(member(id), MockDirectory.PIN);
+const stepUp = (id: string) => directory.confirm(member(id));
 const code = (c: string) => expect.objectContaining({ code: c });
 
 describe('mock inventory', () => {

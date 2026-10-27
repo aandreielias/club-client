@@ -60,6 +60,7 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   Heute: { text: 'Zum heutigen Tag', command: 'calendar.today' },
   Hinzufügen: { text: 'Zum Team hinzufügen' },
   'Jetzt bestätigen': { text: 'Vereins-PIN eingeben und die Änderung bestätigen' },
+  'Jetzt einrichten': { text: 'Authenticator-App mit QR-Code einrichten' },
   Kommentieren: { text: 'Kommentar veröffentlichen' },
   Kopieren: { text: 'Link in die Zwischenablage kopieren' },
   'Link deaktivieren': { text: 'Abo-Link ungültig machen; abonnierte Kalender werden nicht mehr aktualisiert' },

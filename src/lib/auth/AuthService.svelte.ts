@@ -1,4 +1,4 @@
-import type { AuthProvider, AuthSession } from './AuthProvider';
+import type { AuthProvider, AuthSession, TotpEnrollment } from './AuthProvider';
 
 /** Reactive login state on top of an AuthProvider. */
 export class AuthService {
@@ -45,4 +45,16 @@ export class AuthService {
   }
 
   readonly token = (): Promise<string | null> => this.provider.token();
+
+  totpFactor(): Promise<string | null> {
+    return this.provider.totpFactor();
+  }
+
+  enrollTotp(): Promise<TotpEnrollment> {
+    return this.provider.enrollTotp();
+  }
+
+  verifyTotp(factorId: string, code: string): Promise<void> {
+    return this.provider.verifyTotp(factorId, code);
+  }
 }

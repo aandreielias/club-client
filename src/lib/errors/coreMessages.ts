@@ -16,7 +16,9 @@ export const UNKNOWN_MESSAGE = 'Unbekannter Fehler.';
 
 /** Codes shared by every feature (gateway, login, profile, club PIN). */
 export const CORE_MESSAGES: MessageCatalog = {
-  'auth.step-up-required': 'Dafür bitte zuerst den Vereins-PIN eingeben.',
+  'auth.step-up-required': 'Dafür bitte zuerst bestätigen (Code aus der Authenticator-App oder Vereins-PIN).',
+  'auth.mfa-required': 'Admin und Vorstand bestätigen mit ihrer Authenticator-App, nicht mit dem Vereins-PIN.',
+  'auth.mfa-not-recent': 'Die Bestätigung mit der Authenticator-App ist abgelaufen. Bitte gib einen neuen Code ein.',
   'auth.device-name-invalid': 'Gerätename mit 1 bis 60 Zeichen angeben.',
   'auth.device-key-invalid': 'Dieses Gerät konnte nicht eingerichtet werden. Bitte erneut versuchen.',
   'auth.device-verification-failed': 'Das Gerät konnte nicht bestätigt werden. Bitte erneut versuchen.',

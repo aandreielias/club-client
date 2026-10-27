@@ -445,6 +445,7 @@ export class MockDirectory {
       pinLocked: state.attempts >= settings.security.maxPinAttempts,
       stepUpUntil: active,
       devices: [],
+      mfaRequired: this.hasRole(member, ADMIN_BOARD),
     };
   }
 
@@ -485,10 +486,9 @@ export class MockDirectory {
     return club;
   }
 
-  /** server: SecurityHandlers SET_CLUB_PIN - admin/board; the first PIN needs no step-up (there is none to confirm with). */
+  /** server: SecurityHandlers SET_CLUB_PIN - admin/board with step-up (authenticator app). */
   setClubPin(member: Member, newPin: unknown): void {
-    if (this.clubPin.data.pin) this.requirePrivileged(member, ADMIN_BOARD);
-    else this.requireRole(member, ADMIN_BOARD);
+    this.requirePrivileged(member, ADMIN_BOARD);
     this.clubPin.data.pin = MockDirectory.validPin(newPin);
     this.clubPin.data.changedAt = new Date().toISOString();
     this.clubPin.save();
@@ -544,8 +544,10 @@ export class MockDirectory {
     if (viewer.id === memberId && !roles.includes('ADMIN')) fail(409, 'member.cannot-remove-own-admin');
     const target = this.members.data.find((m) => m.id === memberId) ?? fail(404, 'member.not-found');
     if (target.roles.includes('BOARD') !== roles.includes('BOARD')) fail(409, 'member.board-by-office');
+    const wasPrivileged = this.isPrivileged(target);
     target.roles = roles;
     this.saveMembers();
+    if (wasPrivileged && !this.isPrivileged(target)) this.privilegeEnded(target);
     return this.visibleTo(viewer, target);
   }
 
@@ -554,6 +556,7 @@ export class MockDirectory {
     if (viewer.id === memberId) fail(409, 'member.cannot-deactivate-self');
     const target = this.members.data.find((m) => m.id === memberId) ?? fail(404, 'member.not-found');
     if (target.roles.includes('ADMIN') && !this.hasRole(viewer, ['ADMIN'])) fail(403, 'access.denied');
+    const wasPrivileged = this.isPrivileged(target);
     target.active = false;
     // server: MembershipHandlers.endOfficesOf
     for (const o of this.running().filter((o) => o.memberId === memberId)) o.endedOn = this.clock.today();
@@ -561,6 +564,7 @@ export class MockDirectory {
     target.roles = target.roles.filter((r) => r !== 'BOARD');
     this.saveMembers();
     mockServer.events.publish({ type: 'members.member-deactivated', data: { memberId }, audience: { roles: ADMIN_BOARD } });
+    if (wasPrivileged) this.privilegeEnded(target);
     // server: TeamHandlers.onMemberDeactivated
     for (const teamId of Object.keys(this.teamRoles(memberId))) this.removeFromTeamUnchecked(teamId, memberId);
     return this.visibleTo(viewer, target);
@@ -760,13 +764,38 @@ export class MockDirectory {
   }
 
   /** server: MembersApi.SecurityChanged (internal; the notifications mock turns it into a message) */
-  private securityChanged(member: Member, change: 'CLUB_PIN_CHANGED' | 'PIN_LOCKED' | 'RESET_BY_ADMIN'): void {
+  private securityChanged(member: Member, change: 'CLUB_PIN_CHANGED' | 'PIN_LOCKED' | 'RESET_BY_ADMIN' | 'PIN_CHANGE_DUE'): void {
     mockServer.events.publish({ type: 'members.security-changed', data: { memberId: member.id, change } });
   }
 
+  /** server: SecurityHandlers.verifyPin - coaches only; admin and board use their authenticator app. */
   stepUp(member: Member, pin: unknown): StepUp {
+    if (!this.isPrivileged(member)) fail(403, 'access.denied');
+    if (this.hasRole(member, ADMIN_BOARD)) fail(403, 'auth.mfa-required');
     this.verifyPin(member, pin);
     return this.grantStepUp(member);
+  }
+
+  /** server: SecurityHandlers.verifyMfa - the token's authenticator-app check (`totpAt`, epoch s) must be recent. */
+  stepUpWithMfa(member: Member, totpAt: number | null): StepUp {
+    if (!this.isPrivileged(member)) fail(403, 'access.denied');
+    const age = Date.now() / 1000 - (totpAt ?? 0);
+    if (!totpAt || age > settings.security.totpFreshSeconds || age < -30) fail(403, 'auth.mfa-not-recent');
+    return this.grantStepUp(member);
+  }
+
+  /** Tests: the step-up each role gives (PIN for coaches, authenticator app for admin and board). */
+  confirm(member: Member): StepUp {
+    return this.hasRole(member, ADMIN_BOARD) ? this.stepUpWithMfa(member, Math.floor(Date.now() / 1000)) : this.stepUp(member, MockDirectory.PIN);
+  }
+
+  /** server: SecurityHandlers.privilegeEnded - devices and step-ups go, admin and board should change the club PIN. */
+  private privilegeEnded(member: Member): void {
+    this.security.data[member.id] = { attempts: 0, stepUpUntil: null };
+    this.security.save();
+    for (const other of this.members.data) {
+      if (other.active && other.id !== member.id && this.hasRole(other, ADMIN_BOARD)) this.securityChanged(other, 'PIN_CHANGE_DUE');
+    }
   }
 
   /** server: MemberHandlers.updateProfile — self or guardian freely, admin/board with step-up, others 404 */
@@ -892,6 +921,7 @@ mockServer
   .on('GET', '/api/v1/me/security', (req) => directory.securityStatus(directory.actor(req, true)))
   .on('PUT', '/api/v1/club/pin', (req) => directory.setClubPin(directory.actor(req), req.body?.pin))
   .on('POST', '/api/v1/me/step-up', (req) => directory.stepUp(directory.actor(req), req.body?.pin))
+  .on('POST', '/api/v1/me/step-up/mfa', (req) => directory.stepUpWithMfa(directory.actor(req), req.totpAt ?? null))
   .on('GET', '/api/v1/teams', (req) => {
     const member = directory.actor(req);
     const own = directory.teamRoles(member.id);

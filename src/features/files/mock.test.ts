@@ -5,7 +5,7 @@ import type { Member } from '../../lib/types';
 import { files, MockFiles } from './mock';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
-const stepUp = (id: string) => directory.stepUp(member(id), MockDirectory.PIN);
+const stepUp = (id: string) => directory.confirm(member(id));
 const visible = (id: string) => files.listFolders(member(id)).map((f) => f.id).sort();
 
 function uploadRequest(as: string, folderId: string, content: BlobPart, name: string, tags: string[] = []): MockRequest {

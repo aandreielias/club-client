@@ -7,7 +7,7 @@ import { mockServer } from './MockServer';
 import { MockSocket } from './MockSocket';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
-const stepUp = (id: string) => directory.stepUp(member(id), MockDirectory.PIN);
+const stepUp = (id: string) => directory.confirm(member(id));
 
 describe('mock members admin', () => {
   it('invites with the server rules', () => {

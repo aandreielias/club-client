@@ -135,6 +135,8 @@ export interface SecurityStatus {
   pinLocked: boolean;
   stepUpUntil: string | null;
   devices: Device[];
+  /** Admin and board confirm with their authenticator app instead of the club PIN. */
+  mfaRequired: boolean;
 }
 
 export interface StepUp {
