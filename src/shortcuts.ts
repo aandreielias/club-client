@@ -37,7 +37,6 @@ export const SHORTCUTS = {
   'nav.calendar': { label: 'Zum Kalender', group: 'Navigation', context: 'global', keys: 'g k', path: '/calendar' },
   'nav.events': { label: 'Zu den Events', group: 'Navigation', context: 'global', keys: 'g x', path: '/events' },
   'nav.meetings': { label: 'Zu den Sitzungen', group: 'Navigation', context: 'global', keys: 'g s', path: '/meetings' },
-  'nav.deadlines': { label: 'Zu den Fristen', group: 'Navigation', context: 'global', keys: 'g f', path: '/deadlines' },
   'nav.board': { label: 'Zum Vorstand', group: 'Navigation', context: 'global', keys: 'g v', path: '/board' },
   'nav.tasks': { label: 'Zu den Aufgaben', group: 'Navigation', context: 'global', keys: 'g a', path: '/tasks' },
   'nav.files': { label: 'Zu den Dateien', group: 'Navigation', context: 'global', keys: 'g d', path: '/files' },

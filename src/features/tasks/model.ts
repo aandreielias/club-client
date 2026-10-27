@@ -40,7 +40,7 @@ export interface Task {
 }
 
 export interface TaskSource {
-  /** MEETING_REMINDER: a deadline (yearly meetings, co-option, by-election) the server turned into a task. */
+  /** MEETING_REMINDER: a deadline (invitation, circular vote, term end, yearly meetings, co-option, by-election) as a task. */
   kind: 'CHANGE_REQUEST' | 'MEETING_FOLLOW_UP' | 'MEETING_REMINDER';
   id: string;
 }

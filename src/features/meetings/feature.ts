@@ -2,7 +2,6 @@ import { ADMIN_BOARD } from '../../lib/types';
 import type { Feature } from '../Feature';
 import { isAssembly } from './model';
 import { meetingTypes, resolutionRules } from './services';
-import DeadlinesPage from './DeadlinesPage.svelte';
 import MeetingCreateView from './MeetingCreateView.svelte';
 import MeetingPage from './MeetingPage.svelte';
 import MeetingsPage from './MeetingsPage.svelte';
@@ -10,7 +9,6 @@ import MeetingsHome from './MeetingsHome.svelte';
 import MeetingTypeCreateView from './MeetingTypeCreateView.svelte';
 import MeetingTypePage from './MeetingTypePage.svelte';
 import MeetingTypeView from './MeetingTypeView.svelte';
-import DeadlinesHome from './DeadlinesHome.svelte';
 import MeetingView from './MeetingView.svelte';
 import CircularCreateView from './CircularCreateView.svelte';
 import ResolutionPage from './ResolutionPage.svelte';
@@ -22,8 +20,6 @@ export const meetingsFeature: Feature = {
   routes: [
     // Voters (extraordinary and honorary members) see general meetings, the board its own meetings too (server: MeetingAccess.maySee).
     { path: '/meetings', component: MeetingsPage, nav: 'Sitzungen', icon: 'meetings' },
-    // Everything dated around the meetings as a list (the calendar's MEETING, DEADLINE, OFFICE and FOLLOW_UP items).
-    { path: '/deadlines', component: DeadlinesPage, nav: 'Fristen', icon: 'alert', roles: ADMIN_BOARD },
     { path: '/meetings/:id', component: MeetingPage },
     { path: '/resolutions/:id', component: ResolutionPage },
     { path: '/meeting-types/:key', component: MeetingTypePage, roles: ADMIN_BOARD },
@@ -41,7 +37,6 @@ export const meetingsFeature: Feature = {
       const assembly = isAssembly(meetingTypes.get(item.detail ?? ''));
       return { hue: assembly ? 'blue' : 'purple', label: assembly ? 'Mitgliederversammlung' : 'Vorstandssitzung' };
     },
-    DEADLINE: (item) => ({ hue: item.kind === 'resolution' ? 'purple' : 'orange', label: item.kind === 'resolution' ? 'Umlaufbeschluss' : 'Einladungsfrist' }),
   },
   start: () => {
     const stops = [meetingTypes.start(), resolutionRules.start()];
@@ -49,7 +44,6 @@ export const meetingsFeature: Feature = {
   },
   home: [
     { id: 'meetings', label: 'Sitzungen', component: MeetingsHome },
-    { id: 'deadlines', label: 'Fristen', component: DeadlinesHome, roles: ADMIN_BOARD },
   ],
   messages: MEETING_MESSAGES,
   links: [

@@ -264,17 +264,6 @@ export class MockMeetings {
     return this.followUpDtos([f])[0];
   }
 
-  /** server: MeetingHandlers.calendarMove — a circular vote keeps its start; its deadline moves later (at least three days). */
-  extendDeadline(viewer: Member, id: string, start: string, end: string | null): void {
-    const r = this.managedResolution(viewer, id);
-    if (r.meetingId) fail(409, 'resolution.not-circular');
-    if (r.status !== 'OPEN') fail(409, 'resolution.not-open');
-    if (start !== r.openedAt) fail(409, 'resolution.start-fixed');
-    if (!end || Date.parse(end) < Date.parse(r.openedAt!) + this.circular.data.minHours * 3_600_000 || Date.parse(end) <= Date.now()) fail(400, 'resolution.deadline-too-short');
-    r.deadline = end;
-    this.resolutionChanged(r, 'UPDATED');
-  }
-
   /** server: ResolutionHandlers.setLinks */
   setResolutionLinks(viewer: Member, id: string, refs: unknown): Resolution {
     const r = this.managedResolution(viewer, id);
@@ -597,6 +586,8 @@ export class MockMeetings {
     Object.assign(r, { status: 'OPEN', openedAt: new Date().toISOString(), voters: voters.length, frozenVoters: meeting ? undefined : voters });
     this.resolutionChanged(r, 'OPENED');
     if (!meeting) {
+      // server: MeetingReminders — the circular vote's deadline is a task for whoever started it
+      tasks.deadline(`deadline-circular-${r.id}`, `Umlaufbeschluss: ${r.title}`, 'Der Umlaufbeschluss schließt dann von selbst.', r.deadline!, [viewer.id]);
       mockServer.events.publish({ type: 'meetings.circular-opened', data: { resolutionId: r.id, recipients: voters, title: r.title, text: r.text, deadline: r.deadline } });
     }
     return this.resolutionDto(viewer, r);
@@ -656,6 +647,7 @@ export class MockMeetings {
     Object.assign(r, { status: 'CLOSED', closedAt: new Date().toISOString(), result });
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null;
     if (result === 'PASSED' && (!meeting || meeting.autoTasks !== false)) this.planFollowUps(r, meeting);
+    if (!meeting) tasks.deadlineDone(`deadline-circular-${r.id}`);
     this.resolutionChanged(r, 'CLOSED');
     return r;
   }
@@ -888,6 +880,15 @@ export class MockMeetings {
 
   private changed(m: StoredMeeting, change: string): void {
     this.meetings.save();
+    // server: MeetingReminders — a draft's invitation deadline is a task for the board, done once invited or deleted
+    const key = `deadline-invite-${m.id}`;
+    if (m.status === 'DRAFT' && change !== 'DELETED') {
+      const due = latestInvite(this.type(m.kind), m.startsAt);
+      tasks.deadline(key, `Einladen: ${m.title}`, 'Rechtzeitig einladen, sonst ist die Einladungsfrist nicht mehr einzuhalten.', due,
+        this.people.audienceIds({ roles: ['BOARD'] }));
+    } else {
+      tasks.deadlineDone(key);
+    }
     mockServer.events.publish({ type: 'meetings.meeting-changed', data: { meetingId: m.id, change },
       audience: isAssembly(this.type(m.kind)) ? { everyone: true } : { roles: ADMIN_BOARD } });
   }

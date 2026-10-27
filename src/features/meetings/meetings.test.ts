@@ -7,6 +7,7 @@ import type { Member, Role } from '../../lib/types';
 import { MeetingForm } from './MeetingForm.svelte';
 import { MeetingPolicy } from './MeetingPolicy';
 import { MeetingTypeForm } from './MeetingTypeForm.svelte';
+import { tasks } from '../tasks/mock';
 import { meetings, SEEDED_TYPES } from './mock';
 import { latestInvite, type MeetingType } from './model';
 
@@ -253,5 +254,20 @@ describe('meeting types', () => {
     expect(() => meetings.saveType(member('vorstand'), created.key, { ...created, steps: [{ ...created.steps[0], action: 'TASK' }] })).toThrow();
     meetings.saveType(member('vorstand'), created.key, { ...created, archived: true });
     expect(() => meetings.create(member('vorstand'), { kind: created.key, title: 'Klausur', startsAt: inDays(21), endsAt: inDays(21.1) })).toThrow();
+  });
+});
+
+describe('deadlines as tasks', () => {
+  it('turn a draft invitation deadline into a board task that follows the meeting and ends with the invitation', () => {
+    directory.stepUp(member('vorstand'), MockDirectory.PIN);
+    const starts = inDays(30);
+    const draft = meetings.create(member('vorstand'), { kind: 'BOARD', title: 'Fristtest', startsAt: starts, endsAt: inDays(30.1) });
+    const task = () => tasks.tasks.data.find((t) => t.title === 'Einladen: Fristtest')!;
+    expect(task().dueAt).toBe(latestInvite(type('BOARD'), starts));
+    const later = inDays(32);
+    meetings.update(member('vorstand'), draft.id, { startsAt: later, endsAt: inDays(32.1) });
+    expect(task().dueAt).toBe(latestInvite(type('BOARD'), later));
+    meetings.invite(member('vorstand'), draft.id);
+    expect(task().status).toBe('DONE');
   });
 });

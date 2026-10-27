@@ -11,8 +11,6 @@ import { MockServer, mockServer } from './MockServer';
 
 const fail = MockServer.fail;
 const DAY = 86_400_000;
-const OFFICES: Readonly<Record<string, string>> = { CHAIR: 'Vorsitz', VICE_CHAIR: 'Stellvertretung', TREASURER: 'Kassier:in',
-  SECRETARY: 'Schriftführung', BOARD_MEMBER: 'Vorstandsmitglied', AUDITOR: 'Rechnungsprüfung' };
 
 const base = { teamId: null, inactive: false, detail: null, movable: false, resizable: false };
 const allDay = (clock: ZonedClock, first: string, last: string) =>
@@ -68,23 +66,13 @@ export function items(viewer: Member, from: string, to: string): CalendarItem[] 
       inactive: t.status === 'DONE', detail: t.status, movable: runsTournaments, resizable: runsTournaments });
   }
 
-  // Meetings; for admin and board also invitation deadlines and open circular votes.
-  const until = board ? new Date(Date.parse(to) + 15 * DAY).toISOString() : to;
-  for (const m of meetings.list(viewer, new Date(Date.parse(from) - DAY).toISOString(), until).items) {
+  // Meetings; their deadlines are tasks.
+  for (const m of meetings.list(viewer, new Date(Date.parse(from) - DAY).toISOString(), to).items) {
     const full = tryOr(() => meetings.get(viewer, m.id), null);
     if (m.startsAt < to && m.endsAt > from) {
       const editable = m.status === 'DRAFT' && !!full?.canManage;
       out.push({ ...base, kind: 'meeting', id: m.id, title: m.title, start: m.startsAt, end: m.endsAt, allDay: false, category: 'MEETING',
         inactive: m.status === 'CLOSED', detail: m.kind, movable: editable, resizable: editable });
-    }
-    if (board && m.status === 'DRAFT' && full && full.latestInvite >= from && full.latestInvite < to) {
-      out.push({ ...base, kind: 'meeting', id: m.id, title: `Einladen: ${m.title}`, start: full.latestInvite, end: null, allDay: true, category: 'DEADLINE', detail: 'INVITE' });
-    }
-  }
-  if (board) {
-    for (const r of meetings.listResolutions(viewer, null).items.filter((x) => x.status === 'OPEN' && x.openedAt! < to && x.deadline! > from)) {
-      out.push({ ...base, kind: 'resolution', id: r.id, title: `Umlaufbeschluss: ${r.title}`, start: r.openedAt!, end: r.deadline, allDay: false,
-        category: 'DEADLINE', detail: 'CIRCULAR', resizable: r.canManage });
     }
   }
 
@@ -99,10 +87,6 @@ export function items(viewer: Member, from: string, to: string): CalendarItem[] 
     }
   }
 
-  for (const o of directory.board().offices.filter((x) => x.termEndsOn >= fromDay && x.termEndsOn <= toDay)) {
-    out.push({ ...base, kind: 'office', id: o.id, title: `Funktionsperiode endet: ${OFFICES[o.office]} – ${o.name}`, start: clock.startOfDay(o.termEndsOn),
-      end: null, allDay: true, category: 'OFFICE', detail: o.office });
-  }
   return out.sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
 }
 
@@ -122,9 +106,6 @@ export function move(viewer: Member, kind: string, id: string, start: string, en
       return;
     case 'meeting':
       meetings.update(viewer, id, { startsAt: start, endsAt: end ?? start });
-      return;
-    case 'resolution':
-      meetings.extendDeadline(viewer, id, start, end);
       return;
     case 'absence':
       calendar.moveAbsence(viewer, id, clock.localDate(start), lastDay());

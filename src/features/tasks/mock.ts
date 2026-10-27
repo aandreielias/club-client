@@ -112,6 +112,35 @@ export class MockTasks {
     this.changed(task, 'STATUS');
   }
 
+  /** server: Reminders.task / move — a deadline as a task once per key, its due date following the deadline while open. */
+  deadline(key: string, title: string, description: string, dueAt: string, assignees: readonly string[]): void {
+    const taskId = Object.entries(this.sources.data).find(([, s]) => s.kind === 'MEETING_REMINDER' && s.id === key)?.[0];
+    const existing = this.tasks.data.find((t) => t.id === taskId);
+    if (existing) {
+      if (existing.status === 'DONE' || existing.dueAt === dueAt) return;
+      existing.dueAt = dueAt;
+      this.tasks.save();
+      this.changed(existing, 'UPDATED');
+      return;
+    }
+    const active = assignees.filter((id) => this.people.members.data.some((m) => m.id === id && m.active)).sort().slice(0, limits.maxAssignees);
+    if (!active.length) return;
+    const task: StoredTask = {
+      id: crypto.randomUUID(), teamId: null, appointmentId: null, title: title.slice(0, limits.titleMaxLength), description, status: 'OPEN', dueAt,
+      createdBy: active[0], assignees: active, checklist: [], createdAt: new Date().toISOString(), completedAt: null, repeatWeeks: null,
+    };
+    this.tasks.data.push(task);
+    this.sources.data[task.id] = { kind: 'MEETING_REMINDER', id: key };
+    this.tasks.save();
+    this.sources.save();
+    this.changed(task, 'CREATED');
+  }
+
+  /** server: REMINDER_DONE — the deadline is met. */
+  deadlineDone(key: string): void {
+    this.finish('MEETING_REMINDER', key);
+  }
+
   /** server: TasksApi.SOURCED — source id → task and its state. */
   sourced(kind: TaskSource['kind'], ids: readonly string[]): Record<string, { taskId: string; status: Task['status'] }> {
     const found: Record<string, { taskId: string; status: Task['status'] }> = {};

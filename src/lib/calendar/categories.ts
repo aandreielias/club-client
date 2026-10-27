@@ -2,7 +2,7 @@ import type { IconName } from '../../icons';
 import type { Hue } from '../types';
 
 /** Filter and colour groups of calendar items (server: platform.CalendarItems.Category). */
-export type CalendarCategory = 'APPOINTMENT' | 'TASK' | 'FOLLOW_UP' | 'MEETING' | 'DEADLINE' | 'TOURNAMENT' | 'ABSENCE' | 'BIRTHDAY' | 'OFFICE';
+export type CalendarCategory = 'APPOINTMENT' | 'TASK' | 'FOLLOW_UP' | 'MEETING' | 'TOURNAMENT' | 'ABSENCE' | 'BIRTHDAY';
 
 export interface CategoryInfo {
   id: CalendarCategory;
@@ -18,11 +18,9 @@ export const CATEGORIES: readonly CategoryInfo[] = [
   { id: 'TASK', label: 'Aufgaben', hue: 'orange', icon: 'tasks' },
   { id: 'FOLLOW_UP', label: 'Aus Sitzungen', hue: 'brown', icon: 'tasks' },
   { id: 'MEETING', label: 'Sitzungen', hue: 'purple', icon: 'meetings' },
-  { id: 'DEADLINE', label: 'Fristen', hue: 'red', icon: 'alert' },
   { id: 'TOURNAMENT', label: 'Turniere', hue: 'yellow', icon: 'trophy' },
   { id: 'ABSENCE', label: 'Abwesenheiten', hue: 'gray', icon: 'account' },
   { id: 'BIRTHDAY', label: 'Geburtstage', hue: 'green', icon: 'members' },
-  { id: 'OFFICE', label: 'Funktionen', hue: 'purple', icon: 'club' },
 ];
 
 export const categoryInfo = (id: CalendarCategory): CategoryInfo => CATEGORIES.find((c) => c.id === id) ?? CATEGORIES[0];
