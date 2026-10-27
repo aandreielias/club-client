@@ -17,6 +17,7 @@
   import { OwnChangeRequests } from './OwnChangeRequests.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import { inventoryApi } from '../inventory/services';
+  import { BrowserFile } from '../../lib/files/BrowserFile';
 
   const savePhone = new Action();
   const requests = new OwnChangeRequests(membersApi);
@@ -28,6 +29,16 @@
 
   const member = $derived(session.member);
   let phone = $state(session.member.phone ?? '');
+
+  const exporting = new Action();
+  /** GDPR access request: the member's own data or a ward's, as a JSON file. */
+  async function exportData(memberId: string | undefined, name: string) {
+    await exporting.run(async () => {
+      const data = await session.exportData(memberId);
+      const file = `daten-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${session.clock.today()}.json`;
+      BrowserFile.save(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), file);
+    });
+  }
 
   async function submitPhone(event: SubmitEvent) {
     event.preventDefault();
@@ -89,6 +100,17 @@
     <ErrorNote error={savePhone.error} />
     <div><Button type="submit" busy={savePhone.busy}>Speichern</Button></div>
   </form>
+
+  <h2>Meine Daten</h2>
+  <p class="muted small">Alles, was der Verein in der App über dich speichert, als Datei (JSON).</p>
+  <div class="row">
+    <Button busy={exporting.busy} onclick={() => exportData(undefined, member.firstName)}>Daten herunterladen</Button>
+    {#each session.me?.wardIds ?? [] as wardId (wardId)}
+      {@const name = session.me?.wardNames[wardId] ?? 'Kind'}
+      <Button busy={exporting.busy} onclick={() => exportData(wardId, name)} tooltip="Daten von {name} herunterladen">Daten von {name}</Button>
+    {/each}
+  </div>
+  <ErrorNote error={exporting.error} />
 </Page>
 
 <ChangeRequestDialog bind:field={asking} {requests} onsent={() => bus.publish(TOAST, { text: 'Anfrage an den Vorstand gesendet.' })} />

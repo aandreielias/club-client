@@ -6,6 +6,7 @@ import {
   ADMIN_BOARD,
   PRIVILEGED,
   guestOnly,
+  type AuditEntry,
   type Club,
   type ClubEdit,
   type Member,
@@ -907,7 +908,50 @@ export class MockDirectory {
 
 export const directory = new MockDirectory();
 
+/** server: platform.PersonalData.SOURCES - each mock module registers what it keeps about a member. */
+export const personalData = new Map<string, (memberId: string) => Record<string, unknown[]>>([
+  ['members', (memberId) => {
+    const member = directory.members.data.find((m) => m.id === memberId);
+    return {
+      profile: member ? [member] : [],
+      guardians: Object.entries(directory.wards.data).filter(([, minors]) => minors.includes(memberId)).map(([id]) => ({ guardianId: id, name: directory.displayName(id) })),
+      wards: directory.wardsOf(memberId).map((id) => ({ minorId: id, name: directory.displayName(id) })),
+    };
+  }],
+]);
+
+/** server: platform_audit (gateway AuditLog), newest first */
+const auditLog = new MockTable<AuditEntry[]>('audit', () => []);
+
+/** server: AuditLog.audited */
+function audited(member: Member, method: string, route: string): boolean {
+  if (route === '/api/v1/me/export') return true;
+  if (method === 'GET') return directory.hasRole(member, ADMIN_BOARD) && route.startsWith('/api/v1/members');
+  return directory.isPrivileged(member) && directory.securityStatus(member).stepUpUntil !== null;
+}
+
+mockServer.onHandled((req) => {
+  const member = directory.findActive(req.email);
+  const route = req.pattern.replace(/:(\w+)/g, '{$1}');
+  if (!member || !req.method || !audited(member, req.method, route)) return;
+  auditLog.data.unshift({ id: (auditLog.data[0]?.id ?? 0) + 1, at: new Date().toISOString(), actorId: member.id, actorName: null, method: req.method,
+    route, params: { ...req.params }, status: 200 });
+  auditLog.save();
+});
+
 mockServer
+  .on('GET', '/api/v1/audit', (req) => {
+    directory.requireRole(directory.actor(req), ['ADMIN']);
+    const before = Number(req.query.get('before') ?? Infinity);
+    return { items: auditLog.data.filter((e) => e.id < before).slice(0, 100).map((e) => ({ ...e, actorName: directory.displayName(e.actorId) })) };
+  })
+  // server: PersonalDataController - the member's own data or a ward's; others 404
+  .on('GET', '/api/v1/me/export', (req) => {
+    const asker = directory.actor(req, true);
+    const memberId = req.query.get('memberId') ?? asker.id;
+    if (memberId !== asker.id && !directory.wardsOf(asker.id).includes(memberId)) fail(404, 'member.not-found');
+    return { exportedAt: new Date().toISOString(), memberId, data: Object.fromEntries([...personalData].map(([module, rows]) => [module, rows(memberId)])) };
+  })
   .on('GET', '/api/v1/club', () => directory.clubInfo())
   .on('PUT', '/api/v1/club', (req) => directory.updateClub(directory.actor(req), req.body ?? {}))
   .on('GET', '/api/v1/me', (req) => {

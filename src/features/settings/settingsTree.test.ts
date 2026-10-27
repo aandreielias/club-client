@@ -11,5 +11,7 @@ describe('settings tree', () => {
     expect(board.tabs.map((t) => t.id)).toContain('resolution-rules');
     expect(tabPath('meeting-types')).toBe('Verein › Sitzungsarten');
     expect(tabPath('general')).toBe('Allgemein');
+    expect(visibleSettings((roles) => roles.includes('BOARD')).tabs.map((t) => t.id)).not.toContain('audit');
+    expect(visibleSettings((roles) => roles.includes('ADMIN')).tabs.map((t) => t.id)).toContain('audit');
   });
 });

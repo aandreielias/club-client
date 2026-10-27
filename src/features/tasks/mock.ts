@@ -1,7 +1,7 @@
 // Mock of the club-server tasks module (TaskHandlers): visibility, work and manage rights, validation.
 import { activity, MockActivity } from '../../lib/mock/MockActivity';
 import { settings } from '../../settings';
-import { directory, type MockDirectory } from '../../lib/mock/core';
+import { personalData, directory, type MockDirectory } from '../../lib/mock/core';
 import { itemUseSources, MockLinks, type ItemUse } from '../../lib/mock/MockLinks';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
@@ -477,6 +477,11 @@ export class MockTasks {
 }
 
 export const tasks = new MockTasks(directory);
+// server: TaskRepository.personalData
+personalData.set('tasks', (memberId) => ({
+  assigned: tasks.tasks.data.filter((t) => t.assignees.includes(memberId)).map(({ id, title, description, status, dueAt }) => ({ id, title, description, status, dueAt })),
+  created: tasks.tasks.data.filter((t) => t.createdBy === memberId).map(({ id, title, status }) => ({ id, title, status })),
+}));
 
 itemUseSources.push((member, itemId) => tasks.itemUses(member, itemId));
 

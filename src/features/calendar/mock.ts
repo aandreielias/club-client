@@ -2,7 +2,7 @@
 import { generatedKey } from '../../lib/mock/keys';
 import { activity, MockActivity } from '../../lib/mock/MockActivity';
 import { settings } from '../../settings';
-import { directory, type MockDirectory } from '../../lib/mock/core';
+import { personalData, directory, type MockDirectory } from '../../lib/mock/core';
 import { itemUseSources, MockLinks, type ItemUse } from '../../lib/mock/MockLinks';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
@@ -556,6 +556,14 @@ export class MockCalendar {
 }
 
 export const calendar = new MockCalendar(directory);
+// server: AttendanceRepository / CalendarRepository.personalData
+personalData.set('attendance', (memberId) => ({
+  answers: Object.entries(calendar.responses.data).filter(([, answers]) => memberId in answers).map(([appointmentId, answers]) => ({ appointmentId, ...answers[memberId] })),
+  absences: calendar.absences.data.filter((a) => a.memberId === memberId),
+  ridesOffered: calendar.rides.data.filter((r) => r.driverId === memberId),
+  seatsTaken: calendar.rides.data.filter((r) => r.passengers.includes(memberId)).map((r) => ({ rideId: r.id })),
+}));
+personalData.set('calendar', (memberId) => ({ icalFeed: memberId in calendar.feeds.data ? [{ active: true }] : [] }));
 
 /** server: CalendarHandlers.listTypes, saveType, deleteType. */
 export const appointmentTypes = {

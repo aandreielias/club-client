@@ -15,6 +15,7 @@
   import BoardSettingsSection from '../members/BoardSettingsSection.svelte';
   import MembershipSection from '../members/MembershipSection.svelte';
   import AppointmentTypesSection from '../calendar/AppointmentTypesSection.svelte';
+  import AuditSection from './AuditSection.svelte';
   import { session } from '../../lib/container';
   import Icon from '../../ui/Icon.svelte';
   import { LAST_TAB, tabPath, visibleSettings, type SectionId, type SettingsTab } from './settingsTree';
@@ -25,7 +26,7 @@
   const COMPONENTS: Record<SectionId, Component> = {
     appearance: AppearanceSection, home: HomeSettingsSection, sidebar: SidebarSection, shortcuts: ShortcutsSection, security: SecuritySection,
     general: GeneralSection, club: ClubSection, 'meeting-types': MeetingTypesSection, membership: MembershipSection, offices: BoardSettingsSection,
-    'resolution-rules': ResolutionRulesSection, 'appointment-types': AppointmentTypesSection,
+    'resolution-rules': ResolutionRulesSection, 'appointment-types': AppointmentTypesSection, audit: AuditSection,
   };
   const { groups, tabs } = visibleSettings((roles) => session.hasRole(...roles));
 

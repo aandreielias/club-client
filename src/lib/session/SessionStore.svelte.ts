@@ -91,6 +91,11 @@ export class SessionStore {
     return this.api.put('/api/v1/club/pin', { pin });
   }
 
+  /** Everything the club keeps about the member (or a ward), as the server's JSON export. */
+  exportData(memberId?: string): Promise<unknown> {
+    return this.api.get('/api/v1/me/export', memberId ? { memberId } : undefined);
+  }
+
   security(): Promise<SecurityStatus> {
     return this.api.get<SecurityStatus>('/api/v1/me/security');
   }

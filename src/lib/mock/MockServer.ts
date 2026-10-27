@@ -33,6 +33,7 @@ export class MockServer {
   readonly events = new MockEventBus();
 
   readonly #routes: MockRoute[] = [];
+  readonly #handled: ((request: MockRequest & { pattern: string }) => void)[] = [];
 
   on(method: HttpMethod, pattern: string, handler: MockHandler): this {
     this.#routes.push({ method, pattern, handler });
@@ -44,9 +45,20 @@ export class MockServer {
     for (const route of this.#routes) {
       if (route.method !== method) continue;
       const params = Router.match(route.pattern, url.pathname);
-      if (params) return route.handler({ params, query: url.searchParams, body, email, onProgress, totpAt, method, path: url.pathname });
+      if (!params) continue;
+      const request = { params, query: url.searchParams, body, email, onProgress, totpAt, method, path: url.pathname };
+      const result = route.handler(request);
+      const done = () => this.#handled.forEach((listener) => listener({ ...request, pattern: route.pattern }));
+      if (result instanceof Promise) return result.then((value) => (done(), value));
+      done();
+      return result;
     }
     return MockServer.fail(404, 'not-found');
+  }
+
+  /** Called after every request that succeeded (server: interceptors such as AuditLog). */
+  onHandled(listener: (request: MockRequest & { pattern: string }) => void): void {
+    this.#handled.push(listener);
   }
 
   /** Throws the problem answer the real server would send. */

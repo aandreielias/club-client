@@ -139,6 +139,18 @@ export interface SecurityStatus {
   mfaRequired: boolean;
 }
 
+/** server: AuditLog.AuditEntry */
+export interface AuditEntry {
+  id: number;
+  at: string;
+  actorId: string;
+  actorName: string | null;
+  method: string;
+  route: string;
+  params: Record<string, string>;
+  status: number;
+}
+
 export interface StepUp {
   until: string;
 }

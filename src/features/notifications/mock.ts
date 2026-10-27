@@ -1,6 +1,6 @@
 // Mock of the club-server notifications module (NotificationHandlers): inbox entries from domain
 // events, preferences, live announcement to the recipient. Push/e-mail delivery is not simulated.
-import { directory, MockDirectory } from '../../lib/mock/core';
+import { personalData, directory, MockDirectory } from '../../lib/mock/core';
 import type { MockEvent } from '../../lib/mock/MockEventBus';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
@@ -228,6 +228,11 @@ export class MockNotifications {
 }
 
 export const notifications = new MockNotifications(directory);
+// server: NotificationRepository.personalData
+personalData.set('notifications', (memberId) => ({
+  inbox: (notifications.inbox.data[memberId] ?? []).map(({ kind, title, body, link, createdAt, readAt }) => ({ kind, title, body, link, createdAt, readAt })),
+  preferences: notifications.preferences.data[memberId] ?? [],
+}));
 
 const me = (req: MockRequest) => directory.actor(req).id;
 
