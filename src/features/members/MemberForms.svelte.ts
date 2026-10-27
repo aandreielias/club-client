@@ -28,21 +28,33 @@ function phoneError(value: string): string | undefined {
   return value.trim() && !PHONE.test(value.trim()) ? 'Ziffern, Leerzeichen, / und -, optional mit + am Anfang.' : undefined;
 }
 
-/** The member forms validate birth dates against the club's today. */
+/** The person fields both member forms share, checked alike; birth dates against the club's today. */
 abstract class MemberFormBase extends FormState<MemberFormErrors> {
-  constructor(protected readonly today: string) {
-    super();
-  }
-}
-
-/** New account from the membership application: e-mail, name, optional birth date, phone, guardian, roles. */
-export class InviteForm extends MemberFormBase {
   email = $state('');
   firstName = $state('');
   lastName = $state('');
   birthDate = $state('');
   phone = $state('');
   photoConsent = $state(false);
+
+  constructor(protected readonly today: string) {
+    super();
+  }
+
+  protected validate(): MemberFormErrors {
+    const errors: MemberFormErrors = {};
+    const email = this.email.trim();
+    if (!EMAIL.test(email) || email.includes('ß')) errors.email = EMAIL_ERROR;
+    errors.firstName = nameError(this.firstName);
+    errors.lastName = nameError(this.lastName);
+    errors.birthDate = birthDateError(this.birthDate, this.today);
+    errors.phone = phoneError(this.phone);
+    return Object.fromEntries(Object.entries(errors).filter(([, e]) => e)) as MemberFormErrors;
+  }
+}
+
+/** New account from the membership application: e-mail, name, optional birth date, phone, guardian, roles. */
+export class InviteForm extends MemberFormBase {
   guardianId = $state('');
   roles = $state<Role[]>(['PLAYER']);
   membershipType = $state<MembershipType | 'NONE'>('ORDINARY');
@@ -60,31 +72,10 @@ export class InviteForm extends MemberFormBase {
       membershipType: this.membershipType === 'NONE' ? null : this.membershipType,
     };
   }
-
-  protected validate(): MemberFormErrors {
-    const errors: MemberFormErrors = {};
-    const email = this.email.trim();
-    if (!EMAIL.test(email) || email.includes('ß')) errors.email = EMAIL_ERROR;
-    const first = nameError(this.firstName);
-    if (first) errors.firstName = first;
-    const last = nameError(this.lastName);
-    if (last) errors.lastName = last;
-    const birth = birthDateError(this.birthDate, this.today);
-    if (birth) errors.birthDate = birth;
-    const phone = phoneError(this.phone);
-    if (phone) errors.phone = phone;
-    return errors;
-  }
 }
 
 /** Edits another member's profile; only changed fields are sent. */
 export class ProfileForm extends MemberFormBase {
-  email = $state('');
-  firstName = $state('');
-  lastName = $state('');
-  birthDate = $state('');
-  phone = $state('');
-  photoConsent = $state(false);
 
   constructor(
     readonly original: Member,
@@ -116,20 +107,5 @@ export class ProfileForm extends MemberFormBase {
     if ((this.phone.trim() || null) !== o.phone) patch.phone = this.phone.trim();
     if (this.photoConsent !== o.photoConsent) patch.photoConsent = this.photoConsent;
     return patch;
-  }
-
-  protected validate(): MemberFormErrors {
-    const errors: MemberFormErrors = {};
-    const first = nameError(this.firstName);
-    if (first) errors.firstName = first;
-    const last = nameError(this.lastName);
-    if (last) errors.lastName = last;
-    const birth = birthDateError(this.birthDate, this.today);
-    if (birth) errors.birthDate = birth;
-    const phone = phoneError(this.phone);
-    if (phone) errors.phone = phone;
-    const email = this.email.trim();
-    if (!EMAIL.test(email) || email.includes('ß')) errors.email = EMAIL_ERROR;
-    return errors;
   }
 }

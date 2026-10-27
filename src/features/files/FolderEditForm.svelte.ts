@@ -1,15 +1,9 @@
 import { FormState } from '../../lib/state/FormState.svelte';
-import { settings } from '../../settings';
 import type { FilePatch, Folder, FolderColor, FolderPatch, FolderScope, StoredFile } from './model';
-import { MAX_FOLDER_TEAMS } from './FolderForm.svelte';
-
-export interface FolderEditErrors {
-  name?: string;
-  team?: string;
-}
+import { folderErrors, type FolderFormErrors } from './FolderForm.svelte';
 
 /** Edits an existing folder; `toPatch` sends only what changed. Visibility only on top-level folders. */
-export class FolderEditForm extends FormState<FolderEditErrors> {
+export class FolderEditForm extends FormState<FolderFormErrors> {
   name = $state('');
   scope = $state<FolderScope>('CLUB');
   teamIds = $state<string[]>([]);
@@ -58,14 +52,8 @@ export class FolderEditForm extends FormState<FolderEditErrors> {
     return Object.keys(this.toPatch()).length > 0;
   }
 
-  protected validate(): FolderEditErrors {
-    const errors: FolderEditErrors = {};
-    const max = settings.files.folderNameMaxLength;
-    const name = this.name.trim();
-    if (!name || name.length > max) errors.name = `Name mit 1 bis ${max} Zeichen angeben.`;
-    if (this.canChangeScope && this.scope === 'TEAM' && !this.teamIds.length) errors.team = 'Mindestens ein Team auswählen.';
-    if (this.teamIds.length > MAX_FOLDER_TEAMS) errors.team = `Höchstens ${MAX_FOLDER_TEAMS} Teams.`;
-    return errors;
+  protected validate(): FolderFormErrors {
+    return folderErrors(this.name, this.canChangeScope && this.scope === 'TEAM', this.teamIds);
   }
 }
 

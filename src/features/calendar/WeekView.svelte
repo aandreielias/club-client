@@ -1,13 +1,13 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { bus, session } from '../../lib/container';
-  import { WINDOW_OPEN } from '../../channels';
+  import { session } from '../../lib/container';
   import type { CalendarModel } from './CalendarModel.svelte';
   import type { CalendarDrag } from './CalendarDrag';
   import type { CalendarResize } from './CalendarResize';
   import { menu } from '../../ui/contextMenu';
   import EntryChip from './EntryChip.svelte';
-  import { appointmentPolicy as policy } from './services';
+  import { createAppointment, newAppointmentEntries } from './newAppointment';
+  import SpanBars from './SpanBars.svelte';
 
   /** Seven days with an all-day lane (due dates) and a time grid for appointments. */
   let hover = $state<string | null>(null);
@@ -31,18 +31,7 @@
   const hours = Array.from({ length: endHour - startHour }, (_, i) => startHour + i);
   const bars = $derived(model.spans(model.days));
 
-  function create(date: string) {
-    if (!policy.canCreate()) return;
-    const team = model.teamId ? `team=${model.teamId}&` : '';
-    bus.publish(WINDOW_OPEN, { kind: 'appointment-new', id: `${team}date=${date}` });
-  }
 
-  /** Right-click on a day: new appointment there. */
-  function dayMenu(date: string) {
-    return [
-      ...(policy.canCreate() ? [{ label: `Neuer Termin am ${session.format.date(date)}`, run: () => create(date), command: 'page.new' as const }] : []),
-    ];
-  }
 </script>
 
 <div class="week" style:--hours={hours.length}>
@@ -57,7 +46,7 @@
   <div class="lane-label muted">Ganztägig</div>
   <div class="all-day-row" style:--lanes={bars.lanes}>
   {#each model.days as day (day)}
-    <div class="all-day" data-day={day} role="group" aria-label="Ganztägig {session.format.date(day)}" {@attach menu(() => dayMenu(day))} class:drop-target={hover === `all:${day}`}
+    <div class="all-day" data-day={day} role="group" aria-label="Ganztägig {session.format.date(day)}" {@attach menu(() => newAppointmentEntries(model, day))} class:drop-target={hover === `all:${day}`}
       ondragover={(e) => drag?.over(e) && (hover = `all:${day}`)}
       ondragleave={() => hover === `all:${day}` && (hover = null)}
       ondrop={(e) => ((hover = null), drag?.drop(e, model.entries.value ?? [], (entry) => drag.toDay(entry, day), () => void model.load()))}>
@@ -67,13 +56,7 @@
     </div>
   {/each}
     <!-- Entries across several days (also timed ones, e.g. a circular vote): one bar each. -->
-    <div class="bars">
-      {#each bars.spans as bar (bar.entry.key)}
-        <div class="bar" class:before={bar.before} class:after={bar.after} style:grid-column="{bar.from + 1} / {bar.to + 2}" style:grid-row={bar.lane + 1}>
-          <EntryChip entry={bar.entry} showTime={!bar.entry.allDay && !bar.before} before={bar.before} after={bar.after} {drag} resize="days" {resizer} />
-        </div>
-      {/each}
-    </div>
+    <SpanBars spans={bars.spans} top="2px" gap="2px" {drag} {resizer} />
   </div>
 
   <div class="hours">
@@ -81,7 +64,7 @@
   </div>
   {#each model.days as day (day)}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="column" data-day={day} data-start-hour={startHour} data-end-hour={endHour} class:today={day === model.today} ondblclick={() => create(day)} {@attach menu(() => dayMenu(day))}
+    <div class="column" data-day={day} data-start-hour={startHour} data-end-hour={endHour} class:today={day === model.today} ondblclick={() => createAppointment(model, day)} {@attach menu(() => newAppointmentEntries(model, day))}
       class:drop-target={hover === day}
       ondragover={(e) => drag?.over(e) && (hover = day)}
       ondragleave={() => hover === day && (hover = null)}
@@ -158,31 +141,6 @@
     min-height: 28px;
     padding: calc(2px + var(--lanes) * var(--bar-height)) 2px 2px;
     border-left: 1px solid var(--color-border);
-  }
-  .bars {
-    position: absolute;
-    top: 2px;
-    right: 0;
-    left: 0;
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    grid-auto-rows: calc(var(--bar-height) - 2px);
-    row-gap: 2px;
-    pointer-events: none;
-  }
-  .bar {
-    min-width: 0;
-    padding: 0 2px;
-    pointer-events: auto;
-  }
-  .bar.before {
-    padding-left: 0;
-  }
-  .bar.after {
-    padding-right: 0;
-  }
-  .bar :global(.chip) {
-    height: 100%;
   }
   .hours {
     display: grid;

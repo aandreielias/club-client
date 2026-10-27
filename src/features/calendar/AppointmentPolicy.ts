@@ -1,34 +1,11 @@
-import type { ClubPermissions } from '../../lib/policy/ClubPermissions';
-import type { SessionStore } from '../../lib/session/SessionStore.svelte';
-import type { Team } from '../../lib/types';
+import { PlanningPolicy } from '../../lib/policy/PlanningPolicy';
 import type { Appointment } from './model';
 
 /**
  * Client-side mirror of the server's calendar rules, used only to show or hide actions; the server
  * decides. Answering for minors is not offered yet.
  */
-export class AppointmentPolicy {
-  constructor(
-    private readonly session: SessionStore,
-    private readonly permissions: ClubPermissions,
-  ) {}
-
-  canCreate(): boolean {
-    return this.permissions.canManageAnything();
-  }
-
-  canCreateClubWide(): boolean {
-    return this.permissions.canManageClubWide();
-  }
-
-  plannableTeams(): readonly Team[] {
-    return this.permissions.manageableTeams();
-  }
-
-  filterableTeams(): readonly Team[] {
-    return this.permissions.filterableTeams();
-  }
-
+export class AppointmentPolicy extends PlanningPolicy {
   canEdit(appointment: Appointment): boolean {
     return !appointment.cancelled && this.permissions.canManage(appointment.teamId);
   }

@@ -8,14 +8,13 @@
   import Dialog from '../../ui/Dialog.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
-  import Select from '../../ui/Select.svelte';
-  import TeamPicker from '../../ui/TeamPicker.svelte';
   import { TeamListModel } from '../../lib/directory/TeamListModel.svelte';
   import { session } from '../../lib/container';
   import { tooltip } from '../../ui/tooltip';
   import { FolderEditForm } from './FolderEditForm.svelte';
   import { FOLDER_COLORS, FOLDER_SCOPES, scopeLabel, type Folder } from './model';
   import { filePolicy, filesApi, fileTypes } from './services';
+  import FolderVisibility from './FolderVisibility.svelte';
   import Thumbnail from './Thumbnail.svelte';
 
   /** Name, visibility (top-level folders), colour and gallery cover of a folder. */
@@ -59,21 +58,13 @@
     </Field>
 
     {#if form.canChangeScope}
-      <Field label="Sichtbar für" hint="{FOLDER_SCOPES.find((s) => s.value === form.scope)?.hint} Unterordner und Dateien folgen.">
-        <Select bind:value={form.scope} options={scopes} />
-      </Field>
-      {#if form.scope === 'TEAM'}
-        <div class="teams">
-          <span class="legend">Teams</span>
-          <TeamPicker list={teamList} chosen={form.teamIds} error={form.error('team')}
-            ontoggle={(id) => (form.teamIds = form.teamIds.includes(id) ? form.teamIds.filter((t) => t !== id) : [...form.teamIds, id])} />
-        </div>
-      {/if}
+      <FolderVisibility bind:scope={form.scope} bind:teamIds={form.teamIds} {scopes} {teamList} error={form.error('team')}
+        hintSuffix=" Unterordner und Dateien folgen." />
     {:else}
       <p class="muted hint">Sichtbar für: {scopeLabel(folder.scope)}. Unterordner übernehmen die Sichtbarkeit vom obersten Ordner.</p>
     {/if}
 
-    <label class="row"><input type="checkbox" bind:checked={form.membersCanUpload} /> Mitglieder dürfen hochladen</label>
+    <label class="check"><input type="checkbox" bind:checked={form.membersCanUpload} /> Mitglieder dürfen hochladen</label>
 
     <fieldset class="group">
       <legend>Farbe</legend>
@@ -112,23 +103,14 @@
     </fieldset>
 
     <ErrorNote error={action.error} />
-    <div class="row end">
-      <Button variant="ghost" onclick={onclose}>Abbrechen</Button>
+    <div class="row">
       <Button type="submit" variant="primary" busy={action.busy}>Speichern</Button>
+      <Button variant="ghost" onclick={onclose}>Abbrechen</Button>
     </div>
   </form>
 </Dialog>
 
 <style>
-  .teams {
-    display: grid;
-    gap: var(--space-xs);
-  }
-  .legend {
-    color: var(--color-text-muted);
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-medium);
-  }
   .hint {
     margin: 0;
     font-size: var(--font-size-small);
@@ -195,8 +177,5 @@
   .cover.chosen {
     border-color: transparent;
     box-shadow: 0 0 0 2px var(--color-accent);
-  }
-  .end {
-    justify-content: flex-end;
   }
 </style>

@@ -4,12 +4,12 @@
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
-  import TeamPicker from '../../ui/TeamPicker.svelte';
   import { TeamListModel } from '../../lib/directory/TeamListModel.svelte';
   import { session } from '../../lib/container';
   import { settings } from '../../settings';
   import { Action } from '../../lib/state/Action.svelte';
   import { FolderForm } from './FolderForm.svelte';
+  import FolderVisibility from './FolderVisibility.svelte';
   import { FOLDER_KINDS, FOLDER_SCOPES, type Folder } from './model';
   import { filePolicy, filesApi } from './services';
 
@@ -48,20 +48,11 @@
     {#if parent}
       <p class="muted hint">Sichtbarkeit und Team übernimmt der Unterordner vom übergeordneten Ordner.</p>
     {:else}
-      <Field label="Sichtbar für" hint={FOLDER_SCOPES.find((s) => s.value === form.scope)?.hint}>
-        <Select bind:value={form.scope} options={scopes} />
-      </Field>
-      {#if form.scope === 'TEAM'}
-        <div class="teams">
-          <span class="legend">Teams</span>
-          <TeamPicker list={teamList} chosen={form.teamIds} error={form.error('team')}
-            ontoggle={(id) => (form.teamIds = form.teamIds.includes(id) ? form.teamIds.filter((t) => t !== id) : [...form.teamIds, id])} />
-        </div>
-      {/if}
+      <FolderVisibility bind:scope={form.scope} bind:teamIds={form.teamIds} {scopes} {teamList} error={form.error('team')} />
     {/if}
     <label class="check">
       <input type="checkbox" bind:checked={form.membersCanUpload} />
-      Alle, die den Ordner sehen, dürfen hochladen
+      Mitglieder dürfen hochladen
     </label>
     <ErrorNote error={action.error} />
     <div class="row">
@@ -72,15 +63,6 @@
 </Dialog>
 
 <style>
-  .teams {
-    display: grid;
-    gap: var(--space-xs);
-  }
-  .legend {
-    color: var(--color-text-muted);
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-medium);
-  }
   .hint {
     margin: 0;
     font-size: var(--font-size-small);
