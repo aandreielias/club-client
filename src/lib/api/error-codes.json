@@ -127,6 +127,7 @@
   "mail.signature-too-long",
   "mail.subject-invalid",
   "mail.too-many-recipients",
+  "mail.too-many-refs",
   "meeting-step.invalid",
   "meeting-step.offset-invalid",
   "meeting-step.system-fixed",

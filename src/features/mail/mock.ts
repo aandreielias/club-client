@@ -8,7 +8,7 @@ import type { LinkedRef, RefKind } from '../../lib/records/refs';
 import { ADMIN_BOARD, type Member, type Role } from '../../lib/types';
 import { settings } from '../../settings';
 import { meetings } from '../meetings/mock';
-import type { AddressEntry, Mail, Mailbox, MailboxAdmin, MailFolder, MailSummary } from './model';
+import type { AddressEntry, Mail, Mailbox, MailboxAdmin, MailFolder, MailRef, MailSummary } from './model';
 
 const fail = MockServer.fail;
 const limits = settings.mail;
@@ -17,18 +17,8 @@ const PREVIEW = 140;
 // server: mail.domain.Addresses
 const ADDRESS = /^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/;
 // server: MailRefs - a record chip of the composer
+const REF_KINDS: readonly RefKind[] = ['TASK', 'APPOINTMENT', 'ITEM', 'FILE', 'MEMBER', 'TEAM', 'LOCATION', 'TOURNAMENT', 'MEETING'];
 const CHIP = /<a data-ref="([a-z]+):([\w-]{1,64})"[^>]*>[^<]*<\/a>/g;
-const REF_LABELS: Record<RefKind, string> = {
-  TASK: 'Aufgabe',
-  APPOINTMENT: 'Termin',
-  ITEM: 'Gegenstand',
-  FILE: 'Datei',
-  MEMBER: 'Mitglied',
-  TEAM: 'Team',
-  LOCATION: 'Ort',
-  TOURNAMENT: 'Turnier',
-  MEETING: 'Sitzung',
-};
 
 /** server: mail_mailbox */
 interface StoredMailbox {
@@ -58,9 +48,7 @@ function htmlToText(html: string): string {
     .replace(/<li>/gi, '\n- ')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(p|h[1-3]|ul|ol|blockquote)>/gi, '\n\n')
-    .replace(/<a [^>]*href="([^"]+)"[^>]*>([^<]*)<\/a>/gi, (_, href: string, label: string) =>
-      /\/app\/records\/|^club:/.test(href) ? `„${label}“ (${href})` : href === label ? label : `${label} (${href})`,
-    )
+    .replace(/<a [^>]*href="([^"]+)"[^>]*>([^<]*)<\/a>/gi, (_, href: string, label: string) => (href === label ? label : `${label} (${href})`))
     .replace(/<[^>]+>/g, '')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
@@ -78,6 +66,8 @@ export class MockMail {
   readonly mailboxes: MockTable<StoredMailbox[]>;
   /** address → mails (server: MemoryMailGateway) */
   readonly mails: MockTable<Record<string, Mail[]>>;
+  /** code → record (server: mail_ref) */
+  readonly refCodes = new MockTable<Record<string, { kind: RefKind; id: string }>>('mail-refs', () => ({}));
 
   constructor(private readonly people: MockDirectory) {
     this.mailboxes = new MockTable('mailboxes', () => this.seedMailboxes());
@@ -88,6 +78,8 @@ export class MockMail {
       const memberId = (event.data as { memberId: string }).memberId;
       this.mailboxes.data.splice(0, this.mailboxes.data.length, ...this.mailboxes.data.filter((b) => b.memberId !== memberId));
       this.mailboxes.save();
+      for (const [code, ref] of Object.entries(this.refCodes.data)) if (ref.kind === 'MEMBER' && ref.id === memberId) delete this.refCodes.data[code];
+      this.refCodes.save();
     });
   }
 
@@ -240,27 +232,51 @@ export class MockMail {
     this.mails.save();
   }
 
-  /** server: MailRefs.render - record chips and attached records written out as links with the real title */
+  /** server: MailRefs.render - record chips and attached records leave only as random codes */
   private withRefs(viewer: Member, html: string, attached: { kind: RefKind; id: string }[]): string {
     const inline = [...html.matchAll(CHIP)].map((m) => ({ kind: m[1].toUpperCase() as RefKind, id: m[2] }));
     const all = [...inline, ...attached];
     const unique = all.filter((r, i) => all.findIndex((o) => o.kind === r.kind && o.id === r.id) === i);
     if (unique.length > limits.maxRefs) fail(400, 'mail.too-many-refs');
-    const resolved = unique.map((ref) => this.resolve(viewer, ref));
+    unique.forEach((ref) => this.resolve(viewer, ref)); // the sender must see every record they link
+    const codes = new Map(unique.map((ref) => [`${ref.kind}:${ref.id}`, MockMail.code()]));
+    codes.forEach(
+      (code, key) => (this.refCodes.data[code] = { kind: key.slice(0, key.indexOf(':')) as RefKind, id: key.slice(key.indexOf(':') + 1) }),
+    );
+    this.refCodes.save();
     const website = this.people.clubInfo().website?.trim().replace(/\/+$/, '');
-    const base = website ? `${website}/app/records/` : null;
     const link = (kind: RefKind, id: string) => {
-      const ref = resolved.find((r) => r.kind === kind && r.id === id)!;
-      return `<a href="${MockMail.href(ref, base)}" rel="noopener noreferrer nofollow">${ref.title.replace(/</g, '&lt;')}</a>`;
+      const code = codes.get(`${kind}:${id}`)!;
+      return `<a href="${website ? `${website}/app/r/` : 'club:r/'}${code}" rel="noopener noreferrer nofollow">Verweis ${code}</a>`;
     };
     let out = html.replace(CHIP, (_, kind: string, id: string) => link(kind.toUpperCase() as RefKind, id));
     const listed = attached.filter((r, i) => attached.findIndex((o) => o.kind === r.kind && o.id === r.id) === i);
-    if (listed.length) out += `<p>Verknüpft:</p><ul>${listed.map((r) => `<li>${REF_LABELS[r.kind]}: ${link(r.kind, r.id)}</li>`).join('')}</ul>`;
+    if (listed.length) out += `<p>Verknüpft:</p><ul>${listed.map((r) => `<li>${link(r.kind, r.id)}</li>`).join('')}</ul>`;
     return out;
   }
 
+  /** server: MailRefs.resolve - what the codes stand for, as the viewer sees it */
+  resolveRefs(viewer: Member, codes: string[]): MailRef[] {
+    if (codes.length > 50) fail(400, 'mail.too-many-refs');
+    return [...new Set(codes)].map((code) => {
+      const target = this.refCodes.data[code];
+      try {
+        if (!target) throw new Error('unknown');
+        const ref = this.resolve(viewer, target);
+        return { code, visible: true, kind: ref.kind, windowId: ref.kind === 'FILE' ? `${ref.parentId}:${ref.id}` : ref.id, title: ref.title };
+      } catch {
+        return { code, visible: false, kind: null, windowId: null, title: null };
+      }
+    });
+  }
+
+  private static code(): string {
+    const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    return Array.from(crypto.getRandomValues(new Uint32Array(10)), (n) => alphabet[n % alphabet.length]).join('');
+  }
+
   private resolve(viewer: Member, ref: { kind: RefKind; id: string }): LinkedRef {
-    if (!(ref.kind in REF_LABELS)) fail(400, 'mail.ref-unknown');
+    if (!REF_KINDS.includes(ref.kind)) fail(400, 'mail.ref-unknown');
     return resolveRef(viewer, ref, 'mail', (id) => {
       try {
         return meetings.get(viewer, id).title;
@@ -268,11 +284,6 @@ export class MockMail {
         return null;
       }
     });
-  }
-
-  private static href(ref: LinkedRef, base: string | null): string {
-    const path = `${ref.kind.toLowerCase()}/${ref.kind === 'FILE' ? `${ref.parentId}:${ref.id}` : ref.id}`;
-    return base ? base + path : `club:${path}`;
   }
 
   // --- managing the mailboxes (server: MailHandlers admin part) ---
@@ -433,6 +444,7 @@ mockServer
   .on('POST', '/api/v1/mail/mailboxes/:id/drafts', (req) => mail.saveDraft(actor(req), req.params.id, null, req.body ?? {}))
   .on('PUT', '/api/v1/mail/mailboxes/:id/drafts/:draftId', (req) => mail.saveDraft(actor(req), req.params.id, req.params.draftId, req.body ?? {}))
   .on('PUT', '/api/v1/mail/mailboxes/:id/signature', (req) => mail.setSignature(actor(req), req.params.id, req.body?.html))
+  .on('GET', '/api/v1/mail/refs', (req) => ({ items: mail.resolveRefs(actor(req), req.query.getAll('code')) }))
   .on('GET', '/api/v1/mail/address-book', (req) => (actor(req), { items: mail.addressBook() }))
   .on('GET', '/api/v1/mail/admin/mailboxes', (req) => ({ items: mail.all(actor(req)) }))
   .on('POST', '/api/v1/mail/admin/mailboxes', (req) => mail.save(actor(req), null, req.body ?? {}))

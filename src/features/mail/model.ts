@@ -95,3 +95,13 @@ export interface MailboxInput {
   memberId: string | null;
   role: Role | null;
 }
+
+/** A record linked in a mail by its code, as the reader sees it; not `visible`: unknown, or a record the reader may not open. */
+export interface MailRef {
+  code: string;
+  visible: boolean;
+  kind: RefKind | null;
+  /** The id its window opens with (files `folderId:fileId`). */
+  windowId: string | null;
+  title: string | null;
+}

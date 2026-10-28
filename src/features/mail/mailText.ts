@@ -1,29 +1,32 @@
-// Club records linked into a mail (server: mail.application.MailRefs). The server writes them as links to
-// `<website>/app/records/task/<id>` (or `club:task/<id>` without a website); in the plain-text copy as `„Titel“ (<link>)`.
-// The reader opens them in the window.
+// Club records linked into a mail (server: mail.application.MailRefs). The mail carries only a random code per record,
+// `Verweis K7Q2M9XW4P` linking to `<website>/app/r/<code>` (or `club:r/<code>` without a website), so outside mail programs
+// show nothing about it. The app asks the server what each code stands for, as the reader sees it.
 
-/** A piece of a mail text: plain text, or a linked record (window kind and id, files `folderId:fileId`). */
-export type MailSegment = { text: string } | { title: string; kind: string; id: string };
+/** A piece of a mail's plain text: text, or a linked record's code. */
+export type MailSegment = { text: string } | { code: string };
 
-// Server ids are UUIDs; the mock's are short words.
-const ID = '[\\w-]{1,64}';
-const LINK = `(?:https?://[^\\s()]+?/app/records/|club:)([a-z]+)/(${ID}(?::${ID})?)`;
-const WRITTEN = new RegExp(`„([^“\\n]*)“ \\(${LINK}\\)`, 'g');
+const LINK = '(?:https?://[^\\s()]+?/app/r/|club:r/)([A-Z0-9]{10})';
 const HREF = new RegExp(`^${LINK}$`);
+const WRITTEN = new RegExp(`Verweis ([A-Z0-9]{10}) \\(${LINK}\\)`, 'g');
+const ANY = new RegExp(LINK, 'g');
 
-/** The window a record link of a formatted mail opens, or null for other links. */
-export function recordTarget(href: string): { kind: string; id: string } | null {
-  const match = HREF.exec(href);
-  return match ? { kind: match[1], id: match[2] } : null;
+/** The code a link of a formatted mail stands for, or null for other links. */
+export function refCode(href: string): string | null {
+  return HREF.exec(href)?.[1] ?? null;
 }
 
-/** The text with its written-out record links as separate segments, in order. */
+/** Every record code in a mail (formatted or plain), once each. */
+export function refCodes(content: string): string[] {
+  return [...new Set([...content.matchAll(ANY)].map((m) => m[1]))];
+}
+
+/** The plain text with its record links as separate segments, in order. */
 export function mailSegments(body: string): MailSegment[] {
   const segments: MailSegment[] = [];
   let last = 0;
   for (const match of body.matchAll(WRITTEN)) {
     if (match.index > last) segments.push({ text: body.slice(last, match.index) });
-    segments.push({ title: match[1], kind: match[2], id: match[3] });
+    segments.push({ code: match[2] });
     last = match.index + match[0].length;
   }
   if (last < body.length) segments.push({ text: body.slice(last) });

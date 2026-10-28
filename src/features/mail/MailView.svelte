@@ -8,8 +8,11 @@
   import Detail from '../../ui/Detail.svelte';
   import Icon from '../../ui/Icon.svelte';
   import RecordLink from '../../ui/RecordLink.svelte';
-  import { REF_ICONS, type RefKind } from '../../lib/records/refs';
-  import { mailSegments, recordTarget } from './mailText';
+  import { REF_ICONS } from '../../lib/records/refs';
+  import { SvelteMap } from 'svelte/reactivity';
+  import type { Attachment } from 'svelte/attachments';
+  import { mailSegments, refCode, refCodes } from './mailText';
+  import type { MailRef } from './model';
   import { mailApi, mailCenter as center } from './services';
 
   /** One mail, opened from a mailbox list (`id` = mailbox:mail). Opening marks it read. */
@@ -19,13 +22,21 @@
   const [mailboxId, mailId] = id.split(':');
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle, onclosed);
+  /** What the record codes in the mail stand for, as this reader sees them (the mail itself carries only the codes). */
+  const refs = new SvelteMap<string, MailRef>();
   const mail = new Resource(async () => {
     const value = await mailApi.get(mailboxId, mailId);
     void center.mailboxes.load(); // the unread counts changed
+    void mailApi.resolveRefs(refCodes(value.html ?? value.body)).then(
+      (found) => found.forEach((ref) => refs.set(ref.code, ref)),
+      () => undefined, // codes stay codes
+    );
     return value;
   });
   void mail.load();
   view.title(() => mail.value?.subject);
+
+  const openRef = (ref: MailRef | undefined) => ref?.visible && view.open(ref.kind!.toLowerCase(), ref.windowId!);
 
   /** Links in a formatted mail: club records open in the window, others in a new tab. */
   function follow(event: MouseEvent) {
@@ -33,10 +44,22 @@
     if (!link) return;
     event.preventDefault();
     const href = link.getAttribute('href') ?? '';
-    const record = recordTarget(href);
-    if (record) view.open(record.kind, record.id);
+    const code = refCode(href);
+    if (code) openRef(refs.get(code));
     else if (/^(https?:|mailto:)/i.test(href)) window.open(href, '_blank', 'noopener,noreferrer');
   }
+
+  /** Record links of a formatted mail show the record's title once resolved; the ones the reader may not open stay marked. */
+  const showRefs: Attachment<HTMLElement> = (node) => {
+    for (const link of node.querySelectorAll('a')) {
+      const code = refCode(link.getAttribute('href') ?? '');
+      const ref = code ? refs.get(code) : undefined;
+      if (!ref) continue;
+      link.dataset.ref = ref.visible ? 'visible' : 'hidden';
+      if (ref.visible) link.textContent = ref.title;
+      else link.title = 'Für dich nicht sichtbar';
+    }
+  };
 
   const compose = (mode: 'reply' | 'reply-all' | 'forward') => view.open('mail-new', `${mode}:${mailboxId}:${mailId}`);
 
@@ -90,20 +113,22 @@
       {#if value.html}
         <!-- Cleaned by the server (mail.domain.MailHtml: formatting tags and links only). -->
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="prose html" onclick={follow}>
+        <div class="prose html" onclick={follow} {@attach showRefs}>
           <!-- eslint-disable-next-line svelte/no-at-html-tags -->
           {@html value.html}
         </div>
       {:else}
-        <!-- Club records linked in the mail open in the window; the reader's own rights decide what they see there. -->
+        <!-- Club records linked in the mail open in the window; the reader's own rights decide what they see. -->
         <p class="prose text">
           {#each mailSegments(value.body) as segment, i (i)}
-            {#if 'kind' in segment}
-              <span class="ref"
-                ><Icon name={REF_ICONS[segment.kind.toUpperCase() as RefKind] ?? 'link'} small /><RecordLink kind={segment.kind} id={segment.id}
-                  >{segment.title}</RecordLink
-                ></span
-              >
+            {#if 'code' in segment}
+              {@const ref = refs.get(segment.code)}
+              {#if ref?.visible}
+                <span class="ref"
+                  ><Icon name={REF_ICONS[ref.kind!]} small /><RecordLink kind={ref.kind!.toLowerCase()} id={ref.windowId!}>{ref.title}</RecordLink
+                  ></span
+                >
+              {:else}<span class="muted" title={ref ? 'Für dich nicht sichtbar' : undefined}>Verweis {segment.code}</span>{/if}
             {:else}{segment.text}{/if}
           {/each}
         </p>
@@ -127,13 +152,17 @@
     border-left: 3px solid var(--color-border-strong);
     color: var(--color-text-muted);
   }
-  .html :global(a[href*='/app/records/']),
-  .html :global(a[href^='club:']) {
+  .html :global(a[data-ref='visible']) {
     padding: 0 var(--space-xxs);
     border-radius: var(--radius-sm);
     background: var(--color-accent-soft);
     color: inherit;
     text-decoration: none;
+  }
+  .html :global(a[data-ref='hidden']) {
+    color: var(--color-text-muted);
+    text-decoration: none;
+    cursor: default;
   }
   .text {
     white-space: pre-wrap;

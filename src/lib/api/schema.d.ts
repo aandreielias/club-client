@@ -1829,6 +1829,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/refs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["refs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/mailboxes": {
         parameters: {
             query?: never;
@@ -3629,6 +3645,17 @@ export interface components {
         };
         "at.clubserver.attendance.api.AttendanceApi.AbsenceList": {
             items: components["schemas"]["at.clubserver.attendance.api.AttendanceApi.AbsenceDto"][];
+        };
+        "at.clubserver.mail.api.MailApi.MailRefDto": {
+            code: string;
+            visible: boolean;
+            /** @enum {string} */
+            kind: "TASK" | "APPOINTMENT" | "ITEM" | "FILE" | "MEMBER" | "TEAM" | "LOCATION" | "TOURNAMENT" | "MEETING";
+            windowId: string;
+            title: string;
+        };
+        "at.clubserver.mail.api.MailApi.MailRefList": {
+            items: components["schemas"]["at.clubserver.mail.api.MailApi.MailRefDto"][];
         };
         "at.clubserver.mail.api.MailApi.MailboxList": {
             items: components["schemas"]["at.clubserver.mail.api.MailApi.MailboxDto"][];
@@ -7701,6 +7728,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.gateway.rest.PersonalDataController.Export"];
+                };
+            };
+        };
+    };
+    refs: {
+        parameters: {
+            query: {
+                code: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.mail.api.MailApi.MailRefList"];
                 };
             };
         };

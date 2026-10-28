@@ -1,5 +1,5 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
-import type { AddressEntry, DraftInput, Mail, Mailbox, MailboxAdmin, MailboxInput, MailFolder, MailSummary, OutgoingMail } from './model';
+import type { AddressEntry, DraftInput, Mail, MailRef, Mailbox, MailboxAdmin, MailboxInput, MailFolder, MailSummary, OutgoingMail } from './model';
 
 /** Typed access to the mail endpoints of club-server. */
 export class MailApi {
@@ -36,6 +36,13 @@ export class MailApi {
   /** Own mailbox; shared ones admin and board. Empty removes it. */
   setSignature(mailboxId: string, html: string): Promise<Mailbox> {
     return this.api.put<Mailbox>(`${MailApi.BASE}/${encodeURIComponent(mailboxId)}/signature`, { html });
+  }
+
+  /** What the record codes in a mail stand for, as the viewer sees them. */
+  async resolveRefs(codes: readonly string[]): Promise<MailRef[]> {
+    if (!codes.length) return [];
+    const query = codes.map((c) => `code=${encodeURIComponent(c)}`).join('&');
+    return (await this.api.get<{ items: MailRef[] }>(`/api/v1/mail/refs?${query}`)).items;
   }
 
   /** Every club address with its name. */

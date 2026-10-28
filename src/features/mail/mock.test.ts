@@ -3,6 +3,7 @@ import { directory } from '../../lib/mock/core';
 import { mockServer } from '../../lib/mock/MockServer';
 import type { Member } from '../../lib/types';
 import { notifications } from '../notifications/mock';
+import { refCodes } from './mailText';
 import { mail } from './mock';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
@@ -63,7 +64,7 @@ describe('mock mail', () => {
 });
 
 describe('mock mail links and mailbox admin', () => {
-  it('writes linked records out with title and link, inline and attached', () => {
+  it('sends linked records only as codes, which the app resolves as the reader sees them', () => {
     const team = directory.teams.data[0];
     const sent = mail.send(member('trainer'), own('trainer').id, {
       to: ['a@b.at'],
@@ -71,9 +72,20 @@ describe('mock mail links and mailbox admin', () => {
       html: `<p>Mit <a data-ref="team:${team.id}" class="record-ref">x</a> heute</p>`,
       refs: [{ kind: 'TEAM', id: team.id }],
     });
-    const anchor = `<a href="club:team/${team.id}" rel="noopener noreferrer nofollow">${team.name}</a>`;
-    expect(sent.html).toBe(`<p>Mit ${anchor} heute</p><p>Verknüpft:</p><ul><li>Team: ${anchor}</li></ul>`);
-    expect(sent.body).toContain(`Mit „${team.name}“ (club:team/${team.id}) heute`);
+    expect(sent.html + sent.body).not.toContain(team.name);
+    expect(sent.html + sent.body).not.toContain(team.id);
+    // One record, one code, wherever it is linked.
+    const [inline] = refCodes(sent.html!);
+    const attached = inline;
+    expect(sent.html).toBe(
+      `<p>Mit <a href="club:r/${inline}" rel="noopener noreferrer nofollow">Verweis ${inline}</a> heute</p>` +
+        `<p>Verknüpft:</p><ul><li><a href="club:r/${attached}" rel="noopener noreferrer nofollow">Verweis ${attached}</a></li></ul>`,
+    );
+    expect(sent.body).toContain(`Mit Verweis ${inline} (club:r/${inline}) heute`);
+    expect(mail.resolveRefs(member('spieler'), [inline, 'ZZZZZZZZZZ'])).toEqual([
+      { code: inline, visible: true, kind: 'TEAM', windowId: team.id, title: team.name },
+      { code: 'ZZZZZZZZZZ', visible: false, kind: null, windowId: null, title: null },
+    ]);
     expect(() => mail.send(member('trainer'), own('trainer').id, { to: ['a@b.at'], subject: 'x', refs: [{ kind: 'TASK', id: 'nope' }] })).toThrow(
       expect.objectContaining({ code: 'mail.ref-unknown' }),
     );
