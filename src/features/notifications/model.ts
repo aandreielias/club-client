@@ -1,7 +1,7 @@
 // Mirrors of the club-server notifications DTOs.
 
 export type NotificationKind =
-  'TASK_ASSIGNED' | 'TASK_DUE' | 'APPOINTMENT_CANCELLED' | 'SECURITY' | 'CHANGE_DECIDED' | 'MESSAGE' | 'ITEM_REMINDER' | 'MEETING';
+  'TASK_ASSIGNED' | 'TASK_DUE' | 'APPOINTMENT_CANCELLED' | 'SECURITY' | 'CHANGE_DECIDED' | 'MESSAGE' | 'ITEM_REMINDER' | 'MEETING' | 'MAIL';
 
 import type { LinkedRef, RefKind } from '../../lib/records/refs';
 
@@ -67,6 +67,7 @@ export const NOTIFICATION_KINDS: readonly { value: NotificationKind; label: stri
   { value: 'ITEM_REMINDER', label: 'Gegenstände mitbringen', hint: 'Etwa einen Tag vor einem Termin, für den du etwas aus dem Inventar hast.' },
   { value: 'CHANGE_DECIDED', label: 'Kontoänderungen', hint: 'Wenn der Vorstand über deine Änderungsanfrage entschieden hat.' },
   { value: 'MESSAGE', label: 'Nachrichten vom Verein', hint: 'Nachrichten von Vorstand und Trainer:innen an dich oder dein Team.' },
+  { value: 'MAIL', label: 'Neue E-Mails', hint: 'Wenn in deinem Vereins-Postfach oder einem geteilten Postfach eine E-Mail ankommt.' },
   { value: 'MEETING', label: 'Sitzungen', hint: 'Einladungen, Umlaufbeschlüsse und Erinnerungen an Fristen. Werden immer gesendet.' },
   { value: 'SECURITY', label: 'Sicherheit', hint: 'Vereins-PIN, Sperren und neue Geräte. Werden immer gesendet.' },
 ];

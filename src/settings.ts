@@ -430,6 +430,12 @@ export const settings = {
   split: { minRatio: 0.3, maxRatio: 0.7, step: 0.05, defaultPath: '/calendar' },
 
   /** server: locations module (Location) */
+  /** Club mailboxes (server: OutgoingMail limits). */
+  mail: {
+    maxRecipients: 50,
+    subjectMaxLength: 200,
+    bodyMaxLength: 100_000,
+  },
   locations: {
     nameMaxLength: 100,
     streetMaxLength: 120,

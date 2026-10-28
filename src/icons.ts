@@ -38,6 +38,9 @@ import Search from '@lucide/svelte/icons/search';
 import Send from '@lucide/svelte/icons/send';
 import Landmark from '@lucide/svelte/icons/landmark';
 import Link from '@lucide/svelte/icons/link';
+import Mail from '@lucide/svelte/icons/mail';
+import Reply from '@lucide/svelte/icons/reply';
+import Forward from '@lucide/svelte/icons/forward';
 import MapPin from '@lucide/svelte/icons/map-pin';
 import Columns2 from '@lucide/svelte/icons/columns-2';
 import Upload from '@lucide/svelte/icons/upload';
@@ -67,6 +70,9 @@ export const ICONS = {
   settings: Settings,
   search: Search,
   send: Send,
+  mail: Mail,
+  reply: Reply,
+  forward: Forward,
   link: Link,
   location: MapPin,
   split: Columns2,

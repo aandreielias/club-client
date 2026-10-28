@@ -21,6 +21,7 @@ const KINDS: readonly NotificationKind[] = [
   'MESSAGE',
   'ITEM_REMINDER',
   'MEETING',
+  'MAIL',
 ];
 const MAX_LISTED = 100;
 const limits = settings.notifications.message;
@@ -69,12 +70,12 @@ export class MockNotifications {
     this.inbox.save();
   }
 
-  /** server: NotificationHandlers.effective — security e-mails always on */
+  /** server: NotificationHandlers.effective — security e-mails always on, e-mails about new mail off by default */
   effective(memberId: string): Preference[] {
     const stored = this.preferences.data[memberId] ?? [];
     return KINDS.map((kind) => {
       const pref = stored.find((p) => p.kind === kind);
-      return { kind, push: isImportant(kind) || (pref?.push ?? true), email: isImportant(kind) || (pref?.email ?? true) };
+      return { kind, push: isImportant(kind) || (pref?.push ?? true), email: isImportant(kind) || (pref?.email ?? kind !== 'MAIL') };
     });
   }
 
@@ -219,6 +220,9 @@ export class MockNotifications {
           `${data.text ? `${data.text} ` : ''}Abstimmen bis ${this.#dateTime.format(new Date(data.deadline))}.`,
           `/resolutions/${data.resolutionId}`,
         );
+        break;
+      case 'mail.mail-received':
+        this.notify(this.people.audienceIds(event.audience ?? {}), 'MAIL', `Neue E-Mail von ${data.fromName}`, data.subject, '/mail');
         break;
       case 'members.change-decided':
         this.notify(

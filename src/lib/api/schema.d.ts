@@ -1189,7 +1189,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/locations": {
+    "/api/v1/mail/mailboxes/{id}/messages": {
         parameters: {
             query?: never;
             header?: never;
@@ -1197,6 +1197,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["list_6"];
+        put?: never;
+        post: operations["send_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_7"];
         put?: never;
         post: operations["create_4"];
         delete?: never;
@@ -1228,7 +1244,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_7"];
+        get: operations["list_8"];
         put?: never;
         post: operations["create_5"];
         delete?: never;
@@ -1340,7 +1356,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_8"];
+        get: operations["list_9"];
         put?: never;
         post: operations["create_6"];
         delete?: never;
@@ -1708,7 +1724,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_9"];
+        get: operations["list_10"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1728,6 +1744,38 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/mailboxes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["mailboxes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/mailboxes/{id}/messages/{mailId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_8"];
+        put?: never;
+        post?: never;
+        delete: operations["delete_8"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1868,7 +1916,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_10"];
+        get: operations["list_11"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1983,7 +2031,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["delete_8"];
+        delete: operations["delete_9"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2564,7 +2612,7 @@ export interface components {
         };
         "at.clubserver.notifications.api.NotificationsApi.Preference": {
             /** @enum {string} */
-            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "SECURITY" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING";
+            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "SECURITY" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING" | "MAIL";
             push: boolean;
             email: boolean;
         };
@@ -2986,6 +3034,26 @@ export interface components {
             to: string;
             reason: string;
         };
+        "at.clubserver.gateway.rest.MailController.MailBody": {
+            to: string[];
+            cc: string[];
+            subject: string;
+            body: string;
+        };
+        "at.clubserver.mail.api.MailApi.MailDto": {
+            id: string;
+            /** @enum {string} */
+            folder: "INBOX" | "SENT" | "TRASH";
+            from: string;
+            fromName: string;
+            to: string[];
+            cc: string[];
+            subject: string;
+            body: string;
+            /** Format: date-time */
+            sentAt: string;
+            read: boolean;
+        };
         "at.clubserver.gateway.rest.LocationsController.LocationBody": {
             name: string;
             street: string;
@@ -3384,7 +3452,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "SECURITY" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING";
+            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "SECURITY" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING" | "MAIL";
             title: string;
             body: string;
             link: string;
@@ -3417,6 +3485,32 @@ export interface components {
         };
         "at.clubserver.attendance.api.AttendanceApi.AbsenceList": {
             items: components["schemas"]["at.clubserver.attendance.api.AttendanceApi.AbsenceDto"][];
+        };
+        "at.clubserver.mail.api.MailApi.MailboxDto": {
+            /** Format: uuid */
+            id: string;
+            address: string;
+            name: string;
+            /** @enum {string} */
+            kind: "PERSONAL" | "SHARED";
+            /** Format: int32 */
+            unread: number;
+        };
+        "at.clubserver.mail.api.MailApi.MailboxList": {
+            items: components["schemas"]["at.clubserver.mail.api.MailApi.MailboxDto"][];
+        };
+        "at.clubserver.mail.api.MailApi.MailList": {
+            items: components["schemas"]["at.clubserver.mail.api.MailApi.MailSummaryDto"][];
+        };
+        "at.clubserver.mail.api.MailApi.MailSummaryDto": {
+            id: string;
+            from: string;
+            fromName: string;
+            subject: string;
+            preview: string;
+            /** Format: date-time */
+            sentAt: string;
+            read: boolean;
         };
         "at.clubserver.locations.api.LocationsApi.LocationList": {
             items: components["schemas"]["at.clubserver.locations.api.LocationsApi.LocationDto"][];
@@ -5872,6 +5966,56 @@ export interface operations {
     };
     list_6: {
         parameters: {
+            query?: {
+                folder?: "INBOX" | "SENT" | "TRASH";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.mail.api.MailApi.MailList"];
+                };
+            };
+        };
+    };
+    send_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.MailController.MailBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.mail.api.MailApi.MailDto"];
+                };
+            };
+        };
+    };
+    list_7: {
+        parameters: {
             query?: never;
             header?: never;
             path?: never;
@@ -5938,7 +6082,7 @@ export interface operations {
             };
         };
     };
-    list_7: {
+    list_8: {
         parameters: {
             query?: never;
             header?: never;
@@ -6247,7 +6391,7 @@ export interface operations {
             };
         };
     };
-    list_8: {
+    list_9: {
         parameters: {
             query: {
                 from: string;
@@ -7200,7 +7344,7 @@ export interface operations {
             };
         };
     };
-    list_9: {
+    list_10: {
         parameters: {
             query?: {
                 unreadOnly?: boolean;
@@ -7241,6 +7385,70 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["at.clubserver.gateway.rest.PersonalDataController.Export"];
                 };
+            };
+        };
+    };
+    mailboxes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.mail.api.MailApi.MailboxList"];
+                };
+            };
+        };
+    };
+    get_8: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                mailId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.mail.api.MailApi.MailDto"];
+                };
+            };
+        };
+    };
+    delete_8: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                mailId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -7423,7 +7631,7 @@ export interface operations {
             };
         };
     };
-    list_10: {
+    list_11: {
         parameters: {
             query?: {
                 before?: number;
@@ -7580,7 +7788,7 @@ export interface operations {
             };
         };
     };
-    delete_8: {
+    delete_9: {
         parameters: {
             query?: never;
             header?: never;

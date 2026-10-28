@@ -45,6 +45,7 @@ export const SHORTCUTS = {
   'nav.tournaments': { label: 'Zu den Turnieren', group: 'Navigation', context: 'global', keys: 'g r', path: '/tournaments' },
   'nav.teams': { label: 'Zu den Teams', group: 'Navigation', context: 'global', keys: 'g t', path: '/teams' },
   'nav.notifications': { label: 'Zu den Benachrichtigungen', group: 'Navigation', context: 'global', keys: 'g b', path: '/notifications' },
+  'nav.mail': { label: 'Zu den E-Mails', group: 'Navigation', context: 'global', keys: 'g n', path: '/mail' },
   'nav.members': { label: 'Zu den Mitgliedern', group: 'Navigation', context: 'global', keys: 'g m', path: '/members' },
   'nav.activity': { label: 'Zu den Logs', group: 'Navigation', context: 'global', keys: 'g l', path: '/activity' },
   'nav.account': { label: 'Zu meinem Konto', group: 'Navigation', context: 'global', keys: 'g p', path: '/account' },
