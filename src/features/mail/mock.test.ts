@@ -33,11 +33,13 @@ describe('mock mail', () => {
     expect(mail.get(member('spieler'), own('spieler').id, copy.id).bcc).toEqual(['geheim@example.com']);
     expect(shared('kassier')!.unread).toBe(before + 1);
     // Every board member gets the notice, not the sender.
-    expect(notifications.list('kassier', false).items[0]).toMatchObject({ kind: 'MAIL', title: 'Neue E-Mail von David Spieler', link: '/mail' });
+    const notice = notifications.list('kassier', false).items[0];
+    expect(notice).toMatchObject({ kind: 'MAIL', title: 'Neue E-Mail von David Spieler' });
     expect(notifications.list('spieler', false).items.some((n) => n.kind === 'MAIL' && n.title.includes('David'))).toBe(false);
 
     const box = shared('kassier')!.id;
     const received = mail.folder(member('kassier'), box, 'INBOX').find((m) => m.subject === 'Frage')!;
+    expect(notice.link).toBe(`/mail/${box}/${received.id}`);
     expect(mail.get(member('kassier'), box, received.id)).toMatchObject({ html: '<p>Hallo</p>', body: 'Hallo', bcc: [] });
     expect(mail.get(member('kassier'), box, received.id).read).toBe(true);
     expect(shared('kassier')!.unread).toBe(before);

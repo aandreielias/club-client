@@ -222,7 +222,13 @@ export class MockNotifications {
         );
         break;
       case 'mail.mail-received':
-        this.notify(this.people.audienceIds(event.audience ?? {}), 'MAIL', `Neue E-Mail von ${data.fromName}`, data.subject, '/mail');
+        this.notify(
+          this.people.audienceIds(event.audience ?? {}),
+          'MAIL',
+          `Neue E-Mail von ${data.fromName}`,
+          data.subject,
+          `/mail/${data.mailboxId}/${data.mailId}`,
+        );
         break;
       case 'members.change-decided':
         this.notify(

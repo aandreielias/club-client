@@ -206,7 +206,13 @@ export class MockMail {
     });
     const sent = copy('SENT', true);
     this.box(box.address).push(sent);
-    for (const address of [...to, ...cc, ...bcc]) this.box(address).push(copy('INBOX', false));
+    // server: MemoryMailGateway.send - which mail each hosted recipient got
+    const delivered = new Map<string, string>();
+    for (const address of [...to, ...cc, ...bcc]) {
+      const received = copy('INBOX', false);
+      this.box(address).push(received);
+      delivered.set(address, received.id);
+    }
     if (typeof body.draftId === 'string') {
       const mails = this.box(box.address);
       const draft = mails.find((m) => m.id === body.draftId && m.folder === 'DRAFTS');
@@ -217,7 +223,7 @@ export class MockMail {
     for (const receiver of this.mailboxes.data.filter((b) => [...to, ...cc, ...bcc].includes(b.address))) {
       mockServer.events.publish({
         type: 'mail.mail-received',
-        data: { mailboxId: receiver.id, fromName: box.name, subject },
+        data: { mailboxId: receiver.id, mailId: delivered.get(receiver.address), fromName: box.name, subject },
         audience: receiver.memberId ? { members: [receiver.memberId] } : { roles: [receiver.role!] },
       });
     }

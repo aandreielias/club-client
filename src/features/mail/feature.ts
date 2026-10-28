@@ -17,6 +17,8 @@ export const mailFeature: Feature = {
     { path: '/mail', component: MailPage, nav: 'E-Mail', icon: 'mail', badge: () => mailCenter.unread },
     { path: '/mailboxes/:id', component: MailboxPage, roles: ADMIN_BOARD },
   ],
+  // server: NotificationHandlers.onMailReceived - a new mail's notice opens that mail.
+  links: [{ server: '/mail/:mailbox/:mail', to: ({ mailbox, mail }) => ({ window: { kind: 'mail', id: `${mailbox}:${mail}` } }) }],
   windows: {
     mail: { component: MailView },
     'mail-new': { component: MailComposeView },
