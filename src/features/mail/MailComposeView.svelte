@@ -3,7 +3,11 @@
   import { TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
+  import { DROPPABLE } from '../../lib/records/refs';
+  import type { RecordRef } from '../../lib/records/RecordDrag';
   import { autofocus } from '../../ui/autofocus';
+  import { recordDrop } from '../../ui/recordDrop';
+  import RefPicker from '../../ui/RefPicker.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -40,6 +44,22 @@
   $effect(() => handle.setTitle(mode === 'forward' ? 'Weiterleiten' : mode === 'new' ? 'Neue E-Mail' : 'Antworten'));
   const senders = $derived((center.mailboxes.value ?? []).map((b) => ({ value: b.id, label: `${b.name} <${b.address}>` })));
 
+  let textarea: HTMLTextAreaElement | undefined = $state();
+
+  /** A record dropped into the text goes where it was dropped (where the browser can tell), else to the cursor. */
+  function dropIntoText(record: RecordRef, event: DragEvent) {
+    if (!form || !textarea) return;
+    const point = document.caretPositionFromPoint?.(event.clientX, event.clientY);
+    const at = point?.offsetNode === textarea ? point.offset : textarea.selectionStart;
+    const caret = form.insertRecord(record, at);
+    if (caret === null) return;
+    const field = textarea;
+    requestAnimationFrame(() => {
+      field.focus();
+      field.setSelectionRange(caret, caret);
+    });
+  }
+
   async function submit(event: SubmitEvent) {
     event.preventDefault();
     if (!form) return;
@@ -57,7 +77,15 @@
 <Detail title={mode === 'forward' ? 'Weiterleiten' : mode === 'new' ? 'Neue E-Mail' : 'Antworten'}>
   <ErrorNote error={load.error} />
   {#if form}
-    <form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
+    {@const f = form}
+    <!-- Records dropped onto the form are attached; dropped into the text they go where they were dropped. -->
+    <form
+      class="stack"
+      onsubmit={submit}
+      novalidate
+      {@attach autofocus}
+      {@attach recordDrop(Object.keys(DROPPABLE), (ref) => f.links.addRecord(ref))}
+    >
       {#if senders.length > 1}
         <Field label="Von" error={form.error('from')}>
           <Select options={senders} bind:value={form.mailboxId} />
@@ -72,9 +100,16 @@
       <Field label="Betreff" error={form.error('subject')}>
         <input bind:value={form.subject} maxlength={limits.subjectMaxLength} required />
       </Field>
-      <Field label="Text" error={form.error('body')}>
-        <textarea bind:value={form.body} rows="12" maxlength={limits.bodyMaxLength}></textarea>
+      <Field label="Text" hint="Mitglieder, Termine, Aufgaben … hierher ziehen, um sie an dieser Stelle zu verlinken." error={form.error('body')}>
+        <textarea
+          bind:this={textarea}
+          bind:value={form.body}
+          rows="12"
+          maxlength={limits.bodyMaxLength}
+          {@attach recordDrop(Object.keys(DROPPABLE), dropIntoText)}></textarea>
       </Field>
+
+      <RefPicker form={form.links} label="Anhängen (optional)" perKind={limits.searchPerKind} />
 
       <ErrorNote error={send.error} />
       <div class="row">

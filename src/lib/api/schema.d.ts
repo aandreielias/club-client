@@ -341,6 +341,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/admin/mailboxes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["update"];
+        post?: never;
+        delete: operations["deleteMailbox"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/inventory/{id}/stock": {
         parameters: {
             query?: never;
@@ -381,7 +397,7 @@ export interface paths {
             cookie?: never;
         };
         get: operations["club"];
-        put: operations["update"];
+        put: operations["update_1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1205,6 +1221,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/admin/mailboxes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["all"];
+        put?: never;
+        post: operations["create_4"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/locations": {
         parameters: {
             query?: never;
@@ -1214,7 +1246,7 @@ export interface paths {
         };
         get: operations["list_7"];
         put?: never;
-        post: operations["create_4"];
+        post: operations["create_5"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1246,7 +1278,7 @@ export interface paths {
         };
         get: operations["list_8"];
         put?: never;
-        post: operations["create_5"];
+        post: operations["create_6"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1358,7 +1390,7 @@ export interface paths {
         };
         get: operations["list_9"];
         put?: never;
-        post: operations["create_6"];
+        post: operations["create_7"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1410,7 +1442,7 @@ export interface paths {
         delete: operations["delete"];
         options?: never;
         head?: never;
-        patch: operations["update_1"];
+        patch: operations["update_2"];
         trace?: never;
     };
     "/api/v1/teams/{teamId}": {
@@ -1426,7 +1458,7 @@ export interface paths {
         delete: operations["delete_1"];
         options?: never;
         head?: never;
-        patch: operations["update_2"];
+        patch: operations["update_3"];
         trace?: never;
     };
     "/api/v1/tasks/{id}": {
@@ -1442,7 +1474,7 @@ export interface paths {
         delete: operations["delete_2"];
         options?: never;
         head?: never;
-        patch: operations["update_3"];
+        patch: operations["update_4"];
         trace?: never;
     };
     "/api/v1/members/{id}": {
@@ -1474,7 +1506,7 @@ export interface paths {
         delete: operations["delete_3"];
         options?: never;
         head?: never;
-        patch: operations["update_4"];
+        patch: operations["update_5"];
         trace?: never;
     };
     "/api/v1/locations/{id}": {
@@ -1490,7 +1522,7 @@ export interface paths {
         delete: operations["delete_4"];
         options?: never;
         head?: never;
-        patch: operations["update_5"];
+        patch: operations["update_6"];
         trace?: never;
     };
     "/api/v1/inventory/{id}": {
@@ -1506,7 +1538,7 @@ export interface paths {
         delete: operations["delete_5"];
         options?: never;
         head?: never;
-        patch: operations["update_6"];
+        patch: operations["update_7"];
         trace?: never;
     };
     "/api/v1/folders/{id}": {
@@ -1554,7 +1586,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch: operations["update_7"];
+        patch: operations["update_8"];
         trace?: never;
     };
     "/ical/{token}.ics": {
@@ -2619,6 +2651,25 @@ export interface components {
         "at.clubserver.notifications.api.NotificationsApi.Preferences": {
             items: components["schemas"]["at.clubserver.notifications.api.NotificationsApi.Preference"][];
         };
+        "at.clubserver.gateway.rest.MailController.MailboxBody": {
+            address: string;
+            name: string;
+            /** Format: uuid */
+            memberId: string;
+            /** @enum {string} */
+            role: "ADMIN" | "BOARD" | "COACH" | "PLAYER" | "PARENT" | "VOLUNTEER" | "GUEST";
+        };
+        "at.clubserver.mail.api.MailApi.MailboxAdminDto": {
+            /** Format: uuid */
+            id: string;
+            address: string;
+            name: string;
+            /** Format: uuid */
+            memberId: string;
+            memberName: string;
+            /** @enum {string} */
+            role: "ADMIN" | "BOARD" | "COACH" | "PLAYER" | "PARENT" | "VOLUNTEER" | "GUEST";
+        };
         "at.clubserver.gateway.rest.InventoryController.StockBody": {
             entries: components["schemas"]["at.clubserver.inventory.api.InventoryApi.StockInput"][];
         };
@@ -3039,6 +3090,7 @@ export interface components {
             cc: string[];
             subject: string;
             body: string;
+            refs: components["schemas"]["at.clubserver.platform.RecordRefs.RefInput"][];
         };
         "at.clubserver.mail.api.MailApi.MailDto": {
             id: string;
@@ -3511,6 +3563,9 @@ export interface components {
             /** Format: date-time */
             sentAt: string;
             read: boolean;
+        };
+        "at.clubserver.mail.api.MailApi.MailboxAdminList": {
+            items: components["schemas"]["at.clubserver.mail.api.MailApi.MailboxAdminDto"][];
         };
         "at.clubserver.locations.api.LocationsApi.LocationList": {
             items: components["schemas"]["at.clubserver.locations.api.LocationsApi.LocationDto"][];
@@ -4338,6 +4393,52 @@ export interface operations {
             };
         };
     };
+    update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.MailController.MailboxBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.mail.api.MailApi.MailboxAdminDto"];
+                };
+            };
+        };
+    };
+    deleteMailbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     setStock: {
         parameters: {
             query?: never;
@@ -4410,7 +4511,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    update_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -6014,6 +6115,50 @@ export interface operations {
             };
         };
     };
+    all: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.mail.api.MailApi.MailboxAdminList"];
+                };
+            };
+        };
+    };
+    create_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.MailController.MailboxBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.mail.api.MailApi.MailboxAdminDto"];
+                };
+            };
+        };
+    };
     list_7: {
         parameters: {
             query?: never;
@@ -6034,7 +6179,7 @@ export interface operations {
             };
         };
     };
-    create_4: {
+    create_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -6102,7 +6247,7 @@ export interface operations {
             };
         };
     };
-    create_5: {
+    create_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -6415,7 +6560,7 @@ export interface operations {
             };
         };
     };
-    create_6: {
+    create_7: {
         parameters: {
             query?: never;
             header?: never;
@@ -6553,7 +6698,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    update_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -6599,7 +6744,7 @@ export interface operations {
             };
         };
     };
-    update_2: {
+    update_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -6667,7 +6812,7 @@ export interface operations {
             };
         };
     };
-    update_3: {
+    update_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -6783,7 +6928,7 @@ export interface operations {
             };
         };
     };
-    update_4: {
+    update_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -6851,7 +6996,7 @@ export interface operations {
             };
         };
     };
-    update_5: {
+    update_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -6919,7 +7064,7 @@ export interface operations {
             };
         };
     };
-    update_6: {
+    update_7: {
         parameters: {
             query?: never;
             header?: never;
@@ -7081,7 +7226,7 @@ export interface operations {
             };
         };
     };
-    update_7: {
+    update_8: {
         parameters: {
             query?: never;
             header?: never;

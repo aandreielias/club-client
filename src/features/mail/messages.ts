@@ -12,5 +12,10 @@ export const MAIL_MESSAGES: MessageCatalog = {
   'mail.subject-invalid': `Betreff mit 1 bis ${limits.subjectMaxLength} Zeichen, ohne Zeilenumbruch.`,
   'mail.body-too-long': `Der Text hat höchstens ${limits.bodyMaxLength} Zeichen.`,
   'mail.mailbox-name-invalid': 'Der Name des Postfachs fehlt oder ist zu lang.',
-  'mail.mailbox-owner-invalid': 'Ein Postfach gehört genau einem Mitglied oder einer Rolle.',
+  'mail.mailbox-owner-invalid': 'Ein Postfach gehört genau einem Mitglied oder einer Rolle (nicht Gast).',
+  'mail.member-unknown': 'Dieses Mitglied gibt es nicht oder es ist nicht aktiv.',
+  'mail.member-has-mailbox': 'Dieses Mitglied hat schon ein persönliches Postfach.',
+  'mail.address-taken': 'Diese Adresse hat schon ein anderes Postfach.',
+  'mail.too-many-refs': `Höchstens ${limits.maxRefs} verlinkte Einträge pro E-Mail.`,
+  'mail.ref-unknown': 'Ein verlinkter Eintrag existiert nicht mehr oder ist für dich nicht sichtbar.',
 };

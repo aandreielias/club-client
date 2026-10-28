@@ -1,5 +1,8 @@
+import type { RecordRef } from '../../lib/records/RecordDrag';
+import { RefList } from '../../lib/records/RefList.svelte';
 import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
+import { mailToken } from './mailText';
 import type { Mail, OutgoingMail } from './model';
 
 export type MailField = 'from' | 'to' | 'cc' | 'subject' | 'body';
@@ -15,6 +18,8 @@ export class MailForm extends FormState<Partial<Record<MailField, string>>> {
   cc = $state('');
   subject = $state('');
   body = $state('');
+  /** Records attached below the text. */
+  readonly links = new RefList(limits.maxRefs);
 
   static reply(mail: Mail, mailboxId: string, all = false): MailForm {
     const form = new MailForm();
@@ -37,6 +42,21 @@ export class MailForm extends FormState<Partial<Record<MailField, string>>> {
     return form;
   }
 
+  /**
+   * A record dropped into the text at `at` (a text position): its marker goes there, with a space to the words
+   * around it. Returns where the cursor goes, or null for records that cannot be linked.
+   */
+  insertRecord(record: RecordRef, at: number): number | null {
+    const probe = new RefList(1);
+    if (!probe.addRecord(record)) return null;
+    const pos = Math.max(0, Math.min(at, this.body.length));
+    const before = this.body.slice(0, pos);
+    const after = this.body.slice(pos);
+    const token = `${before && !/\s$/.test(before) ? ' ' : ''}${mailToken(probe.refs[0])}${after && !/^\s/.test(after) ? ' ' : ''}`;
+    this.body = before + token + after;
+    return pos + token.length;
+  }
+
   /** "a@b.at, c@d.at; e@f.at" → clean, lower-case addresses without duplicates. */
   static addresses(text: string): string[] {
     return [
@@ -56,6 +76,7 @@ export class MailForm extends FormState<Partial<Record<MailField, string>>> {
       cc: MailForm.addresses(this.cc).filter((a) => !to.includes(a)),
       subject: this.subject.trim(),
       body: this.body.trimEnd(),
+      refs: this.links.refs.map(({ kind, id }) => ({ kind, id })),
     };
   }
 

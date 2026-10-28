@@ -16,6 +16,7 @@
   import MembershipSection from '../members/MembershipSection.svelte';
   import AppointmentTypesSection from '../calendar/AppointmentTypesSection.svelte';
   import AuditSection from './AuditSection.svelte';
+  import MailboxesSection from '../mail/MailboxesSection.svelte';
   import { session } from '../../lib/container';
   import Icon from '../../ui/Icon.svelte';
   import { LAST_TAB, tabPath, visibleSettings, type SectionId, type SettingsTab } from './settingsTree';
@@ -36,6 +37,7 @@
     offices: BoardSettingsSection,
     'resolution-rules': ResolutionRulesSection,
     'appointment-types': AppointmentTypesSection,
+    mailboxes: MailboxesSection,
     audit: AuditSection,
   };
   const { groups, tabs } = visibleSettings((roles) => session.hasRole(...roles));

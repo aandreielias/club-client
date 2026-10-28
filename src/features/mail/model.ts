@@ -1,5 +1,8 @@
 // Types of the mail endpoints (server: MailApi).
 
+import type { RefKind } from '../../lib/records/refs';
+import type { Role } from '../../lib/types';
+
 export type MailFolder = 'INBOX' | 'SENT' | 'TRASH';
 export type MailboxKind = 'PERSONAL' | 'SHARED';
 
@@ -42,9 +45,28 @@ export interface Mail {
   read: boolean;
 }
 
+/** `body` may hold `[Titel](club:task/<id>)` markers; `refs` are attached below the text (server: MailController.MailBody). */
 export interface OutgoingMail {
   to: string[];
   cc: string[];
   subject: string;
   body: string;
+  refs: { kind: RefKind; id: string }[];
+}
+
+/** A mailbox as admin and board manage it: personal (`memberId`) or shared by everyone holding `role`. */
+export interface MailboxAdmin {
+  id: string;
+  address: string;
+  name: string;
+  memberId: string | null;
+  memberName: string | null;
+  role: Role | null;
+}
+
+export interface MailboxInput {
+  address: string;
+  name: string;
+  memberId: string | null;
+  role: Role | null;
 }

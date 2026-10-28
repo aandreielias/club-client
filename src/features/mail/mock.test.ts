@@ -56,3 +56,37 @@ describe('mock mail', () => {
     expect(send({ to: ['a@b.at'], subject: 'a\nBcc: x@y.at' })).toThrow(expect.objectContaining({ code: 'mail.subject-invalid' }));
   });
 });
+
+describe('mock mail links and mailbox admin', () => {
+  it('writes linked records out with title and link, inline and attached', () => {
+    const team = directory.teams.data[0];
+    const sent = mail.send(member('trainer'), own('trainer').id, {
+      to: ['a@b.at'],
+      subject: 'Training',
+      body: `Mit [x](club:team/${team.id}) heute`,
+      refs: [{ kind: 'TEAM', id: team.id }],
+    });
+    const link = `„${team.name}“ (club:team/${team.id})`;
+    expect(sent.body).toBe(`Mit ${link} heute\n\nVerknüpft:\n- Team: ${link}`);
+    expect(() => mail.send(member('trainer'), own('trainer').id, { to: ['a@b.at'], subject: 'x', refs: [{ kind: 'TASK', id: 'nope' }] })).toThrow(
+      expect.objectContaining({ code: 'mail.ref-unknown' }),
+    );
+  });
+
+  it('lets admin and board assign mailboxes with step-up', () => {
+    const admin = member('admin');
+    expect(() => mail.all(member('spieler'))).toThrow(expect.objectContaining({ code: 'access.denied' }));
+    directory.confirm(admin);
+    const box = mail.save(admin, null, { address: 'Trainer@mein-verein.at', name: 'Trainer', role: 'COACH' });
+    expect(box.address).toBe('trainer@mein-verein.at');
+    expect(shared('trainer')?.id).toBe(box.id);
+    expect(() => mail.save(admin, null, { address: 'trainer@mein-verein.at', name: 'X', role: 'BOARD' })).toThrow(
+      expect.objectContaining({ code: 'mail.address-taken' }),
+    );
+    expect(() => mail.save(admin, null, { address: 'z@mein-verein.at', name: 'X', memberId: 'spieler' })).toThrow(
+      expect.objectContaining({ code: 'mail.member-has-mailbox' }),
+    );
+    mail.remove(admin, box.id);
+    expect(shared('trainer')).toBeUndefined();
+  });
+});

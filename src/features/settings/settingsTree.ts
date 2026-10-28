@@ -14,6 +14,7 @@ export type SectionId =
   | 'offices'
   | 'resolution-rules'
   | 'appointment-types'
+  | 'mailboxes'
   | 'audit';
 
 export interface SettingsTab {
@@ -72,6 +73,7 @@ export const SETTINGS_TREE: readonly SettingsGroup[] = [
         ],
       },
       { label: 'Kalender', tabs: [{ id: 'appointment-types', label: 'Termine' }] },
+      { label: 'E-Mail', tabs: [{ id: 'mailboxes', label: 'Postfächer' }] },
       { label: 'Sicherheit', tabs: [{ id: 'audit', label: 'Protokoll', roles: ['ADMIN'] }] },
     ],
   },

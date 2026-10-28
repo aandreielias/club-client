@@ -3,9 +3,13 @@ import { RecordDrag, type RecordRef } from '../lib/records/RecordDrag';
 
 /**
  * Makes an element take dropped records of the given kinds (`[data-record-drop]` while one is over it;
- * other kinds show the no-drop cursor). `enabled` turns it off, e.g. outside edit mode.
+ * other kinds show the no-drop cursor). `enabled` turns it off, e.g. outside edit mode. `drop` gets the event too (drop point).
  */
-export function recordDrop(kinds: readonly string[], drop: (ref: RecordRef) => void, enabled: () => boolean = () => true): Attachment<HTMLElement> {
+export function recordDrop(
+  kinds: readonly string[],
+  drop: (ref: RecordRef, event: DragEvent) => void,
+  enabled: () => boolean = () => true,
+): Attachment<HTMLElement> {
   return (node) => {
     const accepts = (e: DragEvent) => enabled() && RecordDrag.carries(e, kinds);
     const over = (e: DragEvent) => {
@@ -23,7 +27,7 @@ export function recordDrop(kinds: readonly string[], drop: (ref: RecordRef) => v
       if (!ref) return;
       e.preventDefault();
       e.stopPropagation(); // an outer target (the whole message form) must not take it again
-      drop(ref);
+      drop(ref, e);
     };
     node.addEventListener('dragover', over);
     node.addEventListener('dragleave', leave);

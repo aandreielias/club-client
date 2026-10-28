@@ -44,11 +44,34 @@ describe('MailForm', () => {
     form.to = 'A@b.at; c@d.at,  a@b.at';
     form.cc = 'c@d.at e@f.at';
     form.subject = ' Hallo ';
-    expect(form.toMail()).toEqual({ to: ['a@b.at', 'c@d.at'], cc: ['e@f.at'], subject: 'Hallo', body: '' });
+    expect(form.toMail()).toEqual({ to: ['a@b.at', 'c@d.at'], cc: ['e@f.at'], subject: 'Hallo', body: '', refs: [] });
     expect(form.valid).toBe(true);
     form.to = 'kein-adresse';
     expect(form.errors.to).toBeDefined();
     form.to = '';
     expect(form.errors.to).toBe('Mindestens einen Empfänger angeben.');
+  });
+});
+
+describe('MailForm links', () => {
+  const task = { kind: 'task', id: '11111111-2222-3333-4444-555555555555', title: 'Bälle holen' };
+
+  it('puts a dropped record into the text where it was dropped, with spaces around it', () => {
+    const form = new MailForm();
+    form.body = 'Bitte erledigen.';
+    const caret = form.insertRecord(task, 'Bitte'.length);
+    expect(form.body).toBe(`Bitte [Bälle holen](club:task/${task.id}) erledigen.`);
+    expect(caret).toBe(form.body.indexOf(' erledigen'));
+    expect(form.insertRecord({ kind: 'resolution', id: 'r', title: 'x' }, 0)).toBeNull();
+  });
+
+  it('sends attached records as refs', () => {
+    const form = new MailForm();
+    form.links.addRecord(task);
+    form.links.addRecord({ kind: 'file', id: 'folder:file-1', title: 'Plan.pdf' });
+    expect(form.toMail().refs).toEqual([
+      { kind: 'TASK', id: task.id },
+      { kind: 'FILE', id: 'file-1' },
+    ]);
   });
 });

@@ -6,6 +6,10 @@
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
+  import Icon from '../../ui/Icon.svelte';
+  import RecordLink from '../../ui/RecordLink.svelte';
+  import { REF_ICONS, type RefKind } from '../../lib/records/refs';
+  import { mailSegments } from './mailText';
   import { mailApi, mailCenter as center } from './services';
 
   /** One mail, opened from a mailbox list (`id` = mailbox:mail). Opening marks it read. */
@@ -68,12 +72,28 @@
         <dt>Datum</dt>
         <dd>{session.format.dateTime(value.sentAt)}</dd>
       </dl>
-      <p class="prose text">{value.body}</p>
+      <!-- Club records linked in the mail open in the window; the reader's own rights decide what they see there. -->
+      <p class="prose text">
+        {#each mailSegments(value.body) as segment, i (i)}
+          {#if 'kind' in segment}
+            <span class="ref"
+              ><Icon name={REF_ICONS[segment.kind.toUpperCase() as RefKind] ?? 'link'} small /><RecordLink kind={segment.kind} id={segment.id}
+                >{segment.title}</RecordLink
+              ></span
+            >
+          {:else}{segment.text}{/if}
+        {/each}
+      </p>
     </Detail>
   {/snippet}
 </AsyncView>
 
 <style>
+  .ref {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-xxs);
+  }
   .text {
     white-space: pre-wrap;
     overflow-wrap: anywhere;

@@ -435,6 +435,10 @@ export const settings = {
     maxRecipients: 50,
     subjectMaxLength: 200,
     bodyMaxLength: 100_000,
+    /** Records linked in the text and attached, together (server: MailRefs.MAX). */
+    maxRefs: 20,
+    /** Hits per kind in the "Verknüpfen" search. */
+    searchPerKind: 5,
   },
   locations: {
     nameMaxLength: 100,
