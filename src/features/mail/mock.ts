@@ -8,7 +8,7 @@ import type { LinkedRef, RefKind } from '../../lib/records/refs';
 import { ADMIN_BOARD, type Member, type Role } from '../../lib/types';
 import { settings } from '../../settings';
 import { meetings } from '../meetings/mock';
-import type { Mail, Mailbox, MailboxAdmin, MailFolder, MailSummary } from './model';
+import type { AddressEntry, Mail, Mailbox, MailboxAdmin, MailFolder, MailSummary } from './model';
 
 const fail = MockServer.fail;
 const limits = settings.mail;
@@ -16,8 +16,8 @@ const DOMAIN = 'mein-verein.at';
 const PREVIEW = 140;
 // server: mail.domain.Addresses
 const ADDRESS = /^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/;
-// server: MailRefs.TOKEN
-const TOKEN = /\[([^\]\n]{0,300})\]\(club:([a-z]+)\/([\w-]{1,64})\)/g;
+// server: MailRefs - a record chip of the composer
+const CHIP = /<a data-ref="([a-z]+):([\w-]{1,64})"[^>]*>[^<]*<\/a>/g;
 const REF_LABELS: Record<RefKind, string> = {
   TASK: 'Aufgabe',
   APPOINTMENT: 'Termin',
@@ -37,7 +37,42 @@ interface StoredMailbox {
   name: string;
   memberId: string | null;
   role: Role | null;
+  signature?: string | null;
 }
+
+/**
+ * shortcut: the mock's own data, so a rough clean (scripts, styles, event handlers, javascript: links) instead of the server's
+ * jsoup safelist; never use this on mail from outside.
+ */
+function cleanHtml(html: string): string {
+  return html
+    .replace(/<(script|style|iframe|object)[\s\S]*?<\/\1>/gi, '')
+    .replace(/<img[^>]*>/gi, '')
+    .replace(/\son\w+="[^"]*"/gi, '')
+    .replace(/href="\s*javascript:[^"]*"/gi, '');
+}
+
+/** server: MailHtml.text, roughly */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<li>/gi, '\n- ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|h[1-3]|ul|ol|blockquote)>/gi, '\n\n')
+    .replace(/<a [^>]*href="([^"]+)"[^>]*>([^<]*)<\/a>/gi, (_, href: string, label: string) =>
+      /\/app\/records\/|^club:/.test(href) ? `„${label}“ (${href})` : href === label ? label : `${label} (${href})`,
+    )
+    .replace(/<[^>]+>/g, '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+const addressList = (list: unknown): string[] => [
+  ...new Set((Array.isArray(list) ? list : []).map((a) => String(a).trim().toLowerCase()).filter(Boolean)),
+];
 
 export class MockMail {
   readonly mailboxes: MockTable<StoredMailbox[]>;
@@ -66,13 +101,63 @@ export class MockMail {
         name: b.name,
         kind: b.memberId ? 'PERSONAL' : 'SHARED',
         unread: this.box(b.address).filter((m) => m.folder === 'INBOX' && !m.read).length,
+        signature: b.signature ?? null,
+        signatureEditable: b.memberId ? b.memberId === member.id : this.people.hasRole(member, ADMIN_BOARD),
       }));
+  }
+
+  /** server: MailHandlers.setSignature */
+  setSignature(member: Member, mailboxId: string, html: unknown): Mailbox {
+    const box = this.mailbox(member, mailboxId);
+    if (!box.memberId) this.people.requirePrivileged(member, ADMIN_BOARD);
+    const signature = typeof html === 'string' ? cleanHtml(html).trim() : '';
+    if (signature.length > 10_000) fail(400, 'mail.signature-too-long');
+    box.signature = htmlToText(signature) ? signature : null;
+    this.mailboxes.save();
+    return this.list(member).find((b) => b.id === box.id)!;
+  }
+
+  /** server: MailApi.ADDRESS_BOOK */
+  addressBook(): AddressEntry[] {
+    return this.mailboxes.data.map(({ address, name, memberId, role }) => ({ address, name, memberId, role }));
+  }
+
+  /** server: MailHandlers.saveDraft - kept as typed */
+  saveDraft(member: Member, mailboxId: string, draftId: string | null, body: Record<string, any>): Mail {
+    const box = this.mailbox(member, mailboxId);
+    const current = draftId ? this.find(box, draftId) : null;
+    if (current && current.folder !== 'DRAFTS') fail(404, 'mail.not-found');
+    const [to, cc, bcc] = [addressList(body.to), addressList(body.cc), addressList(body.bcc)];
+    if (to.length + cc.length + bcc.length > limits.maxRecipients) fail(400, 'mail.too-many-recipients');
+    const html = cleanHtml(typeof body.html === 'string' ? body.html : '');
+    if (html.length > limits.bodyMaxLength) fail(400, 'mail.body-too-long');
+    const refs = (Array.isArray(body.refs) ? body.refs : []).map((r: { kind: RefKind; id: string }) => this.resolve(member, r));
+    const draft: Mail = {
+      id: current?.id ?? crypto.randomUUID(),
+      folder: 'DRAFTS',
+      from: box.address,
+      fromName: box.name,
+      to,
+      cc,
+      bcc,
+      subject: typeof body.subject === 'string' ? body.subject.trim() : '',
+      body: htmlToText(html),
+      html,
+      sentAt: new Date().toISOString(),
+      read: true,
+      refs,
+    };
+    const mails = this.box(box.address);
+    if (current) mails.splice(mails.indexOf(current), 1, draft);
+    else mails.push(draft);
+    this.mails.save();
+    return { ...draft };
   }
 
   folder(member: Member, mailboxId: string, folder: string | null): MailSummary[] {
     const box = this.mailbox(member, mailboxId);
     const wanted = (folder ?? 'INBOX') as MailFolder;
-    if (!['INBOX', 'SENT', 'TRASH'].includes(wanted)) fail(400, 'request.invalid');
+    if (!['INBOX', 'DRAFTS', 'SENT', 'TRASH'].includes(wanted)) fail(400, 'request.invalid');
     return this.box(box.address)
       .filter((m) => m.folder === wanted)
       .sort((a, b) => b.sentAt.localeCompare(a.sentAt))
@@ -90,17 +175,18 @@ export class MockMail {
 
   send(member: Member, mailboxId: string, body: Record<string, any>): Mail {
     const box = this.mailbox(member, mailboxId);
-    const clean = (list: unknown): string[] => [...new Set((Array.isArray(list) ? list : []).map((a) => String(a).trim().toLowerCase()))];
-    const to = clean(body.to);
-    const cc = clean(body.cc).filter((a) => !to.includes(a));
-    if ([...to, ...cc].some((a) => a.length > 254 || !ADDRESS.test(a))) fail(400, 'mail.address-invalid');
+    const to = addressList(body.to);
+    const cc = addressList(body.cc).filter((a) => !to.includes(a));
+    const bcc = addressList(body.bcc).filter((a) => !to.includes(a) && !cc.includes(a));
+    if ([...to, ...cc, ...bcc].some((a) => a.length > 254 || !ADDRESS.test(a))) fail(400, 'mail.address-invalid');
     if (!to.length) fail(400, 'mail.recipient-missing');
-    if (to.length + cc.length > limits.maxRecipients) fail(400, 'mail.too-many-recipients');
+    if (to.length + cc.length + bcc.length > limits.maxRecipients) fail(400, 'mail.too-many-recipients');
     const subject = typeof body.subject === 'string' ? body.subject.trim() : '';
     if (!subject || subject.length > limits.subjectMaxLength || /[\r\n]/.test(subject)) fail(400, 'mail.subject-invalid');
-    const raw = typeof body.body === 'string' ? body.body.trim() : '';
+    const raw = typeof body.html === 'string' ? body.html : '';
     if (raw.length > limits.bodyMaxLength) fail(400, 'mail.body-too-long');
-    const text = this.withRefs(member, raw, Array.isArray(body.refs) ? body.refs : []);
+    const html = this.withRefs(member, cleanHtml(raw), Array.isArray(body.refs) ? body.refs : []);
+    const text = htmlToText(html);
 
     const sentAt = new Date().toISOString();
     const copy = (folder: MailFolder, read: boolean): Mail => ({
@@ -110,17 +196,25 @@ export class MockMail {
       fromName: box.name,
       to,
       cc,
+      bcc: folder === 'SENT' ? bcc : [], // Bcc stays on the sender's copy only
       subject,
       body: text,
+      html,
       sentAt,
       read,
+      refs: [],
     });
     const sent = copy('SENT', true);
     this.box(box.address).push(sent);
-    for (const address of [...to, ...cc]) this.box(address).push(copy('INBOX', false));
+    for (const address of [...to, ...cc, ...bcc]) this.box(address).push(copy('INBOX', false));
+    if (typeof body.draftId === 'string') {
+      const mails = this.box(box.address);
+      const draft = mails.find((m) => m.id === body.draftId && m.folder === 'DRAFTS');
+      if (draft) mails.splice(mails.indexOf(draft), 1);
+    }
     this.mails.save();
     // server: MailHandlers.send - club recipients are told at once
-    for (const receiver of this.mailboxes.data.filter((b) => to.includes(b.address) || cc.includes(b.address))) {
+    for (const receiver of this.mailboxes.data.filter((b) => [...to, ...cc, ...bcc].includes(b.address))) {
       mockServer.events.publish({
         type: 'mail.mail-received',
         data: { mailboxId: receiver.id, fromName: box.name, subject },
@@ -135,42 +229,44 @@ export class MockMail {
     const box = this.mailbox(member, mailboxId);
     const mail = this.find(box, mailId);
     const mails = this.box(box.address);
-    if (mail.folder === 'TRASH') mails.splice(mails.indexOf(mail), 1);
+    if (mail.folder === 'TRASH' || mail.folder === 'DRAFTS') mails.splice(mails.indexOf(mail), 1);
     else mail.folder = 'TRASH';
     this.mails.save();
   }
 
-  /** server: MailRefs.render - inline markers and attached records written out with title and link */
-  private withRefs(viewer: Member, body: string, attached: { kind: RefKind; id: string }[]): string {
-    const inline = [...body.matchAll(TOKEN)].map((m) => ({ kind: m[2].toUpperCase() as RefKind, id: m[3] }));
+  /** server: MailRefs.render - record chips and attached records written out as links with the real title */
+  private withRefs(viewer: Member, html: string, attached: { kind: RefKind; id: string }[]): string {
+    const inline = [...html.matchAll(CHIP)].map((m) => ({ kind: m[1].toUpperCase() as RefKind, id: m[2] }));
     const all = [...inline, ...attached];
     const unique = all.filter((r, i) => all.findIndex((o) => o.kind === r.kind && o.id === r.id) === i);
     if (unique.length > limits.maxRefs) fail(400, 'mail.too-many-refs');
-    const resolved = unique.map((ref) => {
-      if (!(ref.kind in REF_LABELS)) fail(400, 'mail.ref-unknown');
-      return resolveRef(viewer, ref, 'mail', (id) => {
-        try {
-          return meetings.get(viewer, id).title;
-        } catch {
-          return null;
-        }
-      });
-    });
+    const resolved = unique.map((ref) => this.resolve(viewer, ref));
     const website = this.people.clubInfo().website?.trim().replace(/\/+$/, '');
-    const written = (kind: RefKind, id: string) => {
-      const ref = resolved.find((r) => r.kind === kind && (r.id === id || `${r.parentId}:${r.id}` === id))!;
-      return MockMail.written(ref, website ? `${website}/app/records/` : null);
+    const base = website ? `${website}/app/records/` : null;
+    const link = (kind: RefKind, id: string) => {
+      const ref = resolved.find((r) => r.kind === kind && r.id === id)!;
+      return `<a href="${MockMail.href(ref, base)}" rel="noopener noreferrer nofollow">${ref.title.replace(/</g, '&lt;')}</a>`;
     };
-    let text = body.replace(TOKEN, (_, _title, kind: string, id: string) => written(kind.toUpperCase() as RefKind, id));
+    let out = html.replace(CHIP, (_, kind: string, id: string) => link(kind.toUpperCase() as RefKind, id));
     const listed = attached.filter((r, i) => attached.findIndex((o) => o.kind === r.kind && o.id === r.id) === i);
-    if (listed.length) text += `${text ? '\n\n' : ''}Verknüpft:${listed.map((r) => `\n- ${REF_LABELS[r.kind]}: ${written(r.kind, r.id)}`).join('')}`;
-    return text;
+    if (listed.length) out += `<p>Verknüpft:</p><ul>${listed.map((r) => `<li>${REF_LABELS[r.kind]}: ${link(r.kind, r.id)}</li>`).join('')}</ul>`;
+    return out;
   }
 
-  private static written(ref: LinkedRef, base: string | null): string {
-    const title = ref.title.replace(/[„“()\n\r]/g, ' ').trim();
+  private resolve(viewer: Member, ref: { kind: RefKind; id: string }): LinkedRef {
+    if (!(ref.kind in REF_LABELS)) fail(400, 'mail.ref-unknown');
+    return resolveRef(viewer, ref, 'mail', (id) => {
+      try {
+        return meetings.get(viewer, id).title;
+      } catch {
+        return null;
+      }
+    });
+  }
+
+  private static href(ref: LinkedRef, base: string | null): string {
     const path = `${ref.kind.toLowerCase()}/${ref.kind === 'FILE' ? `${ref.parentId}:${ref.id}` : ref.id}`;
-    return `„${title}“ (${base ? base + path : `club:${path}`})`;
+    return base ? base + path : `club:${path}`;
   }
 
   // --- managing the mailboxes (server: MailHandlers admin part) ---
@@ -255,10 +351,13 @@ export class MockMail {
       fromName,
       to: [to],
       cc: [],
+      bcc: [],
       subject,
       body,
+      html: null,
       sentAt: at(daysAgo),
       read,
+      refs: [],
     });
     const result: Record<string, Mail[]> = {};
     for (const box of this.mailboxes.data) {
@@ -325,6 +424,10 @@ mockServer
   .on('POST', '/api/v1/mail/mailboxes/:id/messages', (req) => mail.send(actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/mail/mailboxes/:id/messages/:mailId', (req) => mail.get(actor(req), req.params.id, req.params.mailId))
   .on('DELETE', '/api/v1/mail/mailboxes/:id/messages/:mailId', (req) => mail.delete(actor(req), req.params.id, req.params.mailId))
+  .on('POST', '/api/v1/mail/mailboxes/:id/drafts', (req) => mail.saveDraft(actor(req), req.params.id, null, req.body ?? {}))
+  .on('PUT', '/api/v1/mail/mailboxes/:id/drafts/:draftId', (req) => mail.saveDraft(actor(req), req.params.id, req.params.draftId, req.body ?? {}))
+  .on('PUT', '/api/v1/mail/mailboxes/:id/signature', (req) => mail.setSignature(actor(req), req.params.id, req.body?.html))
+  .on('GET', '/api/v1/mail/address-book', (req) => (actor(req), { items: mail.addressBook() }))
   .on('GET', '/api/v1/mail/admin/mailboxes', (req) => ({ items: mail.all(actor(req)) }))
   .on('POST', '/api/v1/mail/admin/mailboxes', (req) => mail.save(actor(req), null, req.body ?? {}))
   .on('PUT', '/api/v1/mail/admin/mailboxes/:id', (req) => mail.save(actor(req), req.params.id, req.body ?? {}))

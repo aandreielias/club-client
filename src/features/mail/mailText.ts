@@ -1,19 +1,20 @@
-// Club records linked into a mail (server: mail.application.MailRefs). The composer writes `[Titel](club:task/<id>)` where a record
-// was dropped; the server checks it and writes `„Titel“ (<website>/app/records/task/<id>)` (or `club:task/<id>` without a
-// website), which the reader turns back into links.
-
-import type { PickedRef } from '../../lib/records/RefList.svelte';
+// Club records linked into a mail (server: mail.application.MailRefs). The server writes them as links to
+// `<website>/app/records/task/<id>` (or `club:task/<id>` without a website); in the plain-text copy as `„Titel“ (<link>)`.
+// The reader opens them in the window.
 
 /** A piece of a mail text: plain text, or a linked record (window kind and id, files `folderId:fileId`). */
 export type MailSegment = { text: string } | { title: string; kind: string; id: string };
 
 // Server ids are UUIDs; the mock's are short words.
 const ID = '[\\w-]{1,64}';
-const WRITTEN = new RegExp(`„([^“\\n]*)“ \\((?:https?://[^\\s()]+?/app/records/|club:)([a-z]+)/(${ID}(?::${ID})?)\\)`, 'g');
+const LINK = `(?:https?://[^\\s()]+?/app/records/|club:)([a-z]+)/(${ID}(?::${ID})?)`;
+const WRITTEN = new RegExp(`„([^“\\n]*)“ \\(${LINK}\\)`, 'g');
+const HREF = new RegExp(`^${LINK}$`);
 
-/** The marker the composer puts into the text where a record goes; the server replaces it. */
-export function mailToken(ref: PickedRef): string {
-  return `[${ref.title.replace(/[[\]\n]/g, ' ').trim()}](club:${ref.kind.toLowerCase()}/${ref.id})`;
+/** The window a record link of a formatted mail opens, or null for other links. */
+export function recordTarget(href: string): { kind: string; id: string } | null {
+  const match = HREF.exec(href);
+  return match ? { kind: match[1], id: match[2] } : null;
 }
 
 /** The text with its written-out record links as separate segments, in order. */

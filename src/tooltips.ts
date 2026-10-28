@@ -112,6 +112,7 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Neue E-Mail': { text: 'E-Mail aus dem gewählten Postfach schreiben', command: 'page.new' },
   Antworten: { text: 'Dem Absender antworten' },
   'Allen antworten': { text: 'Dem Absender und allen anderen Empfängern antworten' },
+  Signatur: { text: 'Signatur dieses Postfachs für neue E-Mails festlegen' },
   'Neues Postfach': { text: 'Vereins-Adresse einem Mitglied oder einer Rolle zuordnen' },
   Weiterleiten: { text: 'Diese E-Mail an andere Adressen weiterleiten' },
   'Auf der Karte suchen': { text: 'Kartenpunkt aus der Adresse suchen (OpenStreetMap)' },

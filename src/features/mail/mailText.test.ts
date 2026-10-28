@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { mailSegments, mailToken } from './mailText';
+import { mailSegments, recordTarget } from './mailText';
 
 const id = '11111111-2222-3333-4444-555555555555';
 const folder = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 
 describe('mail text links', () => {
-  it('writes the composer marker with a clean title', () => {
-    expect(mailToken({ kind: 'TASK', id, title: 'Bälle [neu]' })).toBe(`[Bälle  neu](club:task/${id})`);
+  it('knows which links of a formatted mail open a record', () => {
+    expect(recordTarget(`https://verein.at/app/records/task/${id}`)).toEqual({ kind: 'task', id });
+    expect(recordTarget(`club:file/${folder}:${id}`)).toEqual({ kind: 'file', id: `${folder}:${id}` });
+    expect(recordTarget('https://example.com/x')).toBeNull();
   });
 
   it('finds written-out links with a website or the club: fallback', () => {

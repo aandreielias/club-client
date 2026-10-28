@@ -1,13 +1,14 @@
 // Types of the mail endpoints (server: MailApi).
 
-import type { RefKind } from '../../lib/records/refs';
+import type { LinkedRef, RefKind } from '../../lib/records/refs';
 import type { Role } from '../../lib/types';
 
-export type MailFolder = 'INBOX' | 'SENT' | 'TRASH';
+export type MailFolder = 'INBOX' | 'DRAFTS' | 'SENT' | 'TRASH';
 export type MailboxKind = 'PERSONAL' | 'SHARED';
 
 export const MAIL_FOLDERS: readonly { value: MailFolder; label: string }[] = [
   { value: 'INBOX', label: 'Posteingang' },
+  { value: 'DRAFTS', label: 'Entwürfe' },
   { value: 'SENT', label: 'Gesendet' },
   { value: 'TRASH', label: 'Papierkorb' },
 ];
@@ -19,6 +20,10 @@ export interface Mailbox {
   name: string;
   kind: MailboxKind;
   unread: number;
+  /** Formatted (HTML), added to new mails; null without one. */
+  signature: string | null;
+  /** The viewer may change the signature (own mailbox; shared ones: admin and board). */
+  signatureEditable: boolean;
 }
 
 /** A mail in a folder list; `preview` is the start of the text on one line. */
@@ -32,6 +37,7 @@ export interface MailSummary {
   read: boolean;
 }
 
+/** `body`: plain text; `html`: the formatted text, cleaned by the server (null for plain mails); `bcc` only on own copies; `refs`: a draft's attached records. */
 export interface Mail {
   id: string;
   folder: MailFolder;
@@ -39,19 +45,38 @@ export interface Mail {
   fromName: string;
   to: string[];
   cc: string[];
+  bcc: string[];
   subject: string;
   body: string;
+  html: string | null;
   sentAt: string;
   read: boolean;
+  refs: LinkedRef[];
 }
 
-/** `body` may hold `[Titel](club:task/<id>)` markers; `refs` are attached below the text (server: MailController.MailBody). */
-export interface OutgoingMail {
+/** A club address for the recipient suggestions: personal (`memberId`) or shared by a role. */
+export interface AddressEntry {
+  address: string;
+  name: string;
+  memberId: string | null;
+  role: Role | null;
+}
+
+/**
+ * A draft as typed (server: MailController.DraftBody); `html` may hold record chips (`<a data-ref="task:<id>">`), `refs` are attached
+ * below the text. Sending adds the draft it came from (MailBody).
+ */
+export interface DraftInput {
   to: string[];
   cc: string[];
+  bcc: string[];
   subject: string;
-  body: string;
+  html: string;
   refs: { kind: RefKind; id: string }[];
+}
+
+export interface OutgoingMail extends DraftInput {
+  draftId: string | null;
 }
 
 /** A mailbox as admin and board manage it: personal (`memberId`) or shared by everyone holding `role`. */

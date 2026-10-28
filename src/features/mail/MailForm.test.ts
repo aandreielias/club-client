@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { MailForm } from './MailForm.svelte';
-import type { Mail } from './model';
+import { MailForm, textToHtml } from './MailForm.svelte';
+import type { Mail, Mailbox } from './model';
 
 const received: Mail = {
   id: 'm1',
@@ -9,69 +9,102 @@ const received: Mail = {
   fromName: 'Anna',
   to: ['me@club.at', 'bob@club.at'],
   cc: ['carl@club.at'],
+  bcc: [],
   subject: 'Training',
   body: 'Zeile 1\nZeile 2',
+  html: null,
   sentAt: '2026-10-01T10:00:00Z',
   read: true,
+  refs: [],
 };
-
-describe('MailForm', () => {
-  it('prefills a reply with the sender, AW: and the quoted text', () => {
-    const form = MailForm.reply(received, 'box');
-    expect(form.mailboxId).toBe('box');
-    expect(form.to).toBe('anna@club.at');
-    expect(form.cc).toBe('');
-    expect(form.subject).toBe('AW: Training');
-    expect(form.body).toContain('> Zeile 1\n> Zeile 2');
-    expect(MailForm.reply({ ...received, subject: 'aw: Training' }, 'box').subject).toBe('aw: Training');
-  });
-
-  it('reply to all copies the other recipients', () => {
-    expect(MailForm.reply(received, 'box', true).cc).toBe('me@club.at, bob@club.at, carl@club.at');
-  });
-
-  it('forwards with WG: and the original text, without recipients', () => {
-    const form = MailForm.forward(received, 'box');
-    expect(form.to).toBe('');
-    expect(form.subject).toBe('WG: Training');
-    expect(form.body).toContain('Weitergeleitete Nachricht');
-    expect(form.body).toContain('Zeile 1\nZeile 2');
-  });
-
-  it('splits, cleans and checks addresses', () => {
-    const form = new MailForm();
-    form.mailboxId = 'box';
-    form.to = 'A@b.at; c@d.at,  a@b.at';
-    form.cc = 'c@d.at e@f.at';
-    form.subject = ' Hallo ';
-    expect(form.toMail()).toEqual({ to: ['a@b.at', 'c@d.at'], cc: ['e@f.at'], subject: 'Hallo', body: '', refs: [] });
-    expect(form.valid).toBe(true);
-    form.to = 'kein-adresse';
-    expect(form.errors.to).toBeDefined();
-    form.to = '';
-    expect(form.errors.to).toBe('Mindestens einen Empfänger angeben.');
-  });
+const box = (signature: string | null, id = 'box'): Mailbox => ({
+  id,
+  address: 'me@club.at',
+  name: 'Ich',
+  kind: 'PERSONAL',
+  unread: 0,
+  signature,
+  signatureEditable: true,
 });
 
-describe('MailForm links', () => {
-  const task = { kind: 'task', id: '11111111-2222-3333-4444-555555555555', title: 'Bälle holen' };
-
-  it('puts a dropped record into the text where it was dropped, with spaces around it', () => {
-    const form = new MailForm();
-    form.body = 'Bitte erledigen.';
-    const caret = form.insertRecord(task, 'Bitte'.length);
-    expect(form.body).toBe(`Bitte [Bälle holen](club:task/${task.id}) erledigen.`);
-    expect(caret).toBe(form.body.indexOf(' erledigen'));
-    expect(form.insertRecord({ kind: 'resolution', id: 'r', title: 'x' }, 0)).toBeNull();
+describe('MailForm', () => {
+  it('starts a new mail with the signature below "-- "', () => {
+    expect(MailForm.compose(box('<p>Gruß</p>')).html).toBe('<p></p><p>-- </p><p>Gruß</p>');
+    expect(MailForm.compose(box(null)).html).toBe('');
   });
 
-  it('sends attached records as refs', () => {
-    const form = new MailForm();
-    form.links.addRecord(task);
-    form.links.addRecord({ kind: 'file', id: 'folder:file-1', title: 'Plan.pdf' });
-    expect(form.toMail().refs).toEqual([
-      { kind: 'TASK', id: task.id },
-      { kind: 'FILE', id: 'file-1' },
-    ]);
+  it('prefills a reply with the sender, AW: and the quoted text', () => {
+    const form = MailForm.reply(received, box(null));
+    expect(form.mailboxId).toBe('box');
+    expect(form.to).toEqual(['anna@club.at']);
+    expect(form.cc).toEqual([]);
+    expect(form.subject).toBe('AW: Training');
+    expect(form.html).toContain('schrieb Anna &lt;anna@club.at&gt;:</p><blockquote><p>Zeile 1<br>Zeile 2</p></blockquote>');
+    expect(MailForm.reply({ ...received, subject: 'aw: Training' }, box(null)).subject).toBe('aw: Training');
+  });
+
+  it('reply to all copies the others, not the own address', () => {
+    const form = MailForm.reply(received, box(null), true);
+    expect(form.cc).toEqual(['bob@club.at', 'carl@club.at']);
+    expect(form.showCc).toBe(true);
+  });
+
+  it('forwards with WG: and the original, without recipients', () => {
+    const form = MailForm.forward({ ...received, html: '<p><b>Formatiert</b></p>' }, box(null));
+    expect(form.to).toEqual([]);
+    expect(form.subject).toBe('WG: Training');
+    expect(form.html).toContain('Weitergeleitete Nachricht');
+    expect(form.html).toContain('<p><b>Formatiert</b></p>');
+  });
+
+  it('swaps the signature with the sender while the text is untouched', () => {
+    const form = MailForm.reply(received, box('<p>Alt</p>'));
+    form.chooseMailbox(box('<p>Neu</p>', 'other'));
+    expect(form.mailboxId).toBe('other');
+    expect(form.html).toMatch(/^<p><\/p><p>-- <\/p><p>Neu<\/p><p>Am /);
+    form.html = '<p>Getippt</p>';
+    form.chooseMailbox(box('<p>Alt</p>'));
+    expect(form.html).toBe('<p>Getippt</p>');
+  });
+
+  it('restores a draft with its recipients and attached records', () => {
+    const draft: Mail = {
+      ...received,
+      folder: 'DRAFTS',
+      to: ['x'],
+      bcc: ['b@c.at'],
+      html: '<p>E</p>',
+      refs: [{ kind: 'TEAM', id: 't', title: 'Damen', parentId: null }],
+    };
+    const form = MailForm.fromDraft(draft, 'box');
+    expect(form.draftId).toBe('m1');
+    expect(form.showBcc).toBe(true);
+    expect(form.toDraft()).toEqual({
+      to: ['x'],
+      cc: ['carl@club.at'],
+      bcc: ['b@c.at'],
+      subject: 'Training',
+      html: '<p>E</p>',
+      refs: [{ kind: 'TEAM', id: 't' }],
+    });
+  });
+
+  it('checks addresses only when sending, and drops duplicates', () => {
+    const form = MailForm.compose(box(null));
+    form.to = ['a@b.at'];
+    form.cc = ['a@b.at', 'c@d.at'];
+    form.bcc = ['c@d.at', 'e@f.at'];
+    form.subject = ' Hallo ';
+    expect(form.toMail()).toMatchObject({ to: ['a@b.at'], cc: ['c@d.at'], bcc: ['e@f.at'], subject: 'Hallo', draftId: null });
+    expect(form.valid).toBe(true);
+    form.to = ['kein-adresse'];
+    expect(form.errors.to).toBeDefined();
+    form.to = [];
+    expect(form.errors.to).toBe('Mindestens einen Empfänger angeben.');
+    expect(MailForm.addresses('A@b.at; c@d.at,  a@b.at')).toEqual(['a@b.at', 'c@d.at']);
+  });
+
+  it('turns plain text into paragraphs, escaped', () => {
+    expect(textToHtml('a <b>\nzwei\n\ndrei')).toBe('<p>a &lt;b&gt;<br>zwei</p><p>drei</p>');
   });
 });

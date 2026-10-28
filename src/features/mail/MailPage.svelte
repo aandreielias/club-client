@@ -29,7 +29,13 @@
 
   const options = $derived(boxes.map((b) => ({ value: b.id, label: b.unread ? `${b.name} (${b.unread})` : b.name })));
   const compose = () => bus.publish(WINDOW_OPEN, { kind: 'mail-new', id: list.mailboxId ?? '-' });
-  const open = (mailId: string) => bus.publish(WINDOW_OPEN, { kind: 'mail', id: `${list.mailboxId}:${mailId}` });
+  // Drafts go on in the composer; other mails open to read.
+  const open = (mailId: string) =>
+    list.folder === 'DRAFTS'
+      ? bus.publish(WINDOW_OPEN, { kind: 'mail-new', id: `draft:${list.mailboxId}:${mailId}` })
+      : bus.publish(WINDOW_OPEN, { kind: 'mail', id: `${list.mailboxId}:${mailId}` });
+  const current = $derived(boxes.find((b) => b.id === list.mailboxId));
+  const editSignature = () => current && bus.publish(WINDOW_OPEN, { kind: 'mail-signature', id: current.id });
   const selected = $derived(windows.current?.kind === 'mail' ? (windows.current.id.split(':')[1] ?? null) : null);
 
   function choose(folder: MailFolder | null) {
@@ -42,6 +48,7 @@
 
 <Page title="E-Mail">
   {#snippet actions()}
+    {#if current?.signatureEditable}<Button icon="signature" onclick={editSignature}>Signatur</Button>{/if}
     {#if boxes.length}<Button variant="primary" icon="mail" onclick={compose}>Neue E-Mail</Button>{/if}
   {/snippet}
   {#snippet context()}
@@ -68,7 +75,7 @@
       rowKey={(m) => m.id}
       onopen={(m) => open(m.id)}
       {selected}
-      emptyText={list.folder === 'INBOX' ? 'Keine E-Mails im Posteingang.' : 'Dieser Ordner ist leer.'}
+      emptyText={list.folder === 'INBOX' ? 'Keine E-Mails im Posteingang.' : list.folder === 'DRAFTS' ? 'Keine Entwürfe.' : 'Dieser Ordner ist leer.'}
     >
       {#snippet cell(mail, column)}
         {#if column.key === 'subject'}

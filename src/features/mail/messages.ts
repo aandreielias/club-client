@@ -11,6 +11,7 @@ export const MAIL_MESSAGES: MessageCatalog = {
   'mail.too-many-recipients': `Höchstens ${limits.maxRecipients} Empfänger.`,
   'mail.subject-invalid': `Betreff mit 1 bis ${limits.subjectMaxLength} Zeichen, ohne Zeilenumbruch.`,
   'mail.body-too-long': `Der Text hat höchstens ${limits.bodyMaxLength} Zeichen.`,
+  'mail.signature-too-long': 'Die Signatur ist zu lang.',
   'mail.mailbox-name-invalid': 'Der Name des Postfachs fehlt oder ist zu lang.',
   'mail.mailbox-owner-invalid': 'Ein Postfach gehört genau einem Mitglied oder einer Rolle (nicht Gast).',
   'mail.member-unknown': 'Dieses Mitglied gibt es nicht oder es ist nicht aktiv.',

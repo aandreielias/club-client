@@ -1,5 +1,5 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
-import type { Mail, Mailbox, MailboxAdmin, MailboxInput, MailFolder, MailSummary, OutgoingMail } from './model';
+import type { AddressEntry, DraftInput, Mail, Mailbox, MailboxAdmin, MailboxInput, MailFolder, MailSummary, OutgoingMail } from './model';
 
 /** Typed access to the mail endpoints of club-server. */
 export class MailApi {
@@ -27,7 +27,23 @@ export class MailApi {
     return this.api.post<Mail>(this.messages(mailboxId), mail);
   }
 
-  /** To the trash; a mail already there is removed. */
+  /** Creates (`draftId` null) or replaces a draft. */
+  saveDraft(mailboxId: string, draftId: string | null, draft: DraftInput): Promise<Mail> {
+    const path = `${MailApi.BASE}/${encodeURIComponent(mailboxId)}/drafts`;
+    return draftId ? this.api.put<Mail>(`${path}/${encodeURIComponent(draftId)}`, draft) : this.api.post<Mail>(path, draft);
+  }
+
+  /** Own mailbox; shared ones admin and board. Empty removes it. */
+  setSignature(mailboxId: string, html: string): Promise<Mailbox> {
+    return this.api.put<Mailbox>(`${MailApi.BASE}/${encodeURIComponent(mailboxId)}/signature`, { html });
+  }
+
+  /** Every club address with its name. */
+  async addressBook(): Promise<AddressEntry[]> {
+    return (await this.api.get<{ items: AddressEntry[] }>('/api/v1/mail/address-book')).items;
+  }
+
+  /** To the trash; a mail already there, or a draft, is removed. */
   delete(mailboxId: string, mailId: string): Promise<void> {
     return this.api.delete(`${this.messages(mailboxId)}/${encodeURIComponent(mailId)}`);
   }

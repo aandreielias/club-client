@@ -25,10 +25,12 @@ describe('mock mail', () => {
     mockServer.handle(
       'POST',
       `/api/v1/mail/mailboxes/${own('spieler').id}/messages`,
-      { to: ['VORSTAND@mein-verein.at'], cc: ['extern@example.com'], subject: 'Frage', body: 'Hallo' },
+      { to: ['VORSTAND@mein-verein.at'], cc: ['extern@example.com'], bcc: ['geheim@example.com'], subject: 'Frage', html: '<p>Hallo</p>' },
       'spieler@example.at',
     );
-    expect(mail.folder(member('spieler'), own('spieler').id, 'SENT')[0].subject).toBe('Frage');
+    const [copy] = mail.folder(member('spieler'), own('spieler').id, 'SENT');
+    expect(copy.subject).toBe('Frage');
+    expect(mail.get(member('spieler'), own('spieler').id, copy.id).bcc).toEqual(['geheim@example.com']);
     expect(shared('kassier')!.unread).toBe(before + 1);
     // Every board member gets the notice, not the sender.
     expect(notifications.list('kassier', false).items[0]).toMatchObject({ kind: 'MAIL', title: 'Neue E-Mail von David Spieler', link: '/mail' });
@@ -36,6 +38,7 @@ describe('mock mail', () => {
 
     const box = shared('kassier')!.id;
     const received = mail.folder(member('kassier'), box, 'INBOX').find((m) => m.subject === 'Frage')!;
+    expect(mail.get(member('kassier'), box, received.id)).toMatchObject({ html: '<p>Hallo</p>', body: 'Hallo', bcc: [] });
     expect(mail.get(member('kassier'), box, received.id).read).toBe(true);
     expect(shared('kassier')!.unread).toBe(before);
   });
@@ -63,11 +66,12 @@ describe('mock mail links and mailbox admin', () => {
     const sent = mail.send(member('trainer'), own('trainer').id, {
       to: ['a@b.at'],
       subject: 'Training',
-      body: `Mit [x](club:team/${team.id}) heute`,
+      html: `<p>Mit <a data-ref="team:${team.id}" class="record-ref">x</a> heute</p>`,
       refs: [{ kind: 'TEAM', id: team.id }],
     });
-    const link = `„${team.name}“ (club:team/${team.id})`;
-    expect(sent.body).toBe(`Mit ${link} heute\n\nVerknüpft:\n- Team: ${link}`);
+    const anchor = `<a href="club:team/${team.id}" rel="noopener noreferrer nofollow">${team.name}</a>`;
+    expect(sent.html).toBe(`<p>Mit ${anchor} heute</p><p>Verknüpft:</p><ul><li>Team: ${anchor}</li></ul>`);
+    expect(sent.body).toContain(`Mit „${team.name}“ (club:team/${team.id}) heute`);
     expect(() => mail.send(member('trainer'), own('trainer').id, { to: ['a@b.at'], subject: 'x', refs: [{ kind: 'TASK', id: 'nope' }] })).toThrow(
       expect.objectContaining({ code: 'mail.ref-unknown' }),
     );
@@ -88,5 +92,25 @@ describe('mock mail links and mailbox admin', () => {
     );
     mail.remove(admin, box.id);
     expect(shared('trainer')).toBeUndefined();
+  });
+});
+
+describe('mock mail drafts, signatures and address book', () => {
+  it('keeps a draft as typed and drops it once sent', () => {
+    const box = own('trainer').id;
+    const draft = mail.saveDraft(member('trainer'), box, null, { to: ['halb'], subject: '', html: '<p>Ent<i>wurf</i></p>' });
+    expect(draft).toMatchObject({ folder: 'DRAFTS', to: ['halb'], body: 'Entwurf' });
+    expect(mail.saveDraft(member('trainer'), box, draft.id, { to: ['a@b.at'], subject: 'Fertig' }).id).toBe(draft.id);
+    expect(mail.folder(member('trainer'), box, 'DRAFTS')).toHaveLength(1);
+    mail.send(member('trainer'), box, { to: ['a@b.at'], subject: 'Fertig', html: '<p>x</p>', draftId: draft.id });
+    expect(mail.folder(member('trainer'), box, 'DRAFTS')).toHaveLength(0);
+  });
+
+  it('lets owners sign their mailbox and admin/board the shared one', () => {
+    expect(mail.setSignature(member('spieler'), own('spieler').id, '<p><b>David</b><script>x()</script></p>').signature).toBe('<p><b>David</b></p>');
+    const board = shared('kassier')!;
+    expect(board.signatureEditable).toBe(true);
+    expect(() => mail.setSignature(member('trainer'), board.id, '<p>x</p>')).toThrow(expect.objectContaining({ code: 'mail.mailbox-not-found' }));
+    expect(mail.addressBook().some((e) => e.address === 'vorstand@mein-verein.at' && e.role === 'BOARD')).toBe(true);
   });
 });

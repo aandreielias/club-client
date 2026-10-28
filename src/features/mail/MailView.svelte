@@ -9,7 +9,7 @@
   import Icon from '../../ui/Icon.svelte';
   import RecordLink from '../../ui/RecordLink.svelte';
   import { REF_ICONS, type RefKind } from '../../lib/records/refs';
-  import { mailSegments } from './mailText';
+  import { mailSegments, recordTarget } from './mailText';
   import { mailApi, mailCenter as center } from './services';
 
   /** One mail, opened from a mailbox list (`id` = mailbox:mail). Opening marks it read. */
@@ -26,6 +26,17 @@
   });
   void mail.load();
   view.title(() => mail.value?.subject);
+
+  /** Links in a formatted mail: club records open in the window, others in a new tab. */
+  function follow(event: MouseEvent) {
+    const link = (event.target as Element).closest('a');
+    if (!link) return;
+    event.preventDefault();
+    const href = link.getAttribute('href') ?? '';
+    const record = recordTarget(href);
+    if (record) view.open(record.kind, record.id);
+    else if (/^(https?:|mailto:)/i.test(href)) window.open(href, '_blank', 'noopener,noreferrer');
+  }
 
   const compose = (mode: 'reply' | 'reply-all' | 'forward') => view.open('mail-new', `${mode}:${mailboxId}:${mailId}`);
 
@@ -69,21 +80,34 @@
           <dt>Cc</dt>
           <dd>{value.cc.join(', ')}</dd>
         {/if}
+        {#if value.bcc.length}
+          <dt>Bcc</dt>
+          <dd>{value.bcc.join(', ')}</dd>
+        {/if}
         <dt>Datum</dt>
         <dd>{session.format.dateTime(value.sentAt)}</dd>
       </dl>
-      <!-- Club records linked in the mail open in the window; the reader's own rights decide what they see there. -->
-      <p class="prose text">
-        {#each mailSegments(value.body) as segment, i (i)}
-          {#if 'kind' in segment}
-            <span class="ref"
-              ><Icon name={REF_ICONS[segment.kind.toUpperCase() as RefKind] ?? 'link'} small /><RecordLink kind={segment.kind} id={segment.id}
-                >{segment.title}</RecordLink
-              ></span
-            >
-          {:else}{segment.text}{/if}
-        {/each}
-      </p>
+      {#if value.html}
+        <!-- Cleaned by the server (mail.domain.MailHtml: formatting tags and links only). -->
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+        <div class="prose html" onclick={follow}>
+          <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+          {@html value.html}
+        </div>
+      {:else}
+        <!-- Club records linked in the mail open in the window; the reader's own rights decide what they see there. -->
+        <p class="prose text">
+          {#each mailSegments(value.body) as segment, i (i)}
+            {#if 'kind' in segment}
+              <span class="ref"
+                ><Icon name={REF_ICONS[segment.kind.toUpperCase() as RefKind] ?? 'link'} small /><RecordLink kind={segment.kind} id={segment.id}
+                  >{segment.title}</RecordLink
+                ></span
+              >
+            {:else}{segment.text}{/if}
+          {/each}
+        </p>
+      {/if}
     </Detail>
   {/snippet}
 </AsyncView>
@@ -93,6 +117,23 @@
     display: inline-flex;
     align-items: baseline;
     gap: var(--space-xxs);
+  }
+  .html {
+    overflow-wrap: anywhere;
+  }
+  .html :global(blockquote) {
+    margin: var(--space-xs) 0;
+    padding-left: var(--space-sm);
+    border-left: 3px solid var(--color-border-strong);
+    color: var(--color-text-muted);
+  }
+  .html :global(a[href*='/app/records/']),
+  .html :global(a[href^='club:']) {
+    padding: 0 var(--space-xxs);
+    border-radius: var(--radius-sm);
+    background: var(--color-accent-soft);
+    color: inherit;
+    text-decoration: none;
   }
   .text {
     white-space: pre-wrap;

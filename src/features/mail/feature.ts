@@ -5,6 +5,7 @@ import MailboxPage from './MailboxPage.svelte';
 import MailboxView from './MailboxView.svelte';
 import MailComposeView from './MailComposeView.svelte';
 import MailPage from './MailPage.svelte';
+import MailSignatureView from './MailSignatureView.svelte';
 import MailView from './MailView.svelte';
 import { MAIL_MESSAGES } from './messages';
 import { mailCenter } from './services';
@@ -19,6 +20,7 @@ export const mailFeature: Feature = {
   windows: {
     mail: { component: MailView },
     'mail-new': { component: MailComposeView },
+    'mail-signature': { component: MailSignatureView },
     // Einstellungen › Postfächer
     mailbox: { component: MailboxView, page: (id) => `/mailboxes/${encodeURIComponent(id)}`, roles: ADMIN_BOARD },
     'mailbox-new': { component: MailboxCreateView, roles: ADMIN_BOARD },

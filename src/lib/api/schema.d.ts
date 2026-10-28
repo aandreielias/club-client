@@ -341,6 +341,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/mailboxes/{id}/signature": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["signature"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/mailboxes/{id}/drafts/{draftId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateDraft"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/admin/mailboxes/{id}": {
         parameters: {
             query?: never;
@@ -1221,6 +1253,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/mailboxes/{id}/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/admin/mailboxes": {
         parameters: {
             query?: never;
@@ -1808,6 +1856,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["delete_8"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/address-book": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["addressBook"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2651,6 +2715,46 @@ export interface components {
         "at.clubserver.notifications.api.NotificationsApi.Preferences": {
             items: components["schemas"]["at.clubserver.notifications.api.NotificationsApi.Preference"][];
         };
+        "at.clubserver.gateway.rest.MailController.SignatureBody": {
+            html: string;
+        };
+        "at.clubserver.mail.api.MailApi.MailboxDto": {
+            /** Format: uuid */
+            id: string;
+            address: string;
+            name: string;
+            /** @enum {string} */
+            kind: "PERSONAL" | "SHARED";
+            /** Format: int32 */
+            unread: number;
+            signature: string;
+            signatureEditable: boolean;
+        };
+        "at.clubserver.gateway.rest.MailController.DraftBody": {
+            to: string[];
+            cc: string[];
+            bcc: string[];
+            subject: string;
+            html: string;
+            refs: components["schemas"]["at.clubserver.platform.RecordRefs.RefInput"][];
+        };
+        "at.clubserver.mail.api.MailApi.MailDto": {
+            id: string;
+            /** @enum {string} */
+            folder: "INBOX" | "DRAFTS" | "SENT" | "TRASH";
+            from: string;
+            fromName: string;
+            to: string[];
+            cc: string[];
+            bcc: string[];
+            subject: string;
+            body: string;
+            html: string;
+            /** Format: date-time */
+            sentAt: string;
+            read: boolean;
+            refs: components["schemas"]["at.clubserver.platform.RecordRefs.RefDto"][];
+        };
         "at.clubserver.gateway.rest.MailController.MailboxBody": {
             address: string;
             name: string;
@@ -3088,23 +3192,11 @@ export interface components {
         "at.clubserver.gateway.rest.MailController.MailBody": {
             to: string[];
             cc: string[];
+            bcc: string[];
             subject: string;
-            body: string;
+            html: string;
             refs: components["schemas"]["at.clubserver.platform.RecordRefs.RefInput"][];
-        };
-        "at.clubserver.mail.api.MailApi.MailDto": {
-            id: string;
-            /** @enum {string} */
-            folder: "INBOX" | "SENT" | "TRASH";
-            from: string;
-            fromName: string;
-            to: string[];
-            cc: string[];
-            subject: string;
-            body: string;
-            /** Format: date-time */
-            sentAt: string;
-            read: boolean;
+            draftId: string;
         };
         "at.clubserver.gateway.rest.LocationsController.LocationBody": {
             name: string;
@@ -3538,16 +3630,6 @@ export interface components {
         "at.clubserver.attendance.api.AttendanceApi.AbsenceList": {
             items: components["schemas"]["at.clubserver.attendance.api.AttendanceApi.AbsenceDto"][];
         };
-        "at.clubserver.mail.api.MailApi.MailboxDto": {
-            /** Format: uuid */
-            id: string;
-            address: string;
-            name: string;
-            /** @enum {string} */
-            kind: "PERSONAL" | "SHARED";
-            /** Format: int32 */
-            unread: number;
-        };
         "at.clubserver.mail.api.MailApi.MailboxList": {
             items: components["schemas"]["at.clubserver.mail.api.MailApi.MailboxDto"][];
         };
@@ -3566,6 +3648,17 @@ export interface components {
         };
         "at.clubserver.mail.api.MailApi.MailboxAdminList": {
             items: components["schemas"]["at.clubserver.mail.api.MailApi.MailboxAdminDto"][];
+        };
+        "at.clubserver.mail.api.MailApi.AddressBook": {
+            items: components["schemas"]["at.clubserver.mail.api.MailApi.AddressEntry"][];
+        };
+        "at.clubserver.mail.api.MailApi.AddressEntry": {
+            address: string;
+            name: string;
+            /** Format: uuid */
+            memberId: string;
+            /** @enum {string} */
+            role: "ADMIN" | "BOARD" | "COACH" | "PLAYER" | "PARENT" | "VOLUNTEER" | "GUEST";
         };
         "at.clubserver.locations.api.LocationsApi.LocationList": {
             items: components["schemas"]["at.clubserver.locations.api.LocationsApi.LocationDto"][];
@@ -4389,6 +4482,59 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.notifications.api.NotificationsApi.Preferences"];
+                };
+            };
+        };
+    };
+    signature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.MailController.SignatureBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.mail.api.MailApi.MailboxDto"];
+                };
+            };
+        };
+    };
+    updateDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                draftId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.MailController.DraftBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.mail.api.MailApi.MailDto"];
                 };
             };
         };
@@ -6068,7 +6214,7 @@ export interface operations {
     list_6: {
         parameters: {
             query?: {
-                folder?: "INBOX" | "SENT" | "TRASH";
+                folder?: "INBOX" | "DRAFTS" | "SENT" | "TRASH";
             };
             header?: never;
             path: {
@@ -6101,6 +6247,32 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["at.clubserver.gateway.rest.MailController.MailBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.mail.api.MailApi.MailDto"];
+                };
+            };
+        };
+    };
+    createDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.MailController.DraftBody"];
             };
         };
         responses: {
@@ -7594,6 +7766,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    addressBook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.mail.api.MailApi.AddressBook"];
+                };
             };
         };
     };

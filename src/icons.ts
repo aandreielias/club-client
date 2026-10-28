@@ -41,6 +41,20 @@ import Link from '@lucide/svelte/icons/link';
 import Mail from '@lucide/svelte/icons/mail';
 import Reply from '@lucide/svelte/icons/reply';
 import Forward from '@lucide/svelte/icons/forward';
+import Bold from '@lucide/svelte/icons/bold';
+import Italic from '@lucide/svelte/icons/italic';
+import Underline from '@lucide/svelte/icons/underline';
+import Strikethrough from '@lucide/svelte/icons/strikethrough';
+import Heading2 from '@lucide/svelte/icons/heading-2';
+import List from '@lucide/svelte/icons/list';
+import ListOrdered from '@lucide/svelte/icons/list-ordered';
+import TextQuote from '@lucide/svelte/icons/text-quote';
+import Unlink from '@lucide/svelte/icons/unlink';
+import RemoveFormatting from '@lucide/svelte/icons/remove-formatting';
+import Undo2 from '@lucide/svelte/icons/undo-2';
+import Redo2 from '@lucide/svelte/icons/redo-2';
+import Signature from '@lucide/svelte/icons/signature';
+import FilePen from '@lucide/svelte/icons/file-pen';
 import MapPin from '@lucide/svelte/icons/map-pin';
 import Columns2 from '@lucide/svelte/icons/columns-2';
 import Upload from '@lucide/svelte/icons/upload';
@@ -73,6 +87,20 @@ export const ICONS = {
   mail: Mail,
   reply: Reply,
   forward: Forward,
+  draft: FilePen,
+  signature: Signature,
+  bold: Bold,
+  italic: Italic,
+  underline: Underline,
+  strike: Strikethrough,
+  heading: Heading2,
+  bulletList: List,
+  orderedList: ListOrdered,
+  quote: TextQuote,
+  unlink: Unlink,
+  clearFormat: RemoveFormatting,
+  undo: Undo2,
+  redo: Redo2,
   link: Link,
   location: MapPin,
   split: Columns2,
