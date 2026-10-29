@@ -142,6 +142,8 @@ export class MockCalendar {
     this.appointments.data.push(...created);
     this.appointments.save();
     this.changed(member, created, 'CREATED');
+    // server: CalendarApi.APPOINTMENT_CREATED (internal)
+    mockServer.events.publish({ type: 'calendar.appointment-created', data: { appointmentId: created[0]?.id, type: body.type } });
     created.forEach((a) => MockActivity.record('APPOINTMENT', a.id, member, 'CREATED', { title: a.title, teamIds: a.teamId ? [a.teamId] : [] }));
     return created;
   }

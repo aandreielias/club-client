@@ -4,6 +4,7 @@ import { directory, MockDirectory } from '../../lib/mock/core';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import { resolveRef } from '../../lib/mock/recordRefs';
+import { appointmentTypes } from '../calendar/mock';
 import { files } from '../files/mock';
 import { defaultTemplate, fill, TEMPLATE_NAME } from './invitationDocument';
 import type { RefKind } from '../../lib/records/refs';
@@ -37,6 +38,7 @@ import {
   AUTOMATIC_FOLLOW_UPS,
   NAMES_MEMBER,
   OWN_ACTION,
+  TARGETED_FOLLOW_UPS,
   plainFollowUp,
   type FollowUpAssignee,
   type FollowUpRule,
@@ -115,6 +117,9 @@ const FOLLOW_UP_KINDS = [
   'NOTIFY_EXCLUSION',
   'CONVENE_ASSEMBLY',
   'UPLOAD_STATUTES',
+  'UPLOAD_FILE',
+  'INVITE_MEETING',
+  'CREATE_APPOINTMENT',
 ] as const;
 const ABOUT_MEMBER: readonly FollowUpKind[] = ['ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'NOTIFY_EXCLUSION'];
 
@@ -132,6 +137,14 @@ const ACTIONS: readonly ResolutionAction[] = [
 ];
 
 const DAY_MS = 86_400_000;
+
+/** server: FollowUpPlanner.hint for the targeted kinds */
+const targetHint = (kind: FollowUpKind, name: string): string =>
+  kind === 'UPLOAD_FILE'
+    ? `Erledigt sich von selbst, sobald eine Datei im Ordner „${name}“ gespeichert ist.`
+    : kind === 'INVITE_MEETING'
+      ? `Erledigt sich von selbst, sobald zu einer Sitzung „${name}“ eingeladen ist.`
+      : `Erledigt sich von selbst, sobald ein Termin „${name}“ angelegt ist.`;
 const ASSIGNEES: readonly FollowUpAssignee[] = ['DEFAULT', 'BOARD', 'OFFICE', 'MANAGER', 'MEMBER'];
 
 /** server: FollowUp.checklist — trimmed, empty ones dropped, at most 20 of 200 characters. */
@@ -185,6 +198,9 @@ export class MockMeetings {
         if (s.fileId ? data.newVersion && s.fileId === data.fileId : s.folderId != null && s.folderId === data.folderId) {
           this.complete((f) => f.kind === 'UPLOAD_STATUTES');
         }
+        this.complete((f) => f.kind === 'UPLOAD_FILE' && f.target === data.folderId && !f.pending);
+      } else if (event.type === 'calendar.appointment-created') {
+        this.complete((f) => f.kind === 'CREATE_APPOINTMENT' && f.target === data.type && !f.pending);
       } else if (event.type === 'members.member-erased') {
         // server: MeetingRepository.renameMemberLinks
         for (const record of [...this.meetings.data, ...this.resolutions.data]) {
@@ -300,8 +316,13 @@ export class MockMeetings {
           dueAt: waitsFor || rule.dueDays == null ? null : new Date(Date.now() + rule.dueDays * DAY_MS).toISOString(),
           doneAt: null,
           waitsFor,
+          target: rule.target,
         },
-        rule.kind === 'UPLOAD_STATUTES' ? `${description}\n${statutesHint}` : description,
+        rule.kind === 'UPLOAD_STATUTES'
+          ? `${description}\n${statutesHint}`
+          : rule.targetName
+            ? `${description}\n${targetHint(rule.kind, rule.targetName)}`
+            : description,
         this.assigneesFor(rule, chosen, meeting, r),
         null,
         rule.checklist.map((t) => fill(t).slice(0, 200)),
@@ -312,10 +333,12 @@ export class MockMeetings {
   }
 
   /** server: FollowUpPlanner.ownFollowUps — tasks given with a motion (IMPLEMENT), at most 10. */
-  private ownFollowUps(given: unknown, action: ResolutionAction): FollowUpRule[] {
+  private ownFollowUps(viewer: Member, given: unknown, action: ResolutionAction): FollowUpRule[] {
     if (!Array.isArray(given) || !given.length) return [];
     if (given.length > 10) fail(400, 'action-rules.too-many');
     return given.map((f: Record<string, any>) => {
+      const kind: FollowUpRule['kind'] = f.kind ?? 'IMPLEMENT';
+      if (kind !== 'IMPLEMENT' && !TARGETED_FOLLOW_UPS.includes(kind)) fail(400, 'action-rules.kind-invalid');
       const title = typeof f.title === 'string' ? f.title.trim() : '';
       if (!title || title.length > 150) fail(400, 'action-rules.title-invalid');
       if (f.dueDays != null && (!Number.isInteger(f.dueDays) || f.dueDays < 0 || f.dueDays > 365)) fail(400, 'action-rules.due-invalid');
@@ -326,7 +349,7 @@ export class MockMeetings {
       if (description && description.length > 2000) fail(400, 'action-rules.description-invalid');
       return {
         id: f.id ?? crypto.randomUUID(),
-        kind: 'IMPLEMENT' as const,
+        kind,
         title,
         dueDays: f.dueDays ?? null,
         assignTo,
@@ -334,8 +357,30 @@ export class MockMeetings {
         description,
         checklist: cleanChecklist(f.checklist, 'action-rules.checklist-invalid'),
         afterPrevious: f.afterPrevious === true,
+        ...this.target(viewer, kind, f.target, {}),
       };
     });
+  }
+
+  /** server: FollowUpTargets — the folder, meeting type or appointment type, named as the viewer sees it; known ones keep their name. */
+  private target(
+    viewer: Member,
+    kind: FollowUpRule['kind'],
+    target: unknown,
+    known: Record<string, string>,
+  ): { target: string | null; targetName: string | null } {
+    const value = typeof target === 'string' && target.trim() ? target.trim() : null;
+    if (TARGETED_FOLLOW_UPS.includes(kind) !== !!value) fail(400, 'action-rules.target-invalid');
+    if (!value) return { target: null, targetName: null };
+    const kept = known[`${kind}:${value}`];
+    if (kept) return { target: value, targetName: kept };
+    const name =
+      kind === 'UPLOAD_FILE'
+        ? files.listFolders(viewer).find((f) => f.id === value)?.name
+        : kind === 'INVITE_MEETING'
+          ? this.types.data.find((t) => t.key === value && !t.archived)?.label
+          : appointmentTypes.list().items.find((t) => t.key === value && !t.archived)?.label;
+    return { target: value, targetName: name ?? fail(400, 'action-rules.target-unknown') };
   }
 
   /** server: ResolutionHandlers.assigneesFor */
@@ -377,6 +422,9 @@ export class MockMeetings {
     ) {
       fail(400, 'action-rules.invalid');
     }
+    // server: MeetingTypeHandlers.withTargetNames — targets chosen before keep their names
+    const known: Record<string, string> = {};
+    for (const r of this.rules.data) for (const f of r.followUps) if (f.target && f.targetName) known[`${f.kind}:${f.target}`] = f.targetName;
     const rules: ActionRule[] = keyed.map((item) => {
       const action: ResolutionAction = item.action;
       const own = isOwnAction(action);
@@ -393,7 +441,11 @@ export class MockMeetings {
         enabled: action === 'GENERAL' || item.enabled !== false,
         followUps: followUps.map((f) => {
           const automatic = OWN_ACTION[f.kind as FollowUpKind];
-          if (!FOLLOW_UP_KINDS.includes(f.kind) || (automatic && automatic !== action) || (own && f.kind !== 'IMPLEMENT'))
+          if (
+            !FOLLOW_UP_KINDS.includes(f.kind) ||
+            (automatic && automatic !== action) ||
+            (own && f.kind !== 'IMPLEMENT' && !TARGETED_FOLLOW_UPS.includes(f.kind))
+          )
             fail(400, 'action-rules.kind-invalid');
           const title = typeof f.title === 'string' ? f.title.trim() : '';
           if (!title || title.length > 150) fail(400, 'action-rules.title-invalid');
@@ -418,6 +470,7 @@ export class MockMeetings {
             description,
             checklist,
             afterPrevious,
+            ...this.target(viewer, f.kind, f.target, known),
           };
         }),
       };
@@ -638,6 +691,7 @@ export class MockMeetings {
     this.changed(meeting, 'INVITED');
     // server: an extraordinary general meeting = an assembly that is not the yearly one
     if (isAssembly(this.type(meeting.kind)) && !this.type(meeting.kind).dueBy) this.complete((f) => f.kind === 'CONVENE_ASSEMBLY');
+    this.complete((f) => f.kind === 'INVITE_MEETING' && f.target === meeting.kind && !f.pending);
     mockServer.events.publish({
       type: 'meetings.meeting-invited',
       data: {
@@ -847,7 +901,7 @@ export class MockMeetings {
       actionMemberId: body.actionMemberId ?? null,
       actionOffice: body.actionOffice ?? null,
       assigneeIds,
-      ownFollowUps: this.ownFollowUps(body.followUps, action),
+      ownFollowUps: this.ownFollowUps(viewer, body.followUps, action),
     };
     this.resolutions.data.push(r);
     this.resolutionChanged(r, 'CREATED');

@@ -6,7 +6,8 @@
   import ListEditor from '../../ui/ListEditor.svelte';
   import Select from '../../ui/Select.svelte';
   import { boardSettings } from '../members/services';
-  import { ASSIGNEE_LABELS, AUTOMATIC_FOLLOW_UPS, FOLLOW_UP_KIND_LABELS, type FollowUpAssignee, type FollowUpRule } from './model';
+  import FollowUpTargetField from './FollowUpTargetField.svelte';
+  import { ASSIGNEE_LABELS, AUTOMATIC_FOLLOW_UPS, type FollowUpAssignee, type FollowUpRule } from './model';
   import { followUpProblem, RULE_LIMITS } from './ResolutionRuleForm.svelte';
 
   /**
@@ -104,13 +105,14 @@
             <Button size="sm" variant="ghost" tooltip={p.hint} onclick={() => insert(p.value)}>{p.value}</Button>
           {/each}
         </div>
-        {#if kinds.length > 1}
-          <Field label="Art" hint={automatic ? 'Erledigt sich von selbst, sobald es eingetragen ist.' : undefined}>
-            <Select bind:value={draft.kind} options={kinds} aria-label="Art der Folgeaufgabe" />
-          </Field>
-        {:else if automatic}
-          <p class="muted small">{FOLLOW_UP_KIND_LABELS[draft.kind]}</p>
-        {/if}
+        <Field label="Erledigt durch" hint={automatic ? 'Niemand muss sie abhaken.' : 'Wer sie übernimmt, hakt sie ab.'}>
+          <Select
+            bind:value={() => draft!.kind, (v) => v && v !== draft!.kind && (draft = { ...draft!, kind: v, target: null, targetName: null })}
+            options={kinds}
+            aria-label="Erledigt durch"
+          />
+        </Field>
+        <FollowUpTargetField kind={draft.kind} bind:target={draft.target} bind:targetName={draft.targetName} />
       </section>
 
       <section class="stack part">

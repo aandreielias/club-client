@@ -1,6 +1,6 @@
 <script lang="ts">
   import FollowUpFlow from './FollowUpFlow.svelte';
-  import { NAMES_MEMBER, type FollowUpRule, type ResolutionAction } from './model';
+  import { FOLLOW_UP_KIND_LABELS, NAMES_MEMBER, TARGETED_FOLLOW_UPS, type FollowUpRule, type ResolutionAction } from './model';
   import { resolutionRules } from './services';
 
   /**
@@ -10,7 +10,7 @@
   let { action, followUps = $bindable() }: { action: ResolutionAction; followUps: FollowUpRule[] } = $props();
 
   const fromRule = $derived(resolutionRules.get(action)?.followUps ?? []);
-  const KINDS = [{ value: 'IMPLEMENT' as const, label: 'Umsetzen' }];
+  const KINDS = (['IMPLEMENT', ...TARGETED_FOLLOW_UPS] as FollowUpRule['kind'][]).map((k) => ({ value: k, label: FOLLOW_UP_KIND_LABELS[k] }));
 </script>
 
 <fieldset class="stack">

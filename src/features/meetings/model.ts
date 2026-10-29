@@ -268,6 +268,8 @@ export const plainFollowUp = (kind: FollowUpRule['kind'], title: string, dueDays
   description: null,
   checklist: [],
   afterPrevious: false,
+  target: null,
+  targetName: null,
 });
 
 /** server: FollowUpPlanner.NAMES_MEMBER — built-in decisions about one member. */
@@ -288,6 +290,9 @@ export interface FollowUpRule {
   description: string | null;
   checklist: string[];
   afterPrevious: boolean;
+  /** Targeted kinds: the folder (id), meeting type or appointment type (key) it waits for, and its last known name. */
+  target: string | null;
+  targetName: string | null;
 }
 
 /**
@@ -313,18 +318,35 @@ export const OWN_ACTION: Partial<Record<FollowUpKind, BuiltinAction>> = {
   UPLOAD_STATUTES: 'STATUTES_CHANGE',
 };
 
+/** How a follow-up gets done ("Erledigt durch"). */
 export const FOLLOW_UP_KIND_LABELS: Readonly<Record<Exclude<FollowUpKind, 'MANUAL'>, string>> = {
-  IMPLEMENT: 'Umsetzen',
-  ENTER_HONORARY: 'Ehrenmitgliedschaft eintragen (erledigt sich selbst)',
-  REVOKE_HONORARY: 'Ehrenmitgliedschaft aberkennen (erledigt sich selbst)',
-  ENTER_OFFICE: 'Funktion eintragen (erledigt sich selbst)',
-  NOTIFY_EXCLUSION: 'Ausschluss mitteilen',
-  CONVENE_ASSEMBLY: 'Mitgliederversammlung einberufen (erledigt sich selbst)',
-  UPLOAD_STATUTES: 'Neue Statuten hochladen (erledigt sich selbst)',
+  IMPLEMENT: 'Von Hand abhaken',
+  ENTER_HONORARY: 'Von selbst, wenn die Ehrenmitgliedschaft eingetragen ist',
+  REVOKE_HONORARY: 'Von selbst, wenn die Ehrenmitgliedschaft aberkannt ist',
+  ENTER_OFFICE: 'Von selbst, wenn die Funktion eingetragen ist',
+  NOTIFY_EXCLUSION: 'Von Hand: Ausschluss mitteilen',
+  CONVENE_ASSEMBLY: 'Von selbst, wenn zur Mitgliederversammlung eingeladen ist',
+  UPLOAD_STATUTES: 'Von selbst, wenn die neuen Statuten hochgeladen sind',
+  UPLOAD_FILE: 'Von selbst, wenn eine Datei in einem Ordner gespeichert ist',
+  INVITE_MEETING: 'Von selbst, wenn zu einer Sitzung einer Art eingeladen ist',
+  CREATE_APPOINTMENT: 'Von selbst, wenn ein Termin einer Art angelegt ist',
 };
 
+/** server: FollowUpKind.targeted — open to every decision and motion, each waiting for a folder, meeting type or appointment type. */
+export const TARGETED_FOLLOW_UPS: readonly FollowUpKind[] = ['UPLOAD_FILE', 'INVITE_MEETING', 'CREATE_APPOINTMENT'];
+
 export type FollowUpKind =
-  'IMPLEMENT' | 'ENTER_HONORARY' | 'REVOKE_HONORARY' | 'ENTER_OFFICE' | 'NOTIFY_EXCLUSION' | 'CONVENE_ASSEMBLY' | 'UPLOAD_STATUTES' | 'MANUAL';
+  | 'IMPLEMENT'
+  | 'ENTER_HONORARY'
+  | 'REVOKE_HONORARY'
+  | 'ENTER_OFFICE'
+  | 'NOTIFY_EXCLUSION'
+  | 'CONVENE_ASSEMBLY'
+  | 'UPLOAD_STATUTES'
+  | 'UPLOAD_FILE'
+  | 'INVITE_MEETING'
+  | 'CREATE_APPOINTMENT'
+  | 'MANUAL';
 
 export interface FollowUp {
   id: string;

@@ -7,6 +7,7 @@ import {
   plainFollowUp,
   NO_STATUTES,
   OWN_ACTION,
+  TARGETED_FOLLOW_UPS,
   type ActionRule,
   type FollowUpRule,
   type Majority,
@@ -53,7 +54,7 @@ export class ResolutionRuleForm extends FormState<Errors> {
   /** Follow-up kinds this decision may have: its own automatic one and those every decision may have; the club's own only IMPLEMENT. */
   kinds(): { value: FollowUpRule['kind']; label: string }[] {
     return (Object.keys(FOLLOW_UP_KIND_LABELS) as FollowUpRule['kind'][])
-      .filter((k) => (this.own ? k === 'IMPLEMENT' : !OWN_ACTION[k] || OWN_ACTION[k] === this.action))
+      .filter((k) => k === 'IMPLEMENT' || TARGETED_FOLLOW_UPS.includes(k) || (!this.own && OWN_ACTION[k] === this.action))
       .map((k) => ({ value: k, label: FOLLOW_UP_KIND_LABELS[k] }));
   }
 
@@ -99,6 +100,7 @@ export class ResolutionRuleForm extends FormState<Errors> {
         description: f.description?.trim() || null,
         checklist: f.checklist.map((t) => t.trim()).filter(Boolean),
         office: f.assignTo === 'OFFICE' ? f.office : null,
+        target: TARGETED_FOLLOW_UPS.includes(f.kind) ? f.target : null,
       })),
     };
   }
@@ -120,8 +122,15 @@ export class ResolutionRuleForm extends FormState<Errors> {
   }
 }
 
+const TARGET_MISSING = {
+  UPLOAD_FILE: 'Den Ordner wählen, in dem die Datei gespeichert wird.',
+  INVITE_MEETING: 'Die Art der Sitzung wählen.',
+  CREATE_APPOINTMENT: 'Die Art des Termins wählen.',
+} as const;
+
 /** What is wrong with one follow-up's options (server: FollowUpPlanner.validate), or null. */
 export function followUpProblem(f: FollowUpRule, namesMember: boolean): string | null {
+  if (TARGETED_FOLLOW_UPS.includes(f.kind) && !f.target) return TARGET_MISSING[f.kind as keyof typeof TARGET_MISSING];
   if (f.assignTo === 'OFFICE' && !f.office) return 'Eine Funktion wählen, die die Aufgabe übernimmt.';
   if (f.assignTo === 'MEMBER' && !namesMember) return 'Nur Beschlüsse über ein Mitglied können es beauftragen.';
   if ((f.description?.length ?? 0) > RULE_LIMITS.description) return `Beschreibung bis ${RULE_LIMITS.description} Zeichen.`;

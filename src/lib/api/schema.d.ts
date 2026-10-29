@@ -2466,7 +2466,7 @@ export interface components {
             /** Format: uuid */
             resolutionId: string;
             /** @enum {string} */
-            kind: "IMPLEMENT" | "ENTER_HONORARY" | "REVOKE_HONORARY" | "ENTER_OFFICE" | "NOTIFY_EXCLUSION" | "CONVENE_ASSEMBLY" | "UPLOAD_STATUTES" | "MANUAL";
+            kind: "IMPLEMENT" | "ENTER_HONORARY" | "REVOKE_HONORARY" | "ENTER_OFFICE" | "NOTIFY_EXCLUSION" | "CONVENE_ASSEMBLY" | "UPLOAD_STATUTES" | "UPLOAD_FILE" | "INVITE_MEETING" | "CREATE_APPOINTMENT" | "MANUAL";
             title: string;
             automatic: boolean;
             /** Format: date-time */
@@ -2483,7 +2483,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "IMPLEMENT" | "ENTER_HONORARY" | "REVOKE_HONORARY" | "ENTER_OFFICE" | "NOTIFY_EXCLUSION" | "CONVENE_ASSEMBLY" | "UPLOAD_STATUTES" | "MANUAL";
+            kind: "IMPLEMENT" | "ENTER_HONORARY" | "REVOKE_HONORARY" | "ENTER_OFFICE" | "NOTIFY_EXCLUSION" | "CONVENE_ASSEMBLY" | "UPLOAD_STATUTES" | "UPLOAD_FILE" | "INVITE_MEETING" | "CREATE_APPOINTMENT" | "MANUAL";
             title: string;
             /** Format: int32 */
             dueDays: number;
@@ -2494,6 +2494,8 @@ export interface components {
             description: string;
             checklist: string[];
             afterPrevious: boolean;
+            target: string;
+            targetName: string;
         };
         "at.clubserver.meetings.api.MeetingsApi.Person": {
             /** Format: uuid */

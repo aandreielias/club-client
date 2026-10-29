@@ -8,7 +8,7 @@
   import Tag from '../../ui/Tag.svelte';
   import { boardSettings } from '../members/services';
   import { ruleSummary, startText } from './followUpText';
-  import { AUTOMATIC_FOLLOW_UPS, FOLLOW_UP_KIND_LABELS, isOwnAction, MAJORITY_LABELS, plainFollowUp } from './model';
+  import { AUTOMATIC_FOLLOW_UPS, isOwnAction, MAJORITY_LABELS, plainFollowUp } from './model';
   import ResolutionRuleEditor from './ResolutionRuleEditor.svelte';
   import { ResolutionRuleForm } from './ResolutionRuleForm.svelte';
   import { saveRule, setRuleEnabled } from './ruleActions';
@@ -81,7 +81,7 @@
           <li>
             <span>{followUp.title}</span>
             <span class="muted small">
-              {i + 1}. {FOLLOW_UP_KIND_LABELS[followUp.kind]} · {ruleSummary(
+              {i + 1}. {ruleSummary(
                 { ...plainFollowUp(followUp.kind, followUp.title, followUp.dueDays), ...followUp },
                 AUTOMATIC_FOLLOW_UPS.includes(followUp.kind),
                 (o) => boardSettings.label(o),

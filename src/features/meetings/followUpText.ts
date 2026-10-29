@@ -30,13 +30,28 @@ export function dueText(dueDays: number | null, afterPrevious = false): string {
   return `fällig nach ${days}${afterPrevious ? '' : ' ab Beschluss'}`;
 }
 
-/** The one-line summary of a follow-up template: who · when due · finishes itself · checklist. */
+/** How it gets done, short: by hand (null), "erledigt sich selbst", or what it waits for. */
+export function doneText(f: Pick<FollowUpRule, 'kind' | 'targetName'>, automatic: boolean): string | null {
+  const name = f.targetName ? `„${f.targetName}“` : '…';
+  switch (f.kind) {
+    case 'UPLOAD_FILE':
+      return `erledigt mit einer Datei in ${name}`;
+    case 'INVITE_MEETING':
+      return `erledigt mit der Einladung zu ${name}`;
+    case 'CREATE_APPOINTMENT':
+      return `erledigt mit einem Termin ${name}`;
+    default:
+      return automatic ? 'erledigt sich selbst' : null;
+  }
+}
+
+/** The one-line summary of a follow-up template: who · when due · how it gets done · checklist. */
 export function ruleSummary(f: FollowUpRule, automatic: boolean, officeLabel: (office: NonNullable<FollowUpRule['office']>) => string): string {
   const items = f.checklist.filter((t) => t.trim()).length;
   return [
     assigneeText(f, officeLabel),
     dueText(f.dueDays, f.afterPrevious),
-    automatic && 'erledigt sich selbst',
+    doneText(f, automatic),
     items && `${items} ${items === 1 ? 'Punkt' : 'Punkte'}`,
   ]
     .filter(Boolean)

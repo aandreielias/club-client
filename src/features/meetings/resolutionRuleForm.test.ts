@@ -20,7 +20,7 @@ describe('ResolutionRuleForm', () => {
     form.label = '  Budget ';
     expect(form.valid).toBe(true);
     expect(form.toRule()).toMatchObject({ action: null, label: 'Budget', majority: null, enabled: true });
-    expect(form.kinds().map((k) => k.value)).toEqual(['IMPLEMENT']);
+    expect(form.kinds().map((k) => k.value)).toEqual(['IMPLEMENT', 'UPLOAD_FILE', 'INVITE_MEETING', 'CREATE_APPOINTMENT']);
   });
 
   it('keeps a built-in decision nameless and offers its own automatic follow-up only', () => {

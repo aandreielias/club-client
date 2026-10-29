@@ -13,6 +13,8 @@
   "action-rules.kind-invalid",
   "action-rules.label-invalid",
   "action-rules.statutes-unknown",
+  "action-rules.target-invalid",
+  "action-rules.target-unknown",
   "action-rules.title-invalid",
   "action-rules.too-many",
   "action-rules.too-many-own",
