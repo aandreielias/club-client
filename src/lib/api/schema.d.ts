@@ -2475,6 +2475,9 @@ export interface components {
             taskId: string;
             /** @enum {string} */
             taskStatus: "OPEN" | "IN_PROGRESS" | "DONE";
+            /** Format: uuid */
+            waitsFor: string;
+            waiting: boolean;
         };
         "at.clubserver.meetings.api.MeetingsApi.Person": {
             /** Format: uuid */
@@ -2746,6 +2749,13 @@ export interface components {
             title: string;
             /** Format: int32 */
             dueDays: number;
+            /** @enum {string} */
+            assignTo: "DEFAULT" | "BOARD" | "OFFICE" | "MANAGER" | "MEMBER";
+            /** @enum {string} */
+            office: "CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR";
+            description: string;
+            checklist: string[];
+            afterPrevious: boolean;
         };
         "at.clubserver.meetings.api.MeetingsApi.StatutesPlace": {
             /** Format: uuid */
@@ -3101,6 +3111,9 @@ export interface components {
             assigneeIds: string[];
             /** Format: date-time */
             dueAt: string;
+            checklist: string[];
+            /** Format: uuid */
+            waitsFor: string;
         };
         "at.clubserver.gateway.rest.ResolutionsController.AnalogBody": {
             /** Format: int32 */
@@ -3191,6 +3204,9 @@ export interface components {
             assigneeIds: string[];
             /** Format: date-time */
             dueAt: string;
+            checklist: string[];
+            /** Format: uuid */
+            waitsFor: string;
         };
         "at.clubserver.gateway.rest.MeetingsController.CloseBody": {
             protocol: string;
