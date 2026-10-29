@@ -112,6 +112,8 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Neue E-Mail': { text: 'E-Mail aus dem gewählten Postfach schreiben', command: 'page.new' },
   Antworten: { text: 'Dem Absender antworten' },
   'Allen antworten': { text: 'Dem Absender und allen anderen Empfängern antworten' },
+  Verwerfen: { text: 'Die Änderungen nicht speichern und die gespeicherten Werte wieder anzeigen' },
+  Fertig: { text: 'Fertig mit Sortieren' },
   Signatur: { text: 'Signatur dieses Postfachs für neue E-Mails festlegen' },
   'Neue Beschlussart': { text: 'Eine eigene Art von Beschluss anlegen, etwa Budget oder Beitragshöhe' },
   'Neues Postfach': { text: 'Vereins-Adresse einem Mitglied oder einer Rolle zuordnen' },
