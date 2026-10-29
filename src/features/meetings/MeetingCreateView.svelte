@@ -81,7 +81,13 @@
               {late ? 'Die Einladungsfrist ist für diesen Termin schon vorbei: ' : 'Einladen spätestens am '}{session.format.dateTime(deadline)}.
             </p>
           {/if}
-          <MeetingPlaceFields bind:location={form.location} bind:online={form.online} bind:videoUrl={form.videoUrl} error={form.error('videoUrl')} />
+          <MeetingPlaceFields
+            bind:location={form.location}
+            bind:videoUrl={form.videoUrl}
+            online={form.online}
+            standing={form.type?.videoUrl ?? null}
+            error={form.error('videoUrl')}
+          />
           <Field label="Tagesordnung" hint="Ein Punkt pro Zeile; geht mit der Einladung hinaus." error={form.error('agenda')}>
             <textarea bind:value={form.agenda} rows="6" maxlength="4000"></textarea>
           </Field>

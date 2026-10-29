@@ -53,7 +53,7 @@ describe('MeetingForm', () => {
     expect(form.title).toBe('Außerordentliche Vorstandssitzung');
     expect(Object.keys(form.errors)).toEqual(['urgency']);
     form.urgency = 'Halle gekündigt';
-    form.online = true;
+    form.setType({ ...type('EXTRA_BOARD'), online: true });
     form.videoUrl = 'http://meet';
     expect(Object.keys(form.errors)).toEqual(['videoUrl']);
     form.videoUrl = '';
@@ -349,24 +349,34 @@ describe('mock own decisions and online meetings', () => {
     );
   });
 
-  it('lets online members vote in the app once the meeting is online', () => {
+  it('shows the link of online kinds and lets online members vote in the app', () => {
     directory.confirm(member('vorstand'));
-    expect(() =>
-      meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(16), endsAt: inDays(16.1), online: true }),
-    ).toThrow(expect.objectContaining({ code: 'meeting.video-missing' }));
     const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(16), endsAt: inDays(16.1) });
+    expect(mv).toMatchObject({ online: false, videoUrl: null });
     meetings.invite(member('vorstand'), mv.id);
     expect(() => meetings.setPresence(member('vorstand'), mv.id, 'kassier', 'ONLINE')).toThrow(
       expect.objectContaining({ code: 'meeting.not-online' }),
     );
-    const online = meetings.update(member('vorstand'), mv.id, { online: true, videoUrl: 'https://meet.example/mv' });
-    expect(online).toMatchObject({ online: true, videoUrl: 'https://meet.example/mv' });
-    meetings.setPresence(member('vorstand'), mv.id, 'kassier', 'ONLINE');
-    for (const p of online.electorate.filter((e) => e.memberId !== 'kassier')) meetings.setPresence(member('vorstand'), mv.id, p.memberId, 'APP');
-    meetings.open(member('vorstand'), mv.id);
-    const draft = meetings.createResolution(member('vorstand'), mv.id, { title: 'Online', majority: 'SIMPLE' });
-    meetings.openResolution(member('vorstand'), draft.id);
-    expect(meetings.vote(member('kassier'), draft.id, 'YES')).toMatchObject({ voted: true });
-    expect(meetings.update(member('vorstand'), mv.id, { online: false }).videoUrl).toBeNull();
+    // The kind turns online with a standing link: its meetings show it.
+    const assembly = meetings.types.data.find((t) => t.key === 'ASSEMBLY')!;
+    Object.assign(assembly, { online: true, videoUrl: 'https://meet.example/mv' });
+    try {
+      const online = meetings.get(member('vorstand'), mv.id);
+      expect(online).toMatchObject({ online: true, videoUrl: 'https://meet.example/mv' });
+      expect(meetings.update(member('vorstand'), mv.id, { videoUrl: 'https://meet.example/heute' }).videoUrl).toBe('https://meet.example/heute');
+      meetings.setPresence(member('vorstand'), mv.id, 'kassier', 'ONLINE');
+      for (const p of online.electorate.filter((e) => e.memberId !== 'kassier')) meetings.setPresence(member('vorstand'), mv.id, p.memberId, 'APP');
+      meetings.open(member('vorstand'), mv.id);
+      const draft = meetings.createResolution(member('vorstand'), mv.id, { title: 'Online', majority: 'SIMPLE' });
+      meetings.openResolution(member('vorstand'), draft.id);
+      expect(meetings.vote(member('kassier'), draft.id, 'YES')).toMatchObject({ voted: true });
+      // Without a standing link each meeting needs its own.
+      assembly.videoUrl = null;
+      expect(() => meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(17), endsAt: inDays(17.1) })).toThrow(
+        expect.objectContaining({ code: 'meeting.video-missing' }),
+      );
+    } finally {
+      Object.assign(assembly, { online: false, videoUrl: null });
+    }
   });
 });

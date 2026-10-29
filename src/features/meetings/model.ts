@@ -78,6 +78,9 @@ export interface MeetingType {
   dueBy: string | null;
   sort: number;
   archived: boolean;
+  /** Members may join its meetings online; each shows its own link or the type's standing `videoUrl`. */
+  online: boolean;
+  videoUrl: string | null;
   /** Meetings of this type exist: it can be archived, not deleted. */
   inUse: boolean;
   steps: MeetingStep[];
@@ -147,7 +150,7 @@ export interface Meeting {
   startsAt: string;
   endsAt: string;
   location: string | null;
-  /** Members may join through `videoUrl`. */
+  /** Its type has online participation: `videoUrl` is the link members join by (its own, or the type's). */
   online: boolean;
   videoUrl: string | null;
   status: MeetingStatus;
@@ -296,7 +299,7 @@ export interface NewMeeting {
   startsAt: string;
   endsAt: string;
   location: string | null;
-  online: boolean;
+  /** Its own link; empty: the type's standing one. */
   videoUrl: string | null;
 }
 

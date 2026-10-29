@@ -32,8 +32,8 @@ export class MeetingModel {
     return this.write(() => this.api.close(this.id, protocol));
   }
 
-  /** Place and online participation, until the meeting closes. */
-  savePlace(patch: { location: string; online: boolean; videoUrl: string }): Promise<boolean> {
+  /** Place and video link, until the meeting closes. */
+  savePlace(patch: { location: string; videoUrl: string }): Promise<boolean> {
     return this.write(() => this.api.update(this.id, patch));
   }
 

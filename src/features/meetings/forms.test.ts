@@ -68,23 +68,26 @@ describe('MeetingForm', () => {
     expect(form.errors.urgency).toBeDefined();
     form.urgency = 'Halle gekündigt';
     form.end = form.start;
-    form.online = true;
+    form.setType({ ...type('EXTRA_BOARD'), online: true });
     form.videoUrl = 'http://meet.example';
     expect(Object.keys(form.errors).sort()).toEqual(['end', 'videoUrl']);
   });
 });
 
 describe('MeetingPlaceForm', () => {
-  it('needs the https link only when members may join online', () => {
-    const form = MeetingPlaceForm.of({ location: 'Halle', online: false, videoUrl: null });
+  it('needs a https link for online kinds, unless the kind has a standing one', () => {
+    expect(MeetingPlaceForm.of({ location: 'Halle', online: false, videoUrl: null }, undefined).valid).toBe(true);
+    const online = MeetingPlaceForm.of({ location: 'Halle', online: true, videoUrl: null }, { ...type('ASSEMBLY'), online: true, videoUrl: null });
+    expect(online.errors.videoUrl).toBe('Link zur Videokonferenz angeben.');
+    online.videoUrl = 'http://x.at';
+    expect(online.errors.videoUrl).toBe('Link mit https:// angeben.');
+    online.videoUrl = 'https://meet.example/mv';
+    expect(online.toPatch()).toEqual({ location: 'Halle', videoUrl: 'https://meet.example/mv' });
+
+    // The kind's standing link shows as the default; an own link replaces it, empty falls back.
+    const standing = { ...type('SIMPLE_BOARD'), online: true, videoUrl: 'https://meet.example/vorstand' };
+    const form = MeetingPlaceForm.of({ location: null, online: true, videoUrl: 'https://meet.example/vorstand' }, standing);
+    expect(form.videoUrl).toBe('');
     expect(form.valid).toBe(true);
-    form.online = true;
-    expect(form.errors.videoUrl).toBe('Link zur Videokonferenz angeben.');
-    form.videoUrl = 'http://x.at';
-    expect(form.errors.videoUrl).toBe('Link mit https:// angeben.');
-    form.videoUrl = 'https://meet.example/mv';
-    expect(form.toPatch()).toEqual({ location: 'Halle', online: true, videoUrl: 'https://meet.example/mv' });
-    form.online = false;
-    expect(form.toPatch().videoUrl).toBe('');
   });
 });

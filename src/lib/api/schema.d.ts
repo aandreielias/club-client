@@ -2674,6 +2674,8 @@ export interface components {
             /** Format: int32 */
             sort: number;
             archived: boolean;
+            online: boolean;
+            videoUrl: string;
             steps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.StepDto"][];
         };
         "at.clubserver.meetings.api.MeetingsApi.StepDto": {
@@ -2712,6 +2714,8 @@ export interface components {
             /** Format: int32 */
             sort: number;
             archived: boolean;
+            online: boolean;
+            videoUrl: string;
             inUse: boolean;
             steps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.StepDto"][];
         };
@@ -3157,7 +3161,6 @@ export interface components {
             /** Format: date-time */
             endsAt: string;
             location: string;
-            online: boolean;
             videoUrl: string;
         };
         "at.clubserver.gateway.rest.MeetingsController.ResolutionBody": {
@@ -3471,7 +3474,6 @@ export interface components {
             /** Format: date-time */
             endsAt: string;
             location: string;
-            online: boolean;
             videoUrl: string;
             protocol: string;
         };

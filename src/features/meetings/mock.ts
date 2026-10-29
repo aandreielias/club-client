@@ -408,7 +408,6 @@ export class MockMeetings {
       startsAt: '',
       endsAt: '',
       location: null,
-      online: false,
       videoUrl: null,
       status: 'DRAFT',
       invitedAt: null,
@@ -490,7 +489,7 @@ export class MockMeetings {
     if (meeting.status === 'DRAFT') fail(409, 'meeting.not-invited');
     if (meeting.status === 'CLOSED') fail(409, 'meeting.closed');
     if (!this.meetingVoters(meeting).includes(memberId)) fail(400, 'meeting.not-voter');
-    if (mode === 'ONLINE' && !meeting.online) fail(400, 'meeting.not-online');
+    if (mode === 'ONLINE' && !this.type(meeting.kind).online) fail(400, 'meeting.not-online');
     if (mode === 'APP' || mode === 'ANALOG' || mode === 'ONLINE') meeting.presence[memberId] = mode;
     else delete meeting.presence[memberId];
     this.changed(meeting, 'PRESENCE');
@@ -871,16 +870,15 @@ export class MockMeetings {
     if (body.urgency !== undefined) m.urgency = text(body.urgency, 1000, 'meeting.urgency-invalid');
     if (body.location !== undefined) m.location = text(body.location, 200, 'meeting.location-too-long');
     if (body.videoUrl !== undefined) m.videoUrl = text(body.videoUrl, 500, 'meeting.video-url-invalid');
-    if (typeof body.online === 'boolean') m.online = body.online;
     if (body.protocol !== undefined) m.protocol = text(body.protocol, 20000, 'meeting.protocol-too-long');
     if (body.startsAt) m.startsAt = new Date(body.startsAt).toISOString();
     if (body.endsAt) m.endsAt = new Date(body.endsAt).toISOString();
     if (!m.startsAt || !m.endsAt || m.endsAt <= m.startsAt) fail(400, 'meeting.times-invalid');
     if (Date.parse(m.endsAt) - Date.parse(m.startsAt) > DAY) fail(400, 'meeting.too-long');
     if (m.videoUrl && !m.videoUrl.startsWith('https://')) fail(400, 'meeting.video-url-invalid');
-    // server: Meeting — online needs its link; without online the link goes
-    if (m.online && !m.videoUrl) fail(400, 'meeting.video-missing');
-    if (!m.online) m.videoUrl = null;
+    // server: MeetingType.videoFor — a meeting of an online kind needs its own link or the kind's standing one
+    const type = this.type(m.kind);
+    if (type.online && !m.videoUrl && !type.videoUrl) fail(400, 'meeting.video-missing');
     if (this.type(m.kind).needsReason !== !!m.urgency) fail(400, 'meeting.urgency-invalid');
     this.meetings.save();
   }
@@ -927,6 +925,8 @@ export class MockMeetings {
     const dueBy = body.dueBy || null;
     if (dueBy && (!/^\d{2}-\d{2}$/.test(dueBy) || !isDayOfYear(Number(dueBy.slice(0, 2)), Number(dueBy.slice(3)))))
       fail(400, 'meeting-type.due-by-invalid');
+    if (body.online && typeof body.videoUrl === 'string' && body.videoUrl.trim() && !body.videoUrl.trim().startsWith('https://'))
+      fail(400, 'meeting.video-url-invalid');
     const type: StoredType = {
       key: key ?? generatedKey('TYPE'),
       label,
@@ -942,6 +942,8 @@ export class MockMeetings {
       dueBy,
       sort: Number.isInteger(body.sort) ? body.sort : 0,
       archived: !!body.archived,
+      online: !!body.online,
+      videoUrl: body.online && typeof body.videoUrl === 'string' && body.videoUrl.trim() ? body.videoUrl.trim() : null,
       inUse: false,
       steps: checkedSteps(body.steps),
     };
@@ -1019,8 +1021,12 @@ export class MockMeetings {
       return p ? `${p.firstName} ${p.lastName}` : '–';
     };
     const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
+    const type = this.type(m.kind);
     return {
       ...rest,
+      // server: MeetingType.shownVideo
+      online: !!type.online,
+      videoUrl: type.online ? (m.videoUrl ?? type.videoUrl ?? null) : null,
       links: m.links ?? [], // mock data stored before links existed
       autoTasks: m.autoTasks !== false,
       followUps: this.followUpDtos(this.followUps.data.filter((f) => f.meetingId === m.id && !f.resolutionId)),

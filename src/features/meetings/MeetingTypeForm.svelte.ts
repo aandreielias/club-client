@@ -14,7 +14,8 @@ import {
   type StepAnchor,
 } from './model';
 
-export type MeetingTypeField = 'label' | 'invitationLabel' | 'notice' | 'grace' | 'majorities' | 'conveners' | 'actions' | 'dueBy' | 'steps';
+export type MeetingTypeField =
+  'label' | 'invitationLabel' | 'notice' | 'grace' | 'majorities' | 'conveners' | 'actions' | 'dueBy' | 'steps' | 'videoUrl';
 type Errors = Partial<Record<MeetingTypeField, string>>;
 
 export type NoticeUnit = 'hours' | 'days';
@@ -38,6 +39,9 @@ export class MeetingTypeForm extends FormState<Errors> {
   dueMonth = $state(10);
   sort = $state(10);
   archived = $state(false);
+  /** Online participation for every meeting of the type, with an optional standing link (e.g. the board's video room). */
+  online = $state(false);
+  videoUrl = $state('');
   /** What happens around each meeting; a new type starts with the server's two reminders. */
   steps = $state<MeetingStep[]>([
     {
@@ -84,6 +88,8 @@ export class MeetingTypeForm extends FormState<Errors> {
     if (type.dueBy) [this.dueMonth, this.dueDay] = type.dueBy.split('-').map(Number);
     this.sort = type.sort;
     this.archived = type.archived;
+    this.online = type.online;
+    this.videoUrl = type.videoUrl ?? '';
     this.steps = type.steps.map((s) => ({ ...s }));
   }
 
@@ -132,6 +138,8 @@ export class MeetingTypeForm extends FormState<Errors> {
       dueBy: this.yearly ? `${String(this.dueMonth).padStart(2, '0')}-${String(this.dueDay).padStart(2, '0')}` : null,
       sort: this.sort,
       archived: this.archived,
+      online: this.online,
+      videoUrl: this.online ? this.videoUrl.trim() || null : null,
       steps: this.steps.map((s) =>
         s.system ? { ...s, title: null, body: null } : { ...s, title: s.title?.trim() ?? '', body: s.body?.trim() || null },
       ),
@@ -157,6 +165,8 @@ export class MeetingTypeForm extends FormState<Errors> {
     if (this.yearly && !isDayOfYear(this.dueMonth, this.dueDay)) {
       errors.dueBy = 'Diesen Tag gibt es nicht.';
     }
+    const video = this.videoUrl.trim();
+    if (this.online && video && (!video.startsWith('https://') || video.length > 500)) errors.videoUrl = 'Link mit https:// angeben.';
     if (this.steps.length > 30) errors.steps = 'Höchstens 30 Schritte.';
     else if (this.steps.some((s) => !s.system && (!s.title?.trim() || s.title.trim().length > 150 || (s.body?.length ?? 0) > 1000))) {
       errors.steps = 'Jeder Schritt braucht einen Titel (bis 150 Zeichen, Text bis 1000).';

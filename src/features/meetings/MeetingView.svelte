@@ -169,8 +169,8 @@
           <MeetingDetailsEditor meeting={m} {model} onclose={() => (editingPlace = false)} />
         {:else}
           <div>
-            <Button size="sm" icon="edit" tooltip="Ort und Online-Teilnahme ändern" onclick={() => (editingPlace = true)}
-              >Ort & Online bearbeiten</Button
+            <Button size="sm" icon="edit" tooltip="Ort und Link zur Videokonferenz ändern" onclick={() => (editingPlace = true)}
+              >Ort & Link bearbeiten</Button
             >
           </div>
         {/if}

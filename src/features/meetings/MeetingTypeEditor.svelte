@@ -216,7 +216,17 @@
     <legend>Optionen</legend>
     <label class="check"><input type="checkbox" bind:checked={form.needsReason} /> Die Einladung nennt den Grund der Dringlichkeit</label>
     <label class="check"><input type="checkbox" bind:checked={form.yearly} /> Findet jährlich statt (Erinnerung und Aufgabe für den Vorstand)</label>
+    <label class="check"><input type="checkbox" bind:checked={form.online} /> Online-Teilnahme möglich (Link in jeder Sitzung dieser Art)</label>
   </fieldset>
+  {#if form.online}
+    <Field
+      label="Ständiger Link zur Videokonferenz (optional)"
+      hint="Etwa der feste Videoraum des Vorstands; einzelne Sitzungen können einen eigenen Link haben. Ohne ständigen Link braucht jede Sitzung einen."
+      error={form.error('videoUrl')}
+    >
+      <input type="url" bind:value={form.videoUrl} maxlength="500" placeholder="https://" />
+    </Field>
+  {/if}
   {#if form.yearly}
     <Field label="Geplant sein bis" error={form.error('dueBy')}>
       <div class="row">

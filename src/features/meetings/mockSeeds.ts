@@ -27,6 +27,8 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     dueBy: '10-01',
     sort: 1,
     archived: false,
+    online: false,
+    videoUrl: null,
     inUse: false,
     steps: [],
   },
@@ -45,6 +47,8 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     dueBy: null,
     sort: 2,
     archived: false,
+    online: true,
+    videoUrl: 'https://meet.example.at/mv',
     inUse: false,
     steps: [],
   },
@@ -63,6 +67,8 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     dueBy: '10-01',
     sort: 3,
     archived: false,
+    online: false,
+    videoUrl: null,
     inUse: false,
     steps: [],
   },
@@ -81,6 +87,8 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     dueBy: null,
     sort: 4,
     archived: false,
+    online: false,
+    videoUrl: null,
     inUse: false,
     steps: [],
   },
@@ -99,6 +107,8 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     dueBy: null,
     sort: 5,
     archived: false,
+    online: true,
+    videoUrl: 'https://meet.example.at/vorstand',
     inUse: false,
     steps: [],
   },
@@ -117,6 +127,8 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     dueBy: null,
     sort: 6,
     archived: false,
+    online: false,
+    videoUrl: null,
     inUse: false,
     steps: [],
   },
@@ -214,7 +226,7 @@ export function seededRules(): ActionRule[] {
 }
 export type StoredMeeting = Omit<
   Meeting,
-  'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage' | 'autoTasks' | 'followUps' | 'assignable'
+  'online' | 'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage' | 'autoTasks' | 'followUps' | 'assignable'
 > & { presence: Record<string, PresenceMode>; autoTasks?: boolean; frozenElectorate?: string[] };
 /** server: meetings_follow_up */
 export type StoredFollowUp = {
@@ -269,7 +281,7 @@ export function seedMeetings(): StoredMeeting[] {
     return d.toISOString();
   };
   const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
-  const base = { urgency: null, online: false, videoUrl: null, openedAt: null, closedAt: null, protocol: null, presence: {}, links: [] };
+  const base = { urgency: null, videoUrl: null, openedAt: null, closedAt: null, protocol: null, presence: {}, links: [] };
   return [
     {
       ...base,
@@ -280,7 +292,6 @@ export function seedMeetings(): StoredMeeting[] {
       startsAt: ago(15),
       endsAt: ago(-105),
       location: 'Vereinsheim',
-      online: true,
       videoUrl: 'https://meet.example.at/mv',
       status: 'OPEN',
       invitedAt: ago(20 * 24 * 60),
@@ -330,7 +341,6 @@ export function seedMeetings(): StoredMeeting[] {
       startsAt: at(10, 18),
       endsAt: at(10, 19),
       location: null,
-      online: true,
       videoUrl: 'https://meet.example.at/vorstand',
       status: 'INVITED',
       invitedAt: new Date().toISOString(),

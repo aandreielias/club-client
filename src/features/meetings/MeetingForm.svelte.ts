@@ -5,36 +5,42 @@ import type { MeetingType, NewMeeting } from './model';
 export type MeetingField = 'title' | 'agenda' | 'urgency' | 'start' | 'end' | 'videoUrl';
 type Errors = Partial<Record<MeetingField, string>>;
 
-/** server: Meeting — an online meeting needs its https link. */
-export function videoError(online: boolean, videoUrl: string): string | undefined {
+/** server: MeetingType.videoFor — a meeting of an online kind needs a https link, its own or the kind's standing one. */
+export function videoError(online: boolean, videoUrl: string, standing: string | null = null): string | undefined {
   const video = videoUrl.trim();
   if (!online) return undefined;
-  if (!video) return 'Link zur Videokonferenz angeben.';
+  if (!video) return standing ? undefined : 'Link zur Videokonferenz angeben.';
   if (!video.startsWith('https://') || video.length > 500) return 'Link mit https:// angeben.';
   return undefined;
 }
 
-/** Place and online participation of an existing meeting (changeable until it closes). */
+/** Place and video link of an existing meeting (changeable until it closes); online participation comes from its kind. */
 export class MeetingPlaceForm extends FormState<Errors> {
   location = $state('');
-  online = $state(false);
   videoUrl = $state('');
 
-  static of(meeting: { location: string | null; online: boolean; videoUrl: string | null }): MeetingPlaceForm {
-    const form = new MeetingPlaceForm();
+  constructor(
+    readonly online: boolean,
+    readonly standing: string | null,
+  ) {
+    super();
+  }
+
+  static of(meeting: { location: string | null; online: boolean; videoUrl: string | null }, type: MeetingType | undefined): MeetingPlaceForm {
+    const form = new MeetingPlaceForm(meeting.online, type?.videoUrl ?? null);
     form.location = meeting.location ?? '';
-    form.online = meeting.online;
-    form.videoUrl = meeting.videoUrl ?? '';
+    form.videoUrl = meeting.videoUrl && meeting.videoUrl !== form.standing ? meeting.videoUrl : '';
     return form;
   }
 
-  toPatch(): { location: string; online: boolean; videoUrl: string } {
-    return { location: this.location.trim(), online: this.online, videoUrl: this.online ? this.videoUrl.trim() : '' };
+  /** An empty link falls back to the kind's standing one. */
+  toPatch(): { location: string; videoUrl: string } {
+    return { location: this.location.trim(), videoUrl: this.online ? this.videoUrl.trim() : '' };
   }
 
   protected validate(): Errors {
     const errors: Errors = {};
-    const video = videoError(this.online, this.videoUrl);
+    const video = videoError(this.online, this.videoUrl, this.standing);
     if (video) errors.videoUrl = video;
     return errors;
   }
@@ -49,7 +55,6 @@ export class MeetingForm extends FormState<Errors> {
   start = $state<LocalDateTime>('');
   end = $state<LocalDateTime>('');
   location = $state('');
-  online = $state(false);
   videoUrl = $state('');
 
   constructor(
@@ -67,6 +72,11 @@ export class MeetingForm extends FormState<Errors> {
   setType(type: MeetingType): void {
     if (!this.title.trim() || this.labels.includes(this.title.trim())) this.title = type.label;
     this.type = type;
+  }
+
+  /** The kind lets members join online: the meeting shows a link. */
+  get online(): boolean {
+    return !!this.type?.online;
   }
 
   /** Moving the start keeps the duration. */
@@ -89,7 +99,6 @@ export class MeetingForm extends FormState<Errors> {
       startsAt: this.startsAt,
       endsAt: this.clock.toInstant(this.end),
       location: this.location.trim() || null,
-      online: this.online,
       videoUrl: this.online ? this.videoUrl.trim() || null : null,
     };
   }
@@ -103,7 +112,7 @@ export class MeetingForm extends FormState<Errors> {
     if (this.type?.needsReason && !this.urgency.trim()) errors.urgency = 'Grund der Dringlichkeit angeben.';
     if (!this.start) errors.start = 'Beginn angeben.';
     if (!this.end || this.end <= this.start) errors.end = 'Das Ende liegt nach dem Beginn.';
-    const video = videoError(this.online, this.videoUrl);
+    const video = videoError(this.online, this.videoUrl, this.type?.videoUrl ?? null);
     if (video) errors.videoUrl = video;
     return errors;
   }

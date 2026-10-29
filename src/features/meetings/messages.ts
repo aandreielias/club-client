@@ -37,8 +37,9 @@ export const MEETING_MESSAGES: MessageCatalog = {
   'meeting-step.title-invalid': 'Jeder Schritt braucht einen Titel (bis 150 Zeichen, Text bis 1000).',
   'meeting.location-too-long': 'Der Ort hat höchstens 200 Zeichen.',
   'meeting.video-url-invalid': 'Der Videolink beginnt mit https://.',
-  'meeting.video-missing': 'Für die Online-Teilnahme den Link zur Videokonferenz eintragen.',
-  'meeting.not-online': 'Diese Sitzung ist ohne Online-Teilnahme; zuerst unter „Ort & Online bearbeiten“ einschalten.',
+  'meeting.video-missing':
+    'Diese Sitzungsart ist online: Link zur Videokonferenz eintragen (oder bei der Sitzungsart einen ständigen Link hinterlegen).',
+  'meeting.not-online': 'Diese Sitzungsart ist ohne Online-Teilnahme; das stellt der Vorstand unter Einstellungen › Sitzungsarten ein.',
   'meeting-type.action-unknown': 'Diese Beschlussart gibt es nicht (mehr).',
   'resolution.action-unknown': 'Diese Beschlussart gibt es nicht (mehr).',
   'action-rules.label-invalid': 'Eigene Beschlussarten brauchen einen Namen mit 1 bis 60 Zeichen.',
