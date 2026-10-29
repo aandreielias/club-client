@@ -80,7 +80,7 @@ export type Contract = [
   Satisfies<With<S['at.clubserver.meetings.api.MeetingsApi.FollowUpRule'], 'kind', FollowUpRule['kind']>, FollowUpRule>, // rules never MANUAL
   Satisfies<With<S['at.clubserver.meetings.api.MeetingsApi.ActionRule'], 'followUps', FollowUpRule[]>, ActionRule>,
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.CircularRules'], CircularRules>,
-  Satisfies<S['at.clubserver.meetings.api.MeetingsApi.ResolutionDto'], Resolution>,
+  Satisfies<With<S['at.clubserver.meetings.api.MeetingsApi.ResolutionDto'], 'ownFollowUps', FollowUpRule[]>, Resolution>,
   Satisfies<S['at.clubserver.members.api.MembersApi.OfficeDto'], Office>,
   Satisfies<S['at.clubserver.members.api.MembersApi.MembershipKindDto'], MembershipKind>,
   Satisfies<S['at.clubserver.members.api.MembersApi.OfficePair'], OfficePair>,

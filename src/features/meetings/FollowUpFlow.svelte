@@ -8,22 +8,40 @@
   import { boardSettings } from '../members/services';
   import FollowUpRuleDialog from './FollowUpRuleDialog.svelte';
   import { ruleSummary, startText } from './followUpText';
-  import { AUTOMATIC_FOLLOW_UPS, type FollowUpRule } from './model';
-  import { RULE_LIMITS, type ResolutionRuleForm } from './ResolutionRuleForm.svelte';
+  import { FollowUpOrder } from './followUpOrder';
+  import { AUTOMATIC_FOLLOW_UPS, plainFollowUp, type FollowUpRule } from './model';
+  import { RULE_LIMITS } from './ResolutionRuleForm.svelte';
 
   /**
    * The follow-ups of a decision as a numbered workflow: one card each with who, when and what it brings; a card that waits hangs under
    * the one before it. A card opens its dialog; "Reihenfolge ändern" lets them be dragged.
    */
-  let { form, name }: { form: ResolutionRuleForm; name: string } = $props();
+  let {
+    followUps = $bindable(),
+    kinds,
+    namesMember,
+    newTitle,
+    firstMayWait = false,
+  }: {
+    followUps: FollowUpRule[];
+    kinds: readonly { value: FollowUpRule['kind']; label: string }[];
+    /** The decision is about one member: tasks may go to them. */
+    namesMember: boolean;
+    /** Title a new follow-up starts with. */
+    newTitle: string;
+    /** A motion's list may start after the decision's own last follow-up. */
+    firstMayWait?: boolean;
+  } = $props();
+
+  // svelte-ignore state_referenced_locally
+  const order = new FollowUpOrder(firstMayWait);
 
   let open = $state<{ index: number | null; followUp: FollowUpRule } | null>(null);
   let sorting = $state(false);
-  const kinds = $derived(form.kinds());
   const label = (o: NonNullable<FollowUpRule['office']>) => boardSettings.label(o);
 
   function apply(followUp: FollowUpRule) {
-    form.put(open?.index ?? null, followUp);
+    followUps = order.put(followUps, open?.index ?? null, followUp);
     open = null;
   }
 
@@ -32,28 +50,36 @@
     const index = open?.index;
     open = null;
     if (index == null) return;
-    const removed = form.remove(index);
-    bus.publish(TOAST, { text: `„${removed.title}“ entfernt.`, action: { label: 'Rückgängig', run: () => form.restore(index, removed) } });
+    const removed = followUps[index];
+    followUps = order.remove(followUps, index);
+    bus.publish(TOAST, {
+      text: `„${removed.title}“ entfernt.`,
+      action: { label: 'Rückgängig', run: () => (followUps = order.restore(followUps, index, removed)) },
+    });
   }
 </script>
 
 {#if sorting}
   <SortableList
-    items={form.followUps.map((f, i) => ({ key: String(i), label: `${i + 1}. ${f.title}` }))}
+    items={followUps.map((f, i) => ({ key: String(i), label: `${i + 1}. ${f.title}` }))}
     label="Reihenfolge der Folgeaufgaben"
-    onreorder={(keys) => form.reorder(keys)}
+    onreorder={(keys) => (followUps = order.reorder(followUps, keys))}
   />
   <div class="row between">
-    <span class="muted small">Ziehen oder mit Leertaste und Pfeiltasten verschieben. Die erste startet immer mit dem Beschluss.</span>
+    <span class="muted small"
+      >Ziehen oder mit Leertaste und Pfeiltasten verschieben. {firstMayWait ? '' : 'Die erste startet immer mit dem Beschluss.'}</span
+    >
     <Button variant="primary" onclick={() => (sorting = false)}>Fertig</Button>
   </div>
 {:else}
-  {#if form.followUps.length}
+  {#if followUps.length}
     <ol class="flow">
-      {#each form.followUps as followUp, i (followUp.id ?? `neu-${i}`)}
+      {#each followUps as followUp, i (followUp.id ?? `neu-${i}`)}
         {@const automatic = AUTOMATIC_FOLLOW_UPS.includes(followUp.kind)}
-        <li class:chained={followUp.afterPrevious && i > 0}>
-          {#if followUp.afterPrevious && i > 0}<span class="link muted small">{startText(followUp, i + 1)}</span>{/if}
+        <li class:chained={followUp.afterPrevious && (i > 0 || firstMayWait)}>
+          {#if followUp.afterPrevious && (i > 0 || firstMayWait)}<span class="link muted small"
+              >{i > 0 ? startText(followUp, i + 1) : 'startet, wenn die Folgeaufgaben der Beschlussart erledigt sind'}</span
+            >{/if}
           <button type="button" class="card" onclick={() => (open = { index: i, followUp })} {@attach tooltip('Folgeaufgabe bearbeiten')}>
             <span class="number" aria-hidden="true">{i + 1}</span>
             <span class="text">
@@ -69,12 +95,10 @@
     <p class="muted small">Keine Folgeaufgaben: wenn der Beschluss angenommen ist, entsteht keine Aufgabe.</p>
   {/if}
   <div class="row">
-    {#if form.followUps.length < RULE_LIMITS.followUps}
-      <Button size="sm" icon="add" onclick={() => (open = { index: null, followUp: form.newFollowUp(`${name || 'Beschluss'}: {beschluss}`) })}
-        >Folgeaufgabe</Button
-      >
+    {#if followUps.length < RULE_LIMITS.followUps}
+      <Button size="sm" icon="add" onclick={() => (open = { index: null, followUp: plainFollowUp('IMPLEMENT', newTitle, 7) })}>Folgeaufgabe</Button>
     {/if}
-    {#if form.followUps.length > 1}
+    {#if followUps.length > 1}
       <Button size="sm" variant="ghost" icon="sort" tooltip="Die Reihenfolge der Folgeaufgaben ändern" onclick={() => (sorting = true)}
         >Reihenfolge ändern</Button
       >
@@ -84,10 +108,11 @@
 
 <FollowUpRuleDialog
   followUp={open?.followUp ?? null}
-  position={open?.index == null ? form.followUps.length + 1 : open.index + 1}
+  position={(open?.index ?? followUps.length) + 1}
+  canWait={firstMayWait || (open?.index ?? followUps.length) > 0}
   isNew={open?.index == null}
   {kinds}
-  namesMember={form.namesMember}
+  {namesMember}
   onapply={apply}
   onremove={remove}
   onclose={() => (open = null)}

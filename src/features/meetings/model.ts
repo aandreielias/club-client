@@ -465,6 +465,8 @@ export interface Resolution {
   /** Who runs it: possible assignees (before closing: of its plan; afterwards: everyone present). */
   assignable: Person[];
   links: LinkedRef[];
+  /** Follow-ups given with the motion, created after the decision's own ones once it passes. */
+  ownFollowUps: FollowUpRule[];
 }
 
 export interface NewResolution {
@@ -476,4 +478,6 @@ export interface NewResolution {
   actionMemberId: string | null;
   actionOffice: OfficeKind | null;
   assigneeIds: string[];
+  /** Tasks of its own (IMPLEMENT), after the decision's ones. */
+  followUps: FollowUpRule[];
 }

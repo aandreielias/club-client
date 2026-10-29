@@ -65,7 +65,12 @@
       Entstehen der Reihe nach, wenn der Beschluss angenommen ist. Im Titel, in der Beschreibung und in der Checkliste setzt {'{beschluss}'} den Beschluss,
       {'{mitglied}'} das betroffene Mitglied und {'{funktion}'} die Funktion ein.
     </p>
-    <FollowUpFlow {form} {name} />
+    <FollowUpFlow
+      bind:followUps={form.followUps}
+      kinds={form.kinds()}
+      namesMember={form.namesMember}
+      newTitle={`${name || 'Beschluss'}: {beschluss}`}
+    />
     <ErrorNote error={form.error('followUps')} />
   </fieldset>
 

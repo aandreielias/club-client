@@ -11,9 +11,10 @@
   import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import Select from '../../ui/Select.svelte';
   import MemberChips from './MemberChips.svelte';
+  import MotionFollowUps from './MotionFollowUps.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import { membersApi } from '../members/services';
-  import { noticeText, QUORUM_LABELS, type ResolutionAction } from './model';
+  import { noticeText, QUORUM_LABELS, type FollowUpRule, type ResolutionAction } from './model';
   import { meetingsApi, resolutionRules } from './services';
 
   /** New circular vote: the motion goes to the whole board at once and runs at least the club's shortest voting time. */
@@ -28,6 +29,7 @@
   let submitted = $state(false);
   let action = $state<ResolutionAction>('GENERAL');
   let assignees = $state<string[]>([]);
+  let followUps = $state<FollowUpRule[]>([]);
   const actionOptions = resolutionRules.forType(null).map((a) => ({ value: a, label: resolutionRules.label(a) }));
   // server: circular votes run among the board, which also carries them out.
   const board = new Resource(async () => {
@@ -43,7 +45,14 @@
     if (!title.trim() || tooSoon) return;
     await create.submit(
       async () => {
-        const draft = await meetingsApi.createCircular(title.trim(), text.trim() || null, session.clock.toInstant(deadline), action, assignees);
+        const draft = await meetingsApi.createCircular(
+          title.trim(),
+          text.trim() || null,
+          session.clock.toInstant(deadline),
+          action,
+          assignees,
+          followUps,
+        );
         return (await meetingsApi.openResolution(draft.id)).id;
       },
       'resolution',
@@ -78,6 +87,7 @@
       label="Verantwortlich für die Umsetzung"
       placeholder="Verantwortlich (leer = Vorstand)"
     />
+    <MotionFollowUps {action} bind:followUps />
     <ErrorNote error={create.save.error} />
     <div class="row">
       <Button type="submit" variant="primary" busy={create.save.busy}>An den Vorstand schicken</Button>

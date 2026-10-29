@@ -282,7 +282,7 @@ export class MockMeetings {
     const chosen = r.assigneeIds?.length ? r.assigneeIds : meeting ? this.assignable(r, meeting, true) : [];
     const fill = (t: string) => t.replaceAll('{beschluss}', r.title).replaceAll('{mitglied}', name).replaceAll('{funktion}', office);
     let previous: string | null = null;
-    for (const stored of this.rules.data.find((x) => x.action === action)!.followUps) {
+    for (const stored of [...this.rules.data.find((x) => x.action === action)!.followUps, ...(r.ownFollowUps ?? [])]) {
       const rule = { ...plainFollowUp(stored.kind, stored.title, stored.dueDays), ...stored };
       const about = ABOUT_MEMBER.includes(rule.kind);
       const waitsFor = rule.afterPrevious ? previous : null;
@@ -309,6 +309,33 @@ export class MockMeetings {
       );
       previous = id;
     }
+  }
+
+  /** server: FollowUpPlanner.ownFollowUps — tasks given with a motion (IMPLEMENT), at most 10. */
+  private ownFollowUps(given: unknown, action: ResolutionAction): FollowUpRule[] {
+    if (!Array.isArray(given) || !given.length) return [];
+    if (given.length > 10) fail(400, 'action-rules.too-many');
+    return given.map((f: Record<string, any>) => {
+      const title = typeof f.title === 'string' ? f.title.trim() : '';
+      if (!title || title.length > 150) fail(400, 'action-rules.title-invalid');
+      if (f.dueDays != null && (!Number.isInteger(f.dueDays) || f.dueDays < 0 || f.dueDays > 365)) fail(400, 'action-rules.due-invalid');
+      const assignTo: FollowUpAssignee = f.assignTo ?? 'DEFAULT';
+      if ((assignTo === 'OFFICE') !== !!f.office || (assignTo === 'MEMBER' && !NAMES_MEMBER.includes(action)))
+        fail(400, 'action-rules.assignee-invalid');
+      const description = typeof f.description === 'string' && f.description.trim() ? f.description.trim() : null;
+      if (description && description.length > 2000) fail(400, 'action-rules.description-invalid');
+      return {
+        id: f.id ?? crypto.randomUUID(),
+        kind: 'IMPLEMENT' as const,
+        title,
+        dueDays: f.dueDays ?? null,
+        assignTo,
+        office: assignTo === 'OFFICE' ? f.office : null,
+        description,
+        checklist: cleanChecklist(f.checklist, 'action-rules.checklist-invalid'),
+        afterPrevious: f.afterPrevious === true,
+      };
+    });
   }
 
   /** server: ResolutionHandlers.assigneesFor */
@@ -820,6 +847,7 @@ export class MockMeetings {
       actionMemberId: body.actionMemberId ?? null,
       actionOffice: body.actionOffice ?? null,
       assigneeIds,
+      ownFollowUps: this.ownFollowUps(body.followUps, action),
     };
     this.resolutions.data.push(r);
     this.resolutionChanged(r, 'CREATED');
@@ -970,7 +998,21 @@ export class MockMeetings {
   }
 
   private resolutionDto(viewer: Member, r: StoredResolution): Resolution {
-    const { yes, no, abstain, ballots, action: _a, actionMemberId: _m, actionOffice: _o, assigneeIds: _as, frozenVoters: _f, links: _l, ...rest } = r;
+    const {
+      yes,
+      no,
+      abstain,
+      ballots,
+      action: _a,
+      actionMemberId: _m,
+      actionOffice: _o,
+      assigneeIds: _as,
+      frozenVoters: _f,
+      links: _l,
+      ownFollowUps,
+      createdBy: _c,
+      ...rest
+    } = r;
     const closed = r.status === 'CLOSED';
     const voters = this.voters(r);
     const manages = this.managesResolution(viewer, r);
@@ -981,6 +1023,7 @@ export class MockMeetings {
     };
     return {
       ...rest,
+      ownFollowUps: ownFollowUps ?? [],
       yes: closed ? yes : null,
       no: closed ? no : null,
       abstain: closed ? abstain : null,

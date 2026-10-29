@@ -15,6 +15,7 @@
   let {
     followUp,
     position,
+    canWait,
     isNew,
     kinds,
     namesMember,
@@ -24,8 +25,10 @@
   }: {
     /** null closes the dialog. */
     followUp: FollowUpRule | null;
-    /** 1-based place in the list (the first one cannot wait). */
+    /** 1-based place in the list. */
     position: number;
+    /** There is a follow-up before it to wait for. */
+    canWait: boolean;
     isNew: boolean;
     kinds: readonly { value: FollowUpRule['kind']; label: string }[];
     /** The decision is about one member: the task may go to them. */
@@ -140,8 +143,8 @@
               name="follow-up-start"
               label="Startet"
               options={START}
-              disabled={position <= 1}
-              bind:value={() => (draft!.afterPrevious && position > 1 ? 'after' : 'now'), (v) => (draft!.afterPrevious = v === 'after')}
+              disabled={!canWait}
+              bind:value={() => (draft!.afterPrevious && canWait ? 'after' : 'now'), (v) => (draft!.afterPrevious = v === 'after')}
             />
           </Field>
           <Field label="Fällig nach" hint={draft.afterPrevious ? 'Tagen ab dem Start' : 'Tagen ab dem Beschluss'}>

@@ -2479,6 +2479,22 @@ export interface components {
             waitsFor: string;
             waiting: boolean;
         };
+        "at.clubserver.meetings.api.MeetingsApi.FollowUpRule": {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "IMPLEMENT" | "ENTER_HONORARY" | "REVOKE_HONORARY" | "ENTER_OFFICE" | "NOTIFY_EXCLUSION" | "CONVENE_ASSEMBLY" | "UPLOAD_STATUTES" | "MANUAL";
+            title: string;
+            /** Format: int32 */
+            dueDays: number;
+            /** @enum {string} */
+            assignTo: "DEFAULT" | "BOARD" | "OFFICE" | "MANAGER" | "MEMBER";
+            /** @enum {string} */
+            office: "CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR";
+            description: string;
+            checklist: string[];
+            afterPrevious: boolean;
+        };
         "at.clubserver.meetings.api.MeetingsApi.Person": {
             /** Format: uuid */
             memberId: string;
@@ -2534,6 +2550,7 @@ export interface components {
             followUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpDto"][];
             assignable: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"][];
             links: components["schemas"]["at.clubserver.platform.RecordRefs.RefDto"][];
+            ownFollowUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpRule"][];
         };
         "at.clubserver.platform.RecordRefs.RefDto": {
             /** @enum {string} */
@@ -2740,22 +2757,6 @@ export interface components {
             minHours: number;
             /** @enum {string} */
             quorum: "AT_LEAST_HALF" | "MORE_THAN_HALF" | "AT_LEAST_THREE_QUARTERS";
-        };
-        "at.clubserver.meetings.api.MeetingsApi.FollowUpRule": {
-            /** Format: uuid */
-            id: string;
-            /** @enum {string} */
-            kind: "IMPLEMENT" | "ENTER_HONORARY" | "REVOKE_HONORARY" | "ENTER_OFFICE" | "NOTIFY_EXCLUSION" | "CONVENE_ASSEMBLY" | "UPLOAD_STATUTES" | "MANUAL";
-            title: string;
-            /** Format: int32 */
-            dueDays: number;
-            /** @enum {string} */
-            assignTo: "DEFAULT" | "BOARD" | "OFFICE" | "MANAGER" | "MEMBER";
-            /** @enum {string} */
-            office: "CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR";
-            description: string;
-            checklist: string[];
-            afterPrevious: boolean;
         };
         "at.clubserver.meetings.api.MeetingsApi.StatutesPlace": {
             /** Format: uuid */
@@ -3094,6 +3095,7 @@ export interface components {
             deadline: string;
             action: string;
             assigneeIds: string[];
+            followUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpRule"][];
         };
         "at.clubserver.gateway.rest.ResolutionsController.VoteBody": {
             /** @enum {string} */
@@ -3197,6 +3199,7 @@ export interface components {
             /** @enum {string} */
             actionOffice: "CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR";
             assigneeIds: string[];
+            followUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpRule"][];
         };
         "at.clubserver.gateway.rest.MeetingsController.FollowUpBody": {
             title: string;

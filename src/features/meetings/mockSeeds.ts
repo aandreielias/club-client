@@ -5,6 +5,7 @@ import {
   plainFollowUp,
   type ActionRule,
   type FollowUpKind,
+  type FollowUpRule,
   type Majority,
   type Meeting,
   type MeetingStep,
@@ -287,6 +288,8 @@ export type StoredResolution = Pick<
   assigneeIds?: string[];
   frozenVoters?: string[];
   createdBy?: string;
+  /** server: meetings_resolution_follow_up */
+  ownFollowUps?: FollowUpRule[];
   links?: LinkedRef[];
 };
 

@@ -3,6 +3,7 @@ import type { RefKind } from '../../lib/records/refs';
 import type {
   Choice,
   FollowUp,
+  FollowUpRule,
   Meeting,
   MeetingPatch,
   MeetingType,
@@ -124,8 +125,9 @@ export class MeetingsApi {
     deadline: string,
     action: ResolutionAction = 'GENERAL',
     assigneeIds: string[] = [],
+    followUps: FollowUpRule[] = [],
   ): Promise<Resolution> {
-    return this.api.post<Resolution>(MeetingsApi.RESOLUTIONS, { title, text, deadline, action, assigneeIds });
+    return this.api.post<Resolution>(MeetingsApi.RESOLUTIONS, { title, text, deadline, action, assigneeIds, followUps });
   }
 
   /** Replaces the records linked to a resolution. */

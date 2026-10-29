@@ -207,6 +207,11 @@
     <p class="muted small">Höchstens {r.analogPresent} Stimmen: so viele sind ohne App da.</p>
   {/if}
 
+  {#if r.status !== 'CLOSED' && r.ownFollowUps.length}
+    <p class="muted small">
+      Bei Annahme zusätzlich: {r.ownFollowUps.map((f, i) => `${i + 1}. ${f.title.replaceAll('{beschluss}', r.title)}`).join(' · ')}
+    </p>
+  {/if}
   {#if r.status === 'CLOSED' && (r.followUps.length || r.canManage)}
     <FollowUpList followUps={r.followUps} canAdd={r.canManage} candidates={r.assignable} contextTitle={r.title} add={addFollowUp} />
   {/if}

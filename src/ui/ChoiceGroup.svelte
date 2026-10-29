@@ -35,11 +35,12 @@
   } = $props();
 
   let group: HTMLFieldSetElement | undefined = $state();
-  let pill = $state<{ x: number; width: number } | null>(null);
+  let pill = $state<{ x: number; y: number; width: number; height: number } | null>(null);
 
+  /** Follows the chosen label, also when the choices wrap onto a second line (narrow dialogs). */
   function measure() {
     const checked = group?.querySelector<HTMLElement>('label.checked');
-    pill = checked ? { x: checked.offsetLeft, width: checked.offsetWidth } : null;
+    pill = checked?.offsetWidth ? { x: checked.offsetLeft, y: checked.offsetTop, width: checked.offsetWidth, height: checked.offsetHeight } : null;
   }
 
   $effect(() => {
@@ -59,7 +60,13 @@
 
 <fieldset {disabled} class="segmented {size}" class:icon-only={iconOnly} bind:this={group}>
   <legend class="visually-hidden">{label}</legend>
-  {#if pill}<span class="pill" aria-hidden="true" style:transform="translateX({pill.x}px)" style:width="{pill.width}px"></span>{/if}
+  {#if pill}<span
+      class="pill"
+      aria-hidden="true"
+      style:transform="translate({pill.x}px, {pill.y}px)"
+      style:width="{pill.width}px"
+      style:height="{pill.height}px"
+    ></span>{/if}
   {#each options as option (option.value)}
     <label class:checked={value === option.value} {@attach tooltip(option.hint ?? (iconOnly ? option.label : null))}>
       <input type="radio" {name} value={option.value} bind:group={value} aria-label={iconOnly ? option.label : undefined} />
@@ -83,15 +90,15 @@
   }
   .pill {
     position: absolute;
-    top: 2px;
-    bottom: 2px;
+    top: 0;
     left: 0;
     border-radius: calc(var(--radius-md) - 2px);
     background: var(--color-elevated);
     box-shadow: var(--color-shadow-raised);
     transition:
       transform var(--motion-base) var(--motion-easing),
-      width var(--motion-base) var(--motion-easing);
+      width var(--motion-base) var(--motion-easing),
+      height var(--motion-base) var(--motion-easing);
   }
   label {
     position: relative;

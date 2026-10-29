@@ -13,7 +13,17 @@
   import type { OfficeKind } from '../members/MembersApi';
   import { boardSettings } from '../members/services';
   import MemberChips from './MemberChips.svelte';
-  import { actionNeedsMember, MAJORITY_LABELS, majorities, type Majority, type Meeting, type Resolution, type ResolutionAction } from './model';
+  import MotionFollowUps from './MotionFollowUps.svelte';
+  import {
+    actionNeedsMember,
+    MAJORITY_LABELS,
+    majorities,
+    type FollowUpRule,
+    type Majority,
+    type Meeting,
+    type Resolution,
+    type ResolutionAction,
+  } from './model';
   import ResolutionCard from './ResolutionCard.svelte';
   import { meetingsApi, meetingTypes, resolutionRules } from './services';
 
@@ -38,6 +48,7 @@
   let actionMemberId = $state('');
   let actionOffice = $state<OfficeKind | ''>('');
   let assignees = $state<string[]>([]);
+  let followUps = $state<FollowUpRule[]>([]);
   const officeOptions = boardSettings.enabled.map((o) => ({ value: o, label: boardSettings.label(o) }));
   const members = new Resource(() => directory.allMembers());
   void members.load();
@@ -68,6 +79,7 @@
       actionMemberId: actionNeedsMember(action) ? actionMemberId : null,
       actionOffice: action === 'ELECTION' && actionOffice ? actionOffice : null,
       assigneeIds: assignees,
+      followUps,
     };
     if (await add.attempt(() => meetingsApi.createResolution(meeting.id, resolution))) {
       title = '';
@@ -76,6 +88,7 @@
       actionMemberId = '';
       actionOffice = '';
       assignees = [];
+      followUps = [];
       void list.load();
     }
   }
@@ -126,6 +139,7 @@
       </Field>
     {/if}
     <MemberChips bind:value={assignees} {candidates} label="Verantwortlich für die Umsetzung" placeholder="Verantwortlich (leer = Vorstand)" />
+    <MotionFollowUps {action} bind:followUps />
     <ErrorNote error={add.error} />
     <div><Button type="submit" busy={add.busy} disabled={!ready}>Antrag hinzufügen</Button></div>
   </form>

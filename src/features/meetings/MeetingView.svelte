@@ -42,7 +42,7 @@
     { value: 'NONE', label: 'Fehlt', hint: 'Nicht da' },
     { value: 'APP', label: 'App', hint: 'Im Raum, stimmt in der App ab' },
     { value: 'ONLINE', label: 'Online', hint: 'Per Video dabei, stimmt in der App ab' },
-    { value: 'ANALOG', label: 'Ohne App', hint: 'Da, stimmt über die Schriftführung ab' },
+    { value: 'ANALOG', label: 'Anwesend', hint: 'Im Raum ohne App, stimmt über die Schriftführung ab' },
   ];
   /** Online presence only where members may join online. */
   const attendanceFor = (m: Meeting) => ATTENDANCE.filter((a) => a.value !== 'ONLINE' || m.online);

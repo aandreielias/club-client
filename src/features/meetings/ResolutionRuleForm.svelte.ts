@@ -1,4 +1,5 @@
 import { FormState } from '../../lib/state/FormState.svelte';
+import { FollowUpOrder } from './followUpOrder';
 import {
   FOLLOW_UP_KIND_LABELS,
   isOwnAction,
@@ -16,6 +17,8 @@ import {
 
 export type RuleMajority = Majority | 'FREE';
 type Errors = Partial<Record<'label' | 'followUps', string>>;
+
+const ORDER = new FollowUpOrder();
 
 /** server: ActionRules — names of the club's own decisions, follow-ups per decision. */
 export const RULE_LIMITS = { label: 60, title: 150, dueDays: 365, followUps: 10, description: 2000, checklist: 20, item: 200 } as const;
@@ -66,33 +69,22 @@ export class ResolutionRuleForm extends FormState<Errors> {
 
   /** Replaces the follow-up at `index`, or adds it at the end. */
   put(index: number | null, followUp: FollowUpRule): void {
-    if (index == null) this.followUps.push(followUp);
-    else this.followUps[index] = followUp;
-    this.#firstStarts();
+    this.followUps = ORDER.put(this.followUps, index, followUp);
   }
 
   /** Takes one out; answers it, for undo. */
   remove(index: number): FollowUpRule {
-    const [removed] = this.followUps.splice(index, 1);
-    this.#firstStarts();
+    const removed = this.followUps[index];
+    this.followUps = ORDER.remove(this.followUps, index);
     return removed;
   }
 
-  /** Puts a removed one back at its place. */
   restore(index: number, followUp: FollowUpRule): void {
-    this.followUps.splice(Math.min(index, this.followUps.length), 0, followUp);
-    this.#firstStarts();
+    this.followUps = ORDER.restore(this.followUps, index, followUp);
   }
 
-  /** New order from the list's keys (the old positions as text). */
   reorder(keys: readonly string[]): void {
-    this.followUps = keys.map((k) => this.followUps[Number(k)]);
-    this.#firstStarts();
-  }
-
-  /** The first follow-up has nothing to wait for. */
-  #firstStarts(): void {
-    if (this.followUps[0]?.afterPrevious) this.followUps[0] = { ...this.followUps[0], afterPrevious: false };
+    this.followUps = ORDER.reorder(this.followUps, keys);
   }
 
   toRule(): ActionRule {
