@@ -83,6 +83,13 @@
   });
   const rememberScroll = () => scrollMemory.remember(router.path, window.scrollY);
 
+  // Einstellungen replace the app navigation; "Zurück" returns to the last page outside them.
+  const inSettings = $derived(router.path === '/settings' || router.path.startsWith('/settings/'));
+  let appPath = $state('/');
+  $effect(() => {
+    if (!inSettings) appPath = router.path;
+  });
+
   /** Typed but unsaved input: the browser asks before the tab closes or reloads. */
   function beforeUnload(event: BeforeUnloadEvent) {
     if (backStack.hasUnsaved()) event.preventDefault();
@@ -130,6 +137,7 @@
       current={router.path}
       connection={live.status}
       onlogout={logout}
+      settingsBack={inSettings ? appPath : null}
     />
     <main style:view-transition-name="page">
       {#if split.isOpen}

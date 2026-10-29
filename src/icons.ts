@@ -39,6 +39,11 @@ import Send from '@lucide/svelte/icons/send';
 import Landmark from '@lucide/svelte/icons/landmark';
 import Link from '@lucide/svelte/icons/link';
 import Mail from '@lucide/svelte/icons/mail';
+import Palette from '@lucide/svelte/icons/palette';
+import Keyboard from '@lucide/svelte/icons/keyboard';
+import ShieldCheck from '@lucide/svelte/icons/shield-check';
+import Briefcase from '@lucide/svelte/icons/briefcase';
+import Vote from '@lucide/svelte/icons/vote';
 import Reply from '@lucide/svelte/icons/reply';
 import Forward from '@lucide/svelte/icons/forward';
 import Bold from '@lucide/svelte/icons/bold';
@@ -85,6 +90,11 @@ export const ICONS = {
   search: Search,
   send: Send,
   mail: Mail,
+  appearance: Palette,
+  keyboard: Keyboard,
+  security: ShieldCheck,
+  offices: Briefcase,
+  resolutions: Vote,
   reply: Reply,
   forward: Forward,
   draft: FilePen,

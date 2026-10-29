@@ -1,7 +1,8 @@
 import { TASK_STATUS_LABELS } from '../../lib/types';
 // Mirror of the club-server search DTOs (gateway SearchController).
 
-export type HitKind = 'APPOINTMENT' | 'TASK' | 'MEMBER' | 'TEAM' | 'ITEM' | 'LOCATION' | 'TOURNAMENT' | 'MEETING' | 'FOLDER' | 'FILE' | 'MAIL';
+export type HitKind =
+  'APPOINTMENT' | 'TASK' | 'MEMBER' | 'TEAM' | 'ITEM' | 'LOCATION' | 'TOURNAMENT' | 'MEETING' | 'FOLDER' | 'FILE' | 'MAIL' | 'SETTING';
 
 export interface SearchHit {
   kind: HitKind;
@@ -34,6 +35,7 @@ export const HIT_KINDS: readonly { value: HitKind; label: string }[] = [
   { value: 'FOLDER', label: 'Ordner' },
   { value: 'FILE', label: 'Datei' },
   { value: 'MAIL', label: 'E-Mail' },
+  { value: 'SETTING', label: 'Einstellung' },
 ];
 
 export const kindLabel = (kind: HitKind): string => HIT_KINDS.find((k) => k.value === kind)?.label ?? kind;
@@ -69,5 +71,7 @@ export function hitTarget(hit: SearchHit): { window: { kind: string; id: string 
       return { path: `/files/${encodeURIComponent(hit.id)}` };
     case 'MAIL':
       return { window: { kind: 'mail', id: hit.windowId ?? '' } };
+    case 'SETTING':
+      return { path: `/settings/${hit.id}` };
   }
 }

@@ -12,15 +12,28 @@
   import { hitDetail, hitTarget, kindLabel, type SearchHit } from './model';
   import { SearchListModel } from './SearchListModel.svelte';
   import { searchApi } from './services';
+  import { searchSettings, tabPath } from '../settings/model';
 
   /** Results of the sidebar search (`/search?q=`); a result opens in the window, a folder on the files page. */
   const pane = usePane();
   const query = $derived(pane.query.get('q')?.trim() ?? '');
+  // Settings sections are found too (only those the member may open), leading to their page.
+  const settingHits = (q: string): SearchHit[] =>
+    searchSettings(q, (roles) => session.hasRole(...roles)).map((tab) => ({
+      kind: 'SETTING',
+      id: tab.id,
+      title: tab.label,
+      detail: `Einstellungen › ${tabPath(tab.id)}`,
+      at: null,
+      folderId: null,
+      windowId: null,
+    }));
   const list = new SearchListModel(
     searchApi,
     () => query,
     () => session.format,
     store,
+    settingHits,
   );
 
   $effect(() => {

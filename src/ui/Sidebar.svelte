@@ -4,7 +4,9 @@
   import { SHORTCUTS, type CommandId } from '../shortcuts';
   import { tick } from 'svelte';
   import { MediaQuery } from 'svelte/reactivity';
-  import { bus, commands, keyboard, keymap, motion, pageNavigator, preferences } from '../lib/container';
+  import { bus, commands, keyboard, keymap, motion, pageNavigator, preferences, session } from '../lib/container';
+  import { searchSettings, visibleSettings } from '../features/settings/settingsTree';
+  import type { Role } from '../lib/types';
   import { settings } from '../settings';
   import { SPLIT_OPEN } from '../lib/split/SplitView.svelte';
   import { menu } from './contextMenu';
@@ -22,6 +24,7 @@
     current,
     connection,
     onlogout,
+    settingsBack = null,
   }: {
     title: string;
     user: string;
@@ -29,7 +32,16 @@
     current: string;
     connection: LiveStatus;
     onlogout: () => void;
+    /** On Einstellungen: the settings tree replaces the app navigation; "Zurück" leads to this path. */
+    settingsBack?: string | null;
   } = $props();
+
+  // --- settings mode: the tree of Einstellungen, filtered by the search field ---
+  let settingsQuery = $state('');
+  const sees = (roles: readonly Role[]) => session.hasRole(...roles);
+  const settingsTree = $derived(settingsBack !== null ? visibleSettings(sees) : null);
+  const settingsFound = $derived(settingsTree && settingsQuery.trim() ? new Set(searchSettings(settingsQuery, sees).map((t) => t.id)) : null);
+  const shown = (id: string) => !settingsFound || settingsFound.has(id as never);
 
   let open = $state(false);
   // Icons only (desktop); the phone layout always shows the full overlay.
@@ -79,6 +91,7 @@
   $effect(() => {
     void current;
     void items.length;
+    void settingsFound;
     const active = list?.querySelector<HTMLElement>(':scope > li > a.active');
     // Measured on the <li>: a group row is positioned (for its flyout), so the link's offsetTop would be 0.
     const row = active?.parentElement;
@@ -133,62 +146,117 @@
       <Icon name="sidebar" />
     </button>
   </div>
-  <!-- Collapsed (desktop): a search icon that expands the sidebar; the phone overlay always shows the field. -->
-  <button
-    class="link search-icon"
-    onclick={() => (preferences.set('sidebarCollapsed', false), keyboardSearch())}
-    aria-label="Suchen"
-    {@attach tooltip(() => withKeys('Suchen', 'search.focus'))}><Icon name="search" /></button
-  >
-  <div class="search"><GlobalSearch /></div>
-  <ul bind:this={list}>
-    {#if indicator}
-      <li class="indicator" aria-hidden="true" style:transform="translateY({indicator.y}px)" style:height="{indicator.height}px"></li>
-    {/if}
-    {#each items.filter((i) => !i.footer) as item (item.key)}
-      {#if item.children}
-        <li
-          class="group"
-          onpointerenter={() => flyout.show(item.key)}
-          onpointerleave={(e) => flyout.leaveGroup(e, item.key)}
-          onfocusout={(e) => flyout.leaveFocus(e)}
-        >
-          <a
-            href="#{item.path}"
-            data-group={item.key}
-            class:active={isRowActive(item)}
-            aria-haspopup="true"
-            aria-expanded={flyout.key === item.key}
-            onclick={(e) => go(e, item.path)}
-            onkeydown={(e) => flyout.groupKeys(e, item.key)}
-          >
-            {#if item.icon}<Icon name={item.icon} />{/if}
-            <span class="label">{item.label}</span>
-            {#if item.badge}<span class="badge">{item.badge}<span class="visually-hidden"> neu</span></span>{/if}
-            <span class="chevron"><Icon name="next" small /></span>
-          </a>
-          <!-- Desktop: flyout to the right while hovered or focused. Compact (no hover): the tabs stay listed below the group. -->
-          {#if flyout.key === item.key || compact.current}
-            <!-- svelte-ignore a11y_no_noninteractive_element_interactions (arrow keys between the links inside, which bubble here) -->
-            <ul
-              class="flyout"
-              data-flyout={item.key}
-              aria-label={item.label}
-              onkeydown={(e) => flyout.flyoutKeys(e, item.key)}
-              transition:motion.pop={{ origin: 'left' }}
-            >
-              <li class="flyout-title" aria-hidden="true">{item.label}</li>
-              {#each item.children as child, i (child.path)}
-                <li in:motion.rise={{ delay: motion.stagger(i), distance: 3 }}>{@render tab(child)}</li>
-              {/each}
-            </ul>
-          {/if}
-        </li>
-      {:else}
-        <li>{@render tab(item)}</li>
+  {#if settingsTree}
+    <!-- Einstellungen: the settings tree takes the place of the app navigation. -->
+    <a class="back" href="#{settingsBack}" onclick={(e) => go(e, settingsBack!)} {@attach tooltip('Zurück zur App')}>
+      <Icon name="back" />
+      <span class="label">Einstellungen</span>
+    </a>
+    <div class="search settings-search">
+      <input type="search" bind:value={settingsQuery} placeholder="Einstellungen durchsuchen" aria-label="Einstellungen durchsuchen" />
+    </div>
+    <ul bind:this={list} aria-label="Einstellungen">
+      {#if indicator}
+        <li class="indicator" aria-hidden="true" style:transform="translateY({indicator.y}px)" style:height="{indicator.height}px"></li>
       {/if}
-    {/each}
-  </ul>
+      {#each settingsTree.groups as group (group.id)}
+        {#if group.subgroups.some((sub) => sub.tabs.some((t) => shown(t.id)))}
+          <li class="section-title" aria-hidden="true"><Icon name={group.icon} small /><span class="label">{group.label}</span></li>
+          {#each group.subgroups as sub (sub.label)}
+            {#each sub.tabs.filter((t) => shown(t.id)) as tab (tab.id)}
+              <li>
+                <a
+                  href="#/settings/{tab.id}"
+                  class:active={isActive(`/settings/${tab.id}`)}
+                  aria-current={isActive(`/settings/${tab.id}`) ? 'page' : undefined}
+                  {@attach tooltip(`${group.label} › ${tab.label}`)}
+                  onclick={(e) => go(e, `/settings/${tab.id}`)}
+                >
+                  <Icon name={tab.icon} />
+                  <span class="label">{tab.label}</span>
+                </a>
+              </li>
+            {/each}
+          {/each}
+        {/if}
+      {/each}
+      {#each settingsTree.tabs.filter((t) => t.id === 'general' && shown(t.id)) as tab (tab.id)}
+        <li class="section-title" aria-hidden="true"></li>
+        <li>
+          <a
+            href="#/settings/{tab.id}"
+            class:active={isActive(`/settings/${tab.id}`)}
+            aria-current={isActive(`/settings/${tab.id}`) ? 'page' : undefined}
+            {@attach tooltip(tab.label)}
+            onclick={(e) => go(e, `/settings/${tab.id}`)}
+          >
+            <Icon name={tab.icon} />
+            <span class="label">{tab.label}</span>
+          </a>
+        </li>
+      {/each}
+      {#if settingsFound && settingsFound.size === 0}
+        <li class="none muted">Nichts gefunden.</li>
+      {/if}
+    </ul>
+  {:else}
+    <!-- Collapsed (desktop): a search icon that expands the sidebar; the phone overlay always shows the field. -->
+    <button
+      class="link search-icon"
+      onclick={() => (preferences.set('sidebarCollapsed', false), keyboardSearch())}
+      aria-label="Suchen"
+      {@attach tooltip(() => withKeys('Suchen', 'search.focus'))}><Icon name="search" /></button
+    >
+    <div class="search"><GlobalSearch /></div>
+    <ul bind:this={list}>
+      {#if indicator}
+        <li class="indicator" aria-hidden="true" style:transform="translateY({indicator.y}px)" style:height="{indicator.height}px"></li>
+      {/if}
+      {#each items.filter((i) => !i.footer) as item (item.key)}
+        {#if item.children}
+          <li
+            class="group"
+            onpointerenter={() => flyout.show(item.key)}
+            onpointerleave={(e) => flyout.leaveGroup(e, item.key)}
+            onfocusout={(e) => flyout.leaveFocus(e)}
+          >
+            <a
+              href="#{item.path}"
+              data-group={item.key}
+              class:active={isRowActive(item)}
+              aria-haspopup="true"
+              aria-expanded={flyout.key === item.key}
+              onclick={(e) => go(e, item.path)}
+              onkeydown={(e) => flyout.groupKeys(e, item.key)}
+            >
+              {#if item.icon}<Icon name={item.icon} />{/if}
+              <span class="label">{item.label}</span>
+              {#if item.badge}<span class="badge">{item.badge}<span class="visually-hidden"> neu</span></span>{/if}
+              <span class="chevron"><Icon name="next" small /></span>
+            </a>
+            <!-- Desktop: flyout to the right while hovered or focused. Compact (no hover): the tabs stay listed below the group. -->
+            {#if flyout.key === item.key || compact.current}
+              <!-- svelte-ignore a11y_no_noninteractive_element_interactions (arrow keys between the links inside, which bubble here) -->
+              <ul
+                class="flyout"
+                data-flyout={item.key}
+                aria-label={item.label}
+                onkeydown={(e) => flyout.flyoutKeys(e, item.key)}
+                transition:motion.pop={{ origin: 'left' }}
+              >
+                <li class="flyout-title" aria-hidden="true">{item.label}</li>
+                {#each item.children as child, i (child.path)}
+                  <li in:motion.rise={{ delay: motion.stagger(i), distance: 3 }}>{@render tab(child)}</li>
+                {/each}
+              </ul>
+            {/if}
+          </li>
+        {:else}
+          <li>{@render tab(item)}</li>
+        {/if}
+      {/each}
+    </ul>
+  {/if}
   <div class="foot">
     {#if connection === 'reconnecting'}
       <span class="connection" role="status"><span class="pulse" aria-hidden="true"></span>Verbindung unterbrochen</span>
@@ -202,7 +270,7 @@
       <span class="label">Befehle</span>
       <Kbd keys={keymap.keys('palette.open')} />
     </button>
-    {#each items.filter((i) => i.footer) as item (item.path)}
+    {#each items.filter((i) => i.footer && !(settingsTree && i.path === '/settings')) as item (item.path)}
       <a
         href="#{item.path}"
         class:active={isActive(item.path)}
@@ -279,6 +347,27 @@
   }
   .search {
     padding: 0 var(--space-xxs) var(--space-md);
+  }
+  .back {
+    margin-bottom: var(--space-sm);
+    color: var(--color-text);
+    font-weight: var(--font-weight-bold);
+  }
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-md) var(--space-sm) var(--space-xxs);
+    color: var(--color-text-faint);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+  }
+  .section-title:first-of-type {
+    padding-top: 0;
+  }
+  .none {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--font-size-small);
   }
   ul {
     position: relative;
@@ -542,6 +631,13 @@
   :global(:root:not([data-layout='compact'])) .collapsed .search-icon {
     display: flex;
   }
+  :global(:root:not([data-layout='compact'])) .collapsed .section-title {
+    padding: var(--space-sm) 0 0;
+  }
+  :global(:root:not([data-layout='compact'])) .collapsed .section-title :global(svg),
+  :global(:root:not([data-layout='compact'])) .collapsed .section-title .label,
+  :global(:root:not([data-layout='compact'])) .collapsed .settings-search,
+  :global(:root:not([data-layout='compact'])) .collapsed .none,
   :global(:root:not([data-layout='compact'])) .collapsed .search {
     display: none;
   }

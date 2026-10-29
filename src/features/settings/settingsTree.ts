@@ -20,6 +20,10 @@ export type SectionId =
 export interface SettingsTab {
   id: SectionId;
   label: string;
+  /** Shown in the settings sidebar (also when it is collapsed). */
+  icon: IconName;
+  /** Further words the settings search finds the tab by. */
+  keywords?: string;
   /** Only shown to these, within a group others see too. */
   roles?: readonly Role[];
 }
@@ -42,13 +46,13 @@ export const SETTINGS_TREE: readonly SettingsGroup[] = [
       {
         label: 'Ansicht',
         tabs: [
-          { id: 'appearance', label: 'Darstellung' },
-          { id: 'home', label: 'Startseite' },
-          { id: 'sidebar', label: 'Seitenleiste' },
+          { id: 'appearance', label: 'Darstellung', icon: 'appearance', keywords: 'farbe theme dunkel hell schrift dichte' },
+          { id: 'home', label: 'Startseite', icon: 'home', keywords: 'bereiche start übersicht' },
+          { id: 'sidebar', label: 'Seitenleiste', icon: 'sidebar', keywords: 'navigation reihenfolge menü' },
         ],
       },
-      { label: 'Bedienung', tabs: [{ id: 'shortcuts', label: 'Tastenkürzel' }] },
-      { label: 'Konto', tabs: [{ id: 'security', label: 'Sicherheit' }] },
+      { label: 'Bedienung', tabs: [{ id: 'shortcuts', label: 'Tastenkürzel', icon: 'keyboard', keywords: 'tasten befehle kürzel' }] },
+      { label: 'Konto', tabs: [{ id: 'security', label: 'Sicherheit', icon: 'security', keywords: 'pin passwort face id gerät authenticator mfa' }] },
     ],
   },
   {
@@ -57,30 +61,46 @@ export const SETTINGS_TREE: readonly SettingsGroup[] = [
     icon: 'club',
     roles: ADMIN_BOARD,
     subgroups: [
-      { label: 'Stammdaten', tabs: [{ id: 'club', label: 'Verein' }] },
+      {
+        label: 'Stammdaten',
+        tabs: [{ id: 'club', label: 'Verein', icon: 'club', keywords: 'name adresse website kontakt zvr saison fahrgemeinschaften' }],
+      },
       {
         label: 'Mitglieder',
         tabs: [
-          { id: 'membership', label: 'Mitgliedschaft' },
-          { id: 'offices', label: 'Funktionen' },
+          {
+            id: 'membership',
+            label: 'Mitgliedschaft',
+            icon: 'members',
+            keywords: 'mitgliedsarten ehrenmitglied stimmrecht minderjährige eltern alter',
+          },
+          { id: 'offices', label: 'Funktionen', icon: 'offices', keywords: 'vorstand obmann kassier schriftführer amtszeit kooptierung' },
         ],
       },
       {
         label: 'Sitzungen',
         tabs: [
-          { id: 'meeting-types', label: 'Sitzungsarten' },
-          { id: 'resolution-rules', label: 'Beschlüsse' },
+          { id: 'meeting-types', label: 'Sitzungsarten', icon: 'meetings', keywords: 'sitzung einladung frist beschlussfähig online ablauf' },
+          { id: 'resolution-rules', label: 'Beschlüsse', icon: 'resolutions', keywords: 'beschlussarten mehrheit folgeaufgaben umlaufbeschluss' },
         ],
       },
-      { label: 'Kalender', tabs: [{ id: 'appointment-types', label: 'Termine' }] },
-      { label: 'E-Mail', tabs: [{ id: 'mailboxes', label: 'Postfächer' }] },
-      { label: 'Sicherheit', tabs: [{ id: 'audit', label: 'Protokoll', roles: ['ADMIN'] }] },
+      {
+        label: 'Kalender',
+        tabs: [
+          { id: 'appointment-types', label: 'Termine', icon: 'calendar', keywords: 'terminarten farbe kabinen fahrgemeinschaften training spiel' },
+        ],
+      },
+      { label: 'E-Mail', tabs: [{ id: 'mailboxes', label: 'Postfächer', icon: 'mail', keywords: 'mail e-mail domain adresse limit signatur' }] },
+      {
+        label: 'Sicherheit',
+        tabs: [{ id: 'audit', label: 'Protokoll', icon: 'activity', keywords: 'audit zugriffe änderungen export', roles: ['ADMIN'] }],
+      },
     ],
   },
 ];
 
 /** Below every group. */
-export const LAST_TAB: SettingsTab = { id: 'general', label: 'Allgemein' };
+export const LAST_TAB: SettingsTab = { id: 'general', label: 'Allgemein', icon: 'settings', keywords: 'sprache zeitzone app version' };
 
 /** The groups a member sees, and all their tabs in display order (Allgemein last). */
 export function visibleSettings(sees: (roles: readonly Role[]) => boolean): { groups: SettingsGroup[]; tabs: SettingsTab[] } {
@@ -96,4 +116,13 @@ export function tabPath(id: SectionId): string {
   const group = SETTINGS_TREE.find((g) => g.subgroups.some((s) => s.tabs.some((t) => t.id === id)));
   const tab = group?.subgroups.flatMap((s) => s.tabs).find((t) => t.id === id) ?? LAST_TAB;
   return group ? `${group.label} › ${tab.label}` : tab.label;
+}
+
+/** Tabs whose label, path or keywords contain every word of `query` (any case); all visible tabs for an empty query. */
+export function searchSettings(query: string, sees: (roles: readonly Role[]) => boolean): SettingsTab[] {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  return visibleSettings(sees).tabs.filter((tab) => {
+    const text = `${tabPath(tab.id)} ${tab.keywords ?? ''}`.toLowerCase();
+    return words.every((w) => text.includes(w));
+  });
 }

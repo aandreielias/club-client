@@ -7,11 +7,12 @@ import type { SearchApi } from './SearchApi';
 
 /** Results of the global search for `query()`: one list of every kind, filterable by kind. */
 export class SearchListModel extends ListModel<SearchHit> {
-  constructor(api: SearchApi, query: () => string, format: () => Formatter, store: LocalStore) {
+  /** `local`: hits found in the app itself (settings sections), listed with the server's. */
+  constructor(api: SearchApi, query: () => string, format: () => Formatter, store: LocalStore, local: (query: string) => SearchHit[] = () => []) {
     super(
       {
         id: 'search',
-        load: async () => (SearchListModel.searchable(query()) ? api.search(query(), settings.search.perKind) : []),
+        load: async () => (SearchListModel.searchable(query()) ? [...local(query()), ...(await api.search(query(), settings.search.perKind))] : []),
         defaultSort: { key: 'kind', dir: 'asc' },
         columns: [
           { key: 'title', label: 'Titel', value: (h) => h.title },

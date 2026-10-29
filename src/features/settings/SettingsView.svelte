@@ -1,45 +1,15 @@
 <script lang="ts">
-  import type { Component } from 'svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Detail from '../../ui/Detail.svelte';
   import { tooltip } from '../../ui/tooltip';
-  import AppearanceSection from './AppearanceSection.svelte';
-  import GeneralSection from './GeneralSection.svelte';
-  import SecuritySection from './SecuritySection.svelte';
-  import ShortcutsSection from './ShortcutsSection.svelte';
-  import SidebarSection from './SidebarSection.svelte';
-  import HomeSettingsSection from './HomeSettingsSection.svelte';
-  import ClubSection from './ClubSection.svelte';
-  import MeetingTypesSection from '../meetings/MeetingTypesSection.svelte';
-  import ResolutionRulesSection from '../meetings/ResolutionRulesSection.svelte';
-  import BoardSettingsSection from '../members/BoardSettingsSection.svelte';
-  import MembershipSection from '../members/MembershipSection.svelte';
-  import AppointmentTypesSection from '../calendar/AppointmentTypesSection.svelte';
-  import AuditSection from './AuditSection.svelte';
-  import MailboxesSection from '../mail/MailboxesSection.svelte';
+  import { SETTINGS_SECTIONS as COMPONENTS } from './sections';
   import { session } from '../../lib/container';
   import Icon from '../../ui/Icon.svelte';
   import { LAST_TAB, tabPath, visibleSettings, type SectionId, type SettingsTab } from './settingsTree';
 
-  /** Settings in the window or on a page; `id` is the section shown first. */
+  /** Settings in the window, with their own tree; on the page the sidebar holds the tree (SettingsPage). `id`: the section shown first. */
   let { id, handle }: { id: string; handle?: WindowHandle } = $props();
 
-  const COMPONENTS: Record<SectionId, Component> = {
-    appearance: AppearanceSection,
-    home: HomeSettingsSection,
-    sidebar: SidebarSection,
-    shortcuts: ShortcutsSection,
-    security: SecuritySection,
-    general: GeneralSection,
-    club: ClubSection,
-    'meeting-types': MeetingTypesSection,
-    membership: MembershipSection,
-    offices: BoardSettingsSection,
-    'resolution-rules': ResolutionRulesSection,
-    'appointment-types': AppointmentTypesSection,
-    mailboxes: MailboxesSection,
-    audit: AuditSection,
-  };
   const { groups, tabs } = visibleSettings((roles) => session.hasRole(...roles));
 
   // svelte-ignore state_referenced_locally
