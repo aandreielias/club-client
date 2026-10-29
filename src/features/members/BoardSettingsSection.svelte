@@ -1,145 +1,106 @@
 <script lang="ts">
-  import { bus } from '../../lib/container';
-  import { TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
-  import { Resource } from '../../lib/state/Resource.svelte';
-  import AsyncView from '../../ui/AsyncView.svelte';
-  import Button from '../../ui/Button.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
-  import ChipToggle from '../../ui/ChipToggle.svelte';
+  import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
   import Field from '../../ui/Field.svelte';
-  import type { BoardSettings, OfficeKind } from './MembersApi';
+  import SettingsForm from '../../ui/SettingsForm.svelte';
+  import SettingsList from '../../ui/SettingsList.svelte';
+  import type { BoardSettings } from './MembersApi';
+  import { partnersOf } from './OfficeSettingForm.svelte';
   import { boardSettings, membersApi } from './services';
 
-  /** Einstellungen › Funktionen (admin/board): names, holders and terms of the offices, and the board-wide rules. */
-  // A fresh copy to edit; the store keeps the saved settings.
-  const settings = new Resource(() => membersApi.boardSettings());
-  void settings.load();
-  const action = new Action();
+  /** Einstellungen › Funktionen (admin/board): the board-wide rules, then the offices; each opens in the window. */
+  type BoardRules = Pick<BoardSettings, 'minBoardSize' | 'oddBoardSize' | 'cooptWeeks' | 'termWarningDays' | 'byElectionDays'>;
+  const rulesOf = ({ minBoardSize, oddBoardSize, cooptWeeks, termWarningDays, byElectionDays }: BoardSettings): BoardRules => ({
+    minBoardSize,
+    oddBoardSize,
+    cooptWeeks,
+    termWarningDays,
+    byElectionDays,
+  });
 
-  /** Offices one person may hold together with `office`; a pair counts for both, so it shows in both cards. */
-  const partners = (value: BoardSettings, office: OfficeKind): OfficeKind[] =>
-    value.combinations.flatMap((p) => (p.a === office ? [p.b] : p.b === office ? [p.a] : []));
+  const draft = new SettingsDraft<BoardRules>({ minBoardSize: 3, oddBoardSize: false, cooptWeeks: 4, termWarningDays: 60, byElectionDays: 30 });
+  const load = new Action();
+  const reload = () =>
+    void load.run(async () => {
+      const settings = await boardSettings.load();
+      if (settings) draft.load(rulesOf(settings));
+    });
+  reload();
 
-  function setPartners(value: BoardSettings, office: OfficeKind, next: OfficeKind[]) {
-    const others = value.combinations.filter((p) => p.a !== office && p.b !== office);
-    value.combinations = [...others, ...next.map((b) => ({ a: office, b }))];
+  /** The offices are sent as the server has them now. */
+  async function saveRules(rules: BoardRules): Promise<BoardRules> {
+    const saved = await membersApi.saveBoardSettings({ ...(await membersApi.boardSettings()), ...rules });
+    boardSettings.value = saved;
+    return rulesOf(saved);
   }
 
-  async function save(event: SubmitEvent, value: BoardSettings) {
-    event.preventDefault();
-    if (await action.run(async () => (boardSettings.value = await membersApi.saveBoardSettings(value)))) {
-      bus.publish(TOAST, { text: 'Funktionen gespeichert.' });
-    }
-  }
+  const rows = $derived(
+    (boardSettings.value?.offices ?? []).map((o) => {
+      const partners = partnersOf(boardSettings.value!, o.office).length;
+      return {
+        key: o.office,
+        label: o.label,
+        detail: o.enabled
+          ? [
+              o.maxHolders == null ? `ab ${o.minHolders} Personen` : `${o.minHolders}–${o.maxHolders} ${o.maxHolders === 1 ? 'Person' : 'Personen'}`,
+              `${o.termYears} ${o.termYears === 1 ? 'Jahr' : 'Jahre'}`,
+              partners ? `zugleich mit ${partners} weiteren` : '',
+            ]
+              .filter(Boolean)
+              .join(' · ')
+          : 'wird nicht mehr vergeben',
+        tags: o.enabled ? [] : ['nicht besetzt'],
+        archived: false,
+        inUse: o.enabled,
+      };
+    }),
+  );
 </script>
 
-<AsyncView resource={settings}>
-  {#snippet children(value)}
-    <form class="stack section" onsubmit={(e) => save(e, value)}>
-      <p class="muted">
-        Wie die Funktionen im Verein heißen, wie viele sie innehaben, wie lange eine Funktionsperiode dauert und welche Funktionen eine Person
-        zugleich innehaben darf.
-      </p>
-      <div class="cards">
-        {#each value.offices as office (office.office)}
-          <section class="card stack" class:off={!office.enabled} aria-label={office.label}>
-            <div class="row between">
-              <input class="name" bind:value={office.label} maxlength="40" aria-label="Bezeichnung" required />
-              <label class="check small"><input type="checkbox" bind:checked={office.enabled} disabled={office.office === 'CHAIR'} /> genutzt</label>
-            </div>
-            {#if office.enabled}
-              <div class="row facts">
-                <label
-                  >Personen
-                  <input type="number" min="0" max="20" bind:value={office.minHolders} aria-label="Mindestens: {office.label}" />
-                  bis
-                  <input
-                    type="number"
-                    min="1"
-                    max="20"
-                    placeholder="beliebig"
-                    aria-label="Höchstens: {office.label}"
-                    bind:value={() => office.maxHolders ?? '', (v) => (office.maxHolders = v === '' || v == null ? null : Math.round(Number(v)))}
-                  />
-                </label>
-                <label>Periode <input type="number" min="1" max="10" bind:value={office.termYears} aria-label="Jahre: {office.label}" /> Jahre</label>
-              </div>
-              <div class="stack tight">
-                <span class="muted small">Zugleich mit</span>
-                <ChipToggle
-                  label="{office.label} zugleich mit"
-                  bind:value={() => partners(value, office.office), (next) => setPartners(value, office.office, next)}
-                  options={value.offices.filter((o) => o.enabled && o.office !== office.office).map((o) => ({ value: o.office, label: o.label }))}
-                />
-              </div>
-            {/if}
-          </section>
-        {/each}
-      </div>
+<div class="stack section">
+  <SettingsForm title="Vorstand" intro="Regeln für den ganzen Vorstand; Hinweise erscheinen auf der Vorstandsseite." {draft} onsave={saveRules}>
+    <div class="grid-2">
+      <Field label="Mindestens Personen im Vorstand">
+        <input type="number" min="1" max="20" bind:value={draft.value.minBoardSize} class="short" />
+      </Field>
+      <Field label="Kooptieren nach Rücktritt" hint="Wochen; 0 = gleich Nachwahl">
+        <input type="number" min="0" max="52" bind:value={draft.value.cooptWeeks} class="short" />
+      </Field>
+      <Field label="Erinnern vor Ende der Periode" hint="Tage">
+        <input type="number" min="1" max="365" bind:value={draft.value.termWarningDays} class="short" />
+      </Field>
+      <Field label="Frist für die Nachwahl" hint="Tage, ab Ende der Kooptierung">
+        <input type="number" min="1" max="365" bind:value={draft.value.byElectionDays} class="short" />
+      </Field>
+    </div>
+    <label class="check"
+      ><input type="checkbox" bind:checked={draft.value.oddBoardSize} /> Ungerade Zahl an Personen im Vorstand (Hinweis bei gerader)</label
+    >
+  </SettingsForm>
 
-      <h3>Vorstand</h3>
-      <div class="grid-2">
-        <Field label="Mindestens Personen im Vorstand">
-          <input type="number" min="1" max="20" bind:value={value.minBoardSize} class="short" />
-        </Field>
-        <Field label="Kooptieren nach Rücktritt" hint="Wochen; 0 = gleich Nachwahl">
-          <input type="number" min="0" max="52" bind:value={value.cooptWeeks} class="short" />
-        </Field>
-        <Field label="Erinnern vor Ende der Periode" hint="Tage">
-          <input type="number" min="1" max="365" bind:value={value.termWarningDays} class="short" />
-        </Field>
-        <Field label="Frist für die Nachwahl" hint="Tage, ab Ende der Kooptierung">
-          <input type="number" min="1" max="365" bind:value={value.byElectionDays} class="short" />
-        </Field>
-      </div>
-      <label class="check"
-        ><input type="checkbox" bind:checked={value.oddBoardSize} /> Ungerade Zahl an Personen im Vorstand (Hinweis bei gerader)</label
-      >
-
-      <ErrorNote error={action.error} />
-      <div><Button type="submit" variant="primary" busy={action.busy}>Speichern</Button></div>
-    </form>
-  {/snippet}
-</AsyncView>
+  <section class="stack">
+    <h2>Funktionen</h2>
+    <p class="muted small">
+      Wie die Funktionen heißen, wie viele sie innehaben, wie lange eine Periode dauert und was eine Person zugleich innehaben darf.
+    </p>
+    <SettingsList
+      {rows}
+      kind="office-setting"
+      loading={load.busy && !rows.length}
+      error={load.error}
+      onretry={reload}
+      emptyText="Die Funktionen werden geladen."
+    />
+  </section>
+</div>
 
 <style>
   p,
-  h3 {
+  h2 {
     margin: 0;
   }
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
-    gap: var(--space-sm);
-  }
-  .card {
-    padding: var(--space-md);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    background: var(--color-surface);
-  }
-  .card.off {
-    opacity: 0.6;
-  }
-  .name {
-    flex: 1;
-    min-width: 0;
-    font-weight: var(--font-weight-medium);
-  }
-  .between {
-    justify-content: space-between;
-  }
-  .facts {
-    flex-wrap: wrap;
-    gap: var(--space-md);
-    font-size: var(--font-size-small);
-  }
-  .facts input {
-    width: 4.5rem;
-  }
-  .tight {
-    gap: var(--space-xs);
+  h2 {
+    font-size: var(--font-size-base);
   }
   .short {
     width: 6rem;

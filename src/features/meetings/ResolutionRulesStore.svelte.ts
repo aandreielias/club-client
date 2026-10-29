@@ -7,6 +7,7 @@ import {
   actions,
   allActions,
   SEEDED_CIRCULAR,
+  type ActionRule,
   type Majority,
   type MeetingType,
   type ResolutionAction,
@@ -17,6 +18,11 @@ import {
 export class ResolutionRulesStore extends LiveStore<ResolutionRules> {
   constructor(api: MeetingsApi, bus: EventBus) {
     super(() => api.resolutionRules(), bus, ACTION_RULES_CHANGED, { items: [], circular: SEEDED_CIRCULAR });
+  }
+
+  /** One decision's rule by its key (the settings window). */
+  get(action: ResolutionAction): ActionRule | undefined {
+    return this.value.items.find((r) => r.action === action);
   }
 
   /** The majority a decision fixes (seeded: statute change two thirds, dissolution three quarters). */

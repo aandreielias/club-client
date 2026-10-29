@@ -1,7 +1,7 @@
 import type { EventBus } from '../../lib/bus';
 import { liveEvent } from '../../lib/live/LiveUpdates.svelte';
 import { LiveStore } from '../../lib/state/LiveStore.svelte';
-import { OFFICE_KINDS, OFFICE_LABELS, type BoardSettings, type MembersApi, type OfficeKind } from './MembersApi';
+import { OFFICE_KINDS, OFFICE_LABELS, type BoardSettings, type MembersApi, type OfficeKind, type OfficeSetting } from './MembersApi';
 
 export const BOARD_SETTINGS_CHANGED = liveEvent<Record<string, never>>('members.board-settings-changed');
 
@@ -9,6 +9,11 @@ export const BOARD_SETTINGS_CHANGED = liveEvent<Record<string, never>>('members.
 export class BoardSettingsStore extends LiveStore<BoardSettings | null> {
   constructor(api: MembersApi, bus: EventBus) {
     super(() => api.boardSettings(), bus, BOARD_SETTINGS_CHANGED, null);
+  }
+
+  /** One office's setting (the settings window); none until loaded. */
+  get(office: string): OfficeSetting | undefined {
+    return this.value?.offices.find((o) => o.office === office);
   }
 
   /** The seeded name until the settings are loaded. */

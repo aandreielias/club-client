@@ -48,8 +48,10 @@
   }: {
     rows: readonly SettingsRow[];
     kind: string;
-    newLabel: string;
-    onremove: (row: SettingsRow) => void;
+    /** Without it, nothing new is created here (e.g. the fixed set of offices). */
+    newLabel?: string;
+    /** Without it, rows are only opened, never removed here. */
+    onremove?: (row: SettingsRow) => void;
     /** Without it, records are only deleted, never archived (e.g. mailboxes). */
     onrestore?: (row: SettingsRow) => void;
     onreorder?: (keys: string[]) => void | Promise<unknown>;
@@ -80,7 +82,7 @@
     <span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span>
   </div>
 {:else if !rows.length}
-  <Empty text={emptyText} action={{ label: newLabel, icon: 'add', run: create }} />
+  <Empty text={emptyText} action={newLabel ? { label: newLabel, icon: 'add', run: create } : undefined} />
 {:else if sorting && onreorder}
   <SortableList
     items={rows.filter((r) => !r.archived).map((r) => ({ key: r.key, label: r.label }))}
@@ -103,7 +105,7 @@
         </button>
         {#if row.archived && onrestore}
           <Button size="sm" variant="ghost" tooltip="{row.label} wieder verwenden" onclick={() => onrestore(row)}>Wiederherstellen</Button>
-        {:else if !fixed(row)}
+        {:else if onremove && !fixed(row)}
           <Button
             size="sm"
             variant="ghost"
@@ -117,7 +119,7 @@
   </ul>
   <div class="row between">
     <div class="row">
-      <Button icon="add" tooltip={BUTTON_TOOLTIPS[newLabel]?.text ?? newLabel} onclick={create}>{newLabel}</Button>
+      {#if newLabel}<Button icon="add" tooltip={BUTTON_TOOLTIPS[newLabel]?.text ?? newLabel} onclick={create}>{newLabel}</Button>{/if}
       {#if onreorder && rows.filter((r) => !r.archived).length > 1}
         <Button variant="ghost" icon="sort" tooltip="Die Reihenfolge der Einträge ändern" onclick={() => (sorting = true)}>Reihenfolge ändern</Button>
       {/if}

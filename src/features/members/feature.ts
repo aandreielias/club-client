@@ -12,6 +12,7 @@ import { boardSettings, membershipKinds } from './services';
 import MembersPage from './MembersPage.svelte';
 import MembershipKindCreateView from './MembershipKindCreateView.svelte';
 import MembershipKindPage from './MembershipKindPage.svelte';
+import OfficeSettingView from './OfficeSettingView.svelte';
 import MembershipKindView from './MembershipKindView.svelte';
 
 export const membersFeature: Feature = {
@@ -31,6 +32,7 @@ export const membersFeature: Feature = {
     'member-new': { component: MemberInviteView, roles: ADMIN_BOARD },
     'membership-kind': { component: MembershipKindView, page: (key) => `/membership-kinds/${encodeURIComponent(key)}`, roles: ADMIN_BOARD },
     'membership-kind-new': { component: MembershipKindCreateView, roles: ADMIN_BOARD },
+    'office-setting': { component: OfficeSettingView, roles: ADMIN_BOARD },
   },
   messages: MEMBER_MESSAGES,
   start: () => {
