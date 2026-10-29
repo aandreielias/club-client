@@ -233,12 +233,61 @@ export function actions(type: MeetingType | null, rules: readonly ActionRule[] =
 export const actionNeedsMember = (a: ResolutionAction): boolean => ['HONORARY_GRANT', 'HONORARY_REVOKE', 'ELECTION', 'EXCLUSION'].includes(a);
 
 /** server: MeetingsApi.FollowUpRule — `title` fills {beschluss}, {mitglied}, {funktion}; `dueDays` null: no due date. */
+/**
+ * server: MeetingsApi.FollowUpAssignee — who carries out a follow-up: DEFAULT the resolution's assignees (else the managers present, else
+ * the board), BOARD, OFFICE the holders of `office` (the board while vacant), MANAGER who started the meeting or vote, MEMBER the member
+ * the decision is about.
+ */
+export type FollowUpAssignee = 'DEFAULT' | 'BOARD' | 'OFFICE' | 'MANAGER' | 'MEMBER';
+
+export const ASSIGNEE_LABELS: Readonly<Record<FollowUpAssignee, string>> = {
+  DEFAULT: 'Wie im Beschluss gewählt',
+  BOARD: 'Vorstand',
+  OFFICE: 'Eine Funktion',
+  MANAGER: 'Wer die Sitzung leitet',
+  MEMBER: 'Betroffenes Mitglied',
+};
+
+/** server: FollowUp.AUTOMATIC — kinds that finish themselves once their effect is entered. */
+export const AUTOMATIC_FOLLOW_UPS: readonly FollowUpKind[] = [
+  'ENTER_HONORARY',
+  'REVOKE_HONORARY',
+  'ENTER_OFFICE',
+  'CONVENE_ASSEMBLY',
+  'UPLOAD_STATUTES',
+];
+
+/** A follow-up for the resolution's assignees, without description or checklist, at once. */
+export const plainFollowUp = (kind: FollowUpRule['kind'], title: string, dueDays: number | null): FollowUpRule => ({
+  id: null,
+  kind,
+  title,
+  dueDays,
+  assignTo: 'DEFAULT',
+  office: null,
+  description: null,
+  checklist: [],
+  afterPrevious: false,
+});
+
+/** server: FollowUpPlanner.NAMES_MEMBER — built-in decisions about one member. */
+export const NAMES_MEMBER: readonly ResolutionAction[] = ['HONORARY_GRANT', 'HONORARY_REVOKE', 'ELECTION', 'EXCLUSION'];
+
+/**
+ * server: MeetingsApi.FollowUpRule — `title`, `description` and `checklist` fill {beschluss}, {mitglied}, {funktion}; `dueDays` counted
+ * from the start; `afterPrevious`: starts only once the follow-up before it is done.
+ */
 export interface FollowUpRule {
   /** null until saved. */
   id: string | null;
   kind: Exclude<FollowUpKind, 'MANUAL'>;
   title: string;
   dueDays: number | null;
+  assignTo: FollowUpAssignee;
+  office: OfficeKind | null;
+  description: string | null;
+  checklist: string[];
+  afterPrevious: boolean;
 }
 
 /**
@@ -285,9 +334,13 @@ export interface FollowUp {
   /** Finishes itself when its effect is entered (honorary membership, office, invitation). */
   automatic: boolean;
   dueAt: string | null;
-  /** null while the task is being created. */
+  /** null while the task is being created, or while it waits. */
   taskId: string | null;
   taskStatus: 'OPEN' | 'IN_PROGRESS' | 'DONE' | null;
+  /** The follow-up it starts after. */
+  waitsFor: string | null;
+  /** No task yet: `waitsFor` is not done. */
+  waiting: boolean;
 }
 
 export interface NewFollowUp {
@@ -296,6 +349,9 @@ export interface NewFollowUp {
   /** Empty = the board. */
   assigneeIds: string[];
   dueAt: string | null;
+  checklist: string[];
+  /** An open follow-up of the same meeting or resolution it starts after. */
+  waitsFor: string | null;
 }
 
 export type MeetingSummary = Pick<Meeting, 'id' | 'kind' | 'title' | 'startsAt' | 'endsAt' | 'location' | 'status'>;

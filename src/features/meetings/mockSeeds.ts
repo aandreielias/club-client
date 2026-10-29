@@ -1,7 +1,18 @@
 // Seed data and stored shapes of the meetings mock (server: the meetings migrations' seeds and tables).
 import type { LinkedRef } from '../../lib/records/refs';
 import type { OfficeKind } from '../members/MembersApi';
-import type { ActionRule, FollowUpKind, Majority, Meeting, MeetingStep, MeetingType, PresenceMode, Resolution, ResolutionAction } from './model';
+import {
+  plainFollowUp,
+  type ActionRule,
+  type FollowUpKind,
+  type Majority,
+  type Meeting,
+  type MeetingStep,
+  type MeetingType,
+  type PresenceMode,
+  type Resolution,
+  type ResolutionAction,
+} from './model';
 
 const DAY = 86_400_000;
 
@@ -178,10 +189,8 @@ for (const t of SEEDED_TYPES) t.steps = defaultSteps(true);
 /** server: V54__resolution_rules.sql */
 export function seededRules(): ActionRule[] {
   const f = (kind: ActionRule['followUps'][number]['kind'], title: string, dueDays: number | null) => ({
+    ...plainFollowUp(kind, title, dueDays),
     id: crypto.randomUUID(),
-    kind,
-    title,
-    dueDays,
   });
   return [
     { action: 'GENERAL', label: null, majority: null, followUps: [f('IMPLEMENT', 'Beschluss umsetzen: {beschluss}', null)], enabled: true },
@@ -210,7 +219,7 @@ export function seededRules(): ActionRule[] {
       action: 'STATUTES_CHANGE',
       label: null,
       majority: 'TWO_THIRDS',
-      followUps: [{ id: crypto.randomUUID(), kind: 'UPLOAD_STATUTES', title: 'Neue Statuten in Dateien hochladen: {beschluss}', dueDays: 14 }],
+      followUps: [f('UPLOAD_STATUTES', 'Neue Statuten in Dateien hochladen: {beschluss}', 14)],
       enabled: true,
     },
     { action: 'DISSOLUTION', label: null, majority: 'THREE_QUARTERS', followUps: [], enabled: true },
@@ -233,7 +242,7 @@ export function seededRules(): ActionRule[] {
 export type StoredMeeting = Omit<
   Meeting,
   'online' | 'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage' | 'autoTasks' | 'followUps' | 'assignable'
-> & { presence: Record<string, PresenceMode>; autoTasks?: boolean; frozenElectorate?: string[] };
+> & { presence: Record<string, PresenceMode>; autoTasks?: boolean; frozenElectorate?: string[]; createdBy?: string };
 /** server: meetings_follow_up */
 export type StoredFollowUp = {
   id: string;
@@ -245,6 +254,10 @@ export type StoredFollowUp = {
   title: string;
   dueAt: string | null;
   doneAt: string | null;
+  /** server: meetings_follow_up.waits_for */
+  waitsFor?: string | null;
+  /** server: meetings_follow_up_pending — what its task gets once released. */
+  pending?: { description: string | null; checklist: string[]; assignees: string[]; createdBy: string | null; dueDays: number | null } | null;
 };
 /** Counters hold what was voted, `ballots` only who voted (server: meetings_resolution, meetings_ballot). */
 export type StoredResolution = Pick<
@@ -273,6 +286,7 @@ export type StoredResolution = Pick<
   actionOffice?: OfficeKind | null;
   assigneeIds?: string[];
   frozenVoters?: string[];
+  createdBy?: string;
   links?: LinkedRef[];
 };
 

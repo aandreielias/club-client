@@ -34,7 +34,12 @@ import {
   type CircularRules,
   type ResolutionRules,
   type StatutesPlace,
+  AUTOMATIC_FOLLOW_UPS,
+  NAMES_MEMBER,
   OWN_ACTION,
+  plainFollowUp,
+  type FollowUpAssignee,
+  type FollowUpRule,
   type ActionRule,
   isDayOfYear,
   isQuorate,
@@ -127,7 +132,15 @@ const ACTIONS: readonly ResolutionAction[] = [
 ];
 
 const DAY_MS = 86_400_000;
-const AUTOMATIC: readonly FollowUpKind[] = ['ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'CONVENE_ASSEMBLY', 'UPLOAD_STATUTES'];
+const ASSIGNEES: readonly FollowUpAssignee[] = ['DEFAULT', 'BOARD', 'OFFICE', 'MANAGER', 'MEMBER'];
+
+/** server: FollowUp.checklist — trimmed, empty ones dropped, at most 20 of 200 characters. */
+const cleanChecklist = (items: unknown, code: string): string[] => {
+  const out = (Array.isArray(items) ? items : []).map((t) => String(t ?? '').trim()).filter(Boolean);
+  if (out.length > 20 || out.some((t) => t.length > 200)) fail(400, code);
+  return out;
+};
+const AUTOMATIC = AUTOMATIC_FOLLOW_UPS;
 
 const text = (value: unknown, max: number, code: string): string | null => {
   if (value == null) return null;
@@ -162,6 +175,11 @@ export class MockMeetings {
         this.complete((f) => f.kind === (data.honorary ? 'ENTER_HONORARY' : 'REVOKE_HONORARY') && f.memberId === data.memberId);
       } else if (event.type === 'members.office-assigned') {
         this.complete((f) => f.kind === 'ENTER_OFFICE' && f.memberId === data.memberId && f.office === data.office);
+      } else if (event.type === 'tasks.sourced-done' && data.source?.kind === 'MEETING_FOLLOW_UP') {
+        // server: FollowUps.register — its task done: the follow-up is done, those waiting for it start
+        const f = this.followUps.data.find((x) => x.id === data.source.id);
+        if (f && !f.doneAt) f.doneAt = new Date().toISOString();
+        this.release(data.source.id);
       } else if (event.type === 'files.file-stored') {
         const s = this.statutes.data;
         if (s.fileId ? data.newVersion && s.fileId === data.fileId : s.folderId != null && s.folderId === data.folderId) {
@@ -182,18 +200,51 @@ export class MockMeetings {
     for (const f of this.followUps.data.filter((x) => !x.doneAt && match(x))) {
       f.doneAt = new Date().toISOString();
       mockServer.events.publish({ type: 'meetings.follow-up-done', data: { followUpId: f.id } });
+      this.release(f.id);
     }
     this.followUps.save();
   }
 
-  private createFollowUp(f: StoredFollowUp, description: string | null, assigneeIds: readonly string[], createdBy: string | null): void {
+  /** server: FollowUps.create — one that waits keeps its task data until the one before is done. */
+  private createFollowUp(
+    f: StoredFollowUp,
+    description: string | null,
+    assigneeIds: readonly string[],
+    createdBy: string | null,
+    checklist: readonly string[] = [],
+    dueDays: number | null = null,
+  ): void {
+    const assignees = assigneeIds.length ? [...assigneeIds] : this.people.electorate('BOARD');
+    if (f.waitsFor) f.pending = { description, checklist: [...checklist], assignees, createdBy, dueDays };
     this.followUps.data.push(f);
     this.followUps.save();
-    const assignees = assigneeIds.length ? [...assigneeIds] : this.people.electorate('BOARD');
+    if (f.waitsFor) return;
     mockServer.events.publish({
       type: 'meetings.follow-up-created',
-      data: { followUpId: f.id, title: f.title, description, dueAt: f.dueAt, assignees, createdBy },
+      data: { followUpId: f.id, title: f.title, description, dueAt: f.dueAt, assignees, createdBy, checklist: [...checklist] },
     });
+  }
+
+  /** server: FollowUps.release — those waiting for `doneId` get their task, due from now. */
+  private release(doneId: string): void {
+    for (const f of this.followUps.data.filter((x) => x.waitsFor === doneId && x.pending)) {
+      const p = f.pending!;
+      f.pending = null;
+      f.dueAt = p.dueDays == null ? null : new Date(Date.now() + p.dueDays * DAY_MS).toISOString();
+      mockServer.events.publish({
+        type: 'meetings.follow-up-created',
+        data: {
+          followUpId: f.id,
+          title: f.title,
+          description: p.description,
+          dueAt: f.dueAt,
+          assignees: p.assignees,
+          createdBy: p.createdBy,
+          checklist: p.checklist,
+        },
+      });
+    }
+    this.followUps.save();
   }
 
   private followUpDtos(list: readonly StoredFollowUp[]): FollowUp[] {
@@ -210,6 +261,8 @@ export class MockMeetings {
       dueAt: f.dueAt,
       taskId: refs[f.id]?.taskId ?? null,
       taskStatus: refs[f.id]?.status ?? null,
+      waitsFor: f.waitsFor ?? null,
+      waiting: !refs[f.id] && !!f.waitsFor && !f.doneAt,
     }));
   }
 
@@ -226,25 +279,56 @@ export class MockMeetings {
       : s.folderId
         ? `Die neue Fassung in den Ordner „${s.folderName}“ in Dateien hochladen; die Aufgabe erledigt sich dann von selbst.`
         : 'Die neue Fassung in Dateien hochladen und die Aufgabe erledigen. Unter Einstellungen › Beschlüsse lässt sich festlegen, wo die Statuten liegen; dann erledigt sie sich von selbst.';
-    for (const rule of this.rules.data.find((x) => x.action === action)!.followUps) {
+    const chosen = r.assigneeIds?.length ? r.assigneeIds : meeting ? this.assignable(r, meeting, true) : [];
+    const fill = (t: string) => t.replaceAll('{beschluss}', r.title).replaceAll('{mitglied}', name).replaceAll('{funktion}', office);
+    let previous: string | null = null;
+    for (const stored of this.rules.data.find((x) => x.action === action)!.followUps) {
+      const rule = { ...plainFollowUp(stored.kind, stored.title, stored.dueDays), ...stored };
       const about = ABOUT_MEMBER.includes(rule.kind);
-      const title = rule.title.replaceAll('{beschluss}', r.title).replaceAll('{mitglied}', name).replaceAll('{funktion}', office);
+      const waitsFor = rule.afterPrevious ? previous : null;
+      const id = crypto.randomUUID();
+      const description = rule.description ? `${fill(rule.description).slice(0, 2000)}\n\n${context}` : context;
       this.createFollowUp(
         {
-          id: crypto.randomUUID(),
+          id,
           meetingId: null,
           resolutionId: r.id,
           kind: rule.kind,
           memberId: about ? (r.actionMemberId ?? null) : null,
           office: about ? (r.actionOffice ?? null) : null,
-          title: title.slice(0, 150),
-          dueAt: rule.dueDays == null ? null : new Date(Date.now() + rule.dueDays * DAY_MS).toISOString(),
+          title: fill(rule.title).slice(0, 150),
+          dueAt: waitsFor || rule.dueDays == null ? null : new Date(Date.now() + rule.dueDays * DAY_MS).toISOString(),
           doneAt: null,
+          waitsFor,
         },
-        rule.kind === 'UPLOAD_STATUTES' ? `${context}\n${statutesHint}` : context,
-        r.assigneeIds?.length ? r.assigneeIds : meeting ? this.assignable(r, meeting, true) : [],
+        rule.kind === 'UPLOAD_STATUTES' ? `${description}\n${statutesHint}` : description,
+        this.assigneesFor(rule, chosen, meeting, r),
         null,
+        rule.checklist.map((t) => fill(t).slice(0, 200)),
+        rule.dueDays,
       );
+      previous = id;
+    }
+  }
+
+  /** server: ResolutionHandlers.assigneesFor */
+  private assigneesFor(rule: FollowUpRule, chosen: readonly string[], meeting: StoredMeeting | null, r: StoredResolution): readonly string[] {
+    const active = (id: string | null | undefined) => !!id && this.people.members.data.some((m) => m.id === id && m.active);
+    switch (rule.assignTo) {
+      case 'BOARD':
+        return this.people.electorate('BOARD');
+      case 'OFFICE': {
+        const holders = this.people.offices.data.filter((o) => o.office === rule.office && !o.endedOn).map((o) => o.memberId);
+        return holders.length ? holders : this.people.electorate('BOARD');
+      }
+      case 'MANAGER': {
+        const manager = meeting ? meeting.createdBy : r.createdBy;
+        return active(manager) ? [manager!] : chosen;
+      }
+      case 'MEMBER':
+        return active(r.actionMemberId) ? [r.actionMemberId!] : chosen;
+      default:
+        return chosen;
     }
   }
 
@@ -287,7 +371,27 @@ export class MockMeetings {
           const title = typeof f.title === 'string' ? f.title.trim() : '';
           if (!title || title.length > 150) fail(400, 'action-rules.title-invalid');
           if (f.dueDays != null && (!Number.isInteger(f.dueDays) || f.dueDays < 0 || f.dueDays > 365)) fail(400, 'action-rules.due-invalid');
-          return { id: f.id ?? crypto.randomUUID(), kind: f.kind, title, dueDays: f.dueDays ?? null };
+          // server: FollowUpPlanner.validate — who, text, checklist, order
+          const assignTo: FollowUpAssignee = f.assignTo ?? 'DEFAULT';
+          if (!ASSIGNEES.includes(assignTo)) fail(400, 'action-rules.assignee-invalid');
+          if ((assignTo === 'OFFICE') !== !!f.office || (assignTo === 'MEMBER' && !NAMES_MEMBER.includes(action)))
+            fail(400, 'action-rules.assignee-invalid');
+          const description = typeof f.description === 'string' && f.description.trim() ? f.description.trim() : null;
+          if (description && description.length > 2000) fail(400, 'action-rules.description-invalid');
+          const checklist = cleanChecklist(f.checklist, 'action-rules.checklist-invalid');
+          const afterPrevious = f.afterPrevious === true;
+          if (afterPrevious && followUps.indexOf(f) === 0) fail(400, 'action-rules.chain-invalid');
+          return {
+            id: f.id ?? crypto.randomUUID(),
+            kind: f.kind,
+            title,
+            dueDays: f.dueDays ?? null,
+            assignTo,
+            office: assignTo === 'OFFICE' ? f.office : null,
+            description,
+            checklist,
+            afterPrevious,
+          };
         }),
       };
     });
@@ -359,6 +463,18 @@ export class MockMeetings {
       allowed = this.assignable(null, meeting, false);
     }
     const title = text(body.title, 150, 'meeting.follow-up-title-invalid') ?? fail(400, 'meeting.follow-up-title-invalid');
+    // server: ResolutionHandlers.createFollowUp — only an open follow-up of the same meeting or resolution can come first
+    const waitsFor: string | null = body.waitsFor ?? null;
+    if (waitsFor) {
+      const meetingOf = meetingId ?? this.resolutions.data.find((x) => x.id === resolutionId)?.meetingId ?? null;
+      const ok = this.followUps.data.some(
+        (f) => f.id === waitsFor && !f.doneAt && ((meetingOf && f.meetingId === meetingOf) || (resolutionId && f.resolutionId === resolutionId)),
+      );
+      if (!ok) fail(400, 'meeting.follow-up-waits-invalid');
+    }
+    const checklist = cleanChecklist(body.checklist, 'meeting.follow-up-checklist-invalid');
+    const due = typeof body.dueAt === 'string' && body.dueAt ? body.dueAt : null;
+    const dueDays = waitsFor && due ? Math.max(0, Math.min(365, Math.floor((Date.parse(due) - Date.now()) / DAY_MS))) : null;
     const chosen = this.checkedAssignees(body.assigneeIds, allowed);
     const managers = this.people.audienceIds({ roles: ADMIN_BOARD });
     const assignees = chosen.length ? chosen : allowed.filter((id) => managers.includes(id));
@@ -370,10 +486,11 @@ export class MockMeetings {
       memberId: null,
       office: null,
       title,
-      dueAt: typeof body.dueAt === 'string' && body.dueAt ? body.dueAt : null,
+      dueAt: waitsFor ? null : due,
       doneAt: null,
+      waitsFor,
     };
-    this.createFollowUp(f, text(body.description, 2000, 'request.invalid'), assignees, viewer.id);
+    this.createFollowUp(f, text(body.description, 2000, 'request.invalid'), assignees, viewer.id, checklist, dueDays);
     return this.followUpDtos([f])[0];
   }
 
@@ -457,6 +574,7 @@ export class MockMeetings {
       openedAt: null,
       closedAt: null,
       protocol: null,
+      createdBy: viewer.id,
       presence: {},
       links: [],
     };
@@ -680,6 +798,7 @@ export class MockMeetings {
         : fail(400, 'resolution.deadline-invalid');
     const r: StoredResolution = {
       id: crypto.randomUUID(),
+      createdBy: viewer.id,
       meetingId,
       title,
       text: text(body.text, 4000, 'resolution.text-too-long'),
@@ -1131,7 +1250,12 @@ mockServer
     (req) => (
       actor(req),
       {
-        items: meetings.rules.data.map((r) => ({ ...r, enabled: r.enabled !== false })),
+        items: meetings.rules.data.map((r) => ({
+          ...r,
+          enabled: r.enabled !== false,
+          // rules stored before the workflow options
+          followUps: r.followUps.map((f) => ({ ...plainFollowUp(f.kind, f.title, f.dueDays), ...f })),
+        })),
         circular: meetings.circular.data,
         statutes: meetings.statutes.data,
       }

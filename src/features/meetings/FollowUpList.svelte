@@ -1,80 +1,52 @@
 <script lang="ts">
   import { session } from '../../lib/container';
-  import { Action } from '../../lib/state/Action.svelte';
   import Button from '../../ui/Button.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
-  import Field from '../../ui/Field.svelte';
-  import DateInput from '../../ui/DateInput.svelte';
   import RecordLink from '../../ui/RecordLink.svelte';
   import Tag from '../../ui/Tag.svelte';
-  import MemberChips from './MemberChips.svelte';
+  import FollowUpAddDialog from './FollowUpAddDialog.svelte';
+  import { waitingText } from './followUpText';
   import type { FollowUp, NewFollowUp, Person } from './model';
 
-  /** The tasks of a meeting or resolution, each opening its task; who runs the meeting adds more by hand. */
+  /** The tasks of a meeting or resolution in order, each opening its task; who runs the meeting adds more in a dialog. */
   let {
     followUps,
     canAdd,
     candidates,
+    contextTitle,
     add,
   }: {
     followUps: readonly FollowUp[];
     canAdd: boolean;
     /** Who may take the task: those present. */
     candidates: readonly Person[];
+    /** The resolution's or meeting's title, for templates. */
+    contextTitle: string;
     add: (f: NewFollowUp) => Promise<boolean>;
   } = $props();
 
-  const action = new Action();
-  let open = $state(false);
-  let title = $state('');
-  let assignees = $state<string[]>([]);
-  let due = $state('');
-
-  async function submit(event: SubmitEvent) {
-    event.preventDefault();
-    if (!title.trim()) return;
-    const followUp = { title: title.trim(), description: null, assigneeIds: assignees, dueAt: due ? session.clock.toInstant(`${due}T18:00`) : null };
-    if (await action.run(() => add(followUp).then((ok) => ok || Promise.reject(new Error('Nicht gespeichert.'))))) {
-      title = '';
-      assignees = [];
-      due = '';
-      open = false;
-    }
-  }
+  let adding = $state(false);
 </script>
 
 {#if followUps.length}
-  <ul class="follow-ups">
+  <ol class="follow-ups">
     {#each followUps as f (f.id)}
-      <li>
+      {@const waiting = waitingText(f, followUps)}
+      <li class:chained={!!f.waitsFor}>
         {#if f.taskId}<RecordLink kind="task" id={f.taskId}>{f.title}</RecordLink>{:else}<span>{f.title}</span>{/if}
-        {#if f.taskStatus === 'DONE'}<Tag tone="green">Erledigt</Tag>{:else if f.taskStatus}<Tag tone="orange">Offen</Tag>{/if}
+        {#if f.taskStatus === 'DONE'}<Tag tone="green">Erledigt</Tag>{:else if waiting}<Tag tone="gray">Wartet</Tag>{:else if f.taskStatus}<Tag
+            tone="orange">Offen</Tag
+          >{/if}
+        {#if waiting}<span class="muted small">{waiting}</span>{/if}
         {#if f.dueAt && f.taskStatus !== 'DONE'}<span class="muted small">bis {session.format.date(session.clock.localDate(f.dueAt))}</span>{/if}
         {#if f.automatic && f.taskStatus !== 'DONE'}<span class="muted small">erledigt sich beim Eintragen</span>{/if}
       </li>
     {/each}
-  </ul>
+  </ol>
 {/if}
 
 {#if canAdd}
-  {#if open}
-    <form class="stack add" onsubmit={submit}>
-      <Field label="Aufgabe">
-        <input bind:value={title} maxlength="150" required />
-      </Field>
-      <MemberChips bind:value={assignees} {candidates} label="Verantwortlich" placeholder="Verantwortlich (leer = Vorstand)" />
-      <Field label="Fällig (optional)">
-        <DateInput bind:value={due} />
-      </Field>
-      <ErrorNote error={action.error} />
-      <div class="row">
-        <Button type="submit" variant="primary" busy={action.busy} disabled={!title.trim()}>Aufgabe anlegen</Button>
-        <Button variant="ghost" onclick={() => (open = false)}>Abbrechen</Button>
-      </div>
-    </form>
-  {:else}
-    <div><Button size="sm" icon="add" onclick={() => (open = true)}>Aufgabe hinzufügen</Button></div>
-  {/if}
+  <div><Button size="sm" icon="add" onclick={() => (adding = true)}>Aufgabe hinzufügen</Button></div>
+  <FollowUpAddDialog open={adding} {contextTitle} {candidates} {followUps} {add} onclose={() => (adding = false)} />
 {/if}
 
 <style>
@@ -91,7 +63,9 @@
     align-items: center;
     gap: var(--space-sm);
   }
-  .add {
-    margin-top: var(--space-sm);
+  .follow-ups li.chained {
+    margin-left: var(--space-md);
+    padding-left: var(--space-md);
+    border-left: 2px solid var(--color-border-strong);
   }
 </style>

@@ -111,7 +111,7 @@ export class MockTasks {
         dueAt: data.dueAt ?? null,
         createdBy: data.createdBy ?? assignees[0],
         assignees,
-        checklist: [],
+        checklist: MockTasks.items(Array.isArray(data.checklist) ? data.checklist : []),
         createdAt: new Date().toISOString(),
         completedAt: null,
         repeatWeeks: null,
@@ -135,6 +135,13 @@ export class MockTasks {
     task.completedAt = new Date().toISOString();
     this.tasks.save();
     this.changed(task, 'STATUS');
+    this.sourcedDone(task.id);
+  }
+
+  /** server: TasksApi.SOURCED_DONE (internal) — a task of another module's record was finished. */
+  private sourcedDone(taskId: string): void {
+    const source = this.sources.data[taskId];
+    if (source) mockServer.events.publish({ type: 'tasks.sourced-done', data: { source } });
   }
 
   /** server: Reminders.task / move — a deadline as a task once per key, its due date following the deadline while open. */
@@ -358,10 +365,12 @@ export class MockTasks {
       MockActivity.record('TASK', next.id, member, 'CREATED', { title: next.title, teamIds: next.teamId ? [next.teamId] : [] });
       this.assigned(next, []);
     }
+    const finished = status === 'DONE' && task.status !== 'DONE';
     task.status = status as TaskStatus;
     task.completedAt = status === 'DONE' ? (task.completedAt ?? new Date().toISOString()) : null;
     this.tasks.save();
     this.changed(task, 'STATUS');
+    if (finished) this.sourcedDone(task.id);
     MockActivity.record('TASK', task.id, member, 'STATUS', { title: task.title, teamIds: task.teamId ? [task.teamId] : [], detail: task.status });
     return this.withComments(task);
   }

@@ -2,6 +2,8 @@ import { FormState } from '../../lib/state/FormState.svelte';
 import {
   FOLLOW_UP_KIND_LABELS,
   isOwnAction,
+  NAMES_MEMBER,
+  plainFollowUp,
   NO_STATUTES,
   OWN_ACTION,
   type ActionRule,
@@ -16,7 +18,7 @@ export type RuleMajority = Majority | 'FREE';
 type Errors = Partial<Record<'label' | 'followUps', string>>;
 
 /** server: ActionRules — names of the club's own decisions, follow-ups per decision. */
-export const RULE_LIMITS = { label: 60, title: 150, dueDays: 365, followUps: 10 } as const;
+export const RULE_LIMITS = { label: 60, title: 150, dueDays: 365, followUps: 10, description: 2000, checklist: 20, item: 200 } as const;
 
 /** Editing one decision of the resolution rules; `null` starts a decision of the club's own. */
 export class ResolutionRuleForm extends FormState<Errors> {
@@ -34,7 +36,9 @@ export class ResolutionRuleForm extends FormState<Errors> {
     this.action = rule?.action ?? null;
     this.label = rule?.label ?? '';
     this.majority = rule?.majority ?? 'FREE';
-    this.followUps = rule ? rule.followUps.map((f) => ({ ...f })) : [{ id: null, kind: 'IMPLEMENT', title: 'Umsetzen: {beschluss}', dueDays: 14 }];
+    this.followUps = rule
+      ? rule.followUps.map((f) => ({ ...plainFollowUp(f.kind, f.title, f.dueDays), ...f, checklist: [...(f.checklist ?? [])] }))
+      : [plainFollowUp('IMPLEMENT', 'Umsetzen: {beschluss}', 14)];
     this.enabled = rule?.enabled ?? true;
   }
 
@@ -50,8 +54,45 @@ export class ResolutionRuleForm extends FormState<Errors> {
       .map((k) => ({ value: k, label: FOLLOW_UP_KIND_LABELS[k] }));
   }
 
-  addFollowUp(title: string): void {
-    this.followUps.push({ id: null, kind: 'IMPLEMENT', title, dueDays: 7 });
+  /** Follow-ups may go to the member the decision is about (honorary membership, election, exclusion). */
+  get namesMember(): boolean {
+    return !!this.action && NAMES_MEMBER.includes(this.action);
+  }
+
+  /** A new follow-up to fill in (the dialog adds it with `put`). */
+  newFollowUp(title: string): FollowUpRule {
+    return plainFollowUp('IMPLEMENT', title, 7);
+  }
+
+  /** Replaces the follow-up at `index`, or adds it at the end. */
+  put(index: number | null, followUp: FollowUpRule): void {
+    if (index == null) this.followUps.push(followUp);
+    else this.followUps[index] = followUp;
+    this.#firstStarts();
+  }
+
+  /** Takes one out; answers it, for undo. */
+  remove(index: number): FollowUpRule {
+    const [removed] = this.followUps.splice(index, 1);
+    this.#firstStarts();
+    return removed;
+  }
+
+  /** Puts a removed one back at its place. */
+  restore(index: number, followUp: FollowUpRule): void {
+    this.followUps.splice(Math.min(index, this.followUps.length), 0, followUp);
+    this.#firstStarts();
+  }
+
+  /** New order from the list's keys (the old positions as text). */
+  reorder(keys: readonly string[]): void {
+    this.followUps = keys.map((k) => this.followUps[Number(k)]);
+    this.#firstStarts();
+  }
+
+  /** The first follow-up has nothing to wait for. */
+  #firstStarts(): void {
+    if (this.followUps[0]?.afterPrevious) this.followUps[0] = { ...this.followUps[0], afterPrevious: false };
   }
 
   toRule(): ActionRule {
@@ -60,7 +101,13 @@ export class ResolutionRuleForm extends FormState<Errors> {
       label: this.own ? this.label.trim() : null,
       majority: this.majority === 'FREE' ? null : this.majority,
       enabled: this.enabled,
-      followUps: this.followUps.map((f) => ({ ...f, title: f.title.trim() })),
+      followUps: this.followUps.map((f) => ({
+        ...f,
+        title: f.title.trim(),
+        description: f.description?.trim() || null,
+        checklist: f.checklist.map((t) => t.trim()).filter(Boolean),
+        office: f.assignTo === 'OFFICE' ? f.office : null,
+      })),
     };
   }
 
@@ -73,9 +120,24 @@ export class ResolutionRuleForm extends FormState<Errors> {
       errors.followUps = `Jede Folgeaufgabe braucht einen Titel (bis ${RULE_LIMITS.title} Zeichen).`;
     } else if (this.followUps.some((f) => f.dueDays != null && (!Number.isInteger(f.dueDays) || f.dueDays < 0 || f.dueDays > RULE_LIMITS.dueDays))) {
       errors.followUps = 'Fällig nach 0 bis 365 Tagen, oder leer.';
+    } else {
+      const problem = this.followUps.map((f) => followUpProblem(f, this.namesMember)).find(Boolean);
+      if (problem) errors.followUps = problem;
     }
     return errors;
   }
+}
+
+/** What is wrong with one follow-up's options (server: FollowUpPlanner.validate), or null. */
+export function followUpProblem(f: FollowUpRule, namesMember: boolean): string | null {
+  if (f.assignTo === 'OFFICE' && !f.office) return 'Eine Funktion wählen, die die Aufgabe übernimmt.';
+  if (f.assignTo === 'MEMBER' && !namesMember) return 'Nur Beschlüsse über ein Mitglied können es beauftragen.';
+  if ((f.description?.length ?? 0) > RULE_LIMITS.description) return `Beschreibung bis ${RULE_LIMITS.description} Zeichen.`;
+  const items = f.checklist.map((t) => t.trim()).filter(Boolean);
+  if (items.length > RULE_LIMITS.checklist || items.some((t) => t.length > RULE_LIMITS.item)) {
+    return `Höchstens ${RULE_LIMITS.checklist} Punkte mit je bis ${RULE_LIMITS.item} Zeichen.`;
+  }
+  return null;
 }
 
 /** The whole rules with `rule` in place of the one with its key; a new one (no key yet) goes to the end. Others stay as they are. */

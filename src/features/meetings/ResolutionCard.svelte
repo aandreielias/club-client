@@ -208,7 +208,7 @@
   {/if}
 
   {#if r.status === 'CLOSED' && (r.followUps.length || r.canManage)}
-    <FollowUpList followUps={r.followUps} canAdd={r.canManage} candidates={r.assignable} add={addFollowUp} />
+    <FollowUpList followUps={r.followUps} canAdd={r.canManage} candidates={r.assignable} contextTitle={r.title} add={addFollowUp} />
   {/if}
 
   {#if r.links.length || r.canManage}

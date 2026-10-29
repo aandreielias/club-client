@@ -36,13 +36,44 @@ describe('ResolutionRuleForm', () => {
 
   it('checks the follow-up titles and due days', () => {
     const form = new ResolutionRuleForm(rule('GENERAL'));
-    form.addFollowUp(' ');
+    form.put(null, form.newFollowUp(' '));
     expect(form.errors.followUps).toContain('Titel');
     form.followUps[0].title = 'Umsetzen';
     form.followUps[0].dueDays = 400;
     expect(form.errors.followUps).toContain('365');
     form.followUps[0].dueDays = null;
     expect(form.valid).toBe(true);
+  });
+});
+
+describe('follow-up workflow', () => {
+  it('keeps the first follow-up starting with the decision', () => {
+    const form = new ResolutionRuleForm(rule('GENERAL'));
+    form.put(null, { ...form.newFollowUp('A'), afterPrevious: false });
+    form.put(null, { ...form.newFollowUp('B'), afterPrevious: true });
+    form.reorder(['1', '0']);
+    expect(form.followUps.map((f) => [f.title, f.afterPrevious])).toEqual([
+      ['B', false],
+      ['A', false],
+    ]);
+    const removed = form.remove(0);
+    form.restore(0, removed);
+    expect(form.followUps[0].title).toBe('B');
+  });
+
+  it('checks who does it and the checklist', () => {
+    const form = new ResolutionRuleForm(rule('GENERAL'));
+    form.put(null, { ...form.newFollowUp('A'), assignTo: 'OFFICE' });
+    expect(form.errors.followUps).toContain('Funktion');
+    form.followUps[0] = { ...form.followUps[0], office: 'TREASURER' };
+    expect(form.valid).toBe(true);
+    form.followUps[0] = { ...form.followUps[0], assignTo: 'MEMBER' };
+    expect(form.errors.followUps).toContain('Mitglied');
+    expect(new ResolutionRuleForm(rule('ELECTION')).namesMember).toBe(true);
+    form.followUps[0] = { ...form.followUps[0], assignTo: 'BOARD', checklist: Array.from({ length: 21 }, () => 'x') };
+    expect(form.errors.followUps).toContain('20');
+    form.followUps[0] = { ...form.followUps[0], checklist: [' a ', ''] };
+    expect(form.toRule().followUps.at(-1)!.checklist).toEqual(['a']);
   });
 });
 
