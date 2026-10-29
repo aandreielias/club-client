@@ -32,6 +32,13 @@
     await edit.submit((form) => stored.saved(() => calendarApi.saveType(id, { ...form, label: form.label.trim() })), 'Terminart gespeichert.');
   }
 
+  /** In use, it is archived instead of deleted: kept on old appointments, not offered for new ones. */
+  async function setArchived(archived: boolean) {
+    const { key: _key, inUse: _inUse, ...input } = type!;
+    if (await edit.save.run(() => stored.saved(() => calendarApi.saveType(id, { ...input, archived }))))
+      view.notify(archived ? 'Terminart archiviert.' : 'Terminart wiederhergestellt.');
+  }
+
   function remove(label: string) {
     void stored.remove(label, 'Terminart löschen', 'Terminart gelöscht.', edit.save, () => calendarApi.deleteType(id));
   }
@@ -39,6 +46,9 @@
 
 {#if type}
   <Detail title={edit.form ? 'Terminart bearbeiten' : type.label}>
+    {#snippet meta()}
+      {#if type.archived}<Tag tone="gray">Archiviert</Tag>{/if}
+    {/snippet}
     {#snippet actions()}
       {#if !edit.form && session.hasRole(...ADMIN_BOARD)}
         <Button
@@ -47,27 +57,25 @@
             edit.edit({ label: type.label, hue: type.hue, rides: type.rides, cabins: type.cabins, sort: type.sort, archived: type.archived })}
           >Bearbeiten</Button
         >
-        {#if !type.inUse}<Button variant="danger" icon="delete" onclick={() => remove(type.label)}>Löschen</Button>{/if}
+        {#if type.archived}
+          <Button tooltip="Wieder für neue Termine anbieten" onclick={() => setArchived(false)}>Wiederherstellen</Button>
+        {:else if type.inUse}
+          <Button tooltip="Für neue Termine nicht mehr anbieten; bestehende behalten sie" onclick={() => setArchived(true)}>Archivieren</Button>
+        {:else}
+          <Button variant="danger" icon="delete" onclick={() => remove(type.label)}>Löschen</Button>
+        {/if}
       {/if}
     {/snippet}
 
     {#if edit.form}
       <div class="editing" {@attach edit.track}>
-        <AppointmentTypeEditor
-          form={edit.form}
-          action={edit.save}
-          submitLabel="Speichern"
-          canArchive
-          oncancel={() => edit.cancel()}
-          onsubmit={submit}
-        />
+        <AppointmentTypeEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={submit} />
       </div>
     {:else}
       <dl class="props">
         <dt>Im Kalender</dt>
         <dd>
-          <Tag tone={type.hue}>{type.label}</Tag>{#if type.archived}
-            <Tag tone="gray">Archiviert</Tag>{/if}
+          <Tag tone={type.hue}>{type.label}</Tag>
         </dd>
         <dt>Fahrgemeinschaften</dt>
         <dd>{type.rides ? 'werden angeboten' : 'keine'}</dd>

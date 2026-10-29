@@ -27,5 +27,5 @@
 </script>
 
 <Detail title="Neue Terminart">
-  <AppointmentTypeEditor {form} action={create.save} submitLabel="Anlegen" canArchive={false} oncancel={() => handle.close()} onsubmit={submit} />
+  <AppointmentTypeEditor {form} action={create.save} submitLabel="Anlegen" oncancel={() => handle.close()} onsubmit={submit} />
 </Detail>

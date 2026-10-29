@@ -116,3 +116,17 @@ export interface MailSettings {
   domain: string | null;
   dailyLimit: number;
 }
+
+/** server: MailSettings.personalAddress — "Jürgen Groß" → "juergengross", ASCII only. */
+export function personalLocal(firstName: string, lastName: string): string {
+  return (
+    `${firstName} ${lastName}`
+      .toLowerCase()
+      .replace(/ä/g, 'ae')
+      .replace(/ö/g, 'oe')
+      .replace(/ü/g, 'ue')
+      .replace(/ß/g, 'ss')
+      .normalize('NFD')
+      .replace(/[^a-z0-9]/g, '') || 'mitglied'
+  );
+}

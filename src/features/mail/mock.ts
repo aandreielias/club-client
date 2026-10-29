@@ -8,7 +8,17 @@ import type { LinkedRef, RefKind } from '../../lib/records/refs';
 import { ADMIN_BOARD, type Member, type Role } from '../../lib/types';
 import { settings } from '../../settings';
 import { meetings } from '../meetings/mock';
-import type { AddressEntry, Mail, Mailbox, MailboxAdmin, MailFolder, MailPage, MailRef, MailSettings } from './model';
+import {
+  personalLocal,
+  type AddressEntry,
+  type Mail,
+  type Mailbox,
+  type MailboxAdmin,
+  type MailFolder,
+  type MailPage,
+  type MailRef,
+  type MailSettings,
+} from './model';
 
 const fail = MockServer.fail;
 const limits = settings.mail;
@@ -529,20 +539,6 @@ export class MockMail {
     ];
     return result;
   }
-}
-
-/** server: MailSettings.personalAddress - "Jürgen Groß" → "juergengross", ASCII only */
-function personalLocal(firstName: string, lastName: string): string {
-  return (
-    `${firstName} ${lastName}`
-      .toLowerCase()
-      .replace(/ä/g, 'ae')
-      .replace(/ö/g, 'oe')
-      .replace(/ü/g, 'ue')
-      .replace(/ß/g, 'ss')
-      .normalize('NFD')
-      .replace(/[^a-z0-9]/g, '') || 'mitglied'
-  );
 }
 
 function preview(body: string): string {

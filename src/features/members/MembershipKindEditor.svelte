@@ -11,14 +11,12 @@
     form,
     action,
     submitLabel,
-    canArchive,
     oncancel,
     onsubmit,
   }: {
     form: MembershipKindInput;
     action: Action;
     submitLabel: string;
-    canArchive: boolean;
     oncancel: () => void;
     onsubmit: () => void;
   } = $props();
@@ -35,21 +33,9 @@
   </Field>
   <label class="check"><input type="checkbox" bind:checked={form.votes} /> Stimmrecht in der Mitgliederversammlung</label>
   <label class="check"><input type="checkbox" bind:checked={form.eligible} /> Kann in eine Funktion gewählt werden</label>
-  <Field label="Reihenfolge" hint="Kleinere Zahlen stehen weiter oben.">
-    <input type="number" min="0" max="1000" bind:value={form.sort} class="short" />
-  </Field>
-  {#if canArchive}
-    <label class="check"><input type="checkbox" bind:checked={form.archived} /> Archiviert (für weitere Mitglieder nicht mehr wählbar)</label>
-  {/if}
   <ErrorNote error={action.error} />
   <div class="row">
     <Button type="submit" variant="primary" busy={action.busy}>{submitLabel}</Button>
     <Button variant="ghost" onclick={oncancel}>Abbrechen</Button>
   </div>
 </form>
-
-<style>
-  .short {
-    width: 6rem;
-  }
-</style>

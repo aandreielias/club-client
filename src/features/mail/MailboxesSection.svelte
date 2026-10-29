@@ -2,40 +2,32 @@
   import { bus } from '../../lib/container';
   import { removeRecord } from '../../lib/detail/removeRecord';
   import { Action } from '../../lib/state/Action.svelte';
-  import { background } from '../../lib/state/background';
-  import { Resource } from '../../lib/state/Resource.svelte';
-  import { TOAST } from '../../channels';
-  import Button from '../../ui/Button.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
-  import Field from '../../ui/Field.svelte';
+  import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
   import { ROLE_LABELS } from '../../lib/types';
+  import Field from '../../ui/Field.svelte';
+  import SettingsForm from '../../ui/SettingsForm.svelte';
   import SettingsList from '../../ui/SettingsList.svelte';
+  import type { MailSettings } from './model';
   import { mailApi, mailboxes, mailCenter } from './services';
 
-  /** Einstellungen › Postfächer (admin/board): which club address each member reads, and the shared ones per role; each opens in the window. */
-  background(mailboxes.load());
+  /**
+   * Einstellungen › Postfächer (admin/board): the club's mail domain and daily limit, then which club address each member reads and
+   * the shared ones per role; each opens in the window.
+   */
+  const load = new Action();
+  const reload = () => void load.run(() => mailboxes.load());
+  reload();
 
-  // The club's mail domain and daily limit, above the list.
-  const settings = new Resource(() => mailApi.settings());
-  let domain = $state('');
-  let dailyLimit = $state(200);
-  void settings.load().then(() => {
-    domain = settings.value?.domain ?? '';
-    dailyLimit = settings.value?.dailyLimit ?? 200;
-  });
-  const save = new Action();
-  async function saveSettings(event: SubmitEvent) {
-    event.preventDefault();
-    if (await save.run(async () => settings.set(await mailApi.saveSettings({ domain: domain.trim() || null, dailyLimit })))) {
-      bus.publish(TOAST, { text: 'E-Mail-Einstellungen gespeichert.' });
-    }
-  }
+  const draft = new SettingsDraft<MailSettings>({ domain: null, dailyLimit: 200 });
+  const settingsLoad = new Action();
+  void settingsLoad.run(async () => draft.load(await mailApi.settings()));
 
   const rows = $derived(
     mailboxes.items.map((m) => ({
       key: m.id,
       label: m.address,
       detail: `${m.name} · ${m.memberId ? (m.memberName ?? 'Mitglied') : `alle ${ROLE_LABELS[m.role!]}`}`,
+      tags: m.memberId ? [] : ['geteilt'],
       archived: false,
       inUse: false,
     })),
@@ -47,49 +39,62 @@
         await mailApi.deleteMailbox(id);
         await mailCenter.mailboxes.load();
       },
-      archive: async () => {}, // mailboxes are never archived
+      archive: async () => {}, // never in use: removeRecord deletes
       reload: () => mailboxes.load(),
     };
   }
 </script>
 
 <div class="stack section">
-  <p class="muted">
-    Welche Vereins-Adresse wer in der App liest: persönliche Postfächer gehören einem Mitglied, geteilte (etwa vorstand@) allen mit einer Rolle. Die
-    E-Mails selbst bleiben beim Mail-Anbieter.
-  </p>
-  <form class="stack settings" onsubmit={saveSettings}>
-    <div class="grid-2">
-      <Field
-        label="Mail-Domain des Vereins"
-        hint="Alle Postfach-Adressen enden darauf, etwa mein-verein.at. Neue Mitglieder bekommen vornamenachname@…"
-      >
-        <input bind:value={domain} placeholder="mein-verein.at" autocomplete="off" />
-      </Field>
-      <Field label="Empfänger pro Tag" hint="So viele Empfänger darf ein Mitglied an einem Tag anschreiben (Schutz vor Spam).">
-        <input type="number" min="1" max="10000" bind:value={dailyLimit} class="short" />
-      </Field>
-    </div>
-    <ErrorNote error={save.error} />
-    <div><Button type="submit" busy={save.busy}>Speichern</Button></div>
-  </form>
+  <SettingsForm
+    title="E-Mail des Vereins"
+    intro="Alle Postfach-Adressen enden auf die Mail-Domain; neue Mitglieder bekommen vornamenachname@… von selbst."
+    {draft}
+    onsave={(value) => mailApi.saveSettings({ ...value, domain: value.domain?.trim() || null })}
+  >
+    {#if settingsLoad.error}
+      <p class="muted small">Die Einstellungen konnten nicht geladen werden.</p>
+    {:else}
+      <div class="grid-2">
+        <Field label="Mail-Domain" hint="Etwa mein-verein.at">
+          <input
+            bind:value={() => draft.value.domain ?? '', (v) => (draft.value.domain = v || null)}
+            placeholder="mein-verein.at"
+            autocomplete="off"
+          />
+        </Field>
+        <Field label="Empfänger pro Tag" hint="So viele Empfänger darf ein Mitglied an einem Tag anschreiben (Schutz vor Spam).">
+          <input type="number" min="1" max="10000" bind:value={draft.value.dailyLimit} class="short" />
+        </Field>
+      </div>
+    {/if}
+  </SettingsForm>
 
-  <SettingsList
-    {rows}
-    kind="mailbox"
-    newLabel="Neues Postfach"
-    onremove={(row) => removeRecord(bus, row, 'Postfach', ops(row.key))}
-    onrestore={() => {}}
-  />
+  <section class="stack">
+    <h2>Postfächer</h2>
+    <p class="muted small">
+      Persönliche Postfächer gehören einem Mitglied, geteilte (etwa vorstand@) allen mit einer Rolle. Die E-Mails selbst bleiben beim Mail-Anbieter.
+    </p>
+    <SettingsList
+      {rows}
+      kind="mailbox"
+      newLabel="Neues Postfach"
+      onremove={(row) => removeRecord(bus, row, 'Postfach', ops(row.key))}
+      loading={load.busy && !mailboxes.items.length}
+      error={load.error}
+      onretry={reload}
+      emptyText="Noch keine Postfächer. Zuerst die Mail-Domain eintragen, dann Postfächer anlegen."
+    />
+  </section>
 </div>
 
 <style>
-  p {
+  p,
+  h2 {
     margin: 0;
   }
-  .settings {
-    padding-bottom: var(--space-md);
-    border-bottom: 1px solid var(--color-border);
+  h2 {
+    font-size: var(--font-size-base);
   }
   .short {
     width: 7rem;

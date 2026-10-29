@@ -10,6 +10,8 @@
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
   import type { MailboxForm, MailboxOwner } from './MailboxForm.svelte';
+  import { personalLocal } from './model';
+  import { mailApi } from './services';
 
   /** Form of a mailbox: address, sender name and who reads it (one member, or everyone with a role). */
   let {
@@ -27,6 +29,18 @@
   const roles = (Object.keys(ROLE_LABELS) as Role[]).filter((r) => r !== 'GUEST').map((r) => ({ value: r, label: ROLE_LABELS[r] }));
   const members = new Resource(() => directory.allMembers());
   void members.load();
+  const settings = new Resource(() => mailApi.settings());
+  void settings.load();
+
+  /** Picking a member fills in the usual address and the name, as long as they are still empty. */
+  function pickMember(id: string) {
+    form.memberId = id;
+    const member = members.value?.find((m) => m.id === id);
+    const domain = settings.value?.domain;
+    if (!member) return;
+    if (!form.name.trim()) form.name = `${member.firstName} ${member.lastName}`;
+    if (!form.address.trim() && domain) form.address = `${personalLocal(member.firstName, member.lastName)}@${domain}`;
+  }
   const memberOptions = $derived(
     (members.value ?? [])
       .filter((m) => m.active)
@@ -42,19 +56,32 @@
 </script>
 
 <form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
-  <Field label="Adresse" error={form.error('address')}>
+  <ChoiceGroup name="mailbox-owner" label="Wer liest es" options={owners} bind:value={form.owner} />
+  <Field label={form.owner === 'member' ? 'Mitglied' : 'Rolle'} error={form.error('owner')}>
+    {#if form.owner === 'member'}
+      {#if members.error}
+        <ErrorNote error={members.error} />
+      {:else}
+        <Select
+          options={memberOptions}
+          placeholder={members.value ? 'Mitglied wählen' : 'Mitglieder werden geladen …'}
+          disabled={!members.value}
+          bind:value={() => form.memberId, pickMember}
+        />
+      {/if}
+    {:else}
+      <Select options={roles} placeholder="Rolle wählen" bind:value={form.role} />
+    {/if}
+  </Field>
+  <Field
+    label="Adresse"
+    hint={settings.value?.domain ? `Endet auf @${settings.value.domain}.` : 'Zuerst die Mail-Domain des Vereins eintragen.'}
+    error={form.error('address')}
+  >
     <input type="email" autocomplete="off" bind:value={form.address} required />
   </Field>
   <Field label="Name" hint="Erscheint als Absender, etwa „Vorstand“ oder der Name des Mitglieds." error={form.error('name')}>
     <input bind:value={form.name} maxlength="100" required />
-  </Field>
-  <ChoiceGroup name="mailbox-owner" label="Wer liest es" options={owners} bind:value={form.owner} />
-  <Field label={form.owner === 'member' ? 'Mitglied' : 'Rolle'} error={form.error('owner')}>
-    {#if form.owner === 'member'}
-      <Select options={memberOptions} placeholder="Mitglied wählen" bind:value={form.memberId} />
-    {:else}
-      <Select options={roles} placeholder="Rolle wählen" bind:value={form.role} />
-    {/if}
   </Field>
   <ErrorNote error={action.error} />
   <div class="row">

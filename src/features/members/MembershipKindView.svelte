@@ -35,6 +35,13 @@
     );
   }
 
+  /** In use, it is archived instead of deleted: members keep it, nobody else gets it. */
+  async function setArchived(archived: boolean) {
+    const { key: _key, inUse: _inUse, fixed: _fixed, ...input } = kind!;
+    if (await edit.save.run(() => stored.saved(() => membersApi.saveMembershipKind(id, { ...input, archived }))))
+      view.notify(archived ? 'Mitgliedsart archiviert.' : 'Mitgliedsart wiederhergestellt.');
+  }
+
   function remove(label: string) {
     void stored.remove(label, 'Mitgliedsart löschen', 'Mitgliedsart gelöscht.', edit.save, () => membersApi.deleteMembershipKind(id));
   }
@@ -42,6 +49,10 @@
 
 {#if kind}
   <Detail title={edit.form ? 'Mitgliedsart bearbeiten' : kind.label}>
+    {#snippet meta()}
+      {#if kind.fixed}<Tag tone="blue">fest</Tag>{/if}
+      {#if kind.archived}<Tag tone="gray">Archiviert</Tag>{/if}
+    {/snippet}
     {#snippet actions()}
       {#if !edit.form && session.hasRole(...ADMIN_BOARD)}
         <Button
@@ -49,20 +60,21 @@
           onclick={() => edit.edit({ label: kind.label, votes: kind.votes, eligible: kind.eligible, sort: kind.sort, archived: kind.archived })}
           >Bearbeiten</Button
         >
-        {#if !kind.inUse && !kind.fixed}<Button variant="danger" icon="delete" onclick={() => remove(kind.label)}>Löschen</Button>{/if}
+        {#if kind.fixed}
+          <!-- never archived or deleted: resolutions grant it -->
+        {:else if kind.archived}
+          <Button tooltip="Wieder für weitere Mitglieder anbieten" onclick={() => setArchived(false)}>Wiederherstellen</Button>
+        {:else if kind.inUse}
+          <Button tooltip="Für weitere Mitglieder nicht mehr anbieten; wer sie hat, behält sie" onclick={() => setArchived(true)}>Archivieren</Button>
+        {:else}
+          <Button variant="danger" icon="delete" onclick={() => remove(kind.label)}>Löschen</Button>
+        {/if}
       {/if}
     {/snippet}
 
     {#if edit.form}
       <div class="editing" {@attach edit.track}>
-        <MembershipKindEditor
-          form={edit.form}
-          action={edit.save}
-          submitLabel="Speichern"
-          canArchive={!kind.fixed}
-          oncancel={() => edit.cancel()}
-          onsubmit={submit}
-        />
+        <MembershipKindEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={submit} />
       </div>
     {:else}
       <dl class="props">
@@ -71,10 +83,10 @@
         <dt>Wählbar</dt>
         <dd>{kind.eligible ? 'in eine Funktion' : 'nein'}</dd>
         <dt>Verwendet</dt>
-        <dd>
-          {kind.inUse ? 'Mitglieder haben diese Art.' : 'Noch niemand.'}{#if kind.archived}
-            <Tag tone="gray">Archiviert</Tag>{/if}
-        </dd>
+        <dd>{kind.inUse ? 'Mitglieder haben diese Art.' : 'Noch niemand.'}</dd>
+        {#if kind.fixed}
+          <dt>Vergeben</dt>
+          <dd>durch Beschluss (Ehrenmitgliedschaft verleihen oder aberkennen)</dd>{/if}
       </dl>
     {/if}
   </Detail>

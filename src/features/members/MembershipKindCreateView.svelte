@@ -10,7 +10,13 @@
   /** New membership kind in the window; afterwards the window shows it. */
   let { handle }: { id: string; handle: WindowHandle } = $props();
 
-  const form = $state<MembershipKindInput>({ label: '', votes: false, eligible: false, sort: 10, archived: false });
+  const form = $state<MembershipKindInput>({
+    label: '',
+    votes: false,
+    eligible: false,
+    sort: Math.max(0, ...membershipKinds.items.map((k) => k.sort)) + 10,
+    archived: false,
+  });
   // svelte-ignore state_referenced_locally
   const create = new CreateController(bus, handle, 'Neue Mitgliedsart');
 
@@ -27,5 +33,5 @@
 </script>
 
 <Detail title="Neue Mitgliedsart">
-  <MembershipKindEditor {form} action={create.save} submitLabel="Anlegen" canArchive={false} oncancel={() => handle.close()} onsubmit={submit} />
+  <MembershipKindEditor {form} action={create.save} submitLabel="Anlegen" oncancel={() => handle.close()} onsubmit={submit} />
 </Detail>
