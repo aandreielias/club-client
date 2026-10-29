@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_HOURS, nudge, shortLabel, toFraction, toHours } from './timeline';
+import { fromAmount, MAX_HOURS, nudge, shortLabel, toAmount, toFraction, toHours } from './timeline';
 
 describe('timeline scale', () => {
   it('maps hours to a log axis and back, snapped to hours or days', () => {
@@ -20,5 +20,22 @@ describe('timeline scale', () => {
     expect(nudge(0, -1)).toBe(0);
     expect(nudge(72, 1, true)).toBe(240);
     expect([shortLabel(3), shortLabel(72), shortLabel(336), shortLabel(168)]).toEqual(['3 Std.', '3 Tage', '2 Wochen', '1 Woche']);
+  });
+});
+
+describe('step dialog amounts', () => {
+  it('shows whole days in days and the rest in hours', () => {
+    expect(toAmount(72)).toEqual({ amount: 3, unit: 'days' });
+    expect(toAmount(0)).toEqual({ amount: 0, unit: 'days' });
+    expect(toAmount(30)).toEqual({ amount: 30, unit: 'hours' });
+  });
+
+  it('turns days and hours back into whole hours within a year', () => {
+    expect(fromAmount(3, 'days')).toBe(72);
+    expect(fromAmount(5, 'hours')).toBe(5);
+    expect(fromAmount(1.5, 'days')).toBe(36);
+    expect(fromAmount(-2, 'hours')).toBe(0);
+    expect(fromAmount(400, 'days')).toBe(8760);
+    expect(fromAmount(Number.NaN, 'days')).toBe(0);
   });
 });

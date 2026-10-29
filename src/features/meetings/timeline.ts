@@ -32,3 +32,16 @@ export function shortLabel(hours: number): string {
   if (days % 7 === 0) return `${days / 7} ${days === 7 ? 'Woche' : 'Wochen'}`;
   return `${days} Tage`;
 }
+
+export type TimeUnit = 'hours' | 'days';
+
+/** An offset as the step dialog shows it: whole days in days, everything else in hours. */
+export function toAmount(hours: number): { amount: number; unit: TimeUnit } {
+  return hours % 24 === 0 ? { amount: hours / 24, unit: 'days' } : { amount: hours, unit: 'hours' };
+}
+
+/** Back to hours, whole and within a year; anything not a number counts as 0. */
+export function fromAmount(amount: number, unit: TimeUnit): number {
+  const hours = Math.round((Number(amount) || 0) * (unit === 'days' ? 24 : 1));
+  return Math.max(0, Math.min(8760, hours));
+}

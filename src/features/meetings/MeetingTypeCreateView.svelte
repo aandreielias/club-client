@@ -11,6 +11,7 @@
   let { handle }: { id: string; handle: WindowHandle } = $props();
 
   const form = new MeetingTypeForm(null, resolutionRules.value.items);
+  form.sort = Math.max(0, ...meetingTypes.items.map((t) => t.sort)) + 10;
   // svelte-ignore state_referenced_locally
   const create = new CreateController(bus, handle, 'Neue Sitzungsart');
 
@@ -27,5 +28,5 @@
 </script>
 
 <Detail title="Neue Sitzungsart">
-  <MeetingTypeEditor {form} action={create.save} submitLabel="Anlegen" canArchive={false} oncancel={() => handle.close()} onsubmit={submit} />
+  <MeetingTypeEditor {form} action={create.save} submitLabel="Anlegen" oncancel={() => handle.close()} onsubmit={submit} />
 </Detail>

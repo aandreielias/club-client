@@ -114,6 +114,8 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Allen antworten': { text: 'Dem Absender und allen anderen Empfängern antworten' },
   Verwerfen: { text: 'Die Änderungen nicht speichern und die gespeicherten Werte wieder anzeigen' },
   Fertig: { text: 'Fertig mit Sortieren' },
+  'Schritt entfernen': { text: 'Diesen Schritt aus dem Ablauf nehmen (lässt sich rückgängig machen)' },
+  Übernehmen: { text: 'Den Schritt in den Ablauf übernehmen; gespeichert wird mit der Sitzungsart' },
   Signatur: { text: 'Signatur dieses Postfachs für neue E-Mails festlegen' },
   'Neue Beschlussart': { text: 'Eine eigene Art von Beschluss anlegen, etwa Budget oder Beitragshöhe' },
   'Neues Postfach': { text: 'Vereins-Adresse einem Mitglied oder einer Rolle zuordnen' },

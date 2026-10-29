@@ -16,8 +16,8 @@
     majorities,
     noticeText,
     quorumText,
+    STEP_ANCHOR_TEXT,
     SYSTEM_STEP_LABELS,
-    type MeetingStep,
   } from './model';
   import { meetingPolicy as policy, meetingsApi, meetingTypes, resolutionRules } from './services';
 
@@ -38,14 +38,15 @@
   const type = $derived(stored.record);
   view.title(() => type?.label);
 
-  const ANCHOR_TEXT: Readonly<Record<MeetingStep['anchor'], string>> = {
-    BEFORE_INVITE: 'vor der Einladungsfrist',
-    BEFORE_START: 'vor Beginn',
-    AFTER_END: 'nach dem Ende',
-  };
-
   async function submit() {
     await edit.submit((form) => stored.saved(() => meetingsApi.saveType(id, form.toInput())), 'Sitzungsart gespeichert.');
+  }
+
+  /** In use, it is archived instead of deleted: kept on old meetings, not offered for new ones. */
+  async function setArchived(archived: boolean) {
+    const { key: _key, inUse: _inUse, ...input } = type!;
+    if (await edit.save.run(() => stored.saved(() => meetingsApi.saveType(id, { ...input, archived }))))
+      view.notify(archived ? 'Sitzungsart archiviert.' : 'Sitzungsart wiederhergestellt.');
   }
 
   function remove(label: string) {
@@ -55,19 +56,27 @@
 
 {#if type}
   <Detail title={edit.form ? 'Sitzungsart bearbeiten' : type.label}>
+    {#snippet meta()}
+      {#if type.archived}<Tag tone="gray">Archiviert</Tag>{/if}
+    {/snippet}
     {#snippet actions()}
       {#if !edit.form && policy.canEditTypes()}
         <Button icon="edit" onclick={() => edit.edit(new MeetingTypeForm(type, resolutionRules.value.items))}>Bearbeiten</Button>
-        {#if !type.inUse}<Button variant="danger" icon="delete" onclick={() => remove(type.label)}>Löschen</Button>{/if}
+        {#if type.archived}
+          <Button tooltip="Wieder für neue Sitzungen anbieten" onclick={() => setArchived(false)}>Wiederherstellen</Button>
+        {:else if type.inUse}
+          <Button tooltip="Für neue Sitzungen nicht mehr anbieten; bestehende behalten sie" onclick={() => setArchived(true)}>Archivieren</Button>
+        {:else}
+          <Button variant="danger" icon="delete" onclick={() => remove(type.label)}>Löschen</Button>
+        {/if}
       {/if}
     {/snippet}
 
     {#if edit.form}
       <div class="editing" {@attach edit.track}>
-        <MeetingTypeEditor form={edit.form} action={edit.save} submitLabel="Speichern" canArchive oncancel={() => edit.cancel()} onsubmit={submit} />
+        <MeetingTypeEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={submit} />
       </div>
     {:else}
-      {#if type.archived}<p><Tag tone="gray">Archiviert</Tag></p>{/if}
       <dl class="props">
         <dt>Eingeladen</dt>
         <dd>{type.electorate === 'ASSEMBLY' ? 'Stimmberechtigte Mitglieder' : 'Vorstand'}</dd>
@@ -94,7 +103,7 @@
       <ul class="steps">
         {#each type.steps as step (step.id)}
           <li>
-            <span>{noticeText(step.offsetHours)} {ANCHOR_TEXT[step.anchor]}</span>
+            <span>{noticeText(step.offsetHours)} {STEP_ANCHOR_TEXT[step.anchor]}</span>
             <span>{step.system ? SYSTEM_STEP_LABELS[step.system] : step.title}</span>
             <span class="muted small">{ACTION_KIND_LABELS[step.action]} an {AUDIENCE_LABELS[step.audience]}</span>
           </li>
@@ -109,9 +118,6 @@
 <style>
   .editing {
     display: contents;
-  }
-  p {
-    margin: 0;
   }
   .steps {
     display: grid;

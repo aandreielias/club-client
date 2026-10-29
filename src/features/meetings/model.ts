@@ -55,6 +55,12 @@ export const SYSTEM_STEP_LABELS: Readonly<Record<SystemStep, string>> = {
   INVITE_REMINDER: 'Einladung fällig',
   START_REMINDER: 'Erinnerung an die Sitzung',
 };
+/** "3 Tage vor Beginn": where a step's offset counts from. */
+export const STEP_ANCHOR_TEXT: Readonly<Record<StepAnchor, string>> = {
+  BEFORE_INVITE: 'vor der Einladungsfrist',
+  BEFORE_START: 'vor Beginn',
+  AFTER_END: 'nach dem Ende',
+};
 
 /** server: MeetingsApi.MeetingTypeDto. */
 export interface MeetingType {

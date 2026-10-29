@@ -6,7 +6,7 @@
   /**
    * The steps of a meeting type on one bar: the meeting in the middle, the invitation deadline and everything before it on the left,
    * what follows the end on the right. Markers drag along a logarithmic axis (hours near the meeting, weeks at the edge) and move with
-   * the arrow keys (Shift: a week); clicking one selects it for editing.
+   * the arrow keys (Shift: a week); clicking one (or Enter) opens it, a drag does not.
    */
   let {
     noticeHours,
@@ -35,6 +35,8 @@
   ];
 
   let bar: HTMLDivElement;
+  /** The last pointer press moved a marker: its click does not open the step. */
+  let dragged = false;
 
   /** Hours before the start (negative side) or after the end of a step. */
   function distance(step: MeetingStep): number {
@@ -67,7 +69,13 @@
     const target = event.currentTarget as HTMLElement;
     target.setPointerCapture(event.pointerId);
     target.focus();
-    const move = (e: PointerEvent) => apply(hoursAt(e.clientX, isAfter));
+    dragged = false;
+    const startX = event.clientX;
+    const move = (e: PointerEvent) => {
+      if (Math.abs(e.clientX - startX) < 3 && !dragged) return;
+      dragged = true;
+      apply(hoursAt(e.clientX, isAfter));
+    };
     const up = () => {
       target.removeEventListener('pointermove', move);
       target.removeEventListener('pointerup', up);
@@ -132,10 +140,10 @@
       aria-valuemax={8760}
       aria-valuenow={step.offsetHours}
       aria-valuetext="{shortLabel(hours)} {after(step) ? 'nach dem Ende' : 'vor Beginn'}"
-      onclick={() => onselect(i)}
-      onpointerdown={(e) => (onselect(i), drag(e, after(step), (h) => place(i, h)))}
+      onclick={() => (dragged ? (dragged = false) : onselect(i))}
+      onpointerdown={(e) => drag(e, after(step), (h) => place(i, h))}
       onkeydown={(e) => key(e, hours, after(step), (h) => place(i, h))}
-      {@attach tooltip(`${name(step)}: auswählen, ziehen oder mit den Pfeiltasten verschieben`)}
+      {@attach tooltip(`${name(step)}: öffnen, ziehen oder mit den Pfeiltasten verschieben`)}
     >
       <span class="dot"></span>
       <span class="label">{name(step)}<br /><span class="muted">{shortLabel(hours)}</span></span>

@@ -99,24 +99,18 @@ export class MeetingTypeForm extends FormState<Errors> {
     this.notice = this.noticeUnit === 'days' ? hours / 24 : hours;
   }
 
-  /** A new task on that side; returns its index. */
-  addStep(anchor: StepAnchor): number {
-    const offsetHours = anchor === 'AFTER_END' ? 168 : 72;
-    this.steps.push({
+  /** A new task on that side, not yet added (the step dialog adds it). */
+  newStep(anchor: StepAnchor): MeetingStep {
+    return {
       id: null,
       anchor,
-      offsetHours,
+      offsetHours: anchor === 'AFTER_END' ? 168 : 72,
       action: 'TASK',
       audience: 'BOARD',
       title: anchor === 'AFTER_END' ? 'Nachbereiten: {titel}' : 'Vorbereiten: {titel}',
       body: null,
       system: null,
-    });
-    return this.steps.length - 1;
-  }
-
-  removeStep(index: number): void {
-    this.steps.splice(index, 1);
+    };
   }
 
   get noticeHours(): number {

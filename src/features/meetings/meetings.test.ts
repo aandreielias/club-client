@@ -271,7 +271,7 @@ describe('meeting types', () => {
   it("keep the steps around a meeting: the server reminders plus the club's own", () => {
     const form = new MeetingTypeForm(type('ASSEMBLY'));
     expect(form.steps.map((s) => s.system ?? s.anchor)).toEqual(['INVITE_REMINDER', 'START_REMINDER', 'AFTER_END']);
-    const i = form.addStep('BEFORE_START');
+    const i = form.steps.push(form.newStep('BEFORE_START')) - 1;
     form.steps[i].title = ' ';
     expect(Object.keys(form.errors)).toEqual(['steps']);
     form.steps[i].title = 'Saal buchen: {titel}';

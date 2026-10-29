@@ -35,10 +35,9 @@ describe('MeetingTypeForm', () => {
     [form.dueMonth, form.dueDay] = [2, 30];
     expect(form.errors.dueBy).toBe('Diesen Tag gibt es nicht.');
     [form.dueMonth, form.dueDay] = [2, 28];
-    const index = form.addStep('AFTER_END');
-    form.steps[index].title = '  ';
+    form.steps.push({ ...form.newStep('AFTER_END'), title: '  ' });
     expect(form.errors.steps).toBeDefined();
-    form.removeStep(index);
+    form.steps.pop();
     expect(form.valid).toBe(true);
     expect(form.toInput().dueBy).toBe('02-28');
   });
