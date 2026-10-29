@@ -2,12 +2,14 @@ import { FormState } from '../../lib/state/FormState.svelte';
 import {
   FOLLOW_UP_KIND_LABELS,
   isOwnAction,
+  NO_STATUTES,
   OWN_ACTION,
   type ActionRule,
   type FollowUpRule,
   type Majority,
   type ResolutionAction,
   type ResolutionRules,
+  type StatutesPlace,
 } from './model';
 
 export type RuleMajority = Majority | 'FREE';
@@ -23,9 +25,12 @@ export class ResolutionRuleForm extends FormState<Errors> {
   followUps = $state<FollowUpRule[]>([]);
   readonly action: ResolutionAction | null;
   readonly enabled: boolean;
+  /** Only for the statute change: where the new statutes go (a club-wide setting, saved with the rule). */
+  statutes = $state<StatutesPlace | null>(null);
 
-  constructor(rule: ActionRule | null = null) {
+  constructor(rule: ActionRule | null = null, statutes: StatutesPlace | null = null) {
     super();
+    if (rule?.action === 'STATUTES_CHANGE') this.statutes = { ...(statutes ?? NO_STATUTES) };
     this.action = rule?.action ?? null;
     this.label = rule?.label ?? '';
     this.majority = rule?.majority ?? 'FREE';

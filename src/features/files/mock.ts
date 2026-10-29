@@ -213,6 +213,7 @@ export class MockFiles {
     }
     this.files.save();
     this.changed(folder, file.id, 'UPDATED');
+    mockServer.events.publish({ type: 'files.file-stored', data: { fileId: file.id, folderId: folder.id, newVersion: true } });
     MockActivity.record('FILE', file.id, viewer.member, 'UPDATED', { title: file.name, teamIds: target.teamIds, parentId: target.id });
     if (target !== folder) this.changed(target, file.id, 'UPDATED');
     return file;
@@ -313,6 +314,8 @@ export class MockFiles {
     this.files.data.push(stored);
     this.files.save();
     this.changed(folder, stored.id, 'UPLOADED');
+    // server: FilesApi.FILE_STORED (internal)
+    mockServer.events.publish({ type: 'files.file-stored', data: { fileId: stored.id, folderId: folder.id, newVersion: false } });
     MockActivity.record('FILE', stored.id, viewer.member, 'UPLOADED', { title: stored.name, teamIds: folder.teamIds, parentId: folder.id });
     return stored;
   }

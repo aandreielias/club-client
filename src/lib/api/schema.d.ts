@@ -2466,7 +2466,7 @@ export interface components {
             /** Format: uuid */
             resolutionId: string;
             /** @enum {string} */
-            kind: "IMPLEMENT" | "ENTER_HONORARY" | "REVOKE_HONORARY" | "ENTER_OFFICE" | "NOTIFY_EXCLUSION" | "CONVENE_ASSEMBLY" | "MANUAL";
+            kind: "IMPLEMENT" | "ENTER_HONORARY" | "REVOKE_HONORARY" | "ENTER_OFFICE" | "NOTIFY_EXCLUSION" | "CONVENE_ASSEMBLY" | "UPLOAD_STATUTES" | "MANUAL";
             title: string;
             automatic: boolean;
             /** Format: date-time */
@@ -2722,6 +2722,7 @@ export interface components {
         "at.clubserver.gateway.rest.MeetingsController.ActionRulesBody": {
             items: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.ActionRule"][];
             circular: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.CircularRules"];
+            statutes: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.StatutesPlace"];
         };
         "at.clubserver.meetings.api.MeetingsApi.ActionRule": {
             action: string;
@@ -2741,14 +2742,23 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "IMPLEMENT" | "ENTER_HONORARY" | "REVOKE_HONORARY" | "ENTER_OFFICE" | "NOTIFY_EXCLUSION" | "CONVENE_ASSEMBLY" | "MANUAL";
+            kind: "IMPLEMENT" | "ENTER_HONORARY" | "REVOKE_HONORARY" | "ENTER_OFFICE" | "NOTIFY_EXCLUSION" | "CONVENE_ASSEMBLY" | "UPLOAD_STATUTES" | "MANUAL";
             title: string;
             /** Format: int32 */
             dueDays: number;
         };
+        "at.clubserver.meetings.api.MeetingsApi.StatutesPlace": {
+            /** Format: uuid */
+            fileId: string;
+            fileName: string;
+            /** Format: uuid */
+            folderId: string;
+            folderName: string;
+        };
         "at.clubserver.meetings.api.MeetingsApi.ActionRules": {
             items: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.ActionRule"][];
             circular: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.CircularRules"];
+            statutes: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.StatutesPlace"];
         };
         "at.clubserver.gateway.rest.NotificationsController.PushTokenBody": {
             token: string;

@@ -6,6 +6,7 @@ import {
   actionLabel,
   actions,
   allActions,
+  NO_STATUTES,
   SEEDED_CIRCULAR,
   type ActionRule,
   type Majority,
@@ -17,7 +18,7 @@ import {
 /** The club's resolution rules (server: meetings_action_rule, meetings_setting): fixed majorities, follow-ups, circular votes. */
 export class ResolutionRulesStore extends LiveStore<ResolutionRules> {
   constructor(api: MeetingsApi, bus: EventBus) {
-    super(() => api.resolutionRules(), bus, ACTION_RULES_CHANGED, { items: [], circular: SEEDED_CIRCULAR });
+    super(() => api.resolutionRules(), bus, ACTION_RULES_CHANGED, { items: [], circular: SEEDED_CIRCULAR, statutes: NO_STATUTES });
   }
 
   /** One decision's rule by its key (the settings window). */

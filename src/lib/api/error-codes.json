@@ -9,6 +9,7 @@
   "action-rules.invalid",
   "action-rules.kind-invalid",
   "action-rules.label-invalid",
+  "action-rules.statutes-unknown",
   "action-rules.title-invalid",
   "action-rules.too-many",
   "action-rules.too-many-own",

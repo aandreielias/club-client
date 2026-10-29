@@ -29,8 +29,11 @@ import {
   isOwnAction,
   isAssembly,
   quorumReached,
+  NO_STATUTES,
   SEEDED_CIRCULAR,
   type CircularRules,
+  type ResolutionRules,
+  type StatutesPlace,
   OWN_ACTION,
   type ActionRule,
   isDayOfYear,
@@ -99,7 +102,15 @@ function checkedSteps(value: unknown): MeetingStep[] {
   });
 }
 
-const FOLLOW_UP_KINDS = ['IMPLEMENT', 'ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'NOTIFY_EXCLUSION', 'CONVENE_ASSEMBLY'] as const;
+const FOLLOW_UP_KINDS = [
+  'IMPLEMENT',
+  'ENTER_HONORARY',
+  'REVOKE_HONORARY',
+  'ENTER_OFFICE',
+  'NOTIFY_EXCLUSION',
+  'CONVENE_ASSEMBLY',
+  'UPLOAD_STATUTES',
+] as const;
 const ABOUT_MEMBER: readonly FollowUpKind[] = ['ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'NOTIFY_EXCLUSION'];
 
 const QUORUMS: readonly Quorum[] = ['AT_LEAST_HALF', 'MORE_THAN_HALF', 'AT_LEAST_THREE_QUARTERS'];
@@ -116,7 +127,7 @@ const ACTIONS: readonly ResolutionAction[] = [
 ];
 
 const DAY_MS = 86_400_000;
-const AUTOMATIC: readonly FollowUpKind[] = ['ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'CONVENE_ASSEMBLY'];
+const AUTOMATIC: readonly FollowUpKind[] = ['ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'CONVENE_ASSEMBLY', 'UPLOAD_STATUTES'];
 
 const text = (value: unknown, max: number, code: string): string | null => {
   if (value == null) return null;
@@ -129,6 +140,8 @@ export class MockMeetings {
   readonly rules = new MockTable<ActionRule[]>('resolution-rules', seededRules);
   /** server: meetings_setting */
   readonly circular = new MockTable<CircularRules>('circular-rules', () => ({ ...SEEDED_CIRCULAR }));
+  /** server: meetings_setting.statutes_* */
+  readonly statutes = new MockTable<StatutesPlace>('statutes-place', () => ({ ...NO_STATUTES }));
   readonly types = new MockTable<StoredType[]>('meeting-types', () => structuredClone([...SEEDED_TYPES]));
   readonly meetings = new MockTable<StoredMeeting[]>('meetings', () => seedMeetings());
   readonly resolutions = new MockTable<StoredResolution[]>('resolutions', () => seedResolutions());
@@ -149,6 +162,11 @@ export class MockMeetings {
         this.complete((f) => f.kind === (data.honorary ? 'ENTER_HONORARY' : 'REVOKE_HONORARY') && f.memberId === data.memberId);
       } else if (event.type === 'members.office-assigned') {
         this.complete((f) => f.kind === 'ENTER_OFFICE' && f.memberId === data.memberId && f.office === data.office);
+      } else if (event.type === 'files.file-stored') {
+        const s = this.statutes.data;
+        if (s.fileId ? data.newVersion && s.fileId === data.fileId : s.folderId != null && s.folderId === data.folderId) {
+          this.complete((f) => f.kind === 'UPLOAD_STATUTES');
+        }
       } else if (event.type === 'members.member-erased') {
         // server: MeetingRepository.renameMemberLinks
         for (const record of [...this.meetings.data, ...this.resolutions.data]) {
@@ -201,6 +219,13 @@ export class MockMeetings {
     const name = r.actionMemberId ? this.name(r.actionMemberId) : '';
     const office = r.actionOffice ? this.people.boardSettings.data.offices.find((o) => o.office === r.actionOffice)!.label : '';
     const context = `${r.text ? `${r.text}\n\n` : ''}Beschlossen ${meeting ? `in „${meeting.title}“` : 'im Umlaufverfahren'}: „${r.title}“.`;
+    const s = this.statutes.data;
+    // server: FollowUpPlanner.hint
+    const statutesHint = s.fileId
+      ? `Die neue Fassung als neue Version von „${s.fileName}“ in Dateien hochladen; die Aufgabe erledigt sich dann von selbst.`
+      : s.folderId
+        ? `Die neue Fassung in den Ordner „${s.folderName}“ in Dateien hochladen; die Aufgabe erledigt sich dann von selbst.`
+        : 'Die neue Fassung in Dateien hochladen und die Aufgabe erledigen. Unter Einstellungen › Beschlüsse lässt sich festlegen, wo die Statuten liegen; dann erledigt sie sich von selbst.';
     for (const rule of this.rules.data.find((x) => x.action === action)!.followUps) {
       const about = ABOUT_MEMBER.includes(rule.kind);
       const title = rule.title.replaceAll('{beschluss}', r.title).replaceAll('{mitglied}', name).replaceAll('{funktion}', office);
@@ -216,7 +241,7 @@ export class MockMeetings {
           dueAt: rule.dueDays == null ? null : new Date(Date.now() + rule.dueDays * DAY_MS).toISOString(),
           doneAt: null,
         },
-        context,
+        rule.kind === 'UPLOAD_STATUTES' ? `${context}\n${statutesHint}` : context,
         r.assigneeIds?.length ? r.assigneeIds : meeting ? this.assignable(r, meeting, true) : [],
         null,
       );
@@ -225,7 +250,7 @@ export class MockMeetings {
 
   // --- resolution rules (server: MeetingTypeHandlers.saveRules, FollowUpPlanner.validate) ---
 
-  saveRules(viewer: Member, body: Record<string, any>): { items: ActionRule[]; circular: CircularRules } {
+  saveRules(viewer: Member, body: Record<string, any>): ResolutionRules {
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const items: Record<string, any>[] = Array.isArray(body.items) ? body.items : [];
     // server: FollowUpPlanner.validate — every built-in once, the club's own named; MeetingTypeHandlers.saveRules gives new ones a key
@@ -282,10 +307,28 @@ export class MockMeetings {
     if (stripped.length) this.typesChanged();
     this.rules.data.splice(0, this.rules.data.length, ...rules);
     this.rules.save();
+    const statutes = this.statutesPlace(viewer, body.statutes);
     Object.assign(this.circular.data, { minHours: circular.minHours, quorum: circular.quorum });
     this.circular.save();
+    Object.assign(this.statutes.data, statutes);
+    this.statutes.save();
     mockServer.events.publish({ type: 'meetings.action-rules-changed', data: {} });
-    return { items: this.rules.data, circular: this.circular.data };
+    return { items: this.rules.data, circular: this.circular.data, statutes: this.statutes.data };
+  }
+
+  /** server: MeetingTypeHandlers.statutes — names as the viewer sees them; unchanged ids keep the stored place. */
+  private statutesPlace(viewer: Member, input: Record<string, any> | null | undefined): StatutesPlace {
+    if (!input || (!input.fileId && !input.folderId)) return { ...NO_STATUTES };
+    const stored = this.statutes.data;
+    if ((stored.fileId ?? null) === (input.fileId ?? null) && (stored.folderId ?? null) === (input.folderId ?? null)) return { ...stored };
+    const folders = files.listFolders(viewer);
+    const folder = input.folderId ? (folders.find((f) => f.id === input.folderId) ?? fail(400, 'action-rules.statutes-unknown')) : null;
+    let fileName: string | null = null;
+    if (input.fileId) {
+      const file = folders.flatMap((f) => files.listFiles(viewer, f.id)).find((f) => f.id === input.fileId);
+      fileName = file?.name ?? fail(400, 'action-rules.statutes-unknown');
+    }
+    return { fileId: input.fileId ?? null, fileName, folderId: folder?.id ?? null, folderName: folder?.name ?? null };
   }
 
   private name(id: string): string {
@@ -1085,7 +1128,14 @@ mockServer
   .on(
     'GET',
     '/api/v1/meetings/resolution-rules',
-    (req) => (actor(req), { items: meetings.rules.data.map((r) => ({ ...r, enabled: r.enabled !== false })), circular: meetings.circular.data }),
+    (req) => (
+      actor(req),
+      {
+        items: meetings.rules.data.map((r) => ({ ...r, enabled: r.enabled !== false })),
+        circular: meetings.circular.data,
+        statutes: meetings.statutes.data,
+      }
+    ),
   )
   .on('PUT', '/api/v1/meetings/resolution-rules', (req) => meetings.saveRules(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/meetings/types', (req) => (actor(req), meetings.listTypes()))

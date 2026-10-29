@@ -6,6 +6,7 @@
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
+  import StatutesPlaceField from './StatutesPlaceField.svelte';
   import { RULE_LIMITS, type ResolutionRuleForm, type RuleMajority } from './ResolutionRuleForm.svelte';
 
   /** Form of one decision: its name (the club's own), the majority it fixes, and the tasks that follow when it passes. */
@@ -50,6 +51,14 @@
   <Field label="Mehrheit" hint={MAJORITIES.find((m) => m.value === form.majority)?.hint}>
     <ChoiceGroup name="rule-majority" label="Mehrheit" options={MAJORITIES} bind:value={() => form.majority, (v) => v && (form.majority = v)} />
   </Field>
+
+  {#if form.statutes}
+    <fieldset class="stack">
+      <legend>Neue Statuten</legend>
+      <p class="muted small">Gilt für den ganzen Verein. Ohne Ordner wird die Folgeaufgabe „Neue Statuten hochladen“ von Hand erledigt.</p>
+      <StatutesPlaceField bind:value={form.statutes} />
+    </fieldset>
+  {/if}
 
   <fieldset class="stack">
     <legend>Folgeaufgaben</legend>

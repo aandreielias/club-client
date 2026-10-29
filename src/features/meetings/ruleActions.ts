@@ -1,12 +1,16 @@
 import type { EventBus } from '../../lib/bus';
 import { APP_ERROR, CONFIRM, TOAST } from '../../channels';
-import type { ActionRule, ResolutionAction } from './model';
+import type { ActionRule, ResolutionAction, StatutesPlace } from './model';
 import { withRule } from './ResolutionRuleForm.svelte';
 import { meetingsApi, resolutionRules } from './services';
 
-/** Saves one decision's rule into the club's current rules (others as the server has them now); the store takes the answer. */
-export async function saveRule(rule: ActionRule) {
-  const saved = await meetingsApi.saveResolutionRules(withRule(await meetingsApi.resolutionRules(), rule));
+/**
+ * Saves one decision's rule into the club's current rules (others as the server has them now), with `statutes` when given; the store
+ * takes the answer.
+ */
+export async function saveRule(rule: ActionRule, statutes: StatutesPlace | null = null) {
+  const rules = withRule(await meetingsApi.resolutionRules(), rule);
+  const saved = await meetingsApi.saveResolutionRules(statutes ? { ...rules, statutes } : rules);
   resolutionRules.value = saved;
   return saved;
 }

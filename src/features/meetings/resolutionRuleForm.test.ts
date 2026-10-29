@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ActionRule, ResolutionRules } from './model';
+import { NO_STATUTES, type ActionRule, type ResolutionRules } from './model';
 import { createdAction, ResolutionRuleForm, withRule } from './ResolutionRuleForm.svelte';
 
 const rule = (action: string, extra: Partial<ActionRule> = {}): ActionRule => ({
@@ -10,7 +10,7 @@ const rule = (action: string, extra: Partial<ActionRule> = {}): ActionRule => ({
   followUps: [],
   ...extra,
 });
-const rules = (...items: ActionRule[]): ResolutionRules => ({ items, circular: { minHours: 72, quorum: 'MORE_THAN_HALF' } });
+const rules = (...items: ActionRule[]): ResolutionRules => ({ items, circular: { minHours: 72, quorum: 'MORE_THAN_HALF' }, statutes: NO_STATUTES });
 
 describe('ResolutionRuleForm', () => {
   it('starts a decision of the club own with a name to fill in and one task', () => {

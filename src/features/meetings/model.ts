@@ -261,6 +261,7 @@ export const OWN_ACTION: Partial<Record<FollowUpKind, BuiltinAction>> = {
   ENTER_OFFICE: 'ELECTION',
   NOTIFY_EXCLUSION: 'EXCLUSION',
   CONVENE_ASSEMBLY: 'CONVENE_ASSEMBLY',
+  UPLOAD_STATUTES: 'STATUTES_CHANGE',
 };
 
 export const FOLLOW_UP_KIND_LABELS: Readonly<Record<Exclude<FollowUpKind, 'MANUAL'>, string>> = {
@@ -270,9 +271,11 @@ export const FOLLOW_UP_KIND_LABELS: Readonly<Record<Exclude<FollowUpKind, 'MANUA
   ENTER_OFFICE: 'Funktion eintragen (erledigt sich selbst)',
   NOTIFY_EXCLUSION: 'Ausschluss mitteilen',
   CONVENE_ASSEMBLY: 'Mitgliederversammlung einberufen (erledigt sich selbst)',
+  UPLOAD_STATUTES: 'Neue Statuten hochladen (erledigt sich selbst)',
 };
 
-export type FollowUpKind = 'IMPLEMENT' | 'ENTER_HONORARY' | 'REVOKE_HONORARY' | 'ENTER_OFFICE' | 'NOTIFY_EXCLUSION' | 'CONVENE_ASSEMBLY' | 'MANUAL';
+export type FollowUpKind =
+  'IMPLEMENT' | 'ENTER_HONORARY' | 'REVOKE_HONORARY' | 'ENTER_OFFICE' | 'NOTIFY_EXCLUSION' | 'CONVENE_ASSEMBLY' | 'UPLOAD_STATUTES' | 'MANUAL';
 
 export interface FollowUp {
   id: string;
@@ -346,9 +349,23 @@ export interface CircularRules {
 export const SEEDED_CIRCULAR: CircularRules = { minHours: 72, quorum: 'MORE_THAN_HALF' };
 
 /** server: MeetingsApi.ActionRules. */
+/**
+ * server: MeetingsApi.StatutesPlace — where the club keeps its statutes: a new version of the file finishes "Neue Statuten hochladen";
+ * without a file, any upload into the folder. Names are the last known ones.
+ */
+export interface StatutesPlace {
+  fileId: string | null;
+  fileName: string | null;
+  folderId: string | null;
+  folderName: string | null;
+}
+
+export const NO_STATUTES: StatutesPlace = { fileId: null, fileName: null, folderId: null, folderName: null };
+
 export interface ResolutionRules {
   items: ActionRule[];
   circular: CircularRules;
+  statutes: StatutesPlace;
 }
 
 export interface Resolution {

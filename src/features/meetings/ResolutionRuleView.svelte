@@ -31,7 +31,7 @@
   view.title(() => name || undefined);
 
   async function submit() {
-    await edit.submit((form) => saveRule(form.toRule()), 'Beschlussart gespeichert.');
+    await edit.submit((form) => saveRule(form.toRule(), form.statutes), 'Beschlussart gespeichert.');
   }
 </script>
 
@@ -43,7 +43,7 @@
     {/snippet}
     {#snippet actions()}
       {#if !edit.form && policy.canEditTypes()}
-        <Button icon="edit" onclick={() => edit.edit(new ResolutionRuleForm(rule))}>Bearbeiten</Button>
+        <Button icon="edit" onclick={() => edit.edit(new ResolutionRuleForm(rule, resolutionRules.value.statutes))}>Bearbeiten</Button>
         {#if !rule.enabled}
           <Button tooltip="Wieder anbieten; in den Sitzungsarten neu auswählen" onclick={() => setRuleEnabled(bus, id, true)}>Wiederherstellen</Button
           >
@@ -63,6 +63,13 @@
       <dl class="props">
         <dt>Mehrheit</dt>
         <dd>{rule.majority ? MAJORITY_LABELS[rule.majority] : 'wählt, wer den Beschluss stellt'}</dd>
+        {#if id === 'STATUTES_CHANGE'}
+          {@const s = resolutionRules.value.statutes}
+          <dt>Statuten liegen</dt>
+          <dd>
+            {s.fileId ? `„${s.fileName}“ in „${s.folderName}“` : s.folderId ? `im Ordner „${s.folderName}“` : 'nicht festgelegt'}
+          </dd>
+        {/if}
         <dt>Verfügbar</dt>
         <dd>{rule.enabled ? 'in den Sitzungsarten, die ihn erlauben' : 'nicht mehr; gefasste Beschlüsse bleiben'}</dd>
       </dl>

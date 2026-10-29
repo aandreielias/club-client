@@ -206,7 +206,13 @@ export function seededRules(): ActionRule[] {
       followUps: [f('ENTER_OFFICE', 'Funktion eintragen: {funktion} – {mitglied}', 7)],
       enabled: true,
     },
-    { action: 'STATUTES_CHANGE', label: null, majority: 'TWO_THIRDS', followUps: [], enabled: true },
+    {
+      action: 'STATUTES_CHANGE',
+      label: null,
+      majority: 'TWO_THIRDS',
+      followUps: [{ id: crypto.randomUUID(), kind: 'UPLOAD_STATUTES', title: 'Neue Statuten in Dateien hochladen: {beschluss}', dueDays: 14 }],
+      enabled: true,
+    },
     { action: 'DISSOLUTION', label: null, majority: 'THREE_QUARTERS', followUps: [], enabled: true },
     {
       action: 'EXCLUSION',

@@ -74,6 +74,7 @@ export const MEETING_MESSAGES: MessageCatalog = {
   'resolution.majority-invalid': 'Diese Mehrheit gibt es für diese Sitzung nicht.',
   'resolution.deadline-invalid': 'Nur Umlaufbeschlüsse haben eine Frist.',
   'resolution.deadline-too-short': 'Ein Umlaufbeschluss braucht mehr Zeit zum Abstimmen (Einstellungen › Beschlüsse).',
+  'action-rules.statutes-unknown': 'Diese Datei oder diesen Ordner gibt es nicht (mehr), oder du siehst ihn nicht.',
   'action-rules.circular-invalid': 'Umlaufbeschlüsse laufen 1 bis 720 Stunden und brauchen eine Beteiligung.',
   'resolution.not-draft': 'Die Abstimmung wurde schon geöffnet.',
   'resolution.not-open': 'Die Abstimmung ist nicht offen.',
