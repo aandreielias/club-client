@@ -172,20 +172,40 @@ export function seededRules(): ActionRule[] {
     dueDays,
   });
   return [
-    { action: 'GENERAL', majority: null, followUps: [f('IMPLEMENT', 'Beschluss umsetzen: {beschluss}', null)], enabled: true },
-    { action: 'HONORARY_GRANT', majority: null, followUps: [f('ENTER_HONORARY', 'Ehrenmitgliedschaft eintragen: {mitglied}', 7)], enabled: true },
-    { action: 'HONORARY_REVOKE', majority: null, followUps: [f('REVOKE_HONORARY', 'Ehrenmitgliedschaft aberkennen: {mitglied}', 7)], enabled: true },
-    { action: 'ELECTION', majority: null, followUps: [f('ENTER_OFFICE', 'Funktion eintragen: {funktion} – {mitglied}', 7)], enabled: true },
-    { action: 'STATUTES_CHANGE', majority: 'TWO_THIRDS', followUps: [], enabled: true },
-    { action: 'DISSOLUTION', majority: 'THREE_QUARTERS', followUps: [], enabled: true },
+    { action: 'GENERAL', label: null, majority: null, followUps: [f('IMPLEMENT', 'Beschluss umsetzen: {beschluss}', null)], enabled: true },
+    {
+      action: 'HONORARY_GRANT',
+      label: null,
+      majority: null,
+      followUps: [f('ENTER_HONORARY', 'Ehrenmitgliedschaft eintragen: {mitglied}', 7)],
+      enabled: true,
+    },
+    {
+      action: 'HONORARY_REVOKE',
+      label: null,
+      majority: null,
+      followUps: [f('REVOKE_HONORARY', 'Ehrenmitgliedschaft aberkennen: {mitglied}', 7)],
+      enabled: true,
+    },
+    {
+      action: 'ELECTION',
+      label: null,
+      majority: null,
+      followUps: [f('ENTER_OFFICE', 'Funktion eintragen: {funktion} – {mitglied}', 7)],
+      enabled: true,
+    },
+    { action: 'STATUTES_CHANGE', label: null, majority: 'TWO_THIRDS', followUps: [], enabled: true },
+    { action: 'DISSOLUTION', label: null, majority: 'THREE_QUARTERS', followUps: [], enabled: true },
     {
       action: 'EXCLUSION',
+      label: null,
       majority: null,
       followUps: [f('NOTIFY_EXCLUSION', 'Ausschluss schriftlich mit Gründen mitteilen: {mitglied}', 7)],
       enabled: true,
     },
     {
       action: 'CONVENE_ASSEMBLY',
+      label: null,
       majority: null,
       followUps: [f('CONVENE_ASSEMBLY', 'Außerordentliche Mitgliederversammlung einberufen', 7)],
       enabled: true,
@@ -249,7 +269,7 @@ export function seedMeetings(): StoredMeeting[] {
     return d.toISOString();
   };
   const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
-  const base = { urgency: null, videoUrl: null, openedAt: null, closedAt: null, protocol: null, presence: {}, links: [] };
+  const base = { urgency: null, online: false, videoUrl: null, openedAt: null, closedAt: null, protocol: null, presence: {}, links: [] };
   return [
     {
       ...base,
@@ -260,6 +280,7 @@ export function seedMeetings(): StoredMeeting[] {
       startsAt: ago(15),
       endsAt: ago(-105),
       location: 'Vereinsheim',
+      online: true,
       videoUrl: 'https://meet.example.at/mv',
       status: 'OPEN',
       invitedAt: ago(20 * 24 * 60),
@@ -309,6 +330,7 @@ export function seedMeetings(): StoredMeeting[] {
       startsAt: at(10, 18),
       endsAt: at(10, 19),
       location: null,
+      online: true,
       videoUrl: 'https://meet.example.at/vorstand',
       status: 'INVITED',
       invitedAt: new Date().toISOString(),

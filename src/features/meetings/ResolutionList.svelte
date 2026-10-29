@@ -13,17 +13,7 @@
   import type { OfficeKind } from '../members/MembersApi';
   import { boardSettings } from '../members/services';
   import MemberChips from './MemberChips.svelte';
-  import {
-    ACTION_LABELS,
-    actionNeedsMember,
-    actions,
-    MAJORITY_LABELS,
-    majorities,
-    type Majority,
-    type Meeting,
-    type Resolution,
-    type ResolutionAction,
-  } from './model';
+  import { actionNeedsMember, MAJORITY_LABELS, majorities, type Majority, type Meeting, type Resolution, type ResolutionAction } from './model';
   import ResolutionCard from './ResolutionCard.svelte';
   import { meetingsApi, meetingTypes, resolutionRules } from './services';
 
@@ -43,9 +33,7 @@
   // svelte-ignore state_referenced_locally
   let majority = $state<Majority>(majorityOptions[0].value);
   // svelte-ignore state_referenced_locally
-  const actionOptions = actions(meetingTypes.get(meeting.kind) ?? null)
-    .filter((a) => resolutionRules.enabled(a))
-    .map((a) => ({ value: a, label: ACTION_LABELS[a] }));
+  const actionOptions = resolutionRules.forType(meetingTypes.get(meeting.kind) ?? null).map((a) => ({ value: a, label: resolutionRules.label(a) }));
   let action = $state<ResolutionAction>('GENERAL');
   let actionMemberId = $state('');
   let actionOffice = $state<OfficeKind | ''>('');

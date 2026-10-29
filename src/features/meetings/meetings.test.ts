@@ -53,6 +53,7 @@ describe('MeetingForm', () => {
     expect(form.title).toBe('Außerordentliche Vorstandssitzung');
     expect(Object.keys(form.errors)).toEqual(['urgency']);
     form.urgency = 'Halle gekündigt';
+    form.online = true;
     form.videoUrl = 'http://meet';
     expect(Object.keys(form.errors)).toEqual(['videoUrl']);
     form.videoUrl = '';
@@ -313,5 +314,59 @@ describe('deadlines as tasks', () => {
     expect(tasks.tasks.data.some((t) => t.title === 'Einladen: Fristweg')).toBe(true);
     meetings.delete(member('vorstand'), gone.id);
     expect(tasks.tasks.data.some((t) => t.title === 'Einladen: Fristweg')).toBe(false);
+  });
+});
+
+describe('mock own decisions and online meetings', () => {
+  it('lets the club add its own decision, offered in circular votes and types', () => {
+    directory.confirm(member('vorstand'));
+    const current = { items: structuredClone(meetings.rules.data), circular: { ...meetings.circular.data } };
+    const saved = meetings.saveRules(member('vorstand'), {
+      ...current,
+      items: [
+        ...current.items,
+        {
+          action: null,
+          label: 'Budget',
+          majority: null,
+          enabled: true,
+          followUps: [{ id: null, kind: 'IMPLEMENT', title: 'Budget umsetzen', dueDays: 14 }],
+        },
+      ],
+    });
+    const own = saved.items.find((r) => r.label === 'Budget')!;
+    expect(own.action).toMatch(/^DECISION_[A-Z0-9]{12}$/);
+    const circular = meetings.createResolution(member('vorstand'), null, { title: 'Budget 2027', deadline: inDays(4), action: own.action });
+    expect(circular.action).toBe(own.action);
+    expect(() => meetings.createResolution(member('vorstand'), null, { title: 'x', deadline: inDays(4), action: 'DECISION_NOPE' })).toThrow(
+      expect.objectContaining({ code: 'resolution.action-unknown' }),
+    );
+    // Removed, never deleted; only IMPLEMENT follow-ups and a name.
+    expect(() => meetings.saveRules(member('vorstand'), current)).toThrow(expect.objectContaining({ code: 'action-rules.invalid' }));
+    const wrongKind = saved.items.map((r) => (r === own ? { ...r, followUps: [{ id: null, kind: 'ENTER_OFFICE', title: 'x', dueDays: null }] } : r));
+    expect(() => meetings.saveRules(member('vorstand'), { ...current, items: wrongKind })).toThrow(
+      expect.objectContaining({ code: 'action-rules.kind-invalid' }),
+    );
+  });
+
+  it('lets online members vote in the app once the meeting is online', () => {
+    directory.confirm(member('vorstand'));
+    expect(() =>
+      meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(16), endsAt: inDays(16.1), online: true }),
+    ).toThrow(expect.objectContaining({ code: 'meeting.video-missing' }));
+    const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(16), endsAt: inDays(16.1) });
+    meetings.invite(member('vorstand'), mv.id);
+    expect(() => meetings.setPresence(member('vorstand'), mv.id, 'kassier', 'ONLINE')).toThrow(
+      expect.objectContaining({ code: 'meeting.not-online' }),
+    );
+    const online = meetings.update(member('vorstand'), mv.id, { online: true, videoUrl: 'https://meet.example/mv' });
+    expect(online).toMatchObject({ online: true, videoUrl: 'https://meet.example/mv' });
+    meetings.setPresence(member('vorstand'), mv.id, 'kassier', 'ONLINE');
+    for (const p of online.electorate.filter((e) => e.memberId !== 'kassier')) meetings.setPresence(member('vorstand'), mv.id, p.memberId, 'APP');
+    meetings.open(member('vorstand'), mv.id);
+    const draft = meetings.createResolution(member('vorstand'), mv.id, { title: 'Online', majority: 'SIMPLE' });
+    meetings.openResolution(member('vorstand'), draft.id);
+    expect(meetings.vote(member('kassier'), draft.id, 'YES')).toMatchObject({ voted: true });
+    expect(meetings.update(member('vorstand'), mv.id, { online: false }).videoUrl).toBeNull();
   });
 });

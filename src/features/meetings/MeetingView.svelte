@@ -1,4 +1,5 @@
 <script lang="ts">
+  import MeetingDetailsEditor from './MeetingDetailsEditor.svelte';
   import { bus, commands, session } from '../../lib/container';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
@@ -39,9 +40,13 @@
   type Attendance = PresenceMode | 'NONE';
   const ATTENDANCE: { value: Attendance; label: string; hint: string }[] = [
     { value: 'NONE', label: 'Fehlt', hint: 'Nicht da' },
-    { value: 'APP', label: 'App', hint: 'Da und stimmt in der App ab' },
-    { value: 'ANALOG', label: 'Ohne App', hint: 'Da (im Raum oder per Video), stimmt über die Schriftführung ab' },
+    { value: 'APP', label: 'App', hint: 'Im Raum, stimmt in der App ab' },
+    { value: 'ONLINE', label: 'Online', hint: 'Per Video dabei, stimmt in der App ab' },
+    { value: 'ANALOG', label: 'Ohne App', hint: 'Da, stimmt über die Schriftführung ab' },
   ];
+  /** Online presence only where members may join online. */
+  const attendanceFor = (m: Meeting) => ATTENDANCE.filter((a) => a.value !== 'ONLINE' || m.online);
+  let editingPlace = $state(false);
 
   let protocol = $state('');
   let protocolFor = $state<string | null>(null);
@@ -139,8 +144,16 @@
         <dd>{session.format.dateTime(m.startsAt)} – {session.format.time(m.endsAt)}</dd>
         {#if m.location}<dt>Ort</dt>
           <dd>{m.location}</dd>{/if}
-        {#if m.videoUrl}<dt>Videokonferenz</dt>
-          <dd><a href={m.videoUrl} target="_blank" rel="noopener noreferrer">{m.videoUrl}</a></dd>{/if}
+        {#if m.online && m.videoUrl}<dt>Online</dt>
+          <dd class="join">
+            <Button
+              size="sm"
+              icon="page"
+              tooltip="Videokonferenz in einem neuen Tab öffnen"
+              onclick={() => window.open(m.videoUrl!, '_blank', 'noopener,noreferrer')}>Beitreten</Button
+            >
+            <a href={m.videoUrl} target="_blank" rel="noopener noreferrer" class="muted small">{m.videoUrl}</a>
+          </dd>{/if}
         {#if m.status === 'DRAFT'}
           <dt>Einladen bis</dt>
           <dd class:late={late(m)}>{session.format.dateTime(m.latestInvite)}{late(m) ? ' (Frist vorbei, Termin verschieben)' : ''}</dd>
@@ -151,6 +164,17 @@
         {#if m.urgency}<dt>Dringlichkeit</dt>
           <dd>{m.urgency}</dd>{/if}
       </dl>
+      {#if m.canManage && m.status !== 'CLOSED'}
+        {#if editingPlace}
+          <MeetingDetailsEditor meeting={m} {model} onclose={() => (editingPlace = false)} />
+        {:else}
+          <div>
+            <Button size="sm" icon="edit" tooltip="Ort und Online-Teilnahme ändern" onclick={() => (editingPlace = true)}
+              >Ort & Online bearbeiten</Button
+            >
+          </div>
+        {/if}
+      {/if}
 
       <h2>Tagesordnung</h2>
       {#if m.agenda}<p class="text">{m.agenda}</p>{:else}<p class="muted">Keine Tagesordnung eingetragen.</p>{/if}
@@ -177,7 +201,7 @@
                   name="presence-{person.memberId}"
                   label="Anwesenheit von {person.name}"
                   size="sm"
-                  options={ATTENDANCE}
+                  options={attendanceFor(m)}
                   disabled={model.action.busy}
                   bind:value={() => attendance(m, person.memberId), (v) => v && void model.setPresence(person.memberId, v === 'NONE' ? null : v)}
                 />
@@ -230,6 +254,12 @@
 </AsyncView>
 
 <style>
+  .join {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+  }
   .text {
     margin: 0;
     white-space: pre-wrap;

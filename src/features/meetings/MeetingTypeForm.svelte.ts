@@ -1,7 +1,7 @@
 import { FormState } from '../../lib/state/FormState.svelte';
 import type { OfficeKind } from '../members/MembersApi';
 import {
-  ACTION_LABELS,
+  actionLabel,
   isDayOfYear,
   MAJORITY_LABELS,
   type ActionRule,
@@ -149,8 +149,8 @@ export class MeetingTypeForm extends FormState<Errors> {
     if (this.grace != null && (!Number.isInteger(this.grace) || this.grace < 1 || this.grace > 1440)) errors.grace = '1 bis 1440 Minuten, oder leer.';
     if (!this.majorities.length) errors.majorities = 'Mindestens eine Mehrheit.';
     else {
-      const missing = this.rules.find((r) => r.majority && this.actions.includes(r.action) && !this.majorities.includes(r.majority));
-      if (missing) errors.majorities = `${ACTION_LABELS[missing.action]} braucht ${MAJORITY_LABELS[missing.majority!]}.`;
+      const missing = this.rules.find((r) => r.majority && r.action && this.actions.includes(r.action) && !this.majorities.includes(r.majority));
+      if (missing) errors.majorities = `${actionLabel(missing.action!, this.rules)} braucht ${MAJORITY_LABELS[missing.majority!]}.`;
     }
     if (!this.conveners.length) errors.conveners = 'Mindestens eine Funktion.';
     if (!this.actions.includes('GENERAL')) errors.actions = 'Sonstige Beschlüsse sind immer möglich.';

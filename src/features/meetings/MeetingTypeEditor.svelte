@@ -14,8 +14,6 @@
   import { resolutionRules } from './services';
   import {
     ACTION_KIND_LABELS,
-    ACTION_LABELS,
-    ACTION_ORDER,
     AUDIENCE_LABELS,
     MAJORITY_LABELS,
     noticeText,
@@ -210,7 +208,7 @@
     <ChipToggle
       label="Was Beschlüsse entscheiden dürfen"
       bind:value={form.actions}
-      options={ACTION_ORDER.filter((x) => resolutionRules.enabled(x)).map((a) => ({ value: a, label: ACTION_LABELS[a], disabled: a === 'GENERAL' }))}
+      options={resolutionRules.all().map((a) => ({ value: a, label: resolutionRules.label(a), disabled: a === 'GENERAL' }))}
     />
   </fieldset>
 

@@ -9,6 +9,7 @@
   import Detail from '../../ui/Detail.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
+  import MeetingPlaceFields from './MeetingPlaceFields.svelte';
   import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import Select from '../../ui/Select.svelte';
   import { membersApi } from '../members/services';
@@ -80,14 +81,7 @@
               {late ? 'Die Einladungsfrist ist für diesen Termin schon vorbei: ' : 'Einladen spätestens am '}{session.format.dateTime(deadline)}.
             </p>
           {/if}
-          <div class="grid-2">
-            <Field label="Ort (optional)">
-              <input bind:value={form.location} maxlength="200" />
-            </Field>
-            <Field label="Videokonferenz (optional)" error={form.error('videoUrl')}>
-              <input type="url" bind:value={form.videoUrl} maxlength="500" placeholder="https://" />
-            </Field>
-          </div>
+          <MeetingPlaceFields bind:location={form.location} bind:online={form.online} bind:videoUrl={form.videoUrl} error={form.error('videoUrl')} />
           <Field label="Tagesordnung" hint="Ein Punkt pro Zeile; geht mit der Einladung hinaus." error={form.error('agenda')}>
             <textarea bind:value={form.agenda} rows="6" maxlength="4000"></textarea>
           </Field>

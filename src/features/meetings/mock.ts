@@ -26,6 +26,7 @@ import {
 import {
   actionNeedsMember,
   actions,
+  isOwnAction,
   isAssembly,
   quorumReached,
   SEEDED_CIRCULAR,
@@ -227,25 +228,36 @@ export class MockMeetings {
   saveRules(viewer: Member, body: Record<string, any>): { items: ActionRule[]; circular: CircularRules } {
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const items: Record<string, any>[] = Array.isArray(body.items) ? body.items : [];
+    // server: FollowUpPlanner.validate — every built-in once, the club's own named; MeetingTypeHandlers.saveRules gives new ones a key
+    const keyed: Record<string, any>[] = items.map((i) => ({
+      ...i,
+      action: i.action ?? `DECISION_${crypto.randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()}`,
+    }));
     if (
-      items.length !== ACTIONS.length ||
-      new Set(items.map((i) => i.action)).size !== ACTIONS.length ||
-      items.some((i) => !ACTIONS.includes(i.action))
+      new Set(keyed.map((i) => i.action)).size !== keyed.length ||
+      ACTIONS.some((a) => !keyed.some((i) => i.action === a)) ||
+      keyed.some((i) => !/^[A-Z][A-Z0-9_]{0,59}$/.test(i.action)) ||
+      this.rules.data.some((old) => !keyed.some((i) => i.action === old.action))
     ) {
       fail(400, 'action-rules.invalid');
     }
-    const rules: ActionRule[] = ACTIONS.map((action) => {
-      const item = items.find((i) => i.action === action)!;
+    const rules: ActionRule[] = keyed.map((item) => {
+      const action: ResolutionAction = item.action;
+      const own = isOwnAction(action);
+      const label = typeof item.label === 'string' ? item.label.trim() : null;
+      if (own ? !label || label.length > 60 : label) fail(400, 'action-rules.label-invalid');
       const majority = item.majority ?? null;
       if (majority && !ALL_MAJORITIES.includes(majority)) fail(400, 'action-rules.invalid');
       const followUps: Record<string, any>[] = Array.isArray(item.followUps) ? item.followUps : fail(400, 'action-rules.invalid');
       if (followUps.length > 10) fail(400, 'action-rules.too-many');
       return {
         action,
+        label: own ? label : null,
         majority,
         enabled: action === 'GENERAL' || item.enabled !== false,
         followUps: followUps.map((f) => {
-          if (!FOLLOW_UP_KINDS.includes(f.kind) || (OWN_ACTION[f.kind as FollowUpKind] && OWN_ACTION[f.kind as FollowUpKind] !== action))
+          const automatic = OWN_ACTION[f.kind as FollowUpKind];
+          if (!FOLLOW_UP_KINDS.includes(f.kind) || (automatic && automatic !== action) || (own && f.kind !== 'IMPLEMENT'))
             fail(400, 'action-rules.kind-invalid');
           const title = typeof f.title === 'string' ? f.title.trim() : '';
           if (!title || title.length > 150) fail(400, 'action-rules.title-invalid');
@@ -255,7 +267,7 @@ export class MockMeetings {
       };
     });
     for (const rule of rules) {
-      if (rule.enabled && rule.majority && this.types.data.some((t) => t.actions.includes(rule.action) && !t.majorities.includes(rule.majority!))) {
+      if (rule.enabled && rule.majority && this.types.data.some((t) => t.actions.includes(rule.action!) && !t.majorities.includes(rule.majority!))) {
         fail(400, 'meeting-type.majority-for-action');
       }
     }
@@ -264,7 +276,7 @@ export class MockMeetings {
       fail(400, 'action-rules.circular-invalid');
     }
     // server: MeetingTypeHandlers.saveRules — a removed decision leaves every meeting type that offered it
-    const removed = rules.filter((r) => !r.enabled).map((r) => r.action);
+    const removed = rules.filter((r) => !r.enabled).map((r) => r.action!);
     const stripped = this.types.data.filter((t) => t.actions.some((a) => removed.includes(a)));
     for (const t of stripped) t.actions = t.actions.filter((a) => !removed.includes(a));
     if (stripped.length) this.typesChanged();
@@ -396,6 +408,7 @@ export class MockMeetings {
       startsAt: '',
       endsAt: '',
       location: null,
+      online: false,
       videoUrl: null,
       status: 'DRAFT',
       invitedAt: null,
@@ -477,7 +490,8 @@ export class MockMeetings {
     if (meeting.status === 'DRAFT') fail(409, 'meeting.not-invited');
     if (meeting.status === 'CLOSED') fail(409, 'meeting.closed');
     if (!this.meetingVoters(meeting).includes(memberId)) fail(400, 'meeting.not-voter');
-    if (mode === 'APP' || mode === 'ANALOG') meeting.presence[memberId] = mode;
+    if (mode === 'ONLINE' && !meeting.online) fail(400, 'meeting.not-online');
+    if (mode === 'APP' || mode === 'ANALOG' || mode === 'ONLINE') meeting.presence[memberId] = mode;
     else delete meeting.presence[memberId];
     this.changed(meeting, 'PRESENCE');
     return this.dto(viewer, meeting);
@@ -606,7 +620,9 @@ export class MockMeetings {
     // server: FollowUpPlanner.check
     const action = (body.action ?? 'GENERAL') as ResolutionAction;
     const type = meeting ? this.type(meeting.kind) : null;
-    if (!actions(type).includes(action)) fail(400, 'resolution.action-not-here');
+    if (!this.rules.data.some((r) => r.action === action)) fail(400, 'resolution.action-unknown');
+    if (!actions(type, this.rules.data).includes(action) || this.rules.data.find((r) => r.action === action)!.enabled === false)
+      fail(400, 'resolution.action-not-here');
     if (actionNeedsMember(action) !== !!body.actionMemberId) fail(400, 'resolution.action-member-missing');
     if ((action === 'ELECTION') !== !!body.actionOffice) fail(400, 'resolution.action-office-missing');
     const requested = (meeting ? (body.majority ?? null) : 'SIMPLE') as Majority | null;
@@ -814,7 +830,7 @@ export class MockMeetings {
       analogPresent: this.analogPresent(r),
       ballots: ballots.length,
       voted: ballots.includes(viewer.id),
-      canVote: r.status === 'OPEN' && !ballots.includes(viewer.id) && voters.includes(viewer.id) && mode === 'APP',
+      canVote: r.status === 'OPEN' && !ballots.includes(viewer.id) && voters.includes(viewer.id) && (mode === 'APP' || mode === 'ONLINE'),
       canManage: manages,
       pending:
         !r.meetingId && r.status === 'OPEN' && manages
@@ -855,12 +871,16 @@ export class MockMeetings {
     if (body.urgency !== undefined) m.urgency = text(body.urgency, 1000, 'meeting.urgency-invalid');
     if (body.location !== undefined) m.location = text(body.location, 200, 'meeting.location-too-long');
     if (body.videoUrl !== undefined) m.videoUrl = text(body.videoUrl, 500, 'meeting.video-url-invalid');
+    if (typeof body.online === 'boolean') m.online = body.online;
     if (body.protocol !== undefined) m.protocol = text(body.protocol, 20000, 'meeting.protocol-too-long');
     if (body.startsAt) m.startsAt = new Date(body.startsAt).toISOString();
     if (body.endsAt) m.endsAt = new Date(body.endsAt).toISOString();
     if (!m.startsAt || !m.endsAt || m.endsAt <= m.startsAt) fail(400, 'meeting.times-invalid');
     if (Date.parse(m.endsAt) - Date.parse(m.startsAt) > DAY) fail(400, 'meeting.too-long');
     if (m.videoUrl && !m.videoUrl.startsWith('https://')) fail(400, 'meeting.video-url-invalid');
+    // server: Meeting — online needs its link; without online the link goes
+    if (m.online && !m.videoUrl) fail(400, 'meeting.video-missing');
+    if (!m.online) m.videoUrl = null;
     if (this.type(m.kind).needsReason !== !!m.urgency) fail(400, 'meeting.urgency-invalid');
     this.meetings.save();
   }
@@ -900,9 +920,10 @@ export class MockMeetings {
     if (!majorities.length) fail(400, 'meeting-type.majorities-missing');
     if (!conveners.length || conveners.includes('AUDITOR')) fail(400, 'meeting-type.conveners-invalid');
     if (!actions.includes('GENERAL')) fail(400, 'meeting-type.actions-invalid');
-    if (this.rules.data.some((r) => r.majority && actions.includes(r.action) && !majorities.includes(r.majority)))
+    if (actions.some((a: string) => !this.rules.data.some((r) => r.action === a))) fail(400, 'meeting-type.action-unknown');
+    if (this.rules.data.some((r) => r.majority && actions.includes(r.action!) && !majorities.includes(r.majority)))
       fail(400, 'meeting-type.majority-for-action');
-    if (this.rules.data.some((r) => r.enabled === false && actions.includes(r.action))) fail(400, 'meeting-type.action-removed');
+    if (this.rules.data.some((r) => r.enabled === false && actions.includes(r.action!))) fail(400, 'meeting-type.action-removed');
     const dueBy = body.dueBy || null;
     if (dueBy && (!/^\d{2}-\d{2}$/.test(dueBy) || !isDayOfYear(Number(dueBy.slice(0, 2)), Number(dueBy.slice(3)))))
       fail(400, 'meeting-type.due-by-invalid');

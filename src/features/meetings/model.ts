@@ -8,7 +8,8 @@ import type { OfficeKind } from '../members/MembersApi';
 export type MeetingKind = string;
 export type MeetingStatus = 'DRAFT' | 'INVITED' | 'OPEN' | 'CLOSED';
 /** APP votes in the app; ANALOG is there without the app (in the room or on video). */
-export type PresenceMode = 'APP' | 'ANALOG';
+/** APP: votes in the app; ANALOG: votes through the minute taker; ONLINE: joins by video, votes in the app. */
+export type PresenceMode = 'APP' | 'ANALOG' | 'ONLINE';
 
 export const STATUS_LABELS: Readonly<Record<MeetingStatus, string>> = { DRAFT: 'Entwurf', INVITED: 'Eingeladen', OPEN: 'Läuft', CLOSED: 'Beendet' };
 export const STATUS_TONES: Readonly<Record<MeetingStatus, Hue>> = { DRAFT: 'gray', INVITED: 'blue', OPEN: 'green', CLOSED: 'brown' };
@@ -146,6 +147,8 @@ export interface Meeting {
   startsAt: string;
   endsAt: string;
   location: string | null;
+  /** Members may join through `videoUrl`. */
+  online: boolean;
   videoUrl: string | null;
   status: MeetingStatus;
   invitedAt: string | null;
@@ -175,10 +178,14 @@ export interface Assignable extends Person {
 
 // --- follow-up tasks (server: MeetingsApi.FollowUpDto, FollowUpPlanner) ---
 
-export type ResolutionAction =
+/** The built-in decisions; the club adds its own (`DECISION_…`, named in its ActionRule), which behave like GENERAL. */
+export type BuiltinAction =
   'GENERAL' | 'HONORARY_GRANT' | 'HONORARY_REVOKE' | 'ELECTION' | 'STATUTES_CHANGE' | 'DISSOLUTION' | 'EXCLUSION' | 'CONVENE_ASSEMBLY';
 
-export const ACTION_LABELS: Readonly<Record<ResolutionAction, string>> = {
+/** A decision key: a built-in one or the club's own. */
+export type ResolutionAction = string;
+
+export const ACTION_LABELS: Readonly<Record<BuiltinAction, string>> = {
   GENERAL: 'Sonstiger Beschluss',
   HONORARY_GRANT: 'Ehrenmitgliedschaft verleihen',
   HONORARY_REVOKE: 'Ehrenmitgliedschaft aberkennen',
@@ -189,11 +196,29 @@ export const ACTION_LABELS: Readonly<Record<ResolutionAction, string>> = {
   CONVENE_ASSEMBLY: 'Außerordentliche Mitgliederversammlung einberufen',
 };
 
-export const ACTION_ORDER: readonly ResolutionAction[] = Object.keys(ACTION_LABELS) as ResolutionAction[];
+export const ACTION_ORDER: readonly BuiltinAction[] = Object.keys(ACTION_LABELS) as BuiltinAction[];
 
-/** server: FollowUpPlanner.actions — `null` = circular vote. */
-export function actions(type: MeetingType | null): ResolutionAction[] {
-  return type ? ACTION_ORDER.filter((a) => type.actions.includes(a)) : ['GENERAL', 'CONVENE_ASSEMBLY'];
+/** One of the club's own decisions (server: MeetingsApi.ActionRule.own). */
+export const isOwnAction = (action: ResolutionAction): boolean => !(action in ACTION_LABELS);
+
+/** The decision's name: built-in, or the club's from its rule. */
+export function actionLabel(action: ResolutionAction, rules: readonly ActionRule[] = []): string {
+  return ACTION_LABELS[action as BuiltinAction] ?? rules.find((r) => r.action === action)?.label ?? action;
+}
+
+/** Every decision in display order: built-in ones, then the club's own by name. */
+export function allActions(rules: readonly ActionRule[]): ResolutionAction[] {
+  const own = rules
+    .filter((r) => r.action && isOwnAction(r.action))
+    .sort((a, b) => (a.label ?? '').localeCompare(b.label ?? '', 'de'))
+    .map((r) => r.action!);
+  return [...ACTION_ORDER, ...own];
+}
+
+/** server: FollowUpPlanner.actions — `null` = circular vote (with the club's own decisions). */
+export function actions(type: MeetingType | null, rules: readonly ActionRule[] = []): ResolutionAction[] {
+  const all = allActions(rules);
+  return type ? all.filter((a) => type.actions.includes(a)) : all.filter((a) => a === 'GENERAL' || a === 'CONVENE_ASSEMBLY' || isOwnAction(a));
 }
 
 export const actionNeedsMember = (a: ResolutionAction): boolean => ['HONORARY_GRANT', 'HONORARY_REVOKE', 'ELECTION', 'EXCLUSION'].includes(a);
@@ -207,9 +232,13 @@ export interface FollowUpRule {
   dueDays: number | null;
 }
 
-/** server: MeetingsApi.ActionRule — `majority`: fixed for the decision (statute change, dissolution), null: the resolution picks. */
+/**
+ * server: MeetingsApi.ActionRule — `action` null: a new decision of the club's own (the server gives it a key); `label`: its name (null for
+ * built-ins); `majority`: fixed for the decision (statute change, dissolution), null: the resolution picks.
+ */
 export interface ActionRule {
-  action: ResolutionAction;
+  action: ResolutionAction | null;
+  label: string | null;
   majority: Majority | null;
   followUps: FollowUpRule[];
   /** false: the club removed this decision, no meeting type offers it (GENERAL always stays). */
@@ -217,7 +246,7 @@ export interface ActionRule {
 }
 
 /** Follow-up kinds that finish themselves, each only after its own decision (server: FollowUpPlanner.OWN_ACTION). */
-export const OWN_ACTION: Partial<Record<FollowUpKind, ResolutionAction>> = {
+export const OWN_ACTION: Partial<Record<FollowUpKind, BuiltinAction>> = {
   ENTER_HONORARY: 'HONORARY_GRANT',
   REVOKE_HONORARY: 'HONORARY_REVOKE',
   ENTER_OFFICE: 'ELECTION',
@@ -267,6 +296,7 @@ export interface NewMeeting {
   startsAt: string;
   endsAt: string;
   location: string | null;
+  online: boolean;
   videoUrl: string | null;
 }
 

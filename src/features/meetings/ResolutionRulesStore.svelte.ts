@@ -2,7 +2,16 @@ import type { EventBus } from '../../lib/bus';
 import { LiveStore } from '../../lib/state/LiveStore.svelte';
 import { ACTION_RULES_CHANGED } from './events';
 import type { MeetingsApi } from './MeetingsApi';
-import { ACTION_LABELS, SEEDED_CIRCULAR, type Majority, type ResolutionAction, type ResolutionRules } from './model';
+import {
+  actionLabel,
+  actions,
+  allActions,
+  SEEDED_CIRCULAR,
+  type Majority,
+  type MeetingType,
+  type ResolutionAction,
+  type ResolutionRules,
+} from './model';
 
 /** The club's resolution rules (server: meetings_action_rule, meetings_setting): fixed majorities, follow-ups, circular votes. */
 export class ResolutionRulesStore extends LiveStore<ResolutionRules> {
@@ -20,8 +29,19 @@ export class ResolutionRulesStore extends LiveStore<ResolutionRules> {
     return this.value.items.find((r) => r.action === action)?.enabled !== false;
   }
 
-  /** Removed decisions keep their name on passed resolutions, marked. */
+  /** Removed decisions keep their name on passed resolutions, marked; the club's own carry their name. */
   label(action: ResolutionAction): string {
-    return this.enabled(action) ? ACTION_LABELS[action] : `${ACTION_LABELS[action]} (entfernt)`;
+    const name = actionLabel(action, this.value.items);
+    return this.enabled(action) ? name : `${name} (entfernt)`;
+  }
+
+  /** Every decision the club offers, built-in ones first. */
+  all(): ResolutionAction[] {
+    return allActions(this.value.items).filter((a) => this.enabled(a));
+  }
+
+  /** What a resolution of this meeting type (null: circular vote) may decide. */
+  forType(type: MeetingType | null): ResolutionAction[] {
+    return actions(type, this.value.items).filter((a) => this.enabled(a));
   }
 }

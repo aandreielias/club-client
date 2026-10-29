@@ -2523,8 +2523,7 @@ export interface components {
             canVote: boolean;
             canManage: boolean;
             pending: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"][];
-            /** @enum {string} */
-            action: "GENERAL" | "HONORARY_GRANT" | "HONORARY_REVOKE" | "ELECTION" | "STATUTES_CHANGE" | "DISSOLUTION" | "EXCLUSION" | "CONVENE_ASSEMBLY";
+            action: string;
             actionMember: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"];
             /** @enum {string} */
             actionOffice: "CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR";
@@ -2601,7 +2600,7 @@ export interface components {
         };
         "at.clubserver.gateway.rest.MeetingsController.PresenceBody": {
             /** @enum {string} */
-            mode: "APP" | "ANALOG";
+            mode: "APP" | "ANALOG" | "ONLINE";
         };
         "at.clubserver.meetings.api.MeetingsApi.Assignable": {
             /** Format: uuid */
@@ -2621,6 +2620,7 @@ export interface components {
             /** Format: date-time */
             endsAt: string;
             location: string;
+            online: boolean;
             videoUrl: string;
             /** @enum {string} */
             status: "DRAFT" | "INVITED" | "OPEN" | "CLOSED";
@@ -2647,7 +2647,7 @@ export interface components {
             memberId: string;
             name: string;
             /** @enum {string} */
-            mode: "APP" | "ANALOG";
+            mode: "APP" | "ANALOG" | "ONLINE";
         };
         "at.clubserver.gateway.rest.MeetingsController.MeetingLinksBody": {
             refs: components["schemas"]["at.clubserver.platform.RecordRefs.RefInput"][];
@@ -2668,7 +2668,7 @@ export interface components {
             graceMinutes: number;
             majorities: ("SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS")[];
             conveners: ("CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR")[];
-            actions: ("GENERAL" | "HONORARY_GRANT" | "HONORARY_REVOKE" | "ELECTION" | "STATUTES_CHANGE" | "DISSOLUTION" | "EXCLUSION" | "CONVENE_ASSEMBLY")[];
+            actions: string[];
             needsReason: boolean;
             dueBy: string;
             /** Format: int32 */
@@ -2706,7 +2706,7 @@ export interface components {
             graceMinutes: number;
             majorities: ("SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS")[];
             conveners: ("CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR")[];
-            actions: ("GENERAL" | "HONORARY_GRANT" | "HONORARY_REVOKE" | "ELECTION" | "STATUTES_CHANGE" | "DISSOLUTION" | "EXCLUSION" | "CONVENE_ASSEMBLY")[];
+            actions: string[];
             needsReason: boolean;
             dueBy: string;
             /** Format: int32 */
@@ -2720,8 +2720,8 @@ export interface components {
             circular: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.CircularRules"];
         };
         "at.clubserver.meetings.api.MeetingsApi.ActionRule": {
-            /** @enum {string} */
-            action: "GENERAL" | "HONORARY_GRANT" | "HONORARY_REVOKE" | "ELECTION" | "STATUTES_CHANGE" | "DISSOLUTION" | "EXCLUSION" | "CONVENE_ASSEMBLY";
+            action: string;
+            label: string;
             /** @enum {string} */
             majority: "SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS";
             followUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpRule"][];
@@ -3068,8 +3068,7 @@ export interface components {
             text: string;
             /** Format: date-time */
             deadline: string;
-            /** @enum {string} */
-            action: "GENERAL" | "HONORARY_GRANT" | "HONORARY_REVOKE" | "ELECTION" | "STATUTES_CHANGE" | "DISSOLUTION" | "EXCLUSION" | "CONVENE_ASSEMBLY";
+            action: string;
             assigneeIds: string[];
         };
         "at.clubserver.gateway.rest.ResolutionsController.VoteBody": {
@@ -3158,6 +3157,7 @@ export interface components {
             /** Format: date-time */
             endsAt: string;
             location: string;
+            online: boolean;
             videoUrl: string;
         };
         "at.clubserver.gateway.rest.MeetingsController.ResolutionBody": {
@@ -3165,8 +3165,7 @@ export interface components {
             text: string;
             /** @enum {string} */
             majority: "SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS";
-            /** @enum {string} */
-            action: "GENERAL" | "HONORARY_GRANT" | "HONORARY_REVOKE" | "ELECTION" | "STATUTES_CHANGE" | "DISSOLUTION" | "EXCLUSION" | "CONVENE_ASSEMBLY";
+            action: string;
             /** Format: uuid */
             actionMemberId: string;
             /** @enum {string} */
@@ -3472,6 +3471,7 @@ export interface components {
             /** Format: date-time */
             endsAt: string;
             location: string;
+            online: boolean;
             videoUrl: string;
             protocol: string;
         };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ZonedClock } from '../../lib/time/ZonedClock';
-import { MeetingForm } from './MeetingForm.svelte';
+import { MeetingForm, MeetingPlaceForm } from './MeetingForm.svelte';
 import { MeetingTypeForm } from './MeetingTypeForm.svelte';
 import { SEEDED_TYPES } from './mockSeeds';
 import type { ActionRule, MeetingType } from './model';
@@ -20,7 +20,7 @@ describe('MeetingTypeForm', () => {
   });
 
   it('checks what the server checks', () => {
-    const rules: ActionRule[] = [{ action: 'STATUTES_CHANGE', majority: 'TWO_THIRDS', followUps: [], enabled: true }];
+    const rules: ActionRule[] = [{ action: 'STATUTES_CHANGE', label: null, majority: 'TWO_THIRDS', followUps: [], enabled: true }];
     const form = new MeetingTypeForm(null, rules);
     expect(form.errors).toMatchObject({ label: expect.any(String), invitationLabel: expect.any(String) });
     form.label = 'Klausur';
@@ -68,7 +68,23 @@ describe('MeetingForm', () => {
     expect(form.errors.urgency).toBeDefined();
     form.urgency = 'Halle gekündigt';
     form.end = form.start;
+    form.online = true;
     form.videoUrl = 'http://meet.example';
     expect(Object.keys(form.errors).sort()).toEqual(['end', 'videoUrl']);
+  });
+});
+
+describe('MeetingPlaceForm', () => {
+  it('needs the https link only when members may join online', () => {
+    const form = MeetingPlaceForm.of({ location: 'Halle', online: false, videoUrl: null });
+    expect(form.valid).toBe(true);
+    form.online = true;
+    expect(form.errors.videoUrl).toBe('Link zur Videokonferenz angeben.');
+    form.videoUrl = 'http://x.at';
+    expect(form.errors.videoUrl).toBe('Link mit https:// angeben.');
+    form.videoUrl = 'https://meet.example/mv';
+    expect(form.toPatch()).toEqual({ location: 'Halle', online: true, videoUrl: 'https://meet.example/mv' });
+    form.online = false;
+    expect(form.toPatch().videoUrl).toBe('');
   });
 });
