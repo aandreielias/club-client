@@ -5,6 +5,16 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import { resolveRef } from '../../lib/mock/recordRefs';
 import { appointmentTypes } from '../calendar/mock';
+import {
+  describeTrigger,
+  startedTrigger,
+  TRIGGER_CATALOG,
+  triggerMatches,
+  triggerProblem,
+  type RecordEvent,
+  type Trigger,
+  type TriggerField,
+} from './triggers';
 import { files } from '../files/mock';
 import { defaultTemplate, fill, TEMPLATE_NAME } from './invitationDocument';
 import type { RefKind } from '../../lib/records/refs';
@@ -137,14 +147,8 @@ const ACTIONS: readonly ResolutionAction[] = [
 ];
 
 const DAY_MS = 86_400_000;
+const today = () => new Date().toISOString().slice(0, 10);
 
-/** server: FollowUpPlanner.hint for the targeted kinds */
-const targetHint = (kind: FollowUpKind, name: string): string =>
-  kind === 'UPLOAD_FILE'
-    ? `Erledigt sich von selbst, sobald eine Datei im Ordner „${name}“ gespeichert ist.`
-    : kind === 'INVITE_MEETING'
-      ? `Erledigt sich von selbst, sobald zu einer Sitzung „${name}“ eingeladen ist.`
-      : `Erledigt sich von selbst, sobald ein Termin „${name}“ angelegt ist.`;
 const ASSIGNEES: readonly FollowUpAssignee[] = ['DEFAULT', 'BOARD', 'OFFICE', 'MANAGER', 'MEMBER'];
 
 /** server: FollowUp.checklist — trimmed, empty ones dropped, at most 20 of 200 characters. */
@@ -193,14 +197,8 @@ export class MockMeetings {
         const f = this.followUps.data.find((x) => x.id === data.source.id);
         if (f && !f.doneAt) f.doneAt = new Date().toISOString();
         this.release(data.source.id);
-      } else if (event.type === 'files.file-stored') {
-        const s = this.statutes.data;
-        if (s.fileId ? data.newVersion && s.fileId === data.fileId : s.folderId != null && s.folderId === data.folderId) {
-          this.complete((f) => f.kind === 'UPLOAD_STATUTES');
-        }
-        this.complete((f) => f.kind === 'UPLOAD_FILE' && f.target === data.folderId && !f.pending);
-      } else if (event.type === 'calendar.appointment-created') {
-        this.complete((f) => f.kind === 'CREATE_APPOINTMENT' && f.target === data.type && !f.pending);
+      } else if (event.type === 'platform.record-event') {
+        this.onRecordEvent(data as RecordEvent);
       } else if (event.type === 'members.member-erased') {
         // server: MeetingRepository.renameMemberLinks
         for (const record of [...this.meetings.data, ...this.resolutions.data]) {
@@ -210,6 +208,23 @@ export class MockMeetings {
         this.resolutions.save();
       }
     });
+  }
+
+  /** server: FollowUps.register — statutes stored, and every started TRIGGER follow-up the event fulfils. */
+  private onRecordEvent(e: RecordEvent): void {
+    const s = this.statutes.data;
+    if (
+      e.record === 'FILE' &&
+      (s.fileId ? e.event === 'VERSION' && s.fileId === e.attrs.file : s.folderId != null && s.folderId === e.attrs.folder)
+    ) {
+      this.complete((f) => f.kind === 'UPLOAD_STATUTES');
+    }
+    this.complete((f) => f.kind === 'TRIGGER' && !f.pending && !!f.startedAt && triggerMatches(f.trigger ?? null, e));
+  }
+
+  /** server: platform.RecordEvents — this module's own records (meetings, resolutions). */
+  private recordEvent(e: RecordEvent): void {
+    mockServer.events.publish({ type: 'platform.record-event', data: e });
   }
 
   private complete(match: (f: StoredFollowUp) => boolean): void {
@@ -247,6 +262,8 @@ export class MockMeetings {
       const p = f.pending!;
       f.pending = null;
       f.dueAt = p.dueDays == null ? null : new Date(Date.now() + p.dueDays * DAY_MS).toISOString();
+      f.trigger = startedTrigger(f.trigger ?? null, today());
+      f.startedAt = new Date().toISOString();
       mockServer.events.publish({
         type: 'meetings.follow-up-created',
         data: {
@@ -316,12 +333,13 @@ export class MockMeetings {
           dueAt: waitsFor || rule.dueDays == null ? null : new Date(Date.now() + rule.dueDays * DAY_MS).toISOString(),
           doneAt: null,
           waitsFor,
-          target: rule.target,
+          trigger: waitsFor ? rule.trigger : startedTrigger(rule.trigger, today()),
+          startedAt: waitsFor ? null : new Date().toISOString(),
         },
         rule.kind === 'UPLOAD_STATUTES'
           ? `${description}\n${statutesHint}`
-          : rule.targetName
-            ? `${description}\n${targetHint(rule.kind, rule.targetName)}`
+          : rule.kind === 'TRIGGER'
+            ? `${description}\nErledigt sich von selbst, sobald ${describeTrigger(rule.trigger)}.`
             : description,
         this.assigneesFor(rule, chosen, meeting, r),
         null,
@@ -357,30 +375,54 @@ export class MockMeetings {
         description,
         checklist: cleanChecklist(f.checklist, 'action-rules.checklist-invalid'),
         afterPrevious: f.afterPrevious === true,
-        ...this.target(viewer, kind, f.target, {}),
+        trigger: this.trigger(viewer, kind, f.trigger, {}),
       };
     });
   }
 
-  /** server: FollowUpTargets — the folder, meeting type or appointment type, named as the viewer sees it; known ones keep their name. */
-  private target(
-    viewer: Member,
-    kind: FollowUpRule['kind'],
-    target: unknown,
-    known: Record<string, string>,
-  ): { target: string | null; targetName: string | null } {
-    const value = typeof target === 'string' && target.trim() ? target.trim() : null;
-    if (TARGETED_FOLLOW_UPS.includes(kind) !== !!value) fail(400, 'action-rules.target-invalid');
-    if (!value) return { target: null, targetName: null };
-    const kept = known[`${kind}:${value}`];
-    if (kept) return { target: value, targetName: kept };
-    const name =
-      kind === 'UPLOAD_FILE'
-        ? files.listFolders(viewer).find((f) => f.id === value)?.name
-        : kind === 'INVITE_MEETING'
-          ? this.types.data.find((t) => t.key === value && !t.archived)?.label
-          : appointmentTypes.list().items.find((t) => t.key === value && !t.archived)?.label;
-    return { target: value, targetName: name ?? fail(400, 'action-rules.target-unknown') };
+  /** server: TriggerCatalog.validate + TriggerNames — conditions named as the viewer sees them; known ones keep their label. */
+  private trigger(viewer: Member, kind: FollowUpRule['kind'], given: unknown, known: Record<string, string>): Trigger | null {
+    const t = (given ?? null) as Trigger | null;
+    if (TARGETED_FOLLOW_UPS.includes(kind) !== !!t) fail(400, 'action-rules.target-invalid');
+    if (!t) return null;
+    const entry = TRIGGER_CATALOG[t.record];
+    const conditions = Array.isArray(t.conditions) ? t.conditions : [];
+    if (!entry || !(t.event in entry.events) || new Set(conditions.map((c) => c.field)).size !== conditions.length)
+      fail(400, 'action-rules.trigger-invalid');
+    if (triggerProblem({ ...t, conditions })) fail(400, 'action-rules.trigger-invalid');
+    const name = (field: TriggerField, value: string): string | undefined => {
+      switch (field) {
+        case 'folder':
+          return files.listFolders(viewer).find((f) => f.id === value)?.name;
+        case 'file':
+          return files
+            .listFolders(viewer)
+            .flatMap((f) => files.listFiles(viewer, f.id))
+            .find((f) => f.id === value)?.name;
+        case 'type':
+          return t.record === 'MEETING'
+            ? this.types.data.find((x) => x.key === value && !x.archived)?.label
+            : appointmentTypes.list().items.find((x) => x.key === value && !x.archived)?.label;
+        case 'team':
+          return this.people.teams.data.find((x) => x.id === value)?.name;
+        case 'decision':
+          return this.rules.data.find((r) => r.action === value && r.enabled !== false)?.label ?? (ACTIONS.includes(value) ? value : undefined);
+        case 'office':
+          return this.people.boardSettings.data.offices.find((o) => o.office === value)?.label;
+        case 'kind':
+          return this.people.membershipKinds.data.find((k) => k.key === value && !k.archived)?.label;
+      }
+    };
+    return {
+      record: t.record,
+      event: t.event,
+      window: t.window ?? null,
+      conditions: conditions.map((c) => ({
+        field: c.field,
+        value: c.value.trim(),
+        label: known[`${t.record}:${c.field}:${c.value.trim()}`] ?? name(c.field, c.value.trim()) ?? fail(400, 'action-rules.target-unknown'),
+      })),
+    };
   }
 
   /** server: ResolutionHandlers.assigneesFor */
@@ -424,7 +466,9 @@ export class MockMeetings {
     }
     // server: MeetingTypeHandlers.withTargetNames — targets chosen before keep their names
     const known: Record<string, string> = {};
-    for (const r of this.rules.data) for (const f of r.followUps) if (f.target && f.targetName) known[`${f.kind}:${f.target}`] = f.targetName;
+    for (const r of this.rules.data)
+      for (const f of r.followUps)
+        for (const c of f.trigger?.conditions ?? []) if (c.label) known[`${f.trigger!.record}:${c.field}:${c.value}`] = c.label;
     const rules: ActionRule[] = keyed.map((item) => {
       const action: ResolutionAction = item.action;
       const own = isOwnAction(action);
@@ -470,7 +514,7 @@ export class MockMeetings {
             description,
             checklist,
             afterPrevious,
-            ...this.target(viewer, f.kind, f.target, known),
+            trigger: this.trigger(viewer, f.kind, f.trigger, known),
           };
         }),
       };
@@ -691,7 +735,7 @@ export class MockMeetings {
     this.changed(meeting, 'INVITED');
     // server: an extraordinary general meeting = an assembly that is not the yearly one
     if (isAssembly(this.type(meeting.kind)) && !this.type(meeting.kind).dueBy) this.complete((f) => f.kind === 'CONVENE_ASSEMBLY');
-    this.complete((f) => f.kind === 'INVITE_MEETING' && f.target === meeting.kind && !f.pending);
+    this.recordEvent({ record: 'MEETING', event: 'INVITED', attrs: { type: meeting.kind }, date: null });
     mockServer.events.publish({
       type: 'meetings.meeting-invited',
       data: {
@@ -722,6 +766,7 @@ export class MockMeetings {
     if (this.resolutions.data.some((r) => r.meetingId === id && r.status === 'OPEN')) fail(409, 'meeting.votes-open');
     const text = typeof protocol === 'string' ? protocol.trim() || null : null;
     Object.assign(meeting, { status: 'CLOSED', closedAt: new Date().toISOString(), protocol: text ?? meeting.protocol });
+    this.recordEvent({ record: 'MEETING', event: 'CLOSED', attrs: { type: meeting.kind }, date: null });
     this.changed(meeting, 'CLOSED');
     return this.dto(viewer, meeting);
   }
@@ -865,6 +910,9 @@ export class MockMeetings {
     if (!actions(type, this.rules.data).includes(action) || this.rules.data.find((r) => r.action === action)!.enabled === false)
       fail(400, 'resolution.action-not-here');
     if (actionNeedsMember(action) !== !!body.actionMemberId) fail(400, 'resolution.action-member-missing');
+    // server: ResolutionHandlers.create — only a current honorary member loses it
+    if (action === 'HONORARY_REVOKE' && !this.people.members.data.find((m) => m.id === body.actionMemberId)?.membershipTypes.includes('HONORARY'))
+      fail(400, 'resolution.action-member-missing');
     if ((action === 'ELECTION') !== !!body.actionOffice) fail(400, 'resolution.action-office-missing');
     const requested = (meeting ? (body.majority ?? null) : 'SIMPLE') as Majority | null;
     const implied = this.rules.data.find((x) => x.action === action)?.majority ?? requested;
@@ -1007,6 +1055,7 @@ export class MockMeetings {
     Object.assign(r, { status: 'CLOSED', closedAt: new Date().toISOString(), result });
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null;
     if (result === 'PASSED' && (!meeting || meeting.autoTasks !== false)) this.planFollowUps(r, meeting);
+    if (result === 'PASSED') this.recordEvent({ record: 'RESOLUTION', event: 'PASSED', attrs: { decision: r.action ?? 'GENERAL' }, date: null });
     if (!meeting) tasks.deadlineDone(`deadline-circular-${r.id}`);
     this.resolutionChanged(r, 'CLOSED');
     return r;

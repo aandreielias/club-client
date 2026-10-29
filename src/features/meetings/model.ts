@@ -1,6 +1,7 @@
 import type { LinkedRef } from '../../lib/records/refs';
 import type { Hue } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
+import type { Trigger } from './triggers';
 
 // Mirrors of the club-server meetings DTOs. API times are UTC instants.
 
@@ -268,8 +269,7 @@ export const plainFollowUp = (kind: FollowUpRule['kind'], title: string, dueDays
   description: null,
   checklist: [],
   afterPrevious: false,
-  target: null,
-  targetName: null,
+  trigger: null,
 });
 
 /** server: FollowUpPlanner.NAMES_MEMBER — built-in decisions about one member. */
@@ -290,9 +290,8 @@ export interface FollowUpRule {
   description: string | null;
   checklist: string[];
   afterPrevious: boolean;
-  /** Targeted kinds: the folder (id), meeting type or appointment type (key) it waits for, and its last known name. */
-  target: string | null;
-  targetName: string | null;
+  /** TRIGGER: what finishes it. */
+  trigger: Trigger | null;
 }
 
 /**
@@ -327,13 +326,11 @@ export const FOLLOW_UP_KIND_LABELS: Readonly<Record<Exclude<FollowUpKind, 'MANUA
   NOTIFY_EXCLUSION: 'Von Hand: Ausschluss mitteilen',
   CONVENE_ASSEMBLY: 'Von selbst, wenn zur Mitgliederversammlung eingeladen ist',
   UPLOAD_STATUTES: 'Von selbst, wenn die neuen Statuten hochgeladen sind',
-  UPLOAD_FILE: 'Von selbst, wenn eine Datei in einem Ordner gespeichert ist',
-  INVITE_MEETING: 'Von selbst, wenn zu einer Sitzung einer Art eingeladen ist',
-  CREATE_APPOINTMENT: 'Von selbst, wenn ein Termin einer Art angelegt ist',
+  TRIGGER: 'Von selbst, wenn … (Datei, Termin, Sitzung, Beschluss, Funktion, Mitglied, Turnier)',
 };
 
 /** server: FollowUpKind.targeted — open to every decision and motion, each waiting for a folder, meeting type or appointment type. */
-export const TARGETED_FOLLOW_UPS: readonly FollowUpKind[] = ['UPLOAD_FILE', 'INVITE_MEETING', 'CREATE_APPOINTMENT'];
+export const TARGETED_FOLLOW_UPS: readonly FollowUpKind[] = ['TRIGGER'];
 
 export type FollowUpKind =
   | 'IMPLEMENT'
@@ -343,9 +340,7 @@ export type FollowUpKind =
   | 'NOTIFY_EXCLUSION'
   | 'CONVENE_ASSEMBLY'
   | 'UPLOAD_STATUTES'
-  | 'UPLOAD_FILE'
-  | 'INVITE_MEETING'
-  | 'CREATE_APPOINTMENT'
+  | 'TRIGGER'
   | 'MANUAL';
 
 export interface FollowUp {

@@ -28,6 +28,7 @@
     namesMember={NAMES_MEMBER.includes(action)}
     newTitle={'{beschluss}: '}
     firstMayWait={fromRule.length > 0}
+    allowDates
   />
 </fieldset>
 

@@ -1797,6 +1797,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/meetings/trigger-catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["triggerCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -2466,7 +2482,7 @@ export interface components {
             /** Format: uuid */
             resolutionId: string;
             /** @enum {string} */
-            kind: "IMPLEMENT" | "ENTER_HONORARY" | "REVOKE_HONORARY" | "ENTER_OFFICE" | "NOTIFY_EXCLUSION" | "CONVENE_ASSEMBLY" | "UPLOAD_STATUTES" | "UPLOAD_FILE" | "INVITE_MEETING" | "CREATE_APPOINTMENT" | "MANUAL";
+            kind: "IMPLEMENT" | "ENTER_HONORARY" | "REVOKE_HONORARY" | "ENTER_OFFICE" | "NOTIFY_EXCLUSION" | "CONVENE_ASSEMBLY" | "UPLOAD_STATUTES" | "TRIGGER" | "MANUAL";
             title: string;
             automatic: boolean;
             /** Format: date-time */
@@ -2483,7 +2499,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "IMPLEMENT" | "ENTER_HONORARY" | "REVOKE_HONORARY" | "ENTER_OFFICE" | "NOTIFY_EXCLUSION" | "CONVENE_ASSEMBLY" | "UPLOAD_STATUTES" | "UPLOAD_FILE" | "INVITE_MEETING" | "CREATE_APPOINTMENT" | "MANUAL";
+            kind: "IMPLEMENT" | "ENTER_HONORARY" | "REVOKE_HONORARY" | "ENTER_OFFICE" | "NOTIFY_EXCLUSION" | "CONVENE_ASSEMBLY" | "UPLOAD_STATUTES" | "TRIGGER" | "MANUAL";
             title: string;
             /** Format: int32 */
             dueDays: number;
@@ -2494,8 +2510,7 @@ export interface components {
             description: string;
             checklist: string[];
             afterPrevious: boolean;
-            target: string;
-            targetName: string;
+            trigger: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Trigger"];
         };
         "at.clubserver.meetings.api.MeetingsApi.Person": {
             /** Format: uuid */
@@ -2553,6 +2568,28 @@ export interface components {
             assignable: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"][];
             links: components["schemas"]["at.clubserver.platform.RecordRefs.RefDto"][];
             ownFollowUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpRule"][];
+        };
+        "at.clubserver.meetings.api.MeetingsApi.Trigger": {
+            /** @enum {string} */
+            record: "FILE" | "APPOINTMENT" | "MEETING" | "RESOLUTION" | "OFFICE" | "MEMBER" | "TOURNAMENT";
+            event: string;
+            conditions: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.TriggerCondition"][];
+            window: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.TriggerWindow"];
+        };
+        "at.clubserver.meetings.api.MeetingsApi.TriggerCondition": {
+            field: string;
+            value: string;
+            label: string;
+        };
+        "at.clubserver.meetings.api.MeetingsApi.TriggerWindow": {
+            /** Format: int32 */
+            fromDays: number;
+            /** Format: int32 */
+            toDays: number;
+            /** Format: date */
+            fromDate: string;
+            /** Format: date */
+            toDate: string;
         };
         "at.clubserver.platform.RecordRefs.RefDto": {
             /** @enum {string} */
@@ -3668,6 +3705,16 @@ export interface components {
         };
         "at.clubserver.meetings.api.MeetingsApi.MeetingTypeList": {
             items: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.MeetingTypeDto"][];
+        };
+        "at.clubserver.meetings.api.MeetingsApi.TriggerCatalogDto": {
+            records: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.TriggerRecordDto"][];
+        };
+        "at.clubserver.meetings.api.MeetingsApi.TriggerRecordDto": {
+            /** @enum {string} */
+            record: "FILE" | "APPOINTMENT" | "MEETING" | "RESOLUTION" | "OFFICE" | "MEMBER" | "TOURNAMENT";
+            events: string[];
+            fields: string[];
+            window: boolean;
         };
         "at.clubserver.gateway.rest.MembersController.Me": {
             member: components["schemas"]["at.clubserver.members.api.MembersApi.MemberDto"];
@@ -7851,6 +7898,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.ChangeRequestDto"];
+                };
+            };
+        };
+    };
+    triggerCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.TriggerCatalogDto"];
                 };
             };
         };

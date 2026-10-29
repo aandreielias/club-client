@@ -52,10 +52,12 @@
   const officeOptions = boardSettings.enabled.map((o) => ({ value: o, label: boardSettings.label(o) }));
   const members = new Resource(() => directory.allMembers());
   void members.load();
-  // Elections need someone who may be elected; the other actions any active member.
+  // Elections need someone who may be elected, revoking an honorary membership a current honorary member; the others any active member.
   const memberOptions = $derived(
     (members.value ?? [])
-      .filter((m) => (action === 'ELECTION' ? m.eligible : m.active))
+      .filter((m) =>
+        action === 'ELECTION' ? m.eligible : action === 'HONORARY_REVOKE' ? m.active && m.membershipTypes.includes('HONORARY') : m.active,
+      )
       .map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` })),
   );
   const implied = $derived(resolutionRules.fixedMajority(action));

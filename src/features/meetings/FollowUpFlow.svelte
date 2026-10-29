@@ -22,6 +22,7 @@
     namesMember,
     newTitle,
     firstMayWait = false,
+    allowDates = false,
   }: {
     followUps: FollowUpRule[];
     kinds: readonly { value: FollowUpRule['kind']; label: string }[];
@@ -31,6 +32,8 @@
     newTitle: string;
     /** A motion's list may start after the decision's own last follow-up. */
     firstMayWait?: boolean;
+    /** Triggers may use fixed dates (motions). */
+    allowDates?: boolean;
   } = $props();
 
   // svelte-ignore state_referenced_locally
@@ -113,6 +116,7 @@
   isNew={open?.index == null}
   {kinds}
   {namesMember}
+  {allowDates}
   onapply={apply}
   onremove={remove}
   onclose={() => (open = null)}

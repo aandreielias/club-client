@@ -77,7 +77,10 @@ export type Contract = [
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.Presence'], Presence>,
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.MeetingDto'], Meeting>,
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.Assignable'], Assignable>,
-  Satisfies<With<S['at.clubserver.meetings.api.MeetingsApi.FollowUpRule'], 'kind', FollowUpRule['kind']>, FollowUpRule>, // rules never MANUAL
+  Satisfies<
+    With<With<S['at.clubserver.meetings.api.MeetingsApi.FollowUpRule'], 'kind', FollowUpRule['kind']>, 'trigger', FollowUpRule['trigger']>,
+    FollowUpRule
+  >, // rules never MANUAL; fields as in TRIGGER_CATALOG
   Satisfies<With<S['at.clubserver.meetings.api.MeetingsApi.ActionRule'], 'followUps', FollowUpRule[]>, ActionRule>,
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.CircularRules'], CircularRules>,
   Satisfies<With<S['at.clubserver.meetings.api.MeetingsApi.ResolutionDto'], 'ownFollowUps', FollowUpRule[]>, Resolution>,

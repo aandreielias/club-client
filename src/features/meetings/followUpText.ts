@@ -1,4 +1,5 @@
 import type { FollowUp, FollowUpRule } from './model';
+import { describeTrigger } from './triggers';
 
 /** Who does a follow-up, for its card; `officeLabel` names the office of OFFICE. */
 export function assigneeText(
@@ -31,18 +32,9 @@ export function dueText(dueDays: number | null, afterPrevious = false): string {
 }
 
 /** How it gets done, short: by hand (null), "erledigt sich selbst", or what it waits for. */
-export function doneText(f: Pick<FollowUpRule, 'kind' | 'targetName'>, automatic: boolean): string | null {
-  const name = f.targetName ? `„${f.targetName}“` : '…';
-  switch (f.kind) {
-    case 'UPLOAD_FILE':
-      return `erledigt mit einer Datei in ${name}`;
-    case 'INVITE_MEETING':
-      return `erledigt mit der Einladung zu ${name}`;
-    case 'CREATE_APPOINTMENT':
-      return `erledigt mit einem Termin ${name}`;
-    default:
-      return automatic ? 'erledigt sich selbst' : null;
-  }
+export function doneText(f: Pick<FollowUpRule, 'kind' | 'trigger'>, automatic: boolean): string | null {
+  if (f.kind === 'TRIGGER') return `erledigt, sobald ${describeTrigger(f.trigger)}`;
+  return automatic ? 'erledigt sich selbst' : null;
 }
 
 /** The one-line summary of a follow-up template: who · when due · how it gets done · checklist. */

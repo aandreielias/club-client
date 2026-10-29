@@ -167,6 +167,7 @@ export class MockBoard {
     this.people.offices.save();
     this.people.syncBoardRole(holder);
     mockServer.events.publish({ type: 'members.office-assigned', data: { memberId: holder.id, office } });
+    mockServer.events.publish({ type: 'platform.record-event', data: { record: 'OFFICE', event: 'ASSIGNED', attrs: { office }, date: null } });
     return { ...row, name: this.people.displayName(holder.id) };
   }
 

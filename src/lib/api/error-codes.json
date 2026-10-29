@@ -18,6 +18,7 @@
   "action-rules.title-invalid",
   "action-rules.too-many",
   "action-rules.too-many-own",
+  "action-rules.trigger-invalid",
   "appointment-type.hue-invalid",
   "appointment-type.in-use",
   "appointment-type.key-invalid",

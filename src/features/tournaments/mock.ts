@@ -104,6 +104,7 @@ export class MockTournaments {
     this.teams.data[t.id] = teams;
     this.matches.data[t.id] = [];
     this.save(t.id, 'CREATED');
+    mockServer.events.publish({ type: 'platform.record-event', data: { record: 'TOURNAMENT', event: 'CREATED', attrs: {}, date: null } });
     return this.dto(viewer, t);
   }
 

@@ -6,7 +6,7 @@
   import ListEditor from '../../ui/ListEditor.svelte';
   import Select from '../../ui/Select.svelte';
   import { boardSettings } from '../members/services';
-  import FollowUpTargetField from './FollowUpTargetField.svelte';
+  import TriggerBuilder from './TriggerBuilder.svelte';
   import { ASSIGNEE_LABELS, AUTOMATIC_FOLLOW_UPS, type FollowUpAssignee, type FollowUpRule } from './model';
   import { followUpProblem, RULE_LIMITS } from './ResolutionRuleForm.svelte';
 
@@ -20,6 +20,7 @@
     isNew,
     kinds,
     namesMember,
+    allowDates = false,
     onapply,
     onremove,
     onclose,
@@ -34,6 +35,8 @@
     kinds: readonly { value: FollowUpRule['kind']; label: string }[];
     /** The decision is about one member: the task may go to them. */
     namesMember: boolean;
+    /** A motion's follow-ups may wait for appointments on fixed dates. */
+    allowDates?: boolean;
     onapply: (followUp: FollowUpRule) => void;
     onremove: () => void;
     onclose: () => void;
@@ -107,12 +110,14 @@
         </div>
         <Field label="Erledigt durch" hint={automatic ? 'Niemand muss sie abhaken.' : 'Wer sie übernimmt, hakt sie ab.'}>
           <Select
-            bind:value={() => draft!.kind, (v) => v && v !== draft!.kind && (draft = { ...draft!, kind: v, target: null, targetName: null })}
+            bind:value={() => draft!.kind, (v) => v && v !== draft!.kind && (draft = { ...draft!, kind: v, trigger: null })}
             options={kinds}
             aria-label="Erledigt durch"
           />
         </Field>
-        <FollowUpTargetField kind={draft.kind} bind:target={draft.target} bind:targetName={draft.targetName} />
+        {#if draft.kind === 'TRIGGER'}
+          <TriggerBuilder bind:trigger={draft.trigger} {allowDates} />
+        {/if}
       </section>
 
       <section class="stack part">

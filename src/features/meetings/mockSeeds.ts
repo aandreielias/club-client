@@ -1,6 +1,7 @@
 // Seed data and stored shapes of the meetings mock (server: the meetings migrations' seeds and tables).
 import type { LinkedRef } from '../../lib/records/refs';
 import type { OfficeKind } from '../members/MembersApi';
+import type { Trigger } from './triggers';
 import {
   plainFollowUp,
   type ActionRule,
@@ -257,8 +258,9 @@ export type StoredFollowUp = {
   doneAt: string | null;
   /** server: meetings_follow_up.waits_for */
   waitsFor?: string | null;
-  /** server: meetings_follow_up.target (targeted kinds) */
-  target?: string | null;
+  /** server: meetings_follow_up.trigger / started_at (TRIGGER) */
+  trigger?: Trigger | null;
+  startedAt?: string | null;
   /** server: meetings_follow_up_pending — what its task gets once released. */
   pending?: { description: string | null; checklist: string[]; assignees: string[]; createdBy: string | null; dueDays: number | null } | null;
 };

@@ -604,6 +604,10 @@ export class MockDirectory {
     this.saveMembers();
     if (body.guardianId != null) this.linkGuardian(viewer, member.id, body.guardianId);
     mockServer.events.publish({ type: 'members.member-invited', data: { memberId: member.id }, audience: { roles: ADMIN_BOARD } });
+    mockServer.events.publish({
+      type: 'platform.record-event',
+      data: { record: 'MEMBER', event: 'INVITED', attrs: { kind: member.membershipTypes.join(',') }, date: null },
+    });
     return member;
   }
 
