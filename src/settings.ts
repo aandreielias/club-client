@@ -433,6 +433,8 @@ export const settings = {
   /** Club mailboxes (server: OutgoingMail limits). */
   mail: {
     maxRecipients: 50,
+    /** Default recipients per member and day until admin/board change it (server: mail_setting.daily_limit). */
+    dailyLimit: 200,
     subjectMaxLength: 200,
     /** Formatted text, as HTML (server: OutgoingMail.MAX_HTML). */
     bodyMaxLength: 200_000,

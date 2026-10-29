@@ -26,7 +26,8 @@ const hit = (
   detail: string | null = null,
   at: string | null = null,
   folderId: string | null = null,
-): SearchHit => ({ kind, id, title, detail, at, folderId });
+  windowId: string | null = null,
+): SearchHit => ({ kind, id, title, detail, at, folderId, windowId });
 
 /** server: MemberHandlers.search; non-board members find profiles they may open. */
 function members(req: MockRequest, needle: string, limit: number): SearchHit[] {
@@ -51,7 +52,7 @@ mockServer.on('GET', '/api/v1/search', async (req) => {
   const to = new Date(now + 240 * DAY).toISOString();
   const board = directory.isManager(directory.actor(req));
 
-  const [appointments, tasks, teams, items, places, cups, meetings, folders, files] = await Promise.all([
+  const [appointments, tasks, teams, items, places, cups, meetings, folders, files, mails] = await Promise.all([
     list(req, `/api/v1/appointments?from=${from}&to=${to}`),
     list(req, '/api/v1/tasks?includeDone=true'),
     list(req, `/api/v1/teams?mine=${!board}`),
@@ -62,6 +63,7 @@ mockServer.on('GET', '/api/v1/search', async (req) => {
     list(req, '/api/v1/meetings'),
     list(req, '/api/v1/folders'),
     list(req, `/api/v1/files?q=${encodeURIComponent(query)}&limit=${limit}`),
+    list(req, `/api/v1/mail/search?q=${encodeURIComponent(query)}&limit=${limit}`),
   ]);
   const past = (a: Record<string, any>) => Date.parse(a.endsAt) < now;
   // A weekly series only once, at its next date.
@@ -105,6 +107,7 @@ mockServer.on('GET', '/api/v1/search', async (req) => {
         .slice(0, limit)
         .map((f) => hit('FOLDER', f.id, f.name, null, null, f.parentId)),
       ...files.map((f) => hit('FILE', f.id, f.name, f.folderName, null, f.folderId)),
+      ...mails.map((m) => hit('MAIL', m.mailboxId, m.subject, m.fromName, m.sentAt, null, `${m.mailboxId}:${m.mailId}`)),
     ],
   };
 });

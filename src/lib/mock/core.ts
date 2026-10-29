@@ -647,6 +647,8 @@ export class MockDirectory {
     if (target.roles.includes('ADMIN') && !this.hasRole(viewer, ['ADMIN'])) fail(403, 'access.denied');
     target.active = true;
     this.saveMembers();
+    // server: MembersApi.MEMBER_REACTIVATED (internal, not pushed to clients)
+    mockServer.events.publish({ type: 'members.member-reactivated', data: { memberId }, audience: { members: [] } });
     return this.visibleTo(viewer, target);
   }
 

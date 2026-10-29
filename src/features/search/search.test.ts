@@ -35,9 +35,10 @@ describe('global search (mock)', () => {
   });
 
   it('opens records in the window and folders on the files page', () => {
-    const base = { title: 't', detail: null, at: null, folderId: null };
+    const base = { title: 't', detail: null, at: null, folderId: null, windowId: null };
     expect(hitTarget({ ...base, kind: 'TEAM', id: 'x' })).toEqual({ window: { kind: 'team', id: 'x' } });
     expect(hitTarget({ ...base, kind: 'FILE', id: 'f', folderId: 'd' })).toEqual({ window: { kind: 'file', id: 'd:f' } });
+    expect(hitTarget({ ...base, kind: 'MAIL', id: 'box', windowId: 'box:m1' })).toEqual({ window: { kind: 'mail', id: 'box:m1' } });
     expect(hitTarget({ ...base, kind: 'FOLDER', id: 'd' })).toEqual({ path: '/files/d' });
   });
 });

@@ -17,6 +17,7 @@
   import { settings } from '../../settings';
   import { MailAddressBook } from './MailAddressBook.svelte';
   import { MailForm } from './MailForm.svelte';
+  import { refCodes } from './mailText';
   import RecipientField from './RecipientField.svelte';
   import { mailApi, mailCenter as center } from './services';
 
@@ -55,8 +56,10 @@
     await center.mailboxes.load();
     if (mode === 'new') return void (form = MailForm.compose(boxOf(mailboxId) ?? boxOf(boxes[0]?.id ?? '')));
     const original = await mailApi.get(mailboxId, mailId);
-    if (mode === 'draft') form = MailForm.fromDraft(original, mailboxId);
-    else if (mode === 'forward') form = MailForm.forward(original, boxOf(mailboxId));
+    if (mode === 'draft') {
+      const refs = await mailApi.resolveRefs(refCodes(original.html ?? original.body));
+      form = MailForm.fromDraft(original, mailboxId, new Map(refs.map((r) => [r.code, r])));
+    } else if (mode === 'forward') form = MailForm.forward(original, boxOf(mailboxId));
     else form = MailForm.reply(original, boxOf(mailboxId), mode === 'reply-all');
   });
 
@@ -135,6 +138,12 @@
     } else sent = false;
   }
 
+  /** Closing keeps what was written as a draft; say where to find it. */
+  function close() {
+    if (form && (form.draftId || saveState === 'pending')) bus.publish(TOAST, { text: 'Als Entwurf gespeichert. Unter „Entwürfe“ weiterschreiben.' });
+    handle.close();
+  }
+
   async function discard() {
     sent = true;
     const f = form;
@@ -175,7 +184,7 @@
       {/if}
       <RecipientField label="An" bind:value={f.to} {book} error={f.error('to')} />
       {#if f.showCc}<RecipientField label="Cc" bind:value={f.cc} {book} error={f.error('cc')} />{/if}
-      {#if f.showBcc}<RecipientField label="Bcc (für andere unsichtbar)" bind:value={f.bcc} {book} error={f.error('bcc')} />{/if}
+      {#if f.showBcc}<RecipientField label="Bcc" bind:value={f.bcc} {book} error={f.error('bcc')} />{/if}
       {#if !f.showCc || !f.showBcc}
         <div class="row more">
           {#if !f.showCc}<Button size="sm" variant="ghost" tooltip="Kopie an weitere Empfänger" onclick={() => (f.showCc = true)}>Cc</Button>{/if}
@@ -191,13 +200,7 @@
         <input bind:value={f.subject} maxlength={limits.subjectMaxLength} required />
       </Field>
       <div class="text">
-        <RichTextEditor
-          bind:value={f.html}
-          label="Text"
-          placeholder="Text schreiben. Mitglieder, Termine, Aufgaben … hierher ziehen, um sie an dieser Stelle zu verlinken."
-          records
-          rows={12}
-        />
+        <RichTextEditor bind:value={f.html} label="Text" placeholder="Mailtext" records rows={12} />
         {#if f.error('body')}<span class="error" role="alert">{f.error('body')}</span>{/if}
       </div>
 
@@ -206,7 +209,7 @@
       <ErrorNote error={send.error} />
       <div class="row footer">
         <Button type="submit" variant="primary" icon="send" busy={send.busy}>Senden</Button>
-        <Button variant="ghost" onclick={() => handle.close()}>Schließen</Button>
+        <Button variant="ghost" onclick={close}>Schließen</Button>
         <span class="muted status" aria-live="polite">{status}</span>
         <Button variant="danger" size="sm" icon="delete" tooltip="Diese E-Mail nicht senden und den Entwurf löschen" onclick={discard}
           >Verwerfen</Button

@@ -12,7 +12,7 @@ const shared = (id: string) => mail.list(member(id)).find((b) => b.kind === 'SHA
 
 describe('mock mail', () => {
   it('shows the own mailbox, and the shared board mailbox only to the board', () => {
-    expect(own('spieler').address).toBe('david.spieler@mein-verein.at');
+    expect(own('spieler').address).toBe('davidspieler@mein-verein.at');
     expect(shared('spieler')).toBeUndefined();
     expect(shared('vorstand')?.address).toBe('vorstand@mein-verein.at');
     expect(() => mail.folder(member('spieler'), shared('vorstand')!.id, 'INBOX')).toThrow(
@@ -29,7 +29,7 @@ describe('mock mail', () => {
       { to: ['VORSTAND@mein-verein.at'], cc: ['extern@example.com'], bcc: ['geheim@example.com'], subject: 'Frage', html: '<p>Hallo</p>' },
       'spieler@example.at',
     );
-    const [copy] = mail.folder(member('spieler'), own('spieler').id, 'SENT');
+    const [copy] = mail.folder(member('spieler'), own('spieler').id, 'SENT').items;
     expect(copy.subject).toBe('Frage');
     expect(mail.get(member('spieler'), own('spieler').id, copy.id).bcc).toEqual(['geheim@example.com']);
     expect(shared('kassier')!.unread).toBe(before + 1);
@@ -39,7 +39,7 @@ describe('mock mail', () => {
     expect(notifications.list('spieler', false).items.some((n) => n.kind === 'MAIL' && n.title.includes('David'))).toBe(false);
 
     const box = shared('kassier')!.id;
-    const received = mail.folder(member('kassier'), box, 'INBOX').find((m) => m.subject === 'Frage')!;
+    const received = mail.folder(member('kassier'), box, 'INBOX').items.find((m) => m.subject === 'Frage')!;
     expect(notice.link).toBe(`/mail/${box}/${received.id}`);
     expect(mail.get(member('kassier'), box, received.id)).toMatchObject({ html: '<p>Hallo</p>', body: 'Hallo', bcc: [] });
     expect(mail.get(member('kassier'), box, received.id).read).toBe(true);
@@ -48,9 +48,9 @@ describe('mock mail', () => {
 
   it('moves to the trash first, then deletes for good', () => {
     const box = own('trainer').id;
-    const [first] = mail.folder(member('trainer'), box, 'INBOX');
+    const [first] = mail.folder(member('trainer'), box, 'INBOX').items;
     mail.delete(member('trainer'), box, first.id);
-    expect(mail.folder(member('trainer'), box, 'TRASH').map((m) => m.id)).toContain(first.id);
+    expect(mail.folder(member('trainer'), box, 'TRASH').items.map((m) => m.id)).toContain(first.id);
     mail.delete(member('trainer'), box, first.id);
     expect(() => mail.get(member('trainer'), box, first.id)).toThrow(expect.objectContaining({ code: 'mail.not-found' }));
   });
@@ -115,9 +115,9 @@ describe('mock mail drafts, signatures and address book', () => {
     const draft = mail.saveDraft(member('trainer'), box, null, { to: ['halb'], subject: '', html: '<p>Ent<i>wurf</i></p>' });
     expect(draft).toMatchObject({ folder: 'DRAFTS', to: ['halb'], body: 'Entwurf' });
     expect(mail.saveDraft(member('trainer'), box, draft.id, { to: ['a@b.at'], subject: 'Fertig' }).id).toBe(draft.id);
-    expect(mail.folder(member('trainer'), box, 'DRAFTS')).toHaveLength(1);
+    expect(mail.folder(member('trainer'), box, 'DRAFTS').items).toHaveLength(1);
     mail.send(member('trainer'), box, { to: ['a@b.at'], subject: 'Fertig', html: '<p>x</p>', draftId: draft.id });
-    expect(mail.folder(member('trainer'), box, 'DRAFTS')).toHaveLength(0);
+    expect(mail.folder(member('trainer'), box, 'DRAFTS').items).toHaveLength(0);
   });
 
   it('lets owners sign their mailbox and admin/board the shared one', () => {
@@ -126,5 +126,54 @@ describe('mock mail drafts, signatures and address book', () => {
     expect(board.signatureEditable).toBe(true);
     expect(() => mail.setSignature(member('trainer'), board.id, '<p>x</p>')).toThrow(expect.objectContaining({ code: 'mail.mailbox-not-found' }));
     expect(mail.addressBook().some((e) => e.address === 'vorstand@mein-verein.at' && e.role === 'BOARD')).toBe(true);
+  });
+});
+
+describe('mock mail: read state, paging, limits, lifecycle', () => {
+  it('keeps read state per person in shared mailboxes', () => {
+    const box = shared('kassier')!.id;
+    mail.send(member('spieler'), own('spieler').id, { to: ['vorstand@mein-verein.at'], subject: 'Pro Person', html: '<p>x</p>' });
+    const received = mail.folder(member('kassier'), box, 'INBOX').items.find((m) => m.subject === 'Pro Person')!;
+    mail.get(member('kassier'), box, received.id);
+    expect(mail.folder(member('kassier'), box, 'INBOX').items.find((m) => m.id === received.id)!.read).toBe(true);
+    expect(mail.folder(member('vorstand'), box, 'INBOX').items.find((m) => m.id === received.id)!.read).toBe(false);
+    mail.update(member('kassier'), box, received.id, { read: false });
+    expect(mail.folder(member('kassier'), box, 'INBOX').items.find((m) => m.id === received.id)!.read).toBe(false);
+  });
+
+  it('restores from the trash and pages long folders', () => {
+    const box = own('eltern').id;
+    const [first] = mail.folder(member('eltern'), box, 'INBOX').items;
+    mail.delete(member('eltern'), box, first.id);
+    mail.update(member('eltern'), box, first.id, { folder: 'INBOX' });
+    expect(mail.folder(member('eltern'), box, 'INBOX').items.map((m) => m.id)).toContain(first.id);
+    mail.settings.data.dailyLimit = 1000;
+    for (let i = 0; i < 55; i++) mail.send(member('eltern'), box, { to: ['x@example.com'], subject: `Nr ${i}` });
+    const page = mail.folder(member('eltern'), box, 'SENT');
+    expect(page.items).toHaveLength(50);
+    expect(page.next).not.toBeNull();
+    expect(mail.folder(member('eltern'), box, 'SENT', page.next).items.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('stops at the daily limit', () => {
+    mail.settings.data.dailyLimit = 2;
+    const box = own('neu').id;
+    mail.send(member('neu'), box, { to: ['a@b.at', 'c@d.at'], subject: 'x' });
+    expect(() => mail.send(member('neu'), box, { to: ['e@f.at'], subject: 'y' })).toThrow(expect.objectContaining({ code: 'mail.daily-limit' }));
+    mail.settings.data.dailyLimit = 200;
+  });
+
+  it('gives invited and reactivated members vornamenachname@ and takes it on deactivation', () => {
+    expect(own('spieler').address).toBe('davidspieler@mein-verein.at');
+    mockServer.events.publish({ type: 'members.member-deactivated', data: { memberId: 'spielerin' } });
+    expect(mail.list(member('spielerin'))).toEqual([]);
+    mockServer.events.publish({ type: 'members.member-reactivated', data: { memberId: 'spielerin' } });
+    expect(own('spielerin').address).toBe('lenaspielerin@mein-verein.at');
+  });
+
+  it('finds mails of the own mailboxes only', () => {
+    mail.send(member('trainer'), own('trainer').id, { to: ['davidspieler@mein-verein.at'], subject: 'Suchwort Netz' });
+    expect(mail.search(member('spieler'), 'suchwort', 10).map((h) => h.subject)).toContain('Suchwort Netz');
+    expect(mail.search(member('eltern'), 'suchwort', 10)).toEqual([]);
   });
 });

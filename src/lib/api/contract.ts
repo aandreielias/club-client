@@ -6,7 +6,7 @@ import type { Absence, AbsenceList, Appointment, AppointmentList, Attendance, Ri
 import type { DownloadLink, FileList, FilePatch, FolderList, FolderPatch } from '../../features/files/model';
 import type { Item, ItemList, ItemUse, OwnItem, StockInput } from '../../features/inventory/model';
 import type { GeocodeResult, Location } from '../../features/locations/model';
-import type { AddressEntry, Mail, Mailbox, MailboxAdmin, MailRef, MailSummary } from '../../features/mail/model';
+import type { AddressEntry, Mail, Mailbox, MailboxAdmin, MailPage, MailRef, MailSettings, MailSummary } from '../../features/mail/model';
 import type {
   ActionRule,
   Assignable,
@@ -70,6 +70,8 @@ export type Contract = [
   Satisfies<S['at.clubserver.mail.api.MailApi.MailboxAdminDto'], MailboxAdmin>,
   Satisfies<S['at.clubserver.mail.api.MailApi.AddressEntry'], AddressEntry>,
   Satisfies<S['at.clubserver.mail.api.MailApi.MailRefDto'], MailRef>,
+  Satisfies<S['at.clubserver.mail.api.MailApi.MailList'], MailPage>,
+  Satisfies<S['at.clubserver.mail.api.MailApi.MailSettingsDto'], MailSettings>,
   Satisfies<With<S['at.clubserver.meetings.api.MeetingsApi.MeetingTypeDto'], 'electorate', MeetingType['electorate']>, MeetingType>, // only BOARD/ASSEMBLY (MeetingType validates)
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.Person'], Person>,
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.Presence'], Presence>,

@@ -1,6 +1,6 @@
 // Types of the mail endpoints (server: MailApi).
 
-import type { LinkedRef, RefKind } from '../../lib/records/refs';
+import type { RefKind } from '../../lib/records/refs';
 import type { Role } from '../../lib/types';
 
 export type MailFolder = 'INBOX' | 'DRAFTS' | 'SENT' | 'TRASH';
@@ -37,7 +37,7 @@ export interface MailSummary {
   read: boolean;
 }
 
-/** `body`: plain text; `html`: the formatted text, cleaned by the server (null for plain mails); `bcc` only on own copies; `refs`: a draft's attached records. */
+/** `body`: plain text; `html`: the formatted text, cleaned by the server (null for plain mails), linked records only as codes; `bcc` only on own copies. */
 export interface Mail {
   id: string;
   folder: MailFolder;
@@ -51,7 +51,6 @@ export interface Mail {
   html: string | null;
   sentAt: string;
   read: boolean;
-  refs: LinkedRef[];
 }
 
 /** A club address for the recipient suggestions: personal (`memberId`) or shared by a role. */
@@ -104,4 +103,16 @@ export interface MailRef {
   /** The id its window opens with (files `folderId:fileId`). */
   windowId: string | null;
   title: string | null;
+}
+
+/** A page of a folder, newest first; `next`: cursor of the following page, null on the last one. */
+export interface MailPage {
+  items: MailSummary[];
+  next: string | null;
+}
+
+/** The club's mail domain (every mailbox address ends with it; null until set) and recipients per member and day. */
+export interface MailSettings {
+  domain: string | null;
+  dailyLimit: number;
 }

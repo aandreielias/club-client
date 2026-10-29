@@ -1,7 +1,7 @@
 import { TASK_STATUS_LABELS } from '../../lib/types';
 // Mirror of the club-server search DTOs (gateway SearchController).
 
-export type HitKind = 'APPOINTMENT' | 'TASK' | 'MEMBER' | 'TEAM' | 'ITEM' | 'LOCATION' | 'TOURNAMENT' | 'MEETING' | 'FOLDER' | 'FILE';
+export type HitKind = 'APPOINTMENT' | 'TASK' | 'MEMBER' | 'TEAM' | 'ITEM' | 'LOCATION' | 'TOURNAMENT' | 'MEETING' | 'FOLDER' | 'FILE' | 'MAIL';
 
 export interface SearchHit {
   kind: HitKind;
@@ -13,6 +13,8 @@ export interface SearchHit {
   at: string | null;
   /** Folder of a file; parent of a folder. */
   folderId: string | null;
+  /** What a mail opens with (mailbox:mail); null for other kinds. */
+  windowId: string | null;
 }
 
 export interface SearchResult {
@@ -31,6 +33,7 @@ export const HIT_KINDS: readonly { value: HitKind; label: string }[] = [
   { value: 'MEETING', label: 'Sitzung' },
   { value: 'FOLDER', label: 'Ordner' },
   { value: 'FILE', label: 'Datei' },
+  { value: 'MAIL', label: 'E-Mail' },
 ];
 
 export const kindLabel = (kind: HitKind): string => HIT_KINDS.find((k) => k.value === kind)?.label ?? kind;
@@ -64,5 +67,7 @@ export function hitTarget(hit: SearchHit): { window: { kind: string; id: string 
       return { window: { kind: 'file', id: `${hit.folderId}:${hit.id}` } };
     case 'FOLDER':
       return { path: `/files/${encodeURIComponent(hit.id)}` };
+    case 'MAIL':
+      return { window: { kind: 'mail', id: hit.windowId ?? '' } };
   }
 }

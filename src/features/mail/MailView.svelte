@@ -1,5 +1,6 @@
 <script lang="ts">
   import { bus, pendingDeletes, session } from '../../lib/container';
+  import { TOAST } from '../../channels';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
@@ -61,6 +62,21 @@
     }
   };
 
+  /** Back from the trash where it came from: own mails to Gesendet, others to the Posteingang. */
+  async function restore(from: string) {
+    const own = center.mailboxes.value?.find((b) => b.id === mailboxId)?.address;
+    await mailApi.update(mailboxId, mailId, { folder: from === own ? 'SENT' : 'INBOX' });
+    bus.publish(TOAST, { text: from === own ? 'E-Mail nach „Gesendet“ zurückgelegt.' : 'E-Mail in den Posteingang zurückgelegt.' });
+    await center.mailboxes.load();
+    view.leave();
+  }
+
+  async function markUnread() {
+    await mailApi.update(mailboxId, mailId, { read: false });
+    await center.mailboxes.load();
+    view.leave();
+  }
+
   const compose = (mode: 'reply' | 'reply-all' | 'forward') => view.open('mail-new', `${mode}:${mailboxId}:${mailId}`);
 
   function destroy(inTrash: boolean) {
@@ -85,7 +101,11 @@
           <Button onclick={() => compose('reply-all')}>Allen antworten</Button>
         {/if}
         <Button icon="forward" onclick={() => compose('forward')}>Weiterleiten</Button>
+        {#if value.folder === 'INBOX'}
+          <Button icon="mail" tooltip="Wieder als neu markieren und schließen" onclick={() => void markUnread()}>Als ungelesen markieren</Button>
+        {/if}
         {#if value.folder === 'TRASH'}
+          <Button icon="back" tooltip="Aus dem Papierkorb zurücklegen" onclick={() => void restore(value.from)}>Wiederherstellen</Button>
           <Button variant="danger" icon="delete" tooltip="Aus dem Papierkorb endgültig löschen" onclick={() => destroy(true)}
             >Endgültig löschen</Button
           >

@@ -3,6 +3,7 @@
   import { bus, commands, session, store, windows } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import { Action } from '../../lib/state/Action.svelte';
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import DataTable from '../../ui/DataTable.svelte';
@@ -16,6 +17,7 @@
 
   /** The member's mailboxes: pick a mailbox and folder, open a mail in the window (docked to the side it reads like a mail app). */
   const list = new MailListModel(mailApi, () => session.format, store);
+  const more = new Action();
   const boxes = $derived(center.mailboxes.value ?? []);
 
   // The first mailbox is chosen once the center has loaded; every reload of the counts (new mail, mail read) reloads the folder too.
@@ -87,10 +89,22 @@
         {/if}
       {/snippet}
     </DataTable>
+    {#if list.next}
+      <div class="more">
+        <Button busy={more.busy} onclick={() => void more.run(() => list.loadMore())} tooltip="Die nächsten 50 E-Mails dieses Ordners laden"
+          >Mehr laden</Button
+        >
+      </div>
+    {/if}
   {/if}
 </Page>
 
 <style>
+  .more {
+    display: flex;
+    justify-content: center;
+    padding: var(--space-sm);
+  }
   .unread {
     font-weight: var(--font-weight-bold);
   }

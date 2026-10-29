@@ -6,6 +6,7 @@ import MailboxView from './MailboxView.svelte';
 import MailComposeView from './MailComposeView.svelte';
 import MailPage from './MailPage.svelte';
 import MailSignatureView from './MailSignatureView.svelte';
+import RecordCodePage from './RecordCodePage.svelte';
 import MailView from './MailView.svelte';
 import { MAIL_MESSAGES } from './messages';
 import { mailCenter } from './services';
@@ -16,6 +17,8 @@ export const mailFeature: Feature = {
     // server: MailHandlers - the own mailbox and the shared ones of the member's roles.
     { path: '/mail', component: MailPage, nav: 'E-Mail', icon: 'mail', badge: () => mailCenter.unread },
     { path: '/mailboxes/:id', component: MailboxPage, roles: ADMIN_BOARD },
+    // A record linked in a mail, opened from outside (`<website>/app/r/<code>`, see lib/router/DeepLink).
+    { path: '/r/:code', component: RecordCodePage },
   ],
   // server: NotificationHandlers.onMailReceived - a new mail's notice opens that mail.
   links: [{ server: '/mail/:mailbox/:mail', to: ({ mailbox, mail }) => ({ window: { kind: 'mail', id: `${mailbox}:${mail}` } }) }],

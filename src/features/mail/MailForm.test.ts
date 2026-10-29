@@ -15,7 +15,6 @@ const received: Mail = {
   html: null,
   sentAt: '2026-10-01T10:00:00Z',
   read: true,
-  refs: [],
 };
 const box = (signature: string | null, id = 'box'): Mailbox => ({
   id,
@@ -73,10 +72,10 @@ describe('MailForm', () => {
       folder: 'DRAFTS',
       to: ['x'],
       bcc: ['b@c.at'],
-      html: '<p>E</p>',
-      refs: [{ kind: 'TEAM', id: 't', title: 'Damen', parentId: null }],
+      html: '<p>E</p><p>Verknüpft:</p><ul><li><a href="club:r/AAAAAAAAAA">Verweis AAAAAAAAAA</a></li></ul>',
     };
-    const form = MailForm.fromDraft(draft, 'box');
+    const refs = new Map([['AAAAAAAAAA', { code: 'AAAAAAAAAA', visible: true, kind: 'TEAM' as const, windowId: 't', title: 'Damen' }]]);
+    const form = MailForm.fromDraft(draft, 'box', refs);
     expect(form.draftId).toBe('m1');
     expect(form.showBcc).toBe(true);
     expect(form.toDraft()).toEqual({

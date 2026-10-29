@@ -8,12 +8,14 @@ import type { LinkedRef, RefKind } from '../../lib/records/refs';
 import { ADMIN_BOARD, type Member, type Role } from '../../lib/types';
 import { settings } from '../../settings';
 import { meetings } from '../meetings/mock';
-import type { AddressEntry, Mail, Mailbox, MailboxAdmin, MailFolder, MailRef, MailSummary } from './model';
+import type { AddressEntry, Mail, Mailbox, MailboxAdmin, MailFolder, MailPage, MailRef, MailSettings } from './model';
 
 const fail = MockServer.fail;
 const limits = settings.mail;
 const DOMAIN = 'mein-verein.at';
 const PREVIEW = 140;
+const PAGE = 50;
+const DAY = 86_400_000;
 // server: mail.domain.Addresses
 const ADDRESS = /^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/;
 // server: MailRefs - a record chip of the composer
@@ -68,14 +70,26 @@ export class MockMail {
   readonly mails: MockTable<Record<string, Mail[]>>;
   /** code → record (server: mail_ref) */
   readonly refCodes = new MockTable<Record<string, { kind: RefKind; id: string }>>('mail-refs', () => ({}));
+  /** `<mailbox>:<member>` → mail ids read in a shared mailbox (server: mail_read) */
+  readonly reads = new MockTable<Record<string, string[]>>('mail-reads', () => ({}));
+  /** member → send times and recipient counts of the last two days (server: mail_sent) */
+  readonly sent = new MockTable<Record<string, { at: number; recipients: number }[]>>('mail-sent', () => ({}));
+  /** server: mail_setting */
+  readonly settings = new MockTable<MailSettings>('mail-settings', () => ({ domain: DOMAIN, dailyLimit: limits.dailyLimit }));
 
   constructor(private readonly people: MockDirectory) {
     this.mailboxes = new MockTable('mailboxes', () => this.seedMailboxes());
     this.mails = new MockTable('mails', () => this.seedMails());
     // server: MailboxRepository.deleteOwnedBy (GDPR erasure)
     mockServer.events.subscribe((event) => {
+      const memberId = (event.data as { memberId?: string }).memberId!;
+      // server: MailboxHandlers - a mailbox when invited or back, none while deactivated
+      if (event.type === 'members.member-invited' || event.type === 'members.member-reactivated') return this.giveMailbox(memberId);
+      if (event.type === 'members.member-deactivated') {
+        this.mailboxes.data.splice(0, this.mailboxes.data.length, ...this.mailboxes.data.filter((b) => b.memberId !== memberId));
+        return this.mailboxes.save();
+      }
       if (event.type !== 'members.member-erased') return;
-      const memberId = (event.data as { memberId: string }).memberId;
       this.mailboxes.data.splice(0, this.mailboxes.data.length, ...this.mailboxes.data.filter((b) => b.memberId !== memberId));
       this.mailboxes.save();
       for (const [code, ref] of Object.entries(this.refCodes.data)) if (ref.kind === 'MEMBER' && ref.id === memberId) delete this.refCodes.data[code];
@@ -92,7 +106,7 @@ export class MockMail {
         address: b.address,
         name: b.name,
         kind: b.memberId ? 'PERSONAL' : 'SHARED',
-        unread: this.box(b.address).filter((m) => m.folder === 'INBOX' && !m.read).length,
+        unread: this.box(b.address).filter((m) => m.folder === 'INBOX' && !this.isRead(member, b, m)).length,
         signature: b.signature ?? null,
         signatureEditable: b.memberId ? b.memberId === member.id : this.people.hasRole(member, ADMIN_BOARD),
       }));
@@ -121,9 +135,10 @@ export class MockMail {
     if (current && current.folder !== 'DRAFTS') fail(404, 'mail.not-found');
     const [to, cc, bcc] = [addressList(body.to), addressList(body.cc), addressList(body.bcc)];
     if (to.length + cc.length + bcc.length > limits.maxRecipients) fail(400, 'mail.too-many-recipients');
-    const html = cleanHtml(typeof body.html === 'string' ? body.html : '');
-    if (html.length > limits.bodyMaxLength) fail(400, 'mail.body-too-long');
-    const refs = (Array.isArray(body.refs) ? body.refs : []).map((r: { kind: RefKind; id: string }) => this.resolve(member, r));
+    const raw = typeof body.html === 'string' ? body.html : '';
+    if (raw.length > limits.bodyMaxLength) fail(400, 'mail.body-too-long');
+    // server: drafts carry linked records as codes too
+    const html = this.withRefs(member, cleanHtml(raw), Array.isArray(body.refs) ? body.refs : []);
     const draft: Mail = {
       id: current?.id ?? crypto.randomUUID(),
       folder: 'DRAFTS',
@@ -137,7 +152,6 @@ export class MockMail {
       html,
       sentAt: new Date().toISOString(),
       read: true,
-      refs,
     };
     const mails = this.box(box.address);
     if (current) mails.splice(mails.indexOf(current), 1, draft);
@@ -146,23 +160,108 @@ export class MockMail {
     return { ...draft };
   }
 
-  folder(member: Member, mailboxId: string, folder: string | null): MailSummary[] {
+  /** server: MailHandlers.list - a page of 50, newest first; `after`: the previous page's cursor */
+  folder(member: Member, mailboxId: string, folder: string | null, after: string | null = null): MailPage {
     const box = this.mailbox(member, mailboxId);
     const wanted = (folder ?? 'INBOX') as MailFolder;
     if (!['INBOX', 'DRAFTS', 'SENT', 'TRASH'].includes(wanted)) fail(400, 'request.invalid');
-    return this.box(box.address)
+    const key = (m: Mail) => `${m.sentAt}_${m.id}`;
+    const sorted = this.box(box.address)
       .filter((m) => m.folder === wanted)
+      .sort((a, b) => key(b).localeCompare(key(a)));
+    const rest = after ? sorted.filter((m) => key(m) < after) : sorted;
+    const page = rest.slice(0, PAGE);
+    return {
+      items: page.map((m) => ({
+        id: m.id,
+        from: m.from,
+        fromName: m.fromName,
+        subject: m.subject,
+        preview: preview(m.body),
+        sentAt: m.sentAt,
+        read: this.isRead(member, box, m),
+      })),
+      next: rest.length > PAGE ? key(page[page.length - 1]) : null,
+    };
+  }
+
+  /** server: MailHandlers.update - read flag (shared mailboxes per person) and folder */
+  update(member: Member, mailboxId: string, mailId: string, patch: { read?: boolean; folder?: MailFolder }): void {
+    const box = this.mailbox(member, mailboxId);
+    const mail = this.find(box, mailId);
+    if (patch.folder && patch.folder !== mail.folder) {
+      if (patch.folder === 'DRAFTS' || mail.folder === 'DRAFTS') fail(400, 'mail.not-movable');
+      mail.folder = patch.folder;
+      this.mails.save();
+    }
+    if (typeof patch.read === 'boolean') this.setRead(member, box, mail, patch.read);
+  }
+
+  /** server: MailHandlers.search */
+  search(member: Member, query: string, limit: number): { mailboxId: string; mailId: string; subject: string; fromName: string; sentAt: string }[] {
+    const needle = query.trim().toLowerCase();
+    if (needle.length < 2) fail(400, 'search.query-invalid');
+    return this.mailboxes.data
+      .filter((b) => this.opens(member, b))
+      .flatMap((b) =>
+        this.box(b.address)
+          .filter((m) => m.folder !== 'DRAFTS' && [m.subject, m.fromName, m.from, m.body].some((t) => t.toLowerCase().includes(needle)))
+          .map((m) => ({ mailboxId: b.id, mailId: m.id, subject: m.subject, fromName: m.fromName, sentAt: m.sentAt })),
+      )
       .sort((a, b) => b.sentAt.localeCompare(a.sentAt))
-      .map((m) => ({ id: m.id, from: m.from, fromName: m.fromName, subject: m.subject, preview: preview(m.body), sentAt: m.sentAt, read: m.read }));
+      .slice(0, Math.min(Math.max(limit, 1), 25));
+  }
+
+  /** server: MailboxHandlers settings (admin, board) */
+  mailSettings(viewer: Member): MailSettings {
+    this.people.requireRole(viewer, ADMIN_BOARD);
+    return { ...this.settings.data };
+  }
+
+  saveMailSettings(viewer: Member, body: Record<string, any>): MailSettings {
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    const domain = typeof body.domain === 'string' && body.domain.trim() ? body.domain.trim().toLowerCase().replace(/^@/, '') : null;
+    if (domain && !/^[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(domain)) fail(400, 'mail.domain-invalid');
+    const dailyLimit = Number(body.dailyLimit);
+    if (!Number.isInteger(dailyLimit) || dailyLimit < 1 || dailyLimit > 10_000) fail(400, 'mail.daily-limit-invalid');
+    Object.assign(this.settings.data, { domain, dailyLimit });
+    this.settings.save();
+    return { ...this.settings.data };
   }
 
   get(member: Member, mailboxId: string, mailId: string): Mail {
-    const mail = this.find(this.mailbox(member, mailboxId), mailId);
-    if (!mail.read) {
-      mail.read = true;
-      this.mails.save();
+    const box = this.mailbox(member, mailboxId);
+    const mail = this.find(box, mailId);
+    this.setRead(member, box, mail, true);
+    return { ...mail, read: true };
+  }
+
+  /** server: MailAccess - personal mailboxes use the mail's flag, shared ones one per person */
+  private isRead(member: Member, box: StoredMailbox, mail: Mail): boolean {
+    return box.memberId ? mail.read : (this.reads.data[`${box.id}:${member.id}`] ?? []).includes(mail.id);
+  }
+
+  private setRead(member: Member, box: StoredMailbox, mail: Mail, read: boolean): void {
+    if (box.memberId) {
+      mail.read = read;
+      return this.mails.save();
     }
-    return { ...mail };
+    const key = `${box.id}:${member.id}`;
+    const ids = (this.reads.data[key] ?? []).filter((id) => id !== mail.id);
+    this.reads.data[key] = read ? [...ids, mail.id] : ids;
+    this.reads.save();
+  }
+
+  /** server: MailboxHandlers.giveMailbox - vornamenachname@<domain>, numbered when taken */
+  private giveMailbox(memberId: string): void {
+    const domain = this.settings.data.domain;
+    const member = this.people.members.data.find((m) => m.id === memberId);
+    if (!domain || !member || this.mailboxes.data.some((b) => b.memberId === memberId)) return;
+    const local = personalLocal(member.firstName, member.lastName);
+    let address = `${local}@${domain}`;
+    for (let n = 2; this.mailboxes.data.some((b) => b.address === address); n++) address = `${local}${n}@${domain}`;
+    this.mailboxes.data.push({ id: crypto.randomUUID(), address, name: `${member.firstName} ${member.lastName}`, memberId, role: null });
+    this.mailboxes.save();
   }
 
   send(member: Member, mailboxId: string, body: Record<string, any>): Mail {
@@ -179,6 +278,14 @@ export class MockMail {
     if (raw.length > limits.bodyMaxLength) fail(400, 'mail.body-too-long');
     const html = this.withRefs(member, cleanHtml(raw), Array.isArray(body.refs) ? body.refs : []);
     const text = htmlToText(html);
+    // server: MailHandlers.send - recipients per member and day
+    const now = Date.now();
+    const recent = (this.sent.data[member.id] ?? []).filter((s) => s.at > now - 2 * DAY);
+    const recipients = to.length + cc.length + bcc.length;
+    if (recent.filter((s) => s.at > now - DAY).reduce((sum, s) => sum + s.recipients, 0) + recipients > this.settings.data.dailyLimit)
+      fail(409, 'mail.daily-limit');
+    this.sent.data[member.id] = [...recent, { at: now, recipients }];
+    this.sent.save();
 
     const sentAt = new Date().toISOString();
     const copy = (folder: MailFolder, read: boolean): Mail => ({
@@ -194,7 +301,6 @@ export class MockMail {
       html,
       sentAt,
       read,
-      refs: [],
     });
     const sent = copy('SENT', true);
     this.box(box.address).push(sent);
@@ -227,8 +333,12 @@ export class MockMail {
     const box = this.mailbox(member, mailboxId);
     const mail = this.find(box, mailId);
     const mails = this.box(box.address);
-    if (mail.folder === 'TRASH' || mail.folder === 'DRAFTS') mails.splice(mails.indexOf(mail), 1);
-    else mail.folder = 'TRASH';
+    if (mail.folder === 'TRASH' || mail.folder === 'DRAFTS') {
+      mails.splice(mails.indexOf(mail), 1);
+      for (const key of Object.keys(this.reads.data))
+        if (key.startsWith(`${box.id}:`)) this.reads.data[key] = this.reads.data[key].filter((id) => id !== mailId);
+      this.reads.save();
+    } else mail.folder = 'TRASH';
     this.mails.save();
   }
 
@@ -239,10 +349,15 @@ export class MockMail {
     const unique = all.filter((r, i) => all.findIndex((o) => o.kind === r.kind && o.id === r.id) === i);
     if (unique.length > limits.maxRefs) fail(400, 'mail.too-many-refs');
     unique.forEach((ref) => this.resolve(viewer, ref)); // the sender must see every record they link
-    const codes = new Map(unique.map((ref) => [`${ref.kind}:${ref.id}`, MockMail.code()]));
-    codes.forEach(
-      (code, key) => (this.refCodes.data[code] = { kind: key.slice(0, key.indexOf(':')) as RefKind, id: key.slice(key.indexOf(':') + 1) }),
-    );
+    // server: MailRefRepository.codeFor - a record keeps its code wherever it is linked
+    const codeFor = (ref: { kind: RefKind; id: string }) => {
+      const known = Object.entries(this.refCodes.data).find(([, r]) => r.kind === ref.kind && r.id === ref.id)?.[0];
+      if (known) return known;
+      const code = MockMail.code();
+      this.refCodes.data[code] = { kind: ref.kind, id: ref.id };
+      return code;
+    };
+    const codes = new Map(unique.map((ref) => [`${ref.kind}:${ref.id}`, codeFor(ref)]));
     this.refCodes.save();
     const website = this.people.clubInfo().website?.trim().replace(/\/+$/, '');
     const link = (kind: RefKind, id: string) => {
@@ -299,6 +414,9 @@ export class MockMail {
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const address = typeof body.address === 'string' ? body.address.trim().toLowerCase() : '';
     if (address.length > 254 || !ADDRESS.test(address)) fail(400, 'mail.address-invalid');
+    const domain = this.settings.data.domain;
+    if (!domain) fail(409, 'mail.domain-missing');
+    if (!address.endsWith(`@${domain}`)) fail(400, 'mail.address-not-club');
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     if (!name || name.length > 100) fail(400, 'mail.mailbox-name-invalid');
     const memberId: string | null = body.memberId || null;
@@ -350,7 +468,7 @@ export class MockMail {
       .filter((m) => m.active && !m.roles.every((r) => r === 'GUEST'))
       .map((m) => ({
         id: `mb-${m.id}`,
-        address: `${ascii(m.firstName)}.${ascii(m.lastName)}@${DOMAIN}`,
+        address: `${personalLocal(m.firstName, m.lastName)}@${DOMAIN}`,
         name: `${m.firstName} ${m.lastName}`,
         memberId: m.id,
         role: null,
@@ -374,7 +492,6 @@ export class MockMail {
       html: null,
       sentAt: at(daysAgo),
       read,
-      refs: [],
     });
     const result: Record<string, Mail[]> = {};
     for (const box of this.mailboxes.data) {
@@ -414,16 +531,18 @@ export class MockMail {
   }
 }
 
-/** "Jürgen Groß" → "juergen.gross"-style local parts (ASCII only, like the server's addresses). */
-function ascii(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/ä/g, 'ae')
-    .replace(/ö/g, 'oe')
-    .replace(/ü/g, 'ue')
-    .replace(/ß/g, 'ss')
-    .normalize('NFD')
-    .replace(/[^a-z0-9]/g, '');
+/** server: MailSettings.personalAddress - "Jürgen Groß" → "juergengross", ASCII only */
+function personalLocal(firstName: string, lastName: string): string {
+  return (
+    `${firstName} ${lastName}`
+      .toLowerCase()
+      .replace(/ä/g, 'ae')
+      .replace(/ö/g, 'oe')
+      .replace(/ü/g, 'ue')
+      .replace(/ß/g, 'ss')
+      .normalize('NFD')
+      .replace(/[^a-z0-9]/g, '') || 'mitglied'
+  );
 }
 
 function preview(body: string): string {
@@ -437,7 +556,11 @@ const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer
   .on('GET', '/api/v1/mail/mailboxes', (req) => ({ items: mail.list(actor(req)) }))
-  .on('GET', '/api/v1/mail/mailboxes/:id/messages', (req) => ({ items: mail.folder(actor(req), req.params.id, req.query.get('folder')) }))
+  .on('GET', '/api/v1/mail/mailboxes/:id/messages', (req) => mail.folder(actor(req), req.params.id, req.query.get('folder'), req.query.get('after')))
+  .on('PATCH', '/api/v1/mail/mailboxes/:id/messages/:mailId', (req) => mail.update(actor(req), req.params.id, req.params.mailId, req.body ?? {}))
+  .on('GET', '/api/v1/mail/search', (req) => ({ items: mail.search(actor(req), req.query.get('q') ?? '', Number(req.query.get('limit') ?? 10)) }))
+  .on('GET', '/api/v1/mail/admin/settings', (req) => mail.mailSettings(actor(req)))
+  .on('PUT', '/api/v1/mail/admin/settings', (req) => mail.saveMailSettings(actor(req), req.body ?? {}))
   .on('POST', '/api/v1/mail/mailboxes/:id/messages', (req) => mail.send(actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/mail/mailboxes/:id/messages/:mailId', (req) => mail.get(actor(req), req.params.id, req.params.mailId))
   .on('DELETE', '/api/v1/mail/mailboxes/:id/messages/:mailId', (req) => mail.delete(actor(req), req.params.id, req.params.mailId))

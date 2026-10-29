@@ -1,5 +1,17 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
-import type { AddressEntry, DraftInput, Mail, MailRef, Mailbox, MailboxAdmin, MailboxInput, MailFolder, MailSummary, OutgoingMail } from './model';
+import type {
+  AddressEntry,
+  DraftInput,
+  Mail,
+  MailPage,
+  MailRef,
+  MailSettings,
+  Mailbox,
+  MailboxAdmin,
+  MailboxInput,
+  MailFolder,
+  OutgoingMail,
+} from './model';
 
 /** Typed access to the mail endpoints of club-server. */
 export class MailApi {
@@ -13,9 +25,15 @@ export class MailApi {
     return (await this.api.get<{ items: Mailbox[] }>(MailApi.BASE)).items;
   }
 
-  /** Newest first. */
-  async list(mailboxId: string, folder: MailFolder): Promise<MailSummary[]> {
-    return (await this.api.get<{ items: MailSummary[] }>(`${this.messages(mailboxId)}?folder=${folder}`)).items;
+  /** A page of the folder, newest first; `after`: the previous page's `next`. */
+  list(mailboxId: string, folder: MailFolder, after: string | null = null): Promise<MailPage> {
+    const cursor = after ? `&after=${encodeURIComponent(after)}` : '';
+    return this.api.get<MailPage>(`${this.messages(mailboxId)}?folder=${folder}${cursor}`);
+  }
+
+  /** Read flag (shared mailboxes: only for the viewer) and/or folder (INBOX, SENT, TRASH). */
+  update(mailboxId: string, mailId: string, patch: { read?: boolean; folder?: MailFolder }): Promise<void> {
+    return this.api.patch<void>(`${this.messages(mailboxId)}/${encodeURIComponent(mailId)}`, patch);
   }
 
   /** Marks the mail read. */
@@ -68,6 +86,16 @@ export class MailApi {
   /** The mails stay with the provider. */
   deleteMailbox(id: string): Promise<void> {
     return this.api.delete(`${MailApi.ADMIN}/${encodeURIComponent(id)}`);
+  }
+
+  /** Admin and board: the club's mail domain and daily limit. */
+  settings(): Promise<MailSettings> {
+    return this.api.get<MailSettings>('/api/v1/mail/admin/settings');
+  }
+
+  /** Admin and board with step-up. */
+  saveSettings(settings: MailSettings): Promise<MailSettings> {
+    return this.api.put<MailSettings>('/api/v1/mail/admin/settings', settings);
   }
 
   private messages(mailboxId: string): string {

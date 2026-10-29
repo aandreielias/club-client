@@ -1,8 +1,8 @@
-import type { LinkedRef } from '../../lib/records/refs';
 import { RefList } from '../../lib/records/RefList.svelte';
 import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
-import type { DraftInput, Mail, Mailbox, OutgoingMail } from './model';
+import { draftForEditor } from './mailText';
+import type { DraftInput, Mail, MailRef, Mailbox, OutgoingMail } from './model';
 
 export type MailField = 'from' | 'to' | 'cc' | 'bcc' | 'subject' | 'body';
 
@@ -74,8 +74,8 @@ export class MailForm extends FormState<Partial<Record<MailField, string>>> {
     return form;
   }
 
-  /** A saved draft, to write on. */
-  static fromDraft(mail: Mail, mailboxId: string): MailForm {
+  /** A saved draft, to write on; `refs`: what its record codes stand for (they become chips and attachments again). */
+  static fromDraft(mail: Mail, mailboxId: string, refs: ReadonlyMap<string, MailRef> = new Map()): MailForm {
     const form = new MailForm();
     form.mailboxId = mailboxId;
     form.draftId = mail.id;
@@ -85,8 +85,9 @@ export class MailForm extends FormState<Partial<Record<MailField, string>>> {
     form.showCc = mail.cc.length > 0;
     form.showBcc = mail.bcc.length > 0;
     form.subject = mail.subject;
-    mail.refs.forEach((ref: LinkedRef) => form.links.addRef({ kind: ref.kind, id: ref.id, title: ref.title }));
-    form.html = mail.html ?? textToHtml(mail.body);
+    const { html, attached } = draftForEditor(mail.html ?? textToHtml(mail.body), refs);
+    attached.forEach((ref) => form.links.addRef(ref));
+    form.html = html;
     return form;
   }
 
