@@ -85,6 +85,16 @@ export class MeetingsApi {
     return this.api.post<Meeting>(`${this.path(id)}/close`, { protocol });
   }
 
+  /** After the meeting: the protocol no longer changes. */
+  finalizeProtocol(id: string): Promise<Meeting> {
+    return this.api.post<Meeting>(`${this.path(id)}/protocol/final`);
+  }
+
+  /** Calls off an invited meeting; everyone invited is told. */
+  cancel(id: string): Promise<Meeting> {
+    return this.api.post<Meeting>(`${this.path(id)}/cancel`);
+  }
+
   /** The invitation with agenda as a Word document in the meeting's folder (again: a new version); it is linked first. */
   generateInvitation(id: string): Promise<Meeting> {
     return this.api.post<Meeting>(`${this.path(id)}/invitation-document`);
@@ -127,7 +137,7 @@ export class MeetingsApi {
     assigneeIds: string[] = [],
     followUps: FollowUpRule[] = [],
   ): Promise<Resolution> {
-    return this.api.post<Resolution>(MeetingsApi.RESOLUTIONS, { title, text, deadline, action, assigneeIds, followUps });
+    return this.api.post<Resolution>(MeetingsApi.RESOLUTIONS, { title, text, deadline, action, assigneeIds, followUps, open: true });
   }
 
   /** Replaces the records linked to a resolution. */

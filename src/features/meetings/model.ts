@@ -7,13 +7,25 @@ import type { Trigger } from './triggers';
 
 /** Key of a club-defined meeting type (server: meetings_type); seeded with ASSEMBLY, BOARD, … */
 export type MeetingKind = string;
-export type MeetingStatus = 'DRAFT' | 'INVITED' | 'OPEN' | 'CLOSED';
+export type MeetingStatus = 'DRAFT' | 'INVITED' | 'OPEN' | 'CLOSED' | 'CANCELLED';
 /** APP votes in the app; ANALOG is there without the app (in the room or on video). */
 /** APP: votes in the app; ANALOG: votes through the minute taker; ONLINE: joins by video, votes in the app. */
 export type PresenceMode = 'APP' | 'ANALOG' | 'ONLINE';
 
-export const STATUS_LABELS: Readonly<Record<MeetingStatus, string>> = { DRAFT: 'Entwurf', INVITED: 'Eingeladen', OPEN: 'Läuft', CLOSED: 'Beendet' };
-export const STATUS_TONES: Readonly<Record<MeetingStatus, Hue>> = { DRAFT: 'gray', INVITED: 'blue', OPEN: 'green', CLOSED: 'brown' };
+export const STATUS_LABELS: Readonly<Record<MeetingStatus, string>> = {
+  DRAFT: 'Entwurf',
+  INVITED: 'Eingeladen',
+  OPEN: 'Läuft',
+  CLOSED: 'Beendet',
+  CANCELLED: 'Abgesagt',
+};
+export const STATUS_TONES: Readonly<Record<MeetingStatus, Hue>> = {
+  DRAFT: 'gray',
+  INVITED: 'blue',
+  OPEN: 'green',
+  CLOSED: 'brown',
+  CANCELLED: 'red',
+};
 
 /** server: MeetingsApi.Quorum — of the electorate present: at least half, more than half, at least three quarters. */
 export type Quorum = 'AT_LEAST_HALF' | 'MORE_THAN_HALF' | 'AT_LEAST_THREE_QUARTERS';
@@ -165,6 +177,8 @@ export interface Meeting {
   openedAt: string | null;
   closedAt: string | null;
   protocol: string | null;
+  /** Set once the protocol is final; until then it is written from the opening on, also after closing. */
+  protocolFinalAt: string | null;
   latestInvite: string;
   /** Who votes and counts for the quorum. */
   electorate: Person[];
@@ -385,7 +399,7 @@ export interface NewMeeting {
   videoUrl: string | null;
 }
 
-/** Omitted fields stay, '' clears a text. Times only before the invitation, the protocol only while open. */
+/** Omitted fields stay, '' clears a text. Times only before the invitation, the protocol from the opening until it is final. */
 export type MeetingPatch = Partial<Omit<NewMeeting, 'kind'>> & { protocol?: string };
 
 // --- resolutions (server: MeetingsApi.ResolutionDto) ---

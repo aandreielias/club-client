@@ -22,7 +22,8 @@
 
   // svelte-ignore state_referenced_locally
   const create = new CreateController(bus, handle, 'Neuer Umlaufbeschluss');
-  const earliest = session.clock.toLocal(new Date(Date.now() + resolutionRules.value.circular.minHours * 3_600_000 + 60_000));
+  const earliestNow = () => session.clock.toLocal(new Date(Date.now() + resolutionRules.value.circular.minHours * 3_600_000 + 60_000));
+  const earliest = earliestNow();
   let title = $state('');
   let text = $state('');
   let deadline = $state(`${ZonedClock.addDays(earliest.slice(0, 10), 1)}T20:00`);
@@ -37,15 +38,18 @@
     return [...people].map(([memberId, name]) => ({ memberId, name })).sort((a, b) => a.name.localeCompare(b.name));
   });
   void board.load();
-  const tooSoon = $derived(deadline < earliest);
+  // Checked again when sending: the form may have been open for a while.
+  let tooSoon = $derived(deadline < earliest);
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
     submitted = true;
+    tooSoon = deadline < earliestNow();
     if (!title.trim() || tooSoon) return;
     await create.submit(
       async () => {
-        const draft = await meetingsApi.createCircular(
+        // Created and opened in one request: a refused opening leaves no draft behind.
+        const opened = await meetingsApi.createCircular(
           title.trim(),
           text.trim() || null,
           session.clock.toInstant(deadline),
@@ -53,7 +57,7 @@
           assignees,
           followUps,
         );
-        return (await meetingsApi.openResolution(draft.id)).id;
+        return opened.id;
       },
       'resolution',
       'Umlaufbeschluss an den Vorstand verschickt.',

@@ -981,6 +981,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/meetings/{id}/protocol/final": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["finalizeProtocol"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/meetings/{id}/open": {
         parameters: {
             query?: never;
@@ -1055,6 +1071,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["close_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meetings/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancel"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1486,7 +1518,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["cancel"];
+        post: operations["cancel_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2682,7 +2714,7 @@ export interface components {
             online: boolean;
             videoUrl: string;
             /** @enum {string} */
-            status: "DRAFT" | "INVITED" | "OPEN" | "CLOSED";
+            status: "DRAFT" | "INVITED" | "OPEN" | "CLOSED" | "CANCELLED";
             /** Format: date-time */
             invitedAt: string;
             /** Format: date-time */
@@ -2700,6 +2732,8 @@ export interface components {
             autoTasks: boolean;
             followUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpDto"][];
             assignable: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Assignable"][];
+            /** Format: date-time */
+            protocolFinalAt: string;
         };
         "at.clubserver.meetings.api.MeetingsApi.Presence": {
             /** Format: uuid */
@@ -3135,6 +3169,7 @@ export interface components {
             action: string;
             assigneeIds: string[];
             followUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpRule"][];
+            open: boolean;
         };
         "at.clubserver.gateway.rest.ResolutionsController.VoteBody": {
             /** @enum {string} */
@@ -3701,7 +3736,7 @@ export interface components {
             endsAt: string;
             location: string;
             /** @enum {string} */
-            status: "DRAFT" | "INVITED" | "OPEN" | "CLOSED";
+            status: "DRAFT" | "INVITED" | "OPEN" | "CLOSED" | "CANCELLED";
         };
         "at.clubserver.meetings.api.MeetingsApi.MeetingTypeList": {
             items: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.MeetingTypeDto"][];
@@ -5962,6 +5997,28 @@ export interface operations {
             };
         };
     };
+    finalizeProtocol: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.MeetingDto"];
+                };
+            };
+        };
+    };
     open_1: {
         parameters: {
             query?: never;
@@ -6068,6 +6125,28 @@ export interface operations {
                 "application/json": components["schemas"]["at.clubserver.gateway.rest.MeetingsController.CloseBody"];
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.MeetingDto"];
+                };
+            };
+        };
+    };
+    cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {
@@ -7016,7 +7095,7 @@ export interface operations {
             };
         };
     };
-    cancel: {
+    cancel_1: {
         parameters: {
             query?: {
                 includeFollowing?: boolean;

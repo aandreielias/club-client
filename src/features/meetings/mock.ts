@@ -710,10 +710,19 @@ export class MockMeetings {
 
   update(viewer: Member, id: string, body: Record<string, any>): Meeting {
     const meeting = this.managed(viewer, id);
-    if (meeting.status === 'CLOSED') fail(409, 'meeting.closed');
+    // server: Meeting.withDetails
+    if (meeting.status === 'CANCELLED') fail(409, 'meeting.cancelled');
+    const details = ['title', 'agenda', 'urgency', 'startsAt', 'endsAt', 'location', 'videoUrl'].some((k) => body[k] != null);
+    if (details && meeting.status === 'CLOSED') fail(409, 'meeting.closed');
     const moves = (body.startsAt && body.startsAt !== meeting.startsAt) || (body.endsAt && body.endsAt !== meeting.endsAt);
     if (moves && meeting.status !== 'DRAFT') fail(409, 'meeting.invited-time-fixed');
-    if (body.protocol != null && meeting.status !== 'OPEN') fail(409, 'meeting.not-open');
+    if (body.protocol != null) {
+      if (meeting.status !== 'OPEN' && meeting.status !== 'CLOSED') fail(409, 'meeting.protocol-not-yet');
+      if (this.protocolFinalAt(meeting)) fail(409, 'meeting.protocol-final');
+      if (String(body.protocol).length > 20000) fail(400, 'meeting.protocol-too-long');
+    }
+    if (typeof body.agenda === 'string' && body.agenda.length > 4000) fail(400, 'meeting.agenda-too-long');
+    if (typeof body.location === 'string' && body.location.length > 200) fail(400, 'meeting.location-too-long');
     this.apply(meeting, body);
     this.changed(meeting, 'UPDATED');
     return this.dto(viewer, meeting);
@@ -765,16 +774,47 @@ export class MockMeetings {
     if (meeting.status !== 'OPEN') fail(409, 'meeting.not-open');
     if (this.resolutions.data.some((r) => r.meetingId === id && r.status === 'OPEN')) fail(409, 'meeting.votes-open');
     const text = typeof protocol === 'string' ? protocol.trim() || null : null;
-    Object.assign(meeting, { status: 'CLOSED', closedAt: new Date().toISOString(), protocol: text ?? meeting.protocol });
+    Object.assign(meeting, { status: 'CLOSED', closedAt: new Date().toISOString(), protocol: text ?? meeting.protocol, protocolFinalAt: null });
     this.recordEvent({ record: 'MEETING', event: 'CLOSED', attrs: { type: meeting.kind }, date: null });
     this.changed(meeting, 'CLOSED');
     return this.dto(viewer, meeting);
+  }
+
+  /** server: FinalizeProtocol — after the meeting the protocol no longer changes. */
+  finalizeProtocol(viewer: Member, id: string): Meeting {
+    const meeting = this.managed(viewer, id);
+    if (meeting.status !== 'CLOSED') fail(409, 'meeting.not-closed');
+    if (this.protocolFinalAt(meeting)) fail(409, 'meeting.protocol-final');
+    meeting.protocolFinalAt = new Date().toISOString();
+    this.changed(meeting, 'UPDATED');
+    return this.dto(viewer, meeting);
+  }
+
+  /** server: MeetingHandlers.cancel — an invited meeting is called off, the invitees are told. */
+  cancel(viewer: Member, id: string): Meeting {
+    const meeting = this.managed(viewer, id);
+    if (meeting.status !== 'INVITED') fail(409, 'meeting.not-invited');
+    Object.assign(meeting, { status: 'CANCELLED', closedAt: new Date().toISOString() });
+    this.changed(meeting, 'CANCELLED');
+    mockServer.events.publish({
+      type: 'meetings.meeting-cancelled',
+      data: { meetingId: meeting.id, recipients: this.meetingVoters(meeting), title: meeting.title, startsAt: meeting.startsAt },
+    });
+    return this.dto(viewer, meeting);
+  }
+
+  /** Seeded closed meetings count as final (server: V83). */
+  private protocolFinalAt(m: StoredMeeting): string | null {
+    return m.protocolFinalAt !== undefined ? m.protocolFinalAt : m.status === 'CLOSED' ? m.closedAt : null;
   }
 
   setPresence(viewer: Member, id: string, memberId: string, mode: unknown): Meeting {
     const meeting = this.managed(viewer, id);
     if (meeting.status === 'DRAFT') fail(409, 'meeting.not-invited');
     if (meeting.status === 'CLOSED') fail(409, 'meeting.closed');
+    if (meeting.status === 'CANCELLED') fail(409, 'meeting.cancelled');
+    // server: no switching between app and room while a vote runs
+    if (this.resolutions.data.some((r) => r.meetingId === id && r.status === 'OPEN')) fail(409, 'meeting.vote-open');
     if (!this.meetingVoters(meeting).includes(memberId)) fail(400, 'meeting.not-voter');
     if (mode === 'ONLINE' && !this.type(meeting.kind).online) fail(400, 'meeting.not-online');
     if (mode === 'APP' || mode === 'ANALOG' || mode === 'ONLINE') meeting.presence[memberId] = mode;
@@ -967,7 +1007,7 @@ export class MockMeetings {
     const r = this.managedResolution(viewer, id);
     if (r.status !== 'DRAFT') fail(409, 'resolution.not-draft');
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null;
-    if (meeting && meeting.status !== 'OPEN') fail(409, 'meeting.not-open');
+    if (meeting && meeting.status !== 'OPEN') fail(409, 'resolution.meeting-not-open');
     if (meeting && !this.quorate(meeting, this.meetingVoters(meeting))) fail(409, 'resolution.not-quorate');
     if (!meeting && Date.parse(r.deadline!) < Date.now() + this.circular.data.minHours * 3_600_000) fail(400, 'resolution.deadline-too-short');
     const voters = this.voters(r);
@@ -1300,7 +1340,8 @@ export class MockMeetings {
 
   private maySee(viewer: Member, m: StoredMeeting): boolean {
     if (this.people.hasRole(viewer, ADMIN_BOARD)) return true;
-    return isAssembly(this.type(m.kind)) && viewer.voter;
+    // server: MeetingAccess.maySee — voters see a general meeting from its invitation on
+    return isAssembly(this.type(m.kind)) && viewer.voter && m.status !== 'DRAFT';
   }
 
   private visible(viewer: Member, id: string): StoredMeeting {
@@ -1322,7 +1363,7 @@ export class MockMeetings {
   }
 
   private dto(viewer: Member, m: StoredMeeting): Meeting {
-    const { presence, frozenElectorate: _frozen, ...rest } = m;
+    const { presence, frozenElectorate: _frozen, protocolFinalAt: _final, createdBy: _by, ...rest } = m;
     const voters = this.meetingVoters(m);
     const name = (id: string) => {
       const p = this.people.members.data.find((x) => x.id === id);
@@ -1337,6 +1378,7 @@ export class MockMeetings {
       videoUrl: type.online ? (m.videoUrl ?? type.videoUrl ?? null) : null,
       links: m.links ?? [], // mock data stored before links existed
       autoTasks: m.autoTasks !== false,
+      protocolFinalAt: this.protocolFinalAt(m),
       followUps: this.followUpDtos(this.followUps.data.filter((f) => f.meetingId === m.id && !f.resolutionId)),
       latestInvite: latestInvite(this.type(m.kind), m.startsAt),
       electorate: voters.map((id) => ({ memberId: id, name: name(id) })).sort(byName),
@@ -1419,10 +1461,20 @@ mockServer
   .on('POST', '/api/v1/meetings/:id/invite', (req) => meetings.invite(actor(req), req.params.id))
   .on('POST', '/api/v1/meetings/:id/open', (req) => meetings.open(actor(req), req.params.id))
   .on('POST', '/api/v1/meetings/:id/close', (req) => meetings.close(actor(req), req.params.id, req.body?.protocol))
+  .on('POST', '/api/v1/meetings/:id/protocol/final', (req) => meetings.finalizeProtocol(actor(req), req.params.id))
+  .on('POST', '/api/v1/meetings/:id/cancel', (req) => meetings.cancel(actor(req), req.params.id))
   .on('GET', '/api/v1/meetings/:id/resolutions', (req) => meetings.listResolutions(actor(req), req.params.id))
   .on('POST', '/api/v1/meetings/:id/resolutions', (req) => meetings.createResolution(actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/resolutions', (req) => meetings.listResolutions(actor(req), null))
-  .on('POST', '/api/v1/resolutions', (req) => meetings.createResolution(actor(req), null, req.body ?? {}))
+  // server: open:true creates and opens in one go; a refused opening leaves no draft
+  .on('POST', '/api/v1/resolutions', (req) => {
+    const viewer = actor(req);
+    const body = req.body ?? {};
+    if (body.open && (typeof body.deadline !== 'string' || Date.parse(body.deadline) < Date.now() + meetings.circular.data.minHours * 3_600_000))
+      fail(400, 'resolution.deadline-too-short');
+    const created = meetings.createResolution(viewer, null, body);
+    return body.open ? meetings.openResolution(viewer, created.id) : created;
+  })
   .on('GET', '/api/v1/resolutions/:id', (req) => meetings.getResolution(actor(req), req.params.id))
   .on('DELETE', '/api/v1/resolutions/:id', (req) => meetings.deleteResolution(actor(req), req.params.id))
   .on('POST', '/api/v1/resolutions/:id/open', (req) => meetings.openResolution(actor(req), req.params.id))

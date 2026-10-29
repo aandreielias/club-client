@@ -6,7 +6,7 @@ export const MEETING_CHANGED = liveEvent<MeetingChanged>('meetings.meeting-chang
 
 export interface MeetingChanged {
   meetingId: string;
-  change: 'CREATED' | 'UPDATED' | 'INVITED' | 'PRESENCE' | 'OPENED' | 'CLOSED' | 'DELETED';
+  change: 'CREATED' | 'UPDATED' | 'INVITED' | 'PRESENCE' | 'OPENED' | 'CLOSED' | 'DELETED' | 'CANCELLED';
 }
 
 /** Carries no votes; viewers reload the resolution. */

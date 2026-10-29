@@ -243,8 +243,8 @@ export function seededRules(): ActionRule[] {
 }
 export type StoredMeeting = Omit<
   Meeting,
-  'online' | 'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage' | 'autoTasks' | 'followUps' | 'assignable'
-> & { presence: Record<string, PresenceMode>; autoTasks?: boolean; frozenElectorate?: string[]; createdBy?: string };
+  'online' | 'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage' | 'autoTasks' | 'followUps' | 'assignable' | 'protocolFinalAt'
+> & { presence: Record<string, PresenceMode>; autoTasks?: boolean; frozenElectorate?: string[]; createdBy?: string; protocolFinalAt?: string | null };
 /** server: meetings_follow_up */
 export type StoredFollowUp = {
   id: string;

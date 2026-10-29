@@ -202,7 +202,7 @@ export class MockNotifications {
       case 'meetings.meeting-invited': {
         const where = data.location ? ` in ${data.location}` : '';
         const video = data.videoUrl ? ` Videokonferenz: ${data.videoUrl}.` : '';
-        const agenda = data.agenda ? ` Tagesordnung: ${data.agenda}` : '';
+        const agenda = data.agenda ? `\n\nTagesordnung:\n${data.agenda}` : '';
         this.notify(
           data.recipients,
           'MEETING',
@@ -212,6 +212,15 @@ export class MockNotifications {
         );
         break;
       }
+      case 'meetings.meeting-cancelled':
+        this.notify(
+          data.recipients,
+          'MEETING',
+          `Abgesagt: ${data.title}`,
+          `Die Sitzung am ${this.#dateTime.format(new Date(data.startsAt))} findet nicht statt.`,
+          `/meetings/${data.meetingId}`,
+        );
+        break;
       case 'meetings.circular-opened':
         this.notify(
           data.recipients,

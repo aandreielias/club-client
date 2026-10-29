@@ -37,6 +37,14 @@ export class MeetingModel {
     return this.write(() => this.api.update(this.id, patch));
   }
 
+  finalizeProtocol(): Promise<boolean> {
+    return this.write(() => this.api.finalizeProtocol(this.id));
+  }
+
+  cancel(): Promise<boolean> {
+    return this.write(() => this.api.cancel(this.id));
+  }
+
   saveProtocol(protocol: string): Promise<boolean> {
     return this.write(() => this.api.update(this.id, { protocol }));
   }

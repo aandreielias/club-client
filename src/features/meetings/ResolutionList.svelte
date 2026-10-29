@@ -8,7 +8,7 @@
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
-  import { RESOLUTION_CHANGED } from './events';
+  import { MEETING_CHANGED, RESOLUTION_CHANGED } from './events';
   import { directory } from '../../lib/container';
   import type { OfficeKind } from '../members/MembersApi';
   import { boardSettings } from '../members/services';
@@ -34,6 +34,8 @@
   const list = new Resource(() => meetingsApi.resolutions(meeting.id));
   void list.load();
   useBus(bus, RESOLUTION_CHANGED, ({ data }) => data.meetingId === meeting.id && void list.load());
+  // Presence decides who may vote: a latecomer gets the vote buttons without reloading.
+  useBus(bus, MEETING_CHANGED, ({ data }) => data.meetingId === meeting.id && void list.load());
 
   const add = new Action();
   // svelte-ignore state_referenced_locally

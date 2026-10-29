@@ -114,6 +114,7 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Allen antworten': { text: 'Dem Absender und allen anderen Empfängern antworten' },
   Verwerfen: { text: 'Die Änderungen nicht speichern und die gespeicherten Werte wieder anzeigen' },
   Fertig: { text: 'Fertig mit Sortieren' },
+  'Protokoll abschließen': { text: 'Das Protokoll fertigstellen; danach ändert es sich nicht mehr' },
   Folgeaufgabe: { text: 'Eine Folgeaufgabe hinzufügen, die entsteht, wenn der Beschluss angenommen ist' },
   'Folgeaufgabe entfernen': { text: 'Diese Folgeaufgabe aus der Beschlussart nehmen (lässt sich rückgängig machen)' },
   'Schritt entfernen': { text: 'Diesen Schritt aus dem Ablauf nehmen (lässt sich rückgängig machen)' },

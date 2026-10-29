@@ -106,7 +106,7 @@ describe('mock resolutions', () => {
     for (const id of ['vorstand', 'kassier', 'schrift', 'beisitz', 'beisitz2']) meetings.setPresence(member('vorstand'), mv.id, id, 'APP');
     meetings.setPresence(member('vorstand'), mv.id, 'trainer', 'ANALOG');
     const draft = meetings.createResolution(member('vorstand'), mv.id, { title: 'Statutenänderung', majority: 'TWO_THIRDS' });
-    expect(() => meetings.openResolution(member('vorstand'), draft.id)).toThrow(expect.objectContaining({ code: 'meeting.not-open' }));
+    expect(() => meetings.openResolution(member('vorstand'), draft.id)).toThrow(expect.objectContaining({ code: 'resolution.meeting-not-open' }));
     meetings.open(member('vorstand'), mv.id);
     expect(meetings.openResolution(member('vorstand'), draft.id).analogPresent).toBe(1);
 
@@ -154,6 +154,9 @@ describe('meeting links', () => {
     expect(() => meetings.setLinks(member('vorstand'), mv.id, [{ kind: 'TASK', id: 'nope' }])).toThrow(
       expect.objectContaining({ code: 'meeting.ref-unknown' }),
     );
+    // voters see a general meeting from its invitation on
+    expect(() => meetings.get(member('helfer'), mv.id)).toThrow(expect.objectContaining({ code: 'meeting.not-found' }));
+    meetings.invite(member('vorstand'), mv.id);
     expect(meetings.get(member('helfer'), mv.id).links).toHaveLength(2);
   });
 });

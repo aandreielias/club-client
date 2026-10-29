@@ -90,11 +90,33 @@
     await view.confirm(
       {
         title: 'Sitzung beenden',
-        message: 'Danach lassen sich Protokoll und Anwesenheit nicht mehr ändern.',
+        message:
+          'Danach lassen sich Anwesenheit und Abstimmungen nicht mehr ändern. Das Protokoll lässt sich fertigschreiben, bis es abgeschlossen ist.',
         confirmLabel: 'Beenden',
       },
       () => view.attempt(model.action, () => model.close(protocol)),
       'Sitzung beendet.',
+    );
+  }
+
+  async function cancel() {
+    await view.confirm(
+      {
+        title: 'Sitzung absagen',
+        message: 'Alle Eingeladenen erfahren, dass die Sitzung nicht stattfindet. Das lässt sich nicht rückgängig machen.',
+        confirmLabel: 'Absagen',
+        danger: true,
+      },
+      () => view.attempt(model.action, () => model.cancel()),
+      'Sitzung abgesagt.',
+    );
+  }
+
+  async function finalizeProtocol() {
+    await view.confirm(
+      { title: 'Protokoll abschließen', message: 'Danach lässt sich das Protokoll nicht mehr ändern.', confirmLabel: 'Abschließen' },
+      () => view.attempt(model.action, async () => (await model.saveProtocol(protocol)) && model.finalizeProtocol()),
+      'Protokoll abgeschlossen.',
     );
   }
 
@@ -129,6 +151,7 @@
           <Button variant="ghost" busy={model.action.busy} onclick={remove}>Löschen</Button>
           <Button variant="primary" busy={model.action.busy} disabled={late(m)} onclick={() => invite(m)}>Einladen</Button>
         {:else if m.canManage && m.status === 'INVITED'}
+          <Button variant="ghost" busy={model.action.busy} onclick={cancel}>Absagen</Button>
           <Button variant="primary" busy={model.action.busy} onclick={() => view.attempt(model.action, () => model.open())}>Sitzung eröffnen</Button>
         {:else if m.canManage && m.status === 'OPEN'}
           <Button variant="primary" busy={model.action.busy} onclick={close}>Sitzung beenden</Button>
@@ -238,11 +261,18 @@
         </div>
       {/if}
 
-      {#if m.status === 'OPEN' && m.canManage}
+      {#if (m.status === 'OPEN' || (m.status === 'CLOSED' && !m.protocolFinalAt)) && m.canManage}
         <h2>Protokoll</h2>
         <div class="stack">
+          {#if m.status === 'CLOSED'}<p class="muted small">
+              Die Sitzung ist beendet; das Protokoll lässt sich fertigschreiben und dann abschließen.
+            </p>{/if}
           <textarea bind:value={protocol} rows="10" maxlength="20000" aria-label="Protokoll"></textarea>
-          <div><Button busy={model.action.busy} disabled={protocol === (m.protocol ?? '')} onclick={saveProtocol}>Protokoll speichern</Button></div>
+          <div class="row">
+            <Button busy={model.action.busy} disabled={protocol === (m.protocol ?? '')} onclick={saveProtocol}>Protokoll speichern</Button>
+            {#if m.status === 'CLOSED'}<Button variant="primary" busy={model.action.busy} onclick={finalizeProtocol}>Protokoll abschließen</Button
+              >{/if}
+          </div>
         </div>
       {:else if m.protocol}
         <h2>Protokoll</h2>
