@@ -33,6 +33,9 @@
   let startsOn = $state(today);
   let termEndsOn = $state('');
   let coopted = $state(false);
+  /** server: MembershipHandlers.assign — elected for a later date, entered up to a year ahead. */
+  const latestStart = `${Number(today.slice(0, 4)) + 1}${today.slice(4)}`;
+  const termYears = $derived(office ? (boardSettings.get(office)?.termYears ?? 3) : null);
 
   /** server: MembershipRules.eligible — only members whose membership allows an office. */
   const memberOptions = $derived(
@@ -74,7 +77,10 @@
           ><RecordLink kind="member" id={o.memberId} allowed={permissions.canSeeMember(o.memberId)}>{o.name}</RecordLink>{#if o.coopted}
             <Tag tone="orange">Kooptiert</Tag>{/if}</span
         >
-        <span class="muted small">{session.format.date(o.startsOn)} bis {session.format.date(o.termEndsOn)}</span>
+        <span class="muted small"
+          >{session.format.date(o.startsOn)} bis {session.format.date(o.termEndsOn)}{#if o.startsOn > today}
+            <Tag>Beginnt später</Tag>{/if}</span
+        >
         {#if policy.canManageOffices()}
           <Button size="sm" variant="ghost" busy={model.endAction.busy} onclick={() => end(o)}>Beenden</Button>
         {/if}
@@ -113,16 +119,24 @@
     <h2>Funktion vergeben</h2>
     <form class="stack" onsubmit={assign}>
       <div class="grid">
-        <Field label="Mitglied" hint="Nur wählbare Mitglieder (Einstellungen › Mitgliedschaft).">
+        <Field
+          label="Mitglied"
+          hint={candidates.value && !memberOptions.length
+            ? 'Noch niemand ist wählbar: zuerst Mitglieder einladen und ihnen eine Mitgliedsart mit Wählbarkeit geben.'
+            : 'Nur wählbare Mitglieder (Einstellungen › Mitgliedschaft).'}
+        >
           <Select bind:value={memberId} placeholder="Bitte wählen" options={memberOptions} />
         </Field>
         <Field label="Funktion">
           <Select bind:value={office} placeholder="Bitte wählen" options={officeOptions} />
         </Field>
         <Field label="Beginn">
-          <DateInput bind:value={startsOn} max={today} required />
+          <DateInput bind:value={startsOn} max={latestStart} required />
         </Field>
-        <Field label="Ende der Funktionsperiode (optional)" hint="Leer = drei Jahre nach Beginn.">
+        <Field
+          label="Ende der Funktionsperiode (optional)"
+          hint={termYears ? `Leer = ${termYears === 1 ? 'ein Jahr' : `${termYears} Jahre`} nach Beginn.` : 'Leer = Funktionsperiode der Funktion.'}
+        >
           <DateInput bind:value={termEndsOn} min={startsOn} />
         </Field>
       </div>

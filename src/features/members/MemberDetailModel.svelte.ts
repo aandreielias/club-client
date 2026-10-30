@@ -14,12 +14,21 @@ export class MemberDetailModel {
   readonly deactivateAction = new Action();
   readonly reactivateAction = new Action();
   readonly eraseAction = new Action();
+  readonly inviteAction = new Action();
+  /** Invited and never signed in; loaded only for those who may invite. */
+  readonly invitationPending: Resource<boolean>;
 
   constructor(
     private readonly api: MembersApi,
     readonly id: string,
   ) {
     this.member = new Resource(() => this.api.get(this.id));
+    this.invitationPending = new Resource(async () => (await this.api.pendingInvitations()).includes(this.id));
+  }
+
+  /** The invitation mail again. */
+  resendInvite(): Promise<boolean> {
+    return this.inviteAction.run(() => this.api.resendInvite(this.id));
   }
 
   load(): Promise<void> {

@@ -242,6 +242,16 @@ export class MembersApi {
     return this.api.post<Member>(`${this.path(id)}/deactivate`);
   }
 
+  /** Members invited who never signed in (admin/board). */
+  async pendingInvitations(): Promise<string[]> {
+    return (await this.api.get<{ ids: string[] }>('/api/v1/members/invitations')).ids;
+  }
+
+  /** The invitation mail again, while the member never signed in. */
+  resendInvite(id: string): Promise<void> {
+    return this.api.post(`${this.path(id)}/invite`);
+  }
+
   reactivate(id: string): Promise<Member> {
     return this.api.post<Member>(`${this.path(id)}/reactivate`);
   }

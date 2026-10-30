@@ -3,7 +3,7 @@ import { settings } from '../../settings';
 import type { Member, MembershipType, Role } from '../../lib/types';
 import type { Invitation, ProfilePatch } from './MembersApi';
 
-export type MemberField = 'email' | 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'roles';
+export type MemberField = 'email' | 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'roles' | 'membershipType';
 export type MemberFormErrors = Partial<Record<MemberField, string>>;
 
 const limits = settings.members;
@@ -57,7 +57,8 @@ abstract class MemberFormBase extends FormState<MemberFormErrors> {
 export class InviteForm extends MemberFormBase {
   guardianId = $state('');
   roles = $state<Role[]>(['PLAYER']);
-  membershipType = $state<MembershipType | 'NONE'>('ORDINARY');
+  /** Chosen on purpose: the kind decides vote and eligibility. */
+  membershipType = $state<MembershipType | 'NONE' | ''>('');
 
   toInvitation(): Invitation {
     return {
@@ -69,8 +70,13 @@ export class InviteForm extends MemberFormBase {
       photoConsent: this.photoConsent,
       guardianId: this.guardianId || null,
       roles: [...this.roles],
-      membershipType: this.membershipType === 'NONE' ? null : this.membershipType,
+      membershipType: this.membershipType === 'NONE' || !this.membershipType ? null : this.membershipType,
     };
+  }
+
+  protected validate(): MemberFormErrors {
+    const errors = super.validate();
+    return this.membershipType ? errors : { ...errors, membershipType: 'Mitgliedschaft wählen.' };
   }
 }
 

@@ -36,7 +36,8 @@ function policyFor(roles: Role[]): MemberPolicy {
 describe('InviteForm', () => {
   it('validates e-mail, names and birth date like the server', () => {
     const form = new InviteForm(TODAY);
-    expect(Object.keys(form.errors).sort()).toEqual(['email', 'firstName', 'lastName']);
+    expect(Object.keys(form.errors).sort()).toEqual(['email', 'firstName', 'lastName', 'membershipType']);
+    form.membershipType = 'ORDINARY'; // chosen on purpose
     form.email = 'jörg@verein.at';
     form.firstName = 'Jörg';
     form.lastName = 'Muster';
@@ -84,6 +85,7 @@ describe('MemberListModel', () => {
         wardIds: ['bert'],
         guardianIds: ['anna'],
       }),
+      pendingInvitations: async () => ['bert'],
     };
     const list = new MemberListModel(api as unknown as MembersApi);
     await list.load();
@@ -94,6 +96,11 @@ describe('MemberListModel', () => {
     list.search = 'CARL@';
     expect(list.rows.map((m) => m.id)).toEqual(['carl']);
     expect(list.activeCount).toBe(2);
+    list.setFilter('invited', 'pending');
+    expect(list.rows.map((m) => m.id)).toEqual([]);
+    list.search = '';
+    expect(list.rows.map((m) => m.id)).toEqual(['bert']);
+    list.setFilter('invited', '');
     list.search = '';
     list.setFilter('role', '');
     list.setFilter('family', 'minor');

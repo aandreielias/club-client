@@ -7,7 +7,7 @@
   import CoverImage from './CoverImage.svelte';
   import { FolderTree } from './FolderTree.svelte';
   import { colorHue } from './model';
-  import { filesApi } from './services';
+  import { filePolicy, filesApi } from './services';
 
   /** Start page section: the top-level folders as small tiles (cover photo or coloured folder). */
   const tree = new FolderTree(filesApi, settings.files.maxFolderDepth);
@@ -38,7 +38,10 @@
         {/each}
       </ul>
     {:else}
-      <p class="muted">Noch keine Ordner.</p>
+      <p class="muted">
+        Noch keine Ordner.{#if filePolicy.canCreateRoot()}
+          <a href="#/files">Neuer Ordner</a>{/if}
+      </p>
     {/if}
   {/snippet}
 </AsyncView>

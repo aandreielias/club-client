@@ -34,6 +34,22 @@ export class MembershipKindsStore extends LiveStore<readonly MembershipKind[]> {
     return this.value.filter((k) => !k.archived || current.includes(k.key)).map((k) => ({ value: k.key, label: k.label }));
   }
 
+  /**
+   * Kinds offered when inviting: with what they allow, without the honorary membership (given by resolution); "Kein Mitglied" for
+   * parents and helpers.
+   */
+  inviteChoices(): { value: MembershipChoice; label: string }[] {
+    return [
+      { value: 'NONE', label: 'Kein Mitglied (z.B. Eltern)' },
+      ...this.value
+        .filter((k) => !k.archived && k.key !== 'HONORARY')
+        .map((k) => ({
+          value: k.key,
+          label: `${k.label} · ${[k.votes ? 'Stimmrecht' : 'ohne Stimmrecht', k.eligible && 'wählbar'].filter(Boolean).join(', ')}`,
+        })),
+    ];
+  }
+
   /** Segmented choice for one kind per member, with "Kein Mitglied". */
   choices(current: readonly MembershipType[] = []): { value: MembershipChoice; label: string }[] {
     return [{ value: 'NONE', label: 'Kein Mitglied' }, ...this.options(current)];

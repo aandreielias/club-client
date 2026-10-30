@@ -115,6 +115,8 @@ export interface MailPage {
 export interface MailSettings {
   domain: string | null;
   dailyLimit: number;
+  /** false while the server runs without a mail provider: club mail is not kept (read-only, ignored on save). */
+  keepsMail: boolean;
 }
 
 /** server: MailSettings.personalAddress — "Jürgen Groß" → "juergengross", ASCII only. */

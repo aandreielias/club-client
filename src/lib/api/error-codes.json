@@ -206,6 +206,7 @@
   "meeting.video-url-invalid",
   "meeting.vote-open",
   "meeting.votes-open",
+  "member.already-signed-in",
   "member.birth-date-in-future",
   "member.birth-date-invalid",
   "member.board-by-office",

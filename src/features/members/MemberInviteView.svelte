@@ -12,7 +12,6 @@
   import DateInput from '../../ui/DateInput.svelte';
   import { InviteForm } from './MemberForms.svelte';
   import RoleChecklist from './RoleChecklist.svelte';
-  import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import Select from '../../ui/Select.svelte';
   import { memberPolicy as policy, membersApi, membershipKinds } from './services';
 
@@ -62,13 +61,16 @@
     </Field>
     <Field label="Erziehungsberechtigte:r (optional)" hint="Für Minderjährige: sieht danach Termine, Aufgaben und das Geburtsdatum.">
       <Select bind:value={form.guardianId} placeholder="Keine" options={guardianOptions} />
+      {#if !guardianOptions.length}<p class="muted small">Eltern zuerst anlegen (als „Kein Mitglied“), dann das Kind.</p>{/if}
     </Field>
     <label class="check"><input type="checkbox" bind:checked={form.photoConsent} /> Einverständnis für Fotos liegt vor</label>
-    <fieldset class="stack">
-      <legend>Mitgliedschaft</legend>
-      <ChoiceGroup name="invite-membership" label="Mitgliedschaft" options={membershipKinds.choices()} bind:value={form.membershipType} />
-      <p class="muted small">Mitglied ab heute. Eltern ohne eigene Mitgliedschaft: „Kein Mitglied“.</p>
-    </fieldset>
+    <Field
+      label="Mitgliedschaft"
+      hint="Mitglied ab heute. Nur mit Stimmrecht gehört jemand zur Mitgliederversammlung, nur wählbar in eine Funktion. Ehrenmitglied wird man durch Beschluss."
+      error={form.error('membershipType')}
+    >
+      <Select bind:value={form.membershipType} placeholder="Bitte wählen" options={membershipKinds.inviteChoices()} aria-label="Mitgliedschaft" />
+    </Field>
     <RoleChecklist bind:value={form.roles} allowed={policy.grantableRoles()} legend="Rollen" />
     <ErrorNote error={create.save.error} />
     <div class="row">

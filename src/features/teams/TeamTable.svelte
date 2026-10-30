@@ -13,7 +13,8 @@
     toolbar = true,
     limit,
     emptyAction,
-  }: { list: TeamListModel; toolbar?: boolean; limit?: number; emptyAction?: EmptyAction | null } = $props();
+    emptyText = 'Du bist noch in keinem Team.',
+  }: { list: TeamListModel; toolbar?: boolean; limit?: number; emptyAction?: EmptyAction | null; emptyText?: string } = $props();
 </script>
 
 <DataTable
@@ -25,7 +26,7 @@
   record={(t) => ({ kind: 'team', id: t.id, title: t.name })}
   onopen={(t) => bus.publish(WINDOW_OPEN, { kind: 'team', id: t.id })}
   menu={(t) => windowMenu(bus, windows, router, 'team', t.id)}
-  emptyText="Du bist noch in keinem Team."
+  {emptyText}
 >
   {#snippet cell(team, column)}
     {#if column.key === 'mine'}

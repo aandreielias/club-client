@@ -21,7 +21,9 @@ const HEADER = [
   'Mitglied seit',
   'Status',
 ] as const;
-type Column = (typeof HEADER)[number];
+/** Read by the import only: who the guardian is (their e-mail, a member or a line of the same file) and the teams (names). */
+type ImportOnly = 'Erziehungsberechtigte:r' | 'Teams';
+type Column = (typeof HEADER)[number] | ImportOnly;
 const REQUIRED: readonly Column[] = ['Vorname', 'Nachname', 'E-Mail'];
 const FIELD_COLUMNS: Readonly<Record<MemberField, Column>> = {
   email: 'E-Mail',
@@ -30,6 +32,7 @@ const FIELD_COLUMNS: Readonly<Record<MemberField, Column>> = {
   birthDate: 'Geburtsdatum',
   phone: 'Telefon',
   roles: 'Rollen',
+  membershipType: 'Mitgliedschaft',
 };
 
 /** One valid import line: the invitation, plus membership values the invitation cannot carry. */
@@ -38,6 +41,10 @@ export interface ImportRow {
   invitation: Invitation;
   /** Set after the invitation when honorary or an earlier "Mitglied seit" is given. */
   membership: Membership | null;
+  /** The guardian's e-mail, linked once every account exists. */
+  guardianEmail: string | null;
+  /** Team names the member joins as player. */
+  teams: string[];
 }
 
 export interface ImportProblem {
@@ -196,22 +203,79 @@ export function parseMemberImport(
     const own = invitation.membershipType ? [invitation.membershipType] : [];
     const membershipTypes = !honorary ? own : multipleKinds ? [...own, HONORARY] : [HONORARY];
     const membership = honorary || memberSince ? { membershipTypes, memberSince: memberSince ?? today } : null;
-    rows.push({ line, invitation, membership });
+    const guardianEmail = get('Erziehungsberechtigte:r').toLowerCase() || null;
+    const teams = get('Teams')
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    rows.push({ line, invitation, membership, guardianEmail, teams });
   });
   return { rows, problems };
 }
 
-/** Creates the accounts one by one (each sends its invitation e-mail); a failed line does not stop the rest. */
-export async function runMemberImport(api: MembersApi, rows: readonly ImportRow[], describe: (error: unknown) => string): Promise<ImportProblem[]> {
+/** What the import links after the accounts exist: members already there by e-mail, the club's teams. */
+export interface ImportLinks {
+  existing: ReadonlyMap<string, string>;
+  teams: readonly { id: string; name: string }[];
+  setTeam: (teamId: string, memberId: string) => Promise<unknown>;
+}
+
+/** The server allows 60 writes a minute per member: the import keeps below, and waits when it is told to slow down. */
+const PAUSE_MS = 1100;
+const SLOW_DOWN_MS = 30_000;
+
+/**
+ * Creates the accounts one by one (each sends its invitation e-mail), then links guardians and teams; a failed line does not stop the
+ * rest. `wait` is the pause between requests (tests pass a no-op).
+ */
+export async function runMemberImport(
+  api: MembersApi,
+  rows: readonly ImportRow[],
+  describe: (error: unknown) => string,
+  links: ImportLinks | null = null,
+  wait: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+): Promise<ImportProblem[]> {
   const problems: ImportProblem[] = [];
-  for (const row of rows) {
-    let created = false;
+  /** One request, again once after a "too many requests". */
+  const call = async <T>(request: () => Promise<T>): Promise<T> => {
+    await wait(PAUSE_MS);
     try {
-      const member = await api.invite(row.invitation);
-      created = true;
-      if (row.membership) await api.setMembership(member.id, row.membership);
+      return await request();
     } catch (error) {
-      problems.push({ line: row.line, text: created ? `Konto angelegt, Mitgliedschaft nicht gesetzt: ${describe(error)}` : describe(error) });
+      if ((error as { status?: number })?.status !== 429) throw error;
+      await wait(SLOW_DOWN_MS);
+      return request();
+    }
+  };
+  const created = new Map<string, string>();
+  for (const row of rows) {
+    let done = false;
+    try {
+      const member = await call(() => api.invite(row.invitation));
+      done = true;
+      created.set(row.invitation.email, member.id);
+      if (row.membership) await call(() => api.setMembership(member.id, row.membership!));
+    } catch (error) {
+      problems.push({ line: row.line, text: done ? `Konto angelegt, Mitgliedschaft nicht gesetzt: ${describe(error)}` : describe(error) });
+    }
+  }
+  if (!links) return problems;
+  for (const row of rows) {
+    const memberId = created.get(row.invitation.email);
+    if (!memberId) continue;
+    try {
+      if (row.guardianEmail) {
+        const guardian = created.get(row.guardianEmail) ?? links.existing.get(row.guardianEmail);
+        if (!guardian) problems.push({ line: row.line, text: `Erziehungsberechtigte:r ${row.guardianEmail} nicht gefunden.` });
+        else await call(() => api.linkGuardian(memberId, guardian));
+      }
+      for (const name of row.teams) {
+        const team = links.teams.find((t) => t.name.toLocaleLowerCase() === name.toLocaleLowerCase());
+        if (!team) problems.push({ line: row.line, text: `Team „${name}“ nicht gefunden.` });
+        else await call(() => links.setTeam(team.id, memberId));
+      }
+    } catch (error) {
+      problems.push({ line: row.line, text: `Konto angelegt, nicht verknüpft: ${describe(error)}` });
     }
   }
   return problems;

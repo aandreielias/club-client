@@ -85,7 +85,7 @@ export class MockMail {
   /** member → send times and recipient counts of the last two days (server: mail_sent) */
   readonly sent = new MockTable<Record<string, { at: number; recipients: number }[]>>('mail-sent', () => ({}));
   /** server: mail_setting */
-  readonly settings = new MockTable<MailSettings>('mail-settings', () => ({ domain: DOMAIN, dailyLimit: limits.dailyLimit }));
+  readonly settings = new MockTable<Omit<MailSettings, 'keepsMail'>>('mail-settings', () => ({ domain: DOMAIN, dailyLimit: limits.dailyLimit }));
 
   constructor(private readonly people: MockDirectory) {
     this.mailboxes = new MockTable('mailboxes', () => this.seedMailboxes());
@@ -225,7 +225,12 @@ export class MockMail {
   /** server: MailboxHandlers settings (admin, board) */
   mailSettings(viewer: Member): MailSettings {
     this.people.requireRole(viewer, ADMIN_BOARD);
-    return { ...this.settings.data };
+    return this.settingsDto();
+  }
+
+  /** server: MailGateway.keepsMail — the mock keeps its mail in the browser, but like the dev server's memory gateway nothing is delivered. */
+  private settingsDto(): MailSettings {
+    return { domain: this.settings.data.domain, dailyLimit: this.settings.data.dailyLimit, keepsMail: false };
   }
 
   saveMailSettings(viewer: Member, body: Record<string, any>): MailSettings {
@@ -234,9 +239,12 @@ export class MockMail {
     if (domain && !/^[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(domain)) fail(400, 'mail.domain-invalid');
     const dailyLimit = Number(body.dailyLimit);
     if (!Number.isInteger(dailyLimit) || dailyLimit < 1 || dailyLimit > 10_000) fail(400, 'mail.daily-limit-invalid');
+    const changed = domain !== this.settings.data.domain;
     Object.assign(this.settings.data, { domain, dailyLimit });
     this.settings.save();
-    return { ...this.settings.data };
+    // server: MailboxHandlers.saveSettings — a new domain gives every audience member without one a personal mailbox
+    if (changed && domain) for (const m of this.people.members.data.filter((m) => m.active)) this.giveMailbox(m.id);
+    return this.settingsDto();
   }
 
   get(member: Member, mailboxId: string, mailId: string): Mail {

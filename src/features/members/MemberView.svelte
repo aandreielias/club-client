@@ -26,6 +26,8 @@
   // svelte-ignore state_referenced_locally
   const model = new MemberDetailModel(membersApi, id);
   void model.load();
+  if (policy.canInvite()) void model.invitationPending.load();
+  const invited = $derived(!!model.invitationPending.value);
 
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle);
@@ -89,6 +91,10 @@
     await view.confirm(request, () => view.attempt(model.eraseAction, () => model.erase()), 'Personendaten gelöscht.');
   }
 
+  async function resendInvite() {
+    if (await view.attempt(model.inviteAction, () => model.resendInvite())) view.notify('Einladung erneut gesendet.');
+  }
+
   async function deactivate(member: Member) {
     const request = {
       title: 'Mitglied deaktivieren',
@@ -107,7 +113,7 @@
         {#if !editing && policy.canEditProfile(member)}<Button onclick={() => (editing = true)}>Profil bearbeiten</Button>{/if}
       {/snippet}
       {#snippet meta()}
-        {#if !member.active}<Tag tone="red">Inaktiv</Tag>{/if}
+        {#if !member.active}<Tag tone="red">Inaktiv</Tag>{:else if invited}<Tag>Eingeladen</Tag>{/if}
         {#if member.membershipTypes.includes(HONORARY)}<Tag tone="yellow">{membershipKinds.label(HONORARY)}</Tag>{/if}
         {#each member.roles as role (role)}<Tag tone={roleHue(role)}>{ROLE_LABELS[role]}</Tag>{/each}
       {/snippet}
@@ -167,9 +173,15 @@
         <GuardianLinker {member} {model} />
       {/if}
 
-      {#if policy.canResetSecurity() || policy.canDeactivate(member) || policy.canReactivate(member) || policy.canErase(member)}
+      {#if (invited && member.active) || policy.canResetSecurity() || policy.canDeactivate(member) || policy.canReactivate(member) || policy.canErase(member)}
         <h2>Zugang</h2>
+        {#if invited && member.active}
+          <p class="muted small">Noch nicht angemeldet. Der Link in der Einladung gilt nur eine Zeit lang.</p>
+        {/if}
         <div class="row">
+          {#if invited && member.active}
+            <Button busy={model.inviteAction.busy} onclick={resendInvite}>Einladung erneut senden</Button>
+          {/if}
           {#if policy.canResetSecurity() && member.active}
             <Button busy={model.resetAction.busy} onclick={() => resetSecurity(member)}>Sperre aufheben und Geräte entfernen</Button>
           {/if}

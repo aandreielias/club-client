@@ -140,7 +140,7 @@ export class MockBoard {
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const office = body.office as OfficeRow['office'];
     if (!OFFICES.includes(office) || typeof body.startsOn !== 'string') return fail(400, 'request.invalid');
-    if (body.startsOn > this.people.clock.today()) fail(400, 'office.start-in-future');
+    if (body.startsOn > plusYears(this.people.clock.today(), 1)) fail(400, 'office.start-in-future');
     const setting = this.people.boardSettings.data.offices.find((o) => o.office === office)!;
     const termEndsOn = typeof body.termEndsOn === 'string' && body.termEndsOn ? body.termEndsOn : plusYears(body.startsOn, setting.termYears);
     if (termEndsOn <= body.startsOn || termEndsOn > plusYears(body.startsOn, setting.termYears)) fail(400, 'office.term-invalid');
@@ -187,8 +187,24 @@ export class MockBoard {
 
 export const board = new MockBoard(directory);
 
+/** server: members_member.first_login_at — invited through the mock and never "signed in" (seeded members all have). */
+const pendingInvites = new Set<string>();
+
 mockServer
-  .on('POST', '/api/v1/members', (req) => directory.invite(directory.actor(req), req.body ?? {}))
+  .on('GET', '/api/v1/members/invitations', (req) => {
+    directory.requireRole(directory.actor(req), ADMIN_BOARD);
+    return { ids: [...pendingInvites].filter((id) => directory.members.data.some((m) => m.id === id && m.active)) };
+  })
+  .on('POST', '/api/v1/members/:id/invite', (req) => {
+    directory.requirePrivileged(directory.actor(req), ADMIN_BOARD);
+    directory.get(directory.actor(req), req.params.id);
+    if (!pendingInvites.has(req.params.id)) fail(409, 'member.already-signed-in');
+  })
+  .on('POST', '/api/v1/members', (req) => {
+    const member = directory.invite(directory.actor(req), req.body ?? {});
+    pendingInvites.add(member.id);
+    return member;
+  })
   .on('GET', '/api/v1/members/:id', (req) => directory.get(directory.actor(req), req.params.id))
   .on('PUT', '/api/v1/members/:id/roles', (req) => directory.setRoles(directory.actor(req), req.params.id, req.body?.roles))
   .on('POST', '/api/v1/members/:id/deactivate', (req) => directory.deactivate(directory.actor(req), req.params.id))

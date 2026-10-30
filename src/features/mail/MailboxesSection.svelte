@@ -18,7 +18,7 @@
   const reload = () => void load.run(() => mailboxes.load());
   reload();
 
-  const draft = new SettingsDraft<MailSettings>({ domain: null, dailyLimit: 200 });
+  const draft = new SettingsDraft<MailSettings>({ domain: null, dailyLimit: 200, keepsMail: true });
   const settingsLoad = new Action();
   void settingsLoad.run(async () => draft.load(await mailApi.settings()));
 
@@ -46,11 +46,21 @@
 </script>
 
 <div class="stack section">
+  {#if !settingsLoad.busy && !settingsLoad.error && !draft.value.keepsMail}
+    <p class="banner" role="status">
+      Noch kein Mail-Anbieter angebunden: E-Mails an Vereinsadressen gehen verloren, gesendete werden nicht zugestellt. Postfächer und Adressen lassen
+      sich trotzdem schon anlegen.
+    </p>
+  {/if}
   <SettingsForm
     title="E-Mail des Vereins"
     intro="Alle Postfach-Adressen enden auf die Mail-Domain; neue Mitglieder bekommen vornamenachname@… von selbst."
     {draft}
-    onsave={(value) => mailApi.saveSettings({ ...value, domain: value.domain?.trim() || null })}
+    onsave={(value) =>
+      mailApi.saveSettings({ ...value, domain: value.domain?.trim() || null }).then(async (saved) => {
+        await mailboxes.load(); // a new domain gives every member without one a personal mailbox
+        return saved;
+      })}
   >
     {#if settingsLoad.error}
       <p class="muted small">Die Einstellungen konnten nicht geladen werden.</p>
@@ -89,6 +99,12 @@
 </div>
 
 <style>
+  .banner {
+    margin: 0;
+    padding: var(--space-sm) var(--space-md);
+    border-left: 3px solid var(--color-warning);
+    color: var(--color-warning);
+  }
   p,
   h2 {
     margin: 0;

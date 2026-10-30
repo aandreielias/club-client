@@ -733,7 +733,9 @@ export class MockDirectory {
 
   /** A running board office is the only way to BOARD; a change closes the live sessions like on the server. */
   syncBoardRole(member: Member): void {
-    const board = member.active && this.running().some((o) => o.memberId === member.id && o.office !== 'AUDITOR');
+    // server: MembershipHandlers.holdsBoardOffice — an office entered ahead counts from its start
+    const today = this.clock.today();
+    const board = member.active && this.running().some((o) => o.memberId === member.id && o.office !== 'AUDITOR' && o.startsOn <= today);
     if (board === member.roles.includes('BOARD')) return;
     member.roles = board ? [...member.roles, 'BOARD'] : member.roles.filter((r) => r !== 'BOARD');
     this.saveMembers();

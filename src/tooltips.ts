@@ -12,6 +12,8 @@ export interface ButtonTooltip {
 
 export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   Abbrechen: { text: 'Schließen, ohne zu speichern', command: 'view.back' },
+  'Einladung erneut senden': { text: 'Die Einladungs-E-Mail noch einmal schicken; das Mitglied hat sich noch nie angemeldet' },
+  'Verein anlegen': { text: 'Namen speichern und die App öffnen; alles Weitere zeigt die Karte „Einrichtung“' },
   'Frist verlängern': { text: 'Dem Umlaufbeschluss mehr Zeit geben' },
   Verlängern: { text: 'Neue Frist speichern' },
   Abmelden: { text: 'Auf diesem Gerät abmelden' },

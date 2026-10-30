@@ -8,6 +8,7 @@
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
+  import { memberPolicy, membersApi } from '../members/services';
   import type { RosterModel } from './RosterModel.svelte';
 
   /** Admin/board: pick an active member who is not in the team yet. Loading the list may ask for the PIN. */
@@ -16,14 +17,21 @@
   const members = new Resource(() => directory.allMembers());
   let memberId = $state('');
   let role = $state<TeamRole>('PLAYER');
+  /** A team coach without the COACH role can't plan the team's appointments; admins grant it right here. */
+  let grantCoach = $state(true);
+  const picked = $derived((members.value ?? []).find((m) => m.id === memberId) ?? null);
+  const needsCoach = $derived(role === 'COACH' && !!picked && !picked.roles.includes('COACH'));
+  const mayGrant = $derived(!!picked && memberPolicy.canSetRoles(picked));
 
   void members.load();
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
     if (!memberId) return;
+    const coach = needsCoach && mayGrant && grantCoach ? picked : null;
     if (await model.assign(memberId, role)) {
-      bus.publish(TOAST, { text: 'Zum Team hinzugefügt.' });
+      if (coach && !(await model.assignAction.run(() => membersApi.setRoles(coach.id, [...coach.roles, 'COACH'])))) return;
+      bus.publish(TOAST, { text: coach ? 'Zum Team hinzugefügt, Rolle Trainer:in vergeben.' : 'Zum Team hinzugefügt.' });
       memberId = '';
     }
   }
@@ -43,6 +51,13 @@
       <Field label="Rolle im Team">
         <Select bind:value={role} options={Object.entries(TEAM_ROLE_LABELS).map(([value, label]) => ({ value, label }))} />
       </Field>
+      {#if needsCoach}
+        {#if mayGrant}
+          <label class="check"><input type="checkbox" bind:checked={grantCoach} /> Auch die Rolle Trainer:in geben</label>
+        {:else}
+          <p class="muted small">Ohne die Rolle Trainer:in plant das Mitglied keine Termine; die Rolle vergibt ein Admin.</p>
+        {/if}
+      {/if}
       <div class="row">
         <Button type="submit" variant="primary" busy={model.assignAction.busy} disabled={!memberId}>Hinzufügen</Button>
         <Button variant="ghost" onclick={onclose}>Schließen</Button>

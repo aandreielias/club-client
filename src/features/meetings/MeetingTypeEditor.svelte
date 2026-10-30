@@ -69,7 +69,13 @@
     TWO_THIRDS: 'Mindestens doppelt so viele Ja wie Nein.',
     THREE_QUARTERS: 'Mindestens dreimal so viele Ja wie Nein.',
   };
-  const OFFICES = OFFICE_KINDS.filter((o) => o !== 'AUDITOR').map((o) => ({ value: o, label: boardSettings.label(o) }));
+  // Functions the club uses (Einstellungen › Funktionen); one already chosen stays visible so it can be removed.
+  const OFFICES = $derived(
+    OFFICE_KINDS.filter((o) => o !== 'AUDITOR' && (boardSettings.enabled.includes(o) || form.conveners.includes(o))).map((o) => ({
+      value: o,
+      label: boardSettings.label(o),
+    })),
+  );
   const MAJORITIES = (Object.keys(MAJORITY_LABELS) as Majority[]).map((m) => ({ value: m, label: MAJORITY_LABELS[m], hint: MAJORITY_HINTS[m] }));
 
   /** Each decision with what it brings: a fixed majority and its follow-up tasks. */

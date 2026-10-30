@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { bus, commands, errors, session, store } from '../../lib/container';
+  import { bus, commands, directory, errors, session, store } from '../../lib/container';
   import { CONFIRM, TOAST, WINDOW_OPEN } from '../../channels';
   import { BrowserFile } from '../../lib/files/BrowserFile';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
@@ -10,6 +10,7 @@
   import Page from '../../ui/Page.svelte';
   import { MEMBER_DEACTIVATED, MEMBER_INVITED } from './events';
   import { membersToCsv, parseMemberImport, runMemberImport, type ImportProblem } from './MemberCsv.svelte';
+  import { teamsApi } from '../teams/services';
   import { MemberListModel } from './MemberListModel.svelte';
   import { boardSettings, memberPolicy as policy, membersApi, membershipKinds } from './services';
 
@@ -58,7 +59,13 @@
     if (!ok) return;
     importing = true;
     try {
-      const failed = await runMemberImport(membersApi, parsed.rows, (e) => errors.text(e));
+      await directory.loadTeams().catch(() => {});
+      const existingByEmail = new Map((list.data.value ?? []).map((m) => [m.email.toLowerCase(), m.id]));
+      const failed = await runMemberImport(membersApi, parsed.rows, (e) => errors.text(e), {
+        existing: existingByEmail,
+        teams: directory.teams,
+        setTeam: (teamId, memberId) => teamsApi.setMember(teamId, memberId, 'PLAYER'),
+      });
       problems = [...parsed.problems, ...failed].sort((a, b) => a.line - b.line);
       bus.publish(TOAST, {
         text: `${parsed.rows.length - failed.length} von ${parsed.rows.length} Konten angelegt.`,

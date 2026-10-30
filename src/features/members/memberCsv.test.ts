@@ -45,6 +45,8 @@ describe('member CSV', () => {
           membershipType: 'EXTRAORDINARY',
         },
         membership: { membershipTypes: ['HONORARY'], memberSince: '2020-01-01' },
+        guardianEmail: null,
+        teams: [],
       },
     ]);
   });
@@ -85,8 +87,49 @@ describe('member CSV', () => {
       invite: vi.fn().mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce({ id: 'n2' }),
       setMembership: vi.fn(),
     } as unknown as MembersApi;
-    expect(await runMemberImport(api, parsed.rows, () => 'Fehler')).toEqual([{ line: 2, text: 'Fehler' }]);
+    expect(
+      await runMemberImport(
+        api,
+        parsed.rows,
+        () => 'Fehler',
+        null,
+        async () => {},
+      ),
+    ).toEqual([{ line: 2, text: 'Fehler' }]);
     expect(api.invite).toHaveBeenCalledTimes(2);
     expect(api.setMembership).not.toHaveBeenCalled();
+  });
+});
+
+describe('import links', () => {
+  it('links guardians from the file or the club and joins teams, waiting on "too many requests"', async () => {
+    const calls: string[] = [];
+    let first = true;
+    const api = {
+      invite: async (i: { email: string }) => {
+        if (i.email === 'kind@sdg.at' && first) {
+          first = false;
+          throw Object.assign(new Error('slow'), { status: 429 });
+        }
+        return { id: `id-${i.email}` };
+      },
+      setMembership: async () => ({}),
+      linkGuardian: async (minor: string, guardian: string) => calls.push(`guardian ${minor} ${guardian}`),
+    } as never;
+    const rows = [
+      { line: 2, invitation: { email: 'mama@sdg.at' }, membership: null, guardianEmail: null, teams: [] },
+      { line: 3, invitation: { email: 'kind@sdg.at' }, membership: null, guardianEmail: 'mama@sdg.at', teams: ['U16', 'Gibt es nicht'] },
+    ] as never;
+    const waits: number[] = [];
+    const problems = await runMemberImport(
+      api,
+      rows,
+      () => 'Fehler',
+      { existing: new Map(), teams: [{ id: 't1', name: 'U16' }], setTeam: async (team, member) => calls.push(`team ${team} ${member}`) },
+      async (ms) => void waits.push(ms),
+    );
+    expect(calls).toEqual(['guardian id-kind@sdg.at id-mama@sdg.at', 'team t1 id-kind@sdg.at']);
+    expect(problems).toEqual([{ line: 3, text: 'Team „Gibt es nicht“ nicht gefunden.' }]);
+    expect(waits).toContain(30_000);
   });
 });
