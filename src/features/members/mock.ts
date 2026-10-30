@@ -6,7 +6,15 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import { ADMIN_BOARD, type Member } from '../../lib/types';
 import { settings } from '../../settings';
-import { HONORARY, type BoardSettings, type ChangeField, type ChangeRequest, type MembershipKind, type OfficePair } from './MembersApi';
+import {
+  HONORARY,
+  type BoardSettings,
+  type ChangeField,
+  type ChangeRequest,
+  type MembershipKind,
+  type OfficePair,
+  type OfficeSetting,
+} from './MembersApi';
 
 const plusYears = (date: string, years: number): string => `${Number(date.slice(0, 4)) + years}${date.slice(4)}`;
 
@@ -64,7 +72,7 @@ export class MockBoard {
 
   board(): { offices: (OfficeRow & { name: string })[]; warnings: string[] } {
     const running = this.people.running();
-    const people = new Set(running.filter((o) => o.office !== 'AUDITOR').map((o) => o.memberId));
+    const people = new Set(running.filter((o) => this.people.isBoardOffice(o.office)).map((o) => o.memberId));
     const warnings: string[] = [];
     const settings = this.people.boardSettings.data;
     // server: BoardRules.warnings
@@ -72,43 +80,73 @@ export class MockBoard {
     else if (settings.oddBoardSize && people.size % 2 === 0) warnings.push('board.even');
     for (const s of settings.offices) {
       if (s.enabled && running.filter((o) => o.office === s.office).length < s.minHolders) {
-        warnings.push(s.office === 'AUDITOR' ? 'board.auditors-missing' : `board.${s.office.toLowerCase().replace('_', '-')}-missing`);
+        warnings.push(
+          s.office === 'AUDITOR'
+            ? 'board.auditors-missing'
+            : OFFICES.includes(s.office)
+              ? `board.${s.office.toLowerCase().replace('_', '-')}-missing`
+              : `board.office-missing:${s.office}`,
+        );
       }
     }
     const offices = running
       .map((o) => ({ ...o, name: this.people.displayName(o.memberId) }))
-      .sort((a, b) => OFFICES.indexOf(a.office) - OFFICES.indexOf(b.office) || a.startsOn.localeCompare(b.startsOn));
+      .sort((a, b) => this.order(a.office) - this.order(b.office) || a.startsOn.localeCompare(b.startsOn));
     return { offices, warnings };
   }
 
-  /** server: MembershipHandlers.saveSettings and BoardRules.validate. */
+  /** The club's order of its offices (board page). */
+  private order(office: string): number {
+    return this.people.boardSettings.data.offices.findIndex((o) => o.office === office);
+  }
+
+  private keys(): string[] {
+    return this.people.boardSettings.data.offices.map((o) => o.office);
+  }
+
+  /** server: BoardRules.validate(OfficeSetting) */
+  private static office(o: Record<string, any>, office: string, board: boolean): OfficeSetting {
+    const int = (v: unknown, min: number, max: number) => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
+    const label = typeof o.label === 'string' ? o.label.trim() : '';
+    if (!label || label.length > 40) fail(400, 'board-settings.label-invalid');
+    const max = o.maxHolders ?? null;
+    if (!int(o.minHolders, 0, 20) || (max != null && !int(max, Math.max(1, o.minHolders), 20)) || (o.enabled === false && o.minHolders > 0)) {
+      fail(400, 'board-settings.holders-invalid');
+    }
+    if (!int(o.termYears, 1, 10)) fail(400, 'board-settings.term-invalid');
+    return { office, label, enabled: o.enabled !== false, minHolders: o.minHolders, maxHolders: max, termYears: o.termYears, board };
+  }
+
+  /** server: MembershipHandlers.addOffice — key OFFICE_…, after the others, at most 40. */
+  addOffice(viewer: Member, body: Record<string, any>): BoardSettings {
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    const office = MockBoard.office({ ...body, enabled: true }, generatedKey('OFFICE'), !!body.board);
+    if (this.people.boardSettings.data.offices.length >= 40) fail(409, 'board-settings.too-many-offices');
+    this.people.boardSettings.data.offices.push(office);
+    this.people.boardSettings.save();
+    mockServer.events.publish({ type: 'members.board-settings-changed', data: {} });
+    return this.people.boardSettings.data;
+  }
+
+  /** server: MembershipHandlers.saveSettings and BoardRules.validate — every office once, in the club's order. */
   saveBoardSettings(viewer: Member, body: Record<string, any>): BoardSettings {
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const list: Record<string, any>[] = Array.isArray(body.offices) ? body.offices : [];
-    if (
-      list.length !== OFFICES.length ||
-      new Set(list.map((o) => o.office)).size !== OFFICES.length ||
-      list.some((o) => !OFFICES.includes(o.office))
-    ) {
+    const keys = this.keys();
+    if (list.length !== keys.length || new Set(list.map((o) => o.office)).size !== keys.length || list.some((o) => !keys.includes(o.office))) {
       fail(400, 'board-settings.offices-invalid');
     }
     const int = (v: unknown, min: number, max: number) => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
-    const offices = OFFICES.map((kind) => {
-      const o = list.find((x) => x.office === kind)!;
-      const label = typeof o.label === 'string' ? o.label.trim() : '';
-      if (!label || label.length > 40) fail(400, 'board-settings.label-invalid');
-      const max = o.maxHolders ?? null;
-      if (!int(o.minHolders, 0, 20) || (max != null && !int(max, Math.max(1, o.minHolders), 20)) || (!o.enabled && o.minHolders > 0)) {
-        fail(400, 'board-settings.holders-invalid');
-      }
-      if (!int(o.termYears, 1, 10)) fail(400, 'board-settings.term-invalid');
-      return { office: kind, label, enabled: !!o.enabled, minHolders: o.minHolders, maxHolders: max, termYears: o.termYears };
+    const offices = list.map((o) => {
+      // the seeded ones keep their place on or off the board
+      if (OFFICES.includes(o.office) && o.board !== undefined && !!o.board !== (o.office !== 'AUDITOR')) fail(400, 'board-settings.offices-invalid');
+      return MockBoard.office(o, o.office, OFFICES.includes(o.office) ? o.office !== 'AUDITOR' : !!o.board);
     });
     const combinations: OfficePair[] = Array.isArray(body.combinations) ? body.combinations : fail(400, 'board-settings.combination-invalid');
-    if (combinations.some((p) => !p || !OFFICES.includes(p.a) || !OFFICES.includes(p.b) || p.a === p.b)) {
+    if (combinations.some((p) => !p || !keys.includes(p.a) || !keys.includes(p.b) || p.a === p.b)) {
       fail(400, 'board-settings.combination-invalid');
     }
-    if (!offices[0].enabled) fail(400, 'board-settings.chair-required');
+    if (!offices.find((o) => o.office === 'CHAIR')!.enabled) fail(400, 'board-settings.chair-required');
     if (!int(body.minBoardSize, 1, 20) || !int(body.cooptWeeks, 0, 52) || !int(body.termWarningDays, 1, 365) || !int(body.byElectionDays, 1, 365)) {
       fail(400, 'board-settings.board-invalid');
     }
@@ -131,6 +169,8 @@ export class MockBoard {
       ownConsentAge: body.ownConsentAge,
     });
     this.people.boardSettings.save();
+    // an office moved on or off the board changes its holders' BOARD role
+    for (const m of this.people.members.data) this.people.syncBoardRole(m);
     this.people.saveMembers();
     mockServer.events.publish({ type: 'members.board-settings-changed', data: {} });
     return this.people.boardSettings.data;
@@ -139,7 +179,8 @@ export class MockBoard {
   assignOffice(viewer: Member, body: Record<string, any>): OfficeRow & { name: string } {
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const office = body.office as OfficeRow['office'];
-    if (!OFFICES.includes(office) || typeof body.startsOn !== 'string') return fail(400, 'request.invalid');
+    if (typeof body.startsOn !== 'string') return fail(400, 'request.invalid');
+    if (!this.keys().includes(office)) fail(404, 'office.not-found');
     if (body.startsOn > plusYears(this.people.clock.today(), 1)) fail(400, 'office.start-in-future');
     const setting = this.people.boardSettings.data.offices.find((o) => o.office === office)!;
     const termEndsOn = typeof body.termEndsOn === 'string' && body.termEndsOn ? body.termEndsOn : plusYears(body.startsOn, setting.termYears);
@@ -198,11 +239,20 @@ mockServer
   .on('POST', '/api/v1/members/:id/invite', (req) => {
     directory.requirePrivileged(directory.actor(req), ADMIN_BOARD);
     directory.get(directory.actor(req), req.params.id);
+    const member = directory.members.data.find((m) => m.id === req.params.id)!;
+    // server: MemberHandlers.resendInvite — without a login the first invitation, once an e-mail is set
+    if (!member.login) {
+      if (!member.email) fail(409, 'member.email-missing');
+      member.login = true;
+      directory.saveMembers();
+      pendingInvites.add(member.id);
+      return;
+    }
     if (!pendingInvites.has(req.params.id)) fail(409, 'member.already-signed-in');
   })
   .on('POST', '/api/v1/members', (req) => {
     const member = directory.invite(directory.actor(req), req.body ?? {});
-    pendingInvites.add(member.id);
+    if (member.login) pendingInvites.add(member.id);
     return member;
   })
   .on('GET', '/api/v1/members/:id', (req) => directory.get(directory.actor(req), req.params.id))
@@ -235,6 +285,7 @@ mockServer
   .on('DELETE', '/api/v1/membership-kinds/:key', (req) => board.deleteMembershipKind(directory.actor(req), req.params.key))
   .on('GET', '/api/v1/board/settings', (req) => (directory.actor(req), directory.boardSettings.data))
   .on('PUT', '/api/v1/board/settings', (req) => board.saveBoardSettings(directory.actor(req), req.body ?? {}))
+  .on('POST', '/api/v1/board/settings/offices', (req) => board.addOffice(directory.actor(req), req.body ?? {}))
   .on('POST', '/api/v1/board/offices', (req) => board.assignOffice(directory.actor(req), req.body ?? {}))
   .on('POST', '/api/v1/board/offices/:id/end', (req) => board.endOffice(directory.actor(req), req.params.id));
 

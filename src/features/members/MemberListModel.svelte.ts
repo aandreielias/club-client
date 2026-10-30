@@ -24,12 +24,17 @@ export class MemberListModel extends ListModel<Member> {
           return list.items;
         },
         defaultSort: { key: 'name', dir: 'asc' },
-        searchText: (m) => `${m.firstName} ${m.lastName} ${m.email}`,
+        searchText: (m) => `${m.firstName} ${m.lastName} ${m.email ?? ''}`,
         columns: [
           { key: 'name', label: 'Name', value: (m) => `${m.lastName} ${m.firstName}`, format: (m) => `${m.lastName}, ${m.firstName}` },
-          { key: 'email', label: 'E-Mail', value: (m) => m.email, hideOnCompact: true },
+          { key: 'email', label: 'E-Mail', value: (m) => m.email ?? '', format: (m) => m.email ?? 'ohne Login', hideOnCompact: true },
           { key: 'roles', label: 'Rollen', value: (m) => m.roles.map((r) => ROLE_LABELS[r]).join(', '), sortable: false },
-          { key: 'status', label: 'Status', value: (m) => (!m.active ? 'Inaktiv' : pending.has(m.id) ? 'Eingeladen' : 'Aktiv'), width: '7rem' },
+          {
+            key: 'status',
+            label: 'Status',
+            value: (m) => (!m.active ? 'Inaktiv' : !m.login ? 'Ohne Login' : pending.has(m.id) ? 'Eingeladen' : 'Aktiv'),
+            width: '7rem',
+          },
         ],
         filters: [
           {
@@ -60,8 +65,9 @@ export class MemberListModel extends ListModel<Member> {
             options: () => [
               { value: 'pending', label: 'Noch nicht angemeldet' },
               { value: 'signed', label: 'Angemeldet' },
+              { value: 'none', label: 'Ohne Login' },
             ],
-            test: (m, value) => (value === 'pending' ? pending.has(m.id) : !pending.has(m.id)),
+            test: (m, value) => (value === 'pending' ? pending.has(m.id) : value === 'none' ? !m.login : m.login && !pending.has(m.id)),
           },
           { key: 'inactive', label: 'Inaktive zeigen', kind: 'toggle', always: true, test: (m, on) => !!on || m.active },
         ],

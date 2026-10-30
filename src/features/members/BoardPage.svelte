@@ -58,7 +58,7 @@
   async function end(o: Office) {
     const ok = await bus.request(CONFIRM, {
       title: 'Funktion beenden',
-      message: `${o.name} ist ab heute nicht mehr ${boardSettings.label(o.office)}.${o.office === 'AUDITOR' ? '' : ' Die Vorstandsrolle endet mit der letzten Funktion im Vorstand.'}`,
+      message: `${o.name} ist ab heute nicht mehr ${boardSettings.label(o.office)}.${boardSettings.isBoard(o.office) ? ' Die Vorstandsrolle endet mit der letzten Funktion im Vorstand.' : ''}`,
       confirmLabel: 'Beenden',
       danger: true,
     });
@@ -103,13 +103,13 @@
         </ul>
       {/if}
       {@render list(
-        board.offices.filter((o) => o.office !== 'AUDITOR'),
+        board.offices.filter((o) => boardSettings.isBoard(o.office)),
         'Noch keine Funktionen eingetragen.',
       )}
-      <h2>Rechnungsprüfung</h2>
+      <h2>Weitere Funktionen</h2>
       {@render list(
-        board.offices.filter((o) => o.office === 'AUDITOR'),
-        'Noch keine Rechnungsprüfer:innen eingetragen.',
+        board.offices.filter((o) => !boardSettings.isBoard(o.office)),
+        'Noch keine Rechnungsprüfer:innen oder weiteren Funktionen eingetragen.',
       )}
       <ErrorNote error={model.endAction.error} />
     {/snippet}

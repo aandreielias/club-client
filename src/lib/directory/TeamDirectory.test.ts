@@ -21,6 +21,7 @@ const me: Me = {
     memberSince: null,
     voter: false,
     eligible: false,
+    login: true,
     roles: ['COACH'],
   },
   teams: [

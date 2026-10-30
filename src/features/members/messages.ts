@@ -48,6 +48,8 @@ export const MEMBER_MESSAGES: MessageCatalog = {
   'board-settings.combination-invalid': 'Nur zwei verschiedene Funktionen des Vorstands lassen sich verbinden.',
   'office.term-invalid': 'Die Funktionsperiode endet nach dem Beginn und dauert höchstens drei Jahre.',
   'office.start-in-future': 'Funktionen höchstens ein Jahr im Voraus eintragen.',
+  'member.email-missing': 'Zuerst eine E-Mail-Adresse eintragen, dann zum Login einladen.',
+  'board-settings.too-many-offices': 'Höchstens 40 Funktionen.',
   'member.already-signed-in': 'Dieses Mitglied hat sich schon angemeldet; eine neue Einladung ist nicht nötig.',
   'office.already-ended': 'Diese Funktion ist schon beendet.',
   'office.not-found': 'Diese Funktion gibt es nicht mehr.',
@@ -68,8 +70,9 @@ export const MEMBER_MESSAGES: MessageCatalog = {
 export function boardWarning(code: string, settings: BoardSettings | null): string {
   if (code === 'board.too-small') return `Der Vorstand braucht mindestens ${settings?.minBoardSize ?? 3} Personen.`;
   if (code === 'board.even') return 'Der Vorstand braucht eine ungerade Anzahl Personen.';
-  const kind =
-    code === 'board.auditors-missing'
+  const kind = code.startsWith('board.office-missing:')
+    ? code.slice('board.office-missing:'.length)
+    : code === 'board.auditors-missing'
       ? 'AUDITOR'
       : code
           .replace(/^board\.|-missing$/g, '')

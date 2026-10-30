@@ -13,7 +13,7 @@
   import MemberChips from './MemberChips.svelte';
   import MotionFollowUps from './MotionFollowUps.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
-  import { membersApi } from '../members/services';
+  import { boardSettings, membersApi } from '../members/services';
   import { noticeText, QUORUM_LABELS, type FollowUpRule, type ResolutionAction } from './model';
   import { meetingsApi, resolutionRules } from './services';
 
@@ -34,7 +34,7 @@
   const actionOptions = resolutionRules.forType(null).map((a) => ({ value: a, label: resolutionRules.label(a) }));
   // server: circular votes run among the board, which also carries them out.
   const board = new Resource(async () => {
-    const people = new Map((await membersApi.board()).offices.filter((o) => o.office !== 'AUDITOR').map((o) => [o.memberId, o.name]));
+    const people = new Map((await membersApi.board()).offices.filter((o) => boardSettings.isBoard(o.office)).map((o) => [o.memberId, o.name]));
     return [...people].map(([memberId, name]) => ({ memberId, name })).sort((a, b) => a.name.localeCompare(b.name));
   });
   void board.load();

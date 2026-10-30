@@ -63,7 +63,8 @@ export type ClubEdit = Pick<
 
 export interface Member {
   id: string;
-  email: string;
+  /** null: a member without a login (a child, someone without e-mail); guardians act for them. */
+  email: string | null;
   firstName: string;
   lastName: string;
   /** ISO date; null when unset or hidden from the viewer. */
@@ -82,6 +83,8 @@ export interface Member {
   voter: boolean;
   /** May be elected into an office. */
   eligible: boolean;
+  /** Has an account; members without one never sign in (an admin invites them once an e-mail is set). */
+  login: boolean;
 }
 
 export interface MemberList {

@@ -1,7 +1,7 @@
 import type { EventBus } from '../../lib/bus';
 import { liveEvent } from '../../lib/live/LiveUpdates.svelte';
 import { LiveStore } from '../../lib/state/LiveStore.svelte';
-import { OFFICE_KINDS, OFFICE_LABELS, type BoardSettings, type MembersApi, type OfficeKind, type OfficeSetting } from './MembersApi';
+import { OFFICE_LABELS, SEEDED_OFFICES, type BoardSettings, type MembersApi, type OfficeKind, type OfficeSetting } from './MembersApi';
 
 export const BOARD_SETTINGS_CHANGED = liveEvent<Record<string, never>>('members.board-settings-changed');
 
@@ -18,11 +18,21 @@ export class BoardSettingsStore extends LiveStore<BoardSettings | null> {
 
   /** The seeded name until the settings are loaded. */
   label(kind: OfficeKind): string {
-    return this.value?.offices.find((o) => o.office === kind)?.label ?? OFFICE_LABELS[kind];
+    return this.value?.offices.find((o) => o.office === kind)?.label ?? OFFICE_LABELS[kind] ?? kind;
+  }
+
+  /** Every office of the club in its order (the seeded ones until loaded). */
+  get all(): OfficeKind[] {
+    return this.value?.offices.map((o) => o.office) ?? [...SEEDED_OFFICES];
   }
 
   /** Offices the club uses, for pickers. */
   get enabled(): OfficeKind[] {
-    return OFFICE_KINDS.filter((k) => this.value?.offices.find((o) => o.office === k)?.enabled ?? true);
+    return this.all.filter((k) => this.get(k)?.enabled ?? true);
+  }
+
+  /** server: BoardSettings.isBoard — holders are on the Vorstand; an unknown office counts as the seeded ones do. */
+  isBoard(kind: OfficeKind): boolean {
+    return this.get(kind)?.board ?? kind !== 'AUDITOR';
   }
 }

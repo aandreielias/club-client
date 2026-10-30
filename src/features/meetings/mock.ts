@@ -23,7 +23,6 @@ import type { OfficeKind } from '../members/MembersApi';
 import { tasks } from '../tasks/mock';
 import {
   ALL_MAJORITIES,
-  BOARD_OFFICES,
   defaultSteps,
   seedMeetings,
   seededRules,
@@ -136,7 +135,6 @@ const FOLLOW_UP_KINDS = [
 const ABOUT_MEMBER: readonly FollowUpKind[] = ['ENTER_HONORARY', 'REVOKE_HONORARY', 'ENTER_OFFICE', 'NOTIFY_EXCLUSION'];
 
 const QUORUMS: readonly Quorum[] = ['AT_LEAST_HALF', 'MORE_THAN_HALF', 'AT_LEAST_THREE_QUARTERS'];
-const OFFICES: readonly OfficeKind[] = [...BOARD_OFFICES, 'AUDITOR'];
 const ACTIONS: readonly ResolutionAction[] = [
   'GENERAL',
   'HONORARY_GRANT',
@@ -1487,7 +1485,11 @@ export class MockMeetings {
     const subset = <T>(value: unknown, all: readonly T[]): T[] =>
       Array.isArray(value) && value.every((v) => all.includes(v)) ? [...new Set(value as T[])] : fail(400, 'request.invalid');
     const majorities = subset(body.majorities, ALL_MAJORITIES);
-    const conveners = subset(body.conveners, OFFICES);
+    // server: conveners are offices the club has
+    const conveners = subset(
+      body.conveners,
+      directory.boardSettings.data.offices.map((o) => o.office),
+    );
     const actions = subset(body.actions, ACTIONS);
     if (body.electorate !== 'BOARD' && body.electorate !== 'ASSEMBLY') fail(400, 'meeting-type.electorate-invalid');
     if (!Number.isInteger(body.noticeHours) || body.noticeHours < 0 || body.noticeHours > 8760) fail(400, 'meeting-type.notice-invalid');

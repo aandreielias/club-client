@@ -1557,6 +1557,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/board/settings/offices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["addOffice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/board/offices": {
         parameters: {
             query?: never;
@@ -2697,8 +2713,7 @@ export interface components {
             dueDays: number;
             /** @enum {string} */
             assignTo: "DEFAULT" | "BOARD" | "OFFICE" | "MANAGER" | "MEMBER";
-            /** @enum {string} */
-            office: "CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR";
+            office: string;
             description: string;
             checklist: string[];
             afterPrevious: boolean;
@@ -2753,8 +2768,7 @@ export interface components {
             pending: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"][];
             action: string;
             actionMember: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"];
-            /** @enum {string} */
-            actionOffice: "CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR";
+            actionOffice: string;
             assignees: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"][];
             followUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpDto"][];
             assignable: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"][];
@@ -2839,6 +2853,7 @@ export interface components {
             memberSince: string;
             voter: boolean;
             eligible: boolean;
+            login: boolean;
         };
         "at.clubserver.gateway.rest.MembersController.MembershipBody": {
             membershipTypes: string[];
@@ -2866,8 +2881,7 @@ export interface components {
             /** Format: uuid */
             memberId: string;
             name: string;
-            /** @enum {string} */
-            office: "CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR";
+            office: string;
             /** Format: date-time */
             at: string;
         };
@@ -2951,7 +2965,7 @@ export interface components {
             /** Format: int32 */
             graceMinutes: number;
             majorities: ("SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS")[];
-            conveners: ("CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR")[];
+            conveners: string[];
             actions: string[];
             needsReason: boolean;
             dueBy: string;
@@ -2991,7 +3005,7 @@ export interface components {
             /** Format: int32 */
             graceMinutes: number;
             majorities: ("SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS")[];
-            conveners: ("CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR")[];
+            conveners: string[];
             actions: string[];
             needsReason: boolean;
             dueBy: string;
@@ -3265,14 +3279,11 @@ export interface components {
             ownConsentAge: number;
         };
         "at.clubserver.members.api.MembersApi.OfficePair": {
-            /** @enum {string} */
-            a: "CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR";
-            /** @enum {string} */
-            b: "CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR";
+            a: string;
+            b: string;
         };
         "at.clubserver.members.api.MembersApi.OfficeSetting": {
-            /** @enum {string} */
-            office: "CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR";
+            office: string;
             label: string;
             enabled: boolean;
             /** Format: int32 */
@@ -3281,6 +3292,7 @@ export interface components {
             maxHolders: number;
             /** Format: int32 */
             termYears: number;
+            board: boolean;
         };
         "at.clubserver.gateway.rest.CalendarController.ResponseBody": {
             /** Format: uuid */
@@ -3462,8 +3474,7 @@ export interface components {
             action: string;
             /** Format: uuid */
             actionMemberId: string;
-            /** @enum {string} */
-            actionOffice: "CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR";
+            actionOffice: string;
             assigneeIds: string[];
             followUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpRule"][];
         };
@@ -3631,11 +3642,20 @@ export interface components {
             canUpload: boolean;
             canManage: boolean;
         };
+        "at.clubserver.gateway.rest.MembersController.NewOfficeBody": {
+            label: string;
+            board: boolean;
+            /** Format: int32 */
+            minHolders: number;
+            /** Format: int32 */
+            maxHolders: number;
+            /** Format: int32 */
+            termYears: number;
+        };
         "at.clubserver.gateway.rest.MembersController.OfficeBody": {
             /** Format: uuid */
             memberId: string;
-            /** @enum {string} */
-            office: "CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR";
+            office: string;
             /** Format: date */
             startsOn: string;
             /** Format: date */
@@ -3648,8 +3668,7 @@ export interface components {
             /** Format: uuid */
             memberId: string;
             name: string;
-            /** @enum {string} */
-            office: "CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR";
+            office: string;
             /** Format: date */
             startsOn: string;
             /** Format: date */
@@ -3760,8 +3779,7 @@ export interface components {
             action: string;
             /** Format: uuid */
             actionMemberId: string;
-            /** @enum {string} */
-            actionOffice: "CHAIR" | "VICE_CHAIR" | "TREASURER" | "SECRETARY" | "BOARD_MEMBER" | "AUDITOR";
+            actionOffice: string;
             assigneeIds: string[];
             followUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpRule"][];
         };
@@ -7327,6 +7345,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.calendar.api.CalendarApi.AppointmentTypeDto"];
+                };
+            };
+        };
+    };
+    addOffice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.MembersController.NewOfficeBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.BoardSettings"];
                 };
             };
         };

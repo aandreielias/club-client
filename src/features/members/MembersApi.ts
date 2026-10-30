@@ -2,7 +2,8 @@ import type { ApiClient } from '../../lib/http/ApiClient';
 import type { Member, MemberList, MembershipType, Role } from '../../lib/types';
 
 export interface Invitation {
-  email: string;
+  /** null: no login; the guardians act for the member. */
+  email: string | null;
   firstName: string;
   lastName: string;
   birthDate: string | null;
@@ -20,13 +21,17 @@ export interface Membership {
   memberSince: string | null;
 }
 
-/** Vorstand functions and Rechnungsprüfer. */
-export type OfficeKind = 'CHAIR' | 'VICE_CHAIR' | 'TREASURER' | 'SECRETARY' | 'BOARD_MEMBER' | 'AUDITOR';
+/**
+ * server: MembersApi.OfficeKind — a function by key: the seeded six (meetings rely on CHAIR and SECRETARY) and the club's own
+ * (`OFFICE_…`, Einstellungen › Funktionen).
+ */
+export type OfficeKind = string;
 
-export const OFFICE_KINDS: readonly OfficeKind[] = ['CHAIR', 'VICE_CHAIR', 'TREASURER', 'SECRETARY', 'BOARD_MEMBER', 'AUDITOR'];
+/** The seeded offices, in their order; the club's own come after them with the board settings. */
+export const SEEDED_OFFICES: readonly OfficeKind[] = ['CHAIR', 'VICE_CHAIR', 'TREASURER', 'SECRETARY', 'BOARD_MEMBER', 'AUDITOR'];
 
 /** Seeded names; the club's own come with the board settings (`boardSettings.label`). */
-export const OFFICE_LABELS: Readonly<Record<OfficeKind, string>> = {
+export const OFFICE_LABELS: Readonly<Record<string, string>> = {
   CHAIR: 'Vorsitz',
   VICE_CHAIR: 'Stellvertretung',
   TREASURER: 'Kassier:in',
@@ -96,7 +101,12 @@ export interface OfficeSetting {
   minHolders: number;
   maxHolders: number | null;
   termYears: number;
+  /** Its holders are on the Vorstand (BOARD role, board size); fixed for the seeded ones (all but AUDITOR). */
+  board: boolean;
 }
+
+/** server: MembersController.NewOfficeBody — a function of the club's own. */
+export type OfficeInput = Omit<OfficeSetting, 'office' | 'enabled'>;
 
 /** server: MembersApi.BoardSettings — every office once, plus the board-wide rules. */
 export interface BoardSettings {
@@ -223,6 +233,11 @@ export class MembersApi {
   /** Admin/board with step-up; running offices keep their terms. */
   saveBoardSettings(settings: BoardSettings): Promise<BoardSettings> {
     return this.api.put<BoardSettings>('/api/v1/board/settings', settings);
+  }
+
+  /** A function of the club's own (key generated); answers every office's settings. */
+  addOffice(office: OfficeInput): Promise<BoardSettings> {
+    return this.api.post<BoardSettings>('/api/v1/board/settings/offices', office);
   }
 
   board(): Promise<Board> {

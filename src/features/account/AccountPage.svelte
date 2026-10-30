@@ -71,7 +71,7 @@
     <dt>Nachname</dt>
     {@render changeable('LAST_NAME', member.lastName)}
     <dt>E-Mail</dt>
-    {@render changeable('EMAIL', member.email)}
+    {@render changeable('EMAIL', member.email ?? '')}
     <dt>Geburtsdatum</dt>
     {@render changeable('BIRTH_DATE', member.birthDate ? session.format.date(member.birthDate) : '–')}
     <dt>Rollen</dt>

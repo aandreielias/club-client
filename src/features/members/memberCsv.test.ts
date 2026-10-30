@@ -21,6 +21,7 @@ const member = (extra: Partial<Member> = {}): Member => ({
   memberSince: '2020-01-01',
   voter: true,
   eligible: true,
+  login: true,
   ...extra,
 });
 
@@ -79,6 +80,13 @@ describe('member CSV', () => {
     expect(parseMemberImport('Name;Mail\nx;y', TODAY, new Set(), GRANTABLE).problems).toEqual([
       { line: 1, text: 'Spalten fehlen: Vorname, Nachname, E-Mail.' },
     ]);
+  });
+
+  it('imports a child without e-mail when a guardian is given', () => {
+    const csv = ['E-Mail;Vorname;Nachname;Erziehungsberechtigte:r', ';Kim;Klein;eltern@x.at', ';Ola;Ohne;'].join('\n');
+    const parsed = parseMemberImport(csv, TODAY, new Set(), GRANTABLE);
+    expect(parsed.rows.map((r) => [r.invitation.email, r.guardianEmail])).toEqual([[null, 'eltern@x.at']]);
+    expect(parsed.problems).toEqual([{ line: 3, text: expect.stringMatching(/^E-Mail fehlt/) }]);
   });
 
   it('keeps importing after a failed line', async () => {

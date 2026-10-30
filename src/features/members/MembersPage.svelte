@@ -36,7 +36,7 @@
   const membershipLabels = () => Object.fromEntries(membershipKinds.items.map((k) => [k.key, k.label]));
 
   async function importCsv(file: File): Promise<void> {
-    const existing = new Set((list.data.value ?? []).map((m) => m.email.toLowerCase()));
+    const existing = new Set((list.data.value ?? []).flatMap((m) => (m.email ? [m.email.toLowerCase()] : [])));
     const parsed = parseMemberImport(
       await file.text(),
       session.clock.today(),
@@ -60,7 +60,7 @@
     importing = true;
     try {
       await directory.loadTeams().catch(() => {});
-      const existingByEmail = new Map((list.data.value ?? []).map((m) => [m.email.toLowerCase(), m.id]));
+      const existingByEmail = new Map((list.data.value ?? []).flatMap((m) => (m.email ? [[m.email.toLowerCase(), m.id] as const] : [])));
       const failed = await runMemberImport(membersApi, parsed.rows, (e) => errors.text(e), {
         existing: existingByEmail,
         teams: directory.teams,

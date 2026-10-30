@@ -38,7 +38,7 @@
     {:else if column.key === 'status'}
       <Tag tone={member.active ? 'green' : 'red'}>{member.active ? 'Aktiv' : 'Inaktiv'}</Tag>
     {:else if column.key === 'email'}
-      <span class="muted">{member.email}</span>
+      <span class="muted">{member.email ?? 'ohne Login'}</span>
     {:else}
       {list.display(member, column)}
     {/if}

@@ -12,6 +12,7 @@ export interface ButtonTooltip {
 
 export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   Abbrechen: { text: 'Schließen, ohne zu speichern', command: 'view.back' },
+  'Login einladen': { text: 'Dem Mitglied einen eigenen Login geben: es bekommt eine Einladungs-E-Mail' },
   'Einladung erneut senden': { text: 'Die Einladungs-E-Mail noch einmal schicken; das Mitglied hat sich noch nie angemeldet' },
   'Verein anlegen': { text: 'Namen speichern und die App öffnen; alles Weitere zeigt die Karte „Einrichtung“' },
   'Frist verlängern': { text: 'Dem Umlaufbeschluss mehr Zeit geben' },
@@ -43,6 +44,7 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Schritt danach': { text: 'Aufgabe oder Benachrichtigung nach jeder Sitzung dieser Art' },
   'Folgeaufgabe hinzufügen': { text: 'Eine weitere Aufgabe nach diesem Beschluss anlegen lassen' },
   'Neue Mitgliedsart': { text: 'Eine eigene Art der Mitgliedschaft mit ihren Rechten anlegen' },
+  'Neue Funktion': { text: 'Eine Funktion des Vereins anlegen, etwa Jugendleitung; im Vorstand oder außerhalb' },
   'Neue Terminart': { text: 'Eine eigene Art von Terminen anlegen' },
   'Neue Sitzungsart': { text: 'Eine eigene Art von Sitzung mit ihren Regeln anlegen' },
   'Mitgliedschaft speichern': { text: 'Art, Ehrenmitgliedschaft und Eintrittsdatum speichern' },

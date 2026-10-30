@@ -42,9 +42,14 @@
     Daten aus dem Aufnahmeantrag eintragen. Die Person bekommt eine E-Mail mit einem Link, legt ihr Passwort fest und ergänzt fehlende Angaben.
   </p>
   <form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
-    <Field label="E-Mail" error={form.error('email')}>
-      <input type="email" bind:value={form.email} autocomplete="off" required />
-    </Field>
+    <label class="check"
+      ><input type="checkbox" bind:checked={form.withoutLogin} /> Ohne eigenen Login (etwa ein Kind): Erziehungsberechtigte bekommen die Nachrichten</label
+    >
+    {#if !form.withoutLogin}
+      <Field label="E-Mail" error={form.error('email')}>
+        <input type="email" bind:value={form.email} autocomplete="off" required />
+      </Field>
+    {/if}
     <div class="grid-2">
       <Field label="Vorname" error={form.error('firstName')}>
         <input bind:value={form.firstName} maxlength={max} required />

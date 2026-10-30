@@ -23,6 +23,30 @@ describe('club rules for offices and resolutions', () => {
     board.saveBoardSettings(member('vorstand'), before);
   });
 
+  it('add an office of the club, on or off the board, and reorder the offices', () => {
+    directory.confirm(member('vorstand'));
+    const before = structuredClone(directory.boardSettings.data);
+    const added = board.addOffice(member('vorstand'), { label: 'Jugendleitung', board: false, minHolders: 0, maxHolders: 1, termYears: 2 });
+    const youth = added.offices[added.offices.length - 1];
+    expect(youth.office).toMatch(/^OFFICE_/);
+    expect(directory.isBoardOffice(youth.office)).toBe(false);
+    expect(boardWarning(`board.office-missing:${youth.office}`, { ...added, offices: [{ ...youth, minHolders: 1 }] })).toBe(
+      'Jugendleitung ist nicht besetzt.',
+    );
+    // reordered, moved onto the board; the seeded auditors stay off it
+    const reordered = { ...added, offices: [youth, ...added.offices.slice(0, -1)].map((o) => (o === youth ? { ...o, board: true } : o)) };
+    const saved = board.saveBoardSettings(member('vorstand'), reordered);
+    expect(saved.offices[0].office).toBe(youth.office);
+    expect(directory.isBoardOffice(youth.office)).toBe(true);
+    const auditorsOn = { ...saved, offices: saved.offices.map((o) => (o.office === 'AUDITOR' ? { ...o, board: true } : o)) };
+    expect(() => board.saveBoardSettings(member('vorstand'), auditorsOn)).toThrow(
+      expect.objectContaining({ code: 'board-settings.offices-invalid' }),
+    );
+    Object.assign(directory.boardSettings.data, before);
+    directory.boardSettings.save();
+    for (const m of directory.members.data) directory.syncBoardRole(m);
+  });
+
   it('fix majorities per decision only where every meeting type offers them', () => {
     directory.confirm(member('vorstand'));
     const before = structuredClone(meetings.rules.data);

@@ -1,5 +1,5 @@
 import { FormState } from '../../lib/state/FormState.svelte';
-import type { BoardSettings, OfficeKind, OfficeSetting } from './MembersApi';
+import { SEEDED_OFFICES, type BoardSettings, type OfficeInput, type OfficeKind, type OfficeSetting } from './MembersApi';
 
 type Errors = Partial<Record<'label' | 'holders' | 'termYears', string>>;
 
@@ -18,12 +18,18 @@ export class OfficeSettingForm extends FormState<Errors> {
   minHolders = $state(1);
   maxHolders = $state<number | null>(1);
   termYears = $state(3);
+  board = $state(false);
   partners = $state<OfficeKind[]>([]);
+  /** '' for a new office (the server makes the key). */
   readonly office: OfficeKind;
 
-  constructor(settings: BoardSettings, office: OfficeKind) {
+  constructor(settings: BoardSettings | null, office: OfficeKind = '') {
     super();
     this.office = office;
+    if (!settings) {
+      this.minHolders = 0;
+      return;
+    }
     const setting = settings.offices.find((o) => o.office === office);
     if (setting) {
       this.label = setting.label;
@@ -31,6 +37,7 @@ export class OfficeSettingForm extends FormState<Errors> {
       this.minHolders = setting.minHolders;
       this.maxHolders = setting.maxHolders;
       this.termYears = setting.termYears;
+      this.board = setting.board;
     }
     this.partners = partnersOf(settings, office);
   }
@@ -38,6 +45,19 @@ export class OfficeSettingForm extends FormState<Errors> {
   /** The chair always exists: the board needs someone to convene. */
   get fixed(): boolean {
     return this.office === 'CHAIR';
+  }
+
+  /** The seeded offices keep their place on or off the board. */
+  get seeded(): boolean {
+    return SEEDED_OFFICES.includes(this.office);
+  }
+
+  get isNew(): boolean {
+    return !this.office;
+  }
+
+  toNew(): OfficeInput {
+    return { label: this.label.trim(), board: this.board, minHolders: this.minHolders, maxHolders: this.maxHolders, termYears: this.termYears };
   }
 
   /** The whole settings with this office and its pairs replaced. */
@@ -49,6 +69,7 @@ export class OfficeSettingForm extends FormState<Errors> {
       minHolders: this.minHolders,
       maxHolders: this.maxHolders,
       termYears: this.termYears,
+      board: this.board,
     };
     return {
       ...settings,

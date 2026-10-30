@@ -57,6 +57,8 @@
       </div>
     {:else}
       <dl class="props">
+        <dt>Vorstand</dt>
+        <dd>{office.board ? 'gehört zum Vorstand' : 'außerhalb des Vorstands'}</dd>
         <dt>In Verwendung</dt>
         <dd>{office.enabled ? 'wird besetzt' : 'wird nicht mehr vergeben'}</dd>
         {#if office.enabled}

@@ -10,7 +10,6 @@
   import OptionList from '../../ui/OptionList.svelte';
   import Select from '../../ui/Select.svelte';
   import { tooltip } from '../../ui/tooltip';
-  import { OFFICE_KINDS } from '../members/MembersApi';
   import { boardSettings } from '../members/services';
   import MeetingStepDialog from './MeetingStepDialog.svelte';
   import type { MeetingTypeForm } from './MeetingTypeForm.svelte';
@@ -71,10 +70,12 @@
   };
   // Functions the club uses (Einstellungen › Funktionen); one already chosen stays visible so it can be removed.
   const OFFICES = $derived(
-    OFFICE_KINDS.filter((o) => o !== 'AUDITOR' && (boardSettings.enabled.includes(o) || form.conveners.includes(o))).map((o) => ({
-      value: o,
-      label: boardSettings.label(o),
-    })),
+    boardSettings.all
+      .filter((o) => o !== 'AUDITOR' && (boardSettings.enabled.includes(o) || form.conveners.includes(o)))
+      .map((o) => ({
+        value: o,
+        label: boardSettings.label(o),
+      })),
   );
   const MAJORITIES = (Object.keys(MAJORITY_LABELS) as Majority[]).map((m) => ({ value: m, label: MAJORITY_LABELS[m], hint: MAJORITY_HINTS[m] }));
 

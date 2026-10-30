@@ -43,6 +43,7 @@ describe('TaskPolicy', () => {
         memberSince: null,
         voter: false,
         eligible: false,
+        login: true,
         roles: ['PARENT'],
       },
       teams: [],

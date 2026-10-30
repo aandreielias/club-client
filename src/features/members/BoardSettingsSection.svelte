@@ -34,6 +34,15 @@
     return rulesOf(saved);
   }
 
+  /** The list's order is the club's order of its offices (board page, pickers). */
+  async function reorder(keys: string[]) {
+    await load.run(async () => {
+      const current = await membersApi.boardSettings();
+      const offices = keys.map((k) => current.offices.find((o) => o.office === k)!).filter(Boolean);
+      boardSettings.value = await membersApi.saveBoardSettings({ ...current, offices });
+    });
+  }
+
   const rows = $derived(
     (boardSettings.value?.offices ?? []).map((o) => {
       const partners = partnersOf(boardSettings.value!, o.office).length;
@@ -49,7 +58,7 @@
               .filter(Boolean)
               .join(' · ')
           : 'wird nicht mehr vergeben',
-        tags: o.enabled ? [] : ['nicht besetzt'],
+        tags: [...(o.board ? [] : ['außerhalb des Vorstands']), ...(o.enabled ? [] : ['nicht besetzt'])],
         archived: false,
         inUse: o.enabled,
       };
@@ -86,6 +95,8 @@
     <SettingsList
       {rows}
       kind="office-setting"
+      newLabel="Neue Funktion"
+      onreorder={reorder}
       loading={load.busy && !rows.length}
       error={load.error}
       onretry={reload}

@@ -71,7 +71,7 @@ export function membersToCsv(members: readonly Member[], labels: MembershipLabel
     [
       m.firstName,
       m.lastName,
-      m.email,
+      m.email ?? '',
       m.birthDate ?? '',
       m.phone ?? '',
       yesNo(m.photoConsent),
@@ -165,6 +165,11 @@ export function parseMemberImport(
     form.firstName = get('Vorname');
     form.lastName = get('Nachname');
     form.email = get('E-Mail');
+    // Without e-mail (a child): no login, the guardian of the same file or club gets the messages.
+    if (!form.email) {
+      if (!get('Erziehungsberechtigte:r')) return fail('E-Mail fehlt; ohne E-Mail nur mit Erziehungsberechtigter:m (ohne eigenen Login).');
+      form.withoutLogin = true;
+    }
     form.phone = get('Telefon');
     form.photoConsent = get('Fotoeinwilligung').toLowerCase() === 'ja';
 
@@ -195,8 +200,10 @@ export function parseMemberImport(
     if (invalid.length) return fail(invalid.map(([field, text]) => `${FIELD_COLUMNS[field as MemberField]}: ${text}`).join(' '));
 
     const invitation = form.toInvitation();
-    if (seen.has(invitation.email)) return fail(`${invitation.email} gibt es schon.`);
-    seen.add(invitation.email);
+    if (invitation.email) {
+      if (seen.has(invitation.email)) return fail(`${invitation.email} gibt es schon.`);
+      seen.add(invitation.email);
+    }
 
     const honorary = get('Ehrenmitglied').toLowerCase() === 'ja';
     // With one kind per member, the honour replaces the invited kind (the server remembers it for a revoke).
@@ -247,13 +254,15 @@ export async function runMemberImport(
       return request();
     }
   };
+  // By e-mail (guardians are found by it); members without one by their line.
   const created = new Map<string, string>();
+  const key = (row: ImportRow) => row.invitation.email ?? `line:${row.line}`;
   for (const row of rows) {
     let done = false;
     try {
       const member = await call(() => api.invite(row.invitation));
       done = true;
-      created.set(row.invitation.email, member.id);
+      created.set(key(row), member.id);
       if (row.membership) await call(() => api.setMembership(member.id, row.membership!));
     } catch (error) {
       problems.push({ line: row.line, text: done ? `Konto angelegt, Mitgliedschaft nicht gesetzt: ${describe(error)}` : describe(error) });
@@ -261,7 +270,7 @@ export async function runMemberImport(
   }
   if (!links) return problems;
   for (const row of rows) {
-    const memberId = created.get(row.invitation.email);
+    const memberId = created.get(key(row));
     if (!memberId) continue;
     try {
       if (row.guardianEmail) {

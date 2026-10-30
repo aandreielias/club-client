@@ -41,10 +41,15 @@ abstract class MemberFormBase extends FormState<MemberFormErrors> {
     super();
   }
 
+  /** Members without a login may have no e-mail. */
+  protected get emailOptional(): boolean {
+    return false;
+  }
+
   protected validate(): MemberFormErrors {
     const errors: MemberFormErrors = {};
     const email = this.email.trim();
-    if (!EMAIL.test(email) || email.includes('ß')) errors.email = EMAIL_ERROR;
+    if ((email || !this.emailOptional) && (!EMAIL.test(email) || email.includes('ß'))) errors.email = EMAIL_ERROR;
     errors.firstName = nameError(this.firstName);
     errors.lastName = nameError(this.lastName);
     errors.birthDate = birthDateError(this.birthDate, this.today);
@@ -59,10 +64,16 @@ export class InviteForm extends MemberFormBase {
   roles = $state<Role[]>(['PLAYER']);
   /** Chosen on purpose: the kind decides vote and eligibility. */
   membershipType = $state<MembershipType | 'NONE' | ''>('');
+  /** No account (a child, someone without e-mail): guardians act for them; an admin invites them later. */
+  withoutLogin = $state(false);
+
+  protected get emailOptional(): boolean {
+    return this.withoutLogin;
+  }
 
   toInvitation(): Invitation {
     return {
-      email: this.email.trim().toLowerCase(),
+      email: this.withoutLogin ? null : this.email.trim().toLowerCase(),
       firstName: this.firstName.trim(),
       lastName: this.lastName.trim(),
       birthDate: this.birthDate || null,
@@ -87,12 +98,17 @@ export class ProfileForm extends MemberFormBase {
     today: string,
   ) {
     super(today);
-    this.email = original.email;
+    this.email = original.email ?? '';
     this.firstName = original.firstName;
     this.lastName = original.lastName;
     this.birthDate = original.birthDate ?? '';
     this.phone = original.phone ?? '';
     this.photoConsent = original.photoConsent;
+  }
+
+  /** Without a login the e-mail may stay empty (it is needed only to invite them). */
+  protected get emailOptional(): boolean {
+    return !this.original.login;
   }
 
   /** The new e-mail, or null when unchanged (it has its own endpoint). */

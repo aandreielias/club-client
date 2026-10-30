@@ -26,9 +26,11 @@ export class MemberDetailModel {
     this.invitationPending = new Resource(async () => (await this.api.pendingInvitations()).includes(this.id));
   }
 
-  /** The invitation mail again. */
-  resendInvite(): Promise<boolean> {
-    return this.inviteAction.run(() => this.api.resendInvite(this.id));
+  /** The invitation mail again; for a member without a login the first one (then the member has a login, still pending). */
+  async resendInvite(): Promise<boolean> {
+    if (!(await this.inviteAction.run(() => this.api.resendInvite(this.id)))) return false;
+    await Promise.all([this.member.load(), this.invitationPending.load()]);
+    return true;
   }
 
   load(): Promise<void> {

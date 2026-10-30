@@ -69,6 +69,7 @@ function seedMember(
     memberSince: membershipType ? '2024-09-01' : null,
     voter: false,
     eligible: false,
+    login: true,
   };
 }
 
@@ -91,23 +92,25 @@ const SEED_WARDS: Readonly<Record<string, readonly string[]>> = { eltern: ['spie
 export interface OfficeRow {
   id: string;
   memberId: string;
-  office: 'CHAIR' | 'VICE_CHAIR' | 'TREASURER' | 'SECRETARY' | 'BOARD_MEMBER' | 'AUDITOR';
+  /** A seeded office or one of the club's own (OFFICE_…). */
+  office: string;
   startsOn: string;
   termEndsOn: string;
   endedOn: string | null;
   coopted: boolean;
 }
 
-export const OFFICES = ['CHAIR', 'VICE_CHAIR', 'TREASURER', 'SECRETARY', 'BOARD_MEMBER', 'AUDITOR'] as const;
+/** The seeded offices; the club's own are in the board settings. */
+export const OFFICES: readonly string[] = ['CHAIR', 'VICE_CHAIR', 'TREASURER', 'SECRETARY', 'BOARD_MEMBER', 'AUDITOR'];
 /** server: V53__office_settings.sql — the seeded rules for the offices and the board. */
 const SEEDED_BOARD_SETTINGS: BoardSettings = {
   offices: [
-    { office: 'CHAIR', label: 'Vorsitz', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3 },
-    { office: 'VICE_CHAIR', label: 'Stellvertretung', enabled: true, minHolders: 0, maxHolders: 1, termYears: 3 },
-    { office: 'TREASURER', label: 'Kassier:in', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3 },
-    { office: 'SECRETARY', label: 'Schriftführung', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3 },
-    { office: 'BOARD_MEMBER', label: 'Vorstandsmitglied', enabled: true, minHolders: 0, maxHolders: null, termYears: 3 },
-    { office: 'AUDITOR', label: 'Rechnungsprüfung', enabled: true, minHolders: 2, maxHolders: 2, termYears: 3 },
+    { office: 'CHAIR', label: 'Vorsitz', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3, board: true },
+    { office: 'VICE_CHAIR', label: 'Stellvertretung', enabled: true, minHolders: 0, maxHolders: 1, termYears: 3, board: true },
+    { office: 'TREASURER', label: 'Kassier:in', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3, board: true },
+    { office: 'SECRETARY', label: 'Schriftführung', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3, board: true },
+    { office: 'BOARD_MEMBER', label: 'Vorstandsmitglied', enabled: true, minHolders: 0, maxHolders: null, termYears: 3, board: true },
+    { office: 'AUDITOR', label: 'Rechnungsprüfung', enabled: true, minHolders: 2, maxHolders: 2, termYears: 3, board: false },
   ],
   minBoardSize: 3,
   oddBoardSize: true,
@@ -196,7 +199,21 @@ export class MockDirectory {
     this.migrateMemberships();
     this.addMissingMembers();
     this.upgradeSeed();
+    this.addPhase6Flags();
     this.saveMembers();
+  }
+
+  /** server: V86 — stored mock data from before members without login and the board flag of offices. */
+  private addPhase6Flags(): void {
+    for (const m of this.members.data) m.login ??= !!m.email;
+    let changed = false;
+    for (const o of this.boardSettings.data.offices) {
+      if (o.board === undefined) {
+        o.board = o.office !== 'AUDITOR';
+        changed = true;
+      }
+    }
+    if (changed) this.boardSettings.save();
   }
 
   /** server: V67 — mock data stored before kinds were sets: honorary becomes a kind, the former kind is remembered. */
@@ -341,11 +358,13 @@ export class MockDirectory {
   }));
 
   accounts(): DevAccount[] {
-    return this.members.data.map((m) => ({ email: m.email, name: `${m.firstName} ${m.lastName}`, roles: m.roles }));
+    return this.members.data.flatMap((m) =>
+      m.email && m.login !== false ? [{ email: m.email, name: `${m.firstName} ${m.lastName}`, roles: m.roles }] : [],
+    );
   }
 
   findActive(email: string | null): Member | null {
-    return this.members.data.find((m) => m.email === email && m.active) ?? null;
+    return (email && this.members.data.find((m) => m.email === email && m.active)) || null;
   }
 
   /** Server audience of team items: team members, their guardians, admin and board. */
@@ -580,8 +599,9 @@ export class MockDirectory {
     const roles = MockDirectory.roles(body.roles);
     if (roles.includes('ADMIN') && !this.hasRole(viewer, ['ADMIN'])) fail(403, 'access.denied');
     if (roles.includes('BOARD')) fail(409, 'member.board-by-office');
-    const email = MockDirectory.email(body.email);
-    if (this.members.data.some((m) => m.email === email)) fail(409, 'member.email-taken');
+    // server: no e-mail = no login; the guardians act for the member
+    const email = body.email ? MockDirectory.email(body.email) : null;
+    if (email && this.members.data.some((m) => m.email === email)) fail(409, 'member.email-taken');
     const member: Member = {
       id: crypto.randomUUID(),
       email,
@@ -597,6 +617,7 @@ export class MockDirectory {
       memberSince: body.membershipType ? this.clock.today() : null,
       voter: false,
       eligible: false,
+      login: !!email,
     };
     this.applyProfile(member, { birthDate: body.birthDate || undefined, phone: body.phone ?? undefined, photoConsent: body.photoConsent });
     if (body.guardianId != null && !this.members.data.some((m) => m.id === body.guardianId && m.active)) fail(404, 'member.not-found');
@@ -713,7 +734,7 @@ export class MockDirectory {
     if (body === 'BOARD') {
       const board = new Set(
         this.running()
-          .filter((o) => o.office !== 'AUDITOR')
+          .filter((o) => this.isBoardOffice(o.office))
           .map((o) => o.memberId),
       );
       return this.members.data.filter((m) => m.active && board.has(m.id)).map((m) => m.id);
@@ -727,6 +748,11 @@ export class MockDirectory {
       .map((o) => o.office);
   }
 
+  /** server: BoardSettings.isBoard — browsers with older mock data have no flag yet: all but the auditors. */
+  isBoardOffice(office: string): boolean {
+    return this.boardSettings.data.offices.find((o) => o.office === office)?.board ?? office !== 'AUDITOR';
+  }
+
   running(): OfficeRow[] {
     return this.offices.data.filter((o) => !o.endedOn);
   }
@@ -735,7 +761,7 @@ export class MockDirectory {
   syncBoardRole(member: Member): void {
     // server: MembershipHandlers.holdsBoardOffice — an office entered ahead counts from its start
     const today = this.clock.today();
-    const board = member.active && this.running().some((o) => o.memberId === member.id && o.office !== 'AUDITOR' && o.startsOn <= today);
+    const board = member.active && this.running().some((o) => o.memberId === member.id && this.isBoardOffice(o.office) && o.startsOn <= today);
     if (board === member.roles.includes('BOARD')) return;
     member.roles = board ? [...member.roles, 'BOARD'] : member.roles.filter((r) => r !== 'BOARD');
     this.saveMembers();

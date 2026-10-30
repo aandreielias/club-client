@@ -91,9 +91,11 @@
     await view.confirm(request, () => view.attempt(model.eraseAction, () => model.erase()), 'Personendaten gelöscht.');
   }
 
-  async function resendInvite() {
-    if (await view.attempt(model.inviteAction, () => model.resendInvite())) view.notify('Einladung erneut gesendet.');
+  async function resendInvite(first: boolean) {
+    if (await view.attempt(model.inviteAction, () => model.resendInvite())) view.notify(first ? 'Einladung gesendet.' : 'Einladung erneut gesendet.');
   }
+
+  const mayInviteLogin = $derived(!!model.member.value && !model.member.value.login && model.member.value.active && policy.canInvite());
 
   async function deactivate(member: Member) {
     const request = {
@@ -113,7 +115,7 @@
         {#if !editing && policy.canEditProfile(member)}<Button onclick={() => (editing = true)}>Profil bearbeiten</Button>{/if}
       {/snippet}
       {#snippet meta()}
-        {#if !member.active}<Tag tone="red">Inaktiv</Tag>{:else if invited}<Tag>Eingeladen</Tag>{/if}
+        {#if !member.active}<Tag tone="red">Inaktiv</Tag>{:else if !member.login}<Tag>Ohne Login</Tag>{:else if invited}<Tag>Eingeladen</Tag>{/if}
         {#if member.membershipTypes.includes(HONORARY)}<Tag tone="yellow">{membershipKinds.label(HONORARY)}</Tag>{/if}
         {#each member.roles as role (role)}<Tag tone={roleHue(role)}>{ROLE_LABELS[role]}</Tag>{/each}
       {/snippet}
@@ -123,7 +125,9 @@
       {:else}
         <dl class="props">
           <dt>E-Mail</dt>
-          <dd><a href="mailto:{member.email}">{member.email}</a></dd>
+          <dd>
+            {#if member.email}<a href="mailto:{member.email}">{member.email}</a>{:else}–{/if}
+          </dd>
           <dt>Telefon</dt>
           <dd>
             {#if member.phone}<a href="tel:{member.phone}">{member.phone}</a>{:else}–{/if}
@@ -173,14 +177,22 @@
         <GuardianLinker {member} {model} />
       {/if}
 
-      {#if (invited && member.active) || policy.canResetSecurity() || policy.canDeactivate(member) || policy.canReactivate(member) || policy.canErase(member)}
+      {#if mayInviteLogin || (invited && member.active) || policy.canResetSecurity() || policy.canDeactivate(member) || policy.canReactivate(member) || policy.canErase(member)}
         <h2>Zugang</h2>
-        {#if invited && member.active}
+        {#if mayInviteLogin}
+          <p class="muted small">
+            Ohne eigenen Login: Erziehungsberechtigte bekommen die Nachrichten.{member.email
+              ? ''
+              : ' Für einen Login zuerst unter „Profil bearbeiten“ eine E-Mail eintragen.'}
+          </p>
+        {:else if invited && member.active}
           <p class="muted small">Noch nicht angemeldet. Der Link in der Einladung gilt nur eine Zeit lang.</p>
         {/if}
         <div class="row">
-          {#if invited && member.active}
-            <Button busy={model.inviteAction.busy} onclick={resendInvite}>Einladung erneut senden</Button>
+          {#if mayInviteLogin && member.email}
+            <Button busy={model.inviteAction.busy} onclick={() => resendInvite(true)}>Login einladen</Button>
+          {:else if invited && member.active}
+            <Button busy={model.inviteAction.busy} onclick={() => resendInvite(false)}>Einladung erneut senden</Button>
           {/if}
           {#if policy.canResetSecurity() && member.active}
             <Button busy={model.resetAction.busy} onclick={() => resetSecurity(member)}>Sperre aufheben und Geräte entfernen</Button>

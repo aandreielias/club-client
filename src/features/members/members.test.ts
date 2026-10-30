@@ -23,6 +23,7 @@ const member = (id: string, roles: Role[], extra: Partial<Member> = {}): Member 
   memberSince: null,
   voter: false,
   eligible: false,
+  login: true,
   roles,
   ...extra,
 });
@@ -60,6 +61,20 @@ describe('InviteForm', () => {
       roles: ['PLAYER'],
       membershipType: 'ORDINARY',
     });
+  });
+});
+
+describe('InviteForm without login', () => {
+  it('needs no e-mail and sends none', () => {
+    const form = new InviteForm(TODAY);
+    form.firstName = 'Kim';
+    form.lastName = 'Klein';
+    form.membershipType = 'NONE';
+    expect(form.errors.email).toBeDefined();
+    form.withoutLogin = true;
+    form.email = 'ignored@x.at';
+    expect(form.valid).toBe(true);
+    expect(form.toInvitation().email).toBeNull();
   });
 });
 
