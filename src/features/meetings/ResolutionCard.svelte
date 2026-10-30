@@ -20,7 +20,18 @@
    * One resolution: motion, required majority, secret vote (only the count of votes while open, the split after closing),
    * the room's sums for members without the app, written votes of a circular vote.
    */
-  let { resolution: r, onchanged, ondeleted }: { resolution: Resolution; onchanged: (r: Resolution) => void; ondeleted?: () => void } = $props();
+  let {
+    resolution: r,
+    onchanged,
+    ondeleted,
+    meetingOpen = true,
+  }: {
+    resolution: Resolution;
+    onchanged: (r: Resolution) => void;
+    ondeleted?: () => void;
+    /** Votes open only in the open meeting (circular votes always). */
+    meetingOpen?: boolean;
+  } = $props();
 
   const action = new Action();
   const choices = (Object.keys(CHOICE_LABELS) as Choice[]).map((c) => ({ value: c, label: CHOICE_LABELS[c] }));
@@ -100,6 +111,23 @@
     newDeadline = session.clock.toLocal(r.deadline!).slice(0, 16);
     extending = true;
   }
+  let editing = $state(false);
+  let editTitle = $state('');
+  let editText = $state('');
+
+  function startEdit() {
+    editTitle = r.title;
+    editText = r.text ?? '';
+    editing = true;
+  }
+
+  async function saveDraft(event: SubmitEvent) {
+    event.preventDefault();
+    if (!editTitle.trim()) return;
+    if (await action.run(() => meetingsApi.updateResolution(r.id, { title: editTitle.trim(), text: editText.trim() }).then(onchanged)))
+      editing = false;
+  }
+
   async function extend() {
     await write(() => meetingsApi.extendDeadline(r.id, session.clock.toInstant(newDeadline)), 'Frist verlängert.');
     if (!action.error) extending = false;
@@ -113,7 +141,18 @@
 
 <article class="resolution">
   <header>
-    <strong>{r.title}</strong>
+    {#if editing}
+      <form class="stack edit" onsubmit={saveDraft}>
+        <Field label="Antrag"><input bind:value={editTitle} maxlength="200" required /></Field>
+        <Field label="Text (optional)"><textarea bind:value={editText} rows="3" maxlength="4000"></textarea></Field>
+        <div class="row">
+          <Button type="submit" variant="primary" busy={action.busy} disabled={!editTitle.trim()}>Speichern</Button>
+          <Button variant="ghost" onclick={() => (editing = false)}>Abbrechen</Button>
+        </div>
+      </form>
+    {:else}
+      <strong>{r.title}</strong>
+    {/if}
     <span class="tags">
       <Tag>{MAJORITY_LABELS[r.majority]}</Tag>
       {#if r.result}<Tag tone={RESULT_TONES[r.result]}>{RESULT_LABELS[r.result]}</Tag>{:else if r.status === 'OPEN'}<Tag tone="green">Offen</Tag
@@ -204,13 +243,25 @@
       <Field label="Enthaltung"><input type="number" min="0" bind:value={roomAbstain} /></Field>
       <Button type="submit" busy={action.busy} disabled={roomSum > r.analogPresent}>Stimmen im Raum erfassen</Button>
     </form>
-    <p class="muted small">Höchstens {r.analogPresent} Stimmen: so viele sind ohne App da.</p>
+    <p class="muted small">
+      Höchstens {r.analogPresent} Stimmen: so viele sind ohne App da. Vor dem Schließen eintragen (auch 0); bis dahin lässt es sich korrigieren.
+    </p>
   {/if}
 
   {#if r.status !== 'CLOSED' && r.ownFollowUps.length}
     <p class="muted small">
       Bei Annahme zusätzlich: {r.ownFollowUps.map((f, i) => `${i + 1}. ${f.title.replaceAll('{beschluss}', r.title)}`).join(' · ')}
     </p>
+  {/if}
+  {#if r.status === 'CLOSED' && r.result === 'PASSED' && r.canManage && !r.followUps.some((f) => f.kind !== 'MANUAL')}
+    <div>
+      <Button
+        size="sm"
+        busy={action.busy}
+        tooltip="Die Folgeaufgaben der Beschlussart jetzt anlegen"
+        onclick={() => write(() => meetingsApi.planFollowUps(r.id), 'Aufgaben angelegt.')}>Aufgaben jetzt erzeugen</Button
+      >
+    </div>
   {/if}
   {#if r.status === 'CLOSED' && (r.followUps.length || r.canManage)}
     <FollowUpList followUps={r.followUps} canAdd={r.canManage} candidates={r.assignable} contextTitle={r.title} add={addFollowUp} />
@@ -229,8 +280,9 @@
   {#if r.canManage && r.status !== 'CLOSED'}
     <div class="row">
       {#if r.status === 'DRAFT'}
+        {#if !editing}<Button variant="ghost" icon="edit" onclick={startEdit}>Bearbeiten</Button>{/if}
         <Button variant="ghost" busy={action.busy} onclick={remove}>Entwurf löschen</Button>
-        <Button variant="primary" busy={action.busy} onclick={open}>Abstimmung öffnen</Button>
+        {#if meetingOpen}<Button variant="primary" busy={action.busy} onclick={open}>Abstimmung öffnen</Button>{/if}
       {:else}
         <Button busy={action.busy} onclick={close}>Abstimmung schließen</Button>
       {/if}

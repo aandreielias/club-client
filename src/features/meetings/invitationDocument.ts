@@ -50,21 +50,47 @@ const DOCUMENT_START = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 const SECTION =
   '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1417" w:bottom="1134" w:left="1417" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>';
 
+/** server: AgendaDocument.renderProtocol — the built-in protocol layout; the text repeats line by line. */
+export async function protocolTemplate(Zip: typeof JSZip): Promise<Blob> {
+  return template(
+    Zip,
+    [
+      p('Small', '{{Verein}}'),
+      p('Title', 'Protokoll der {{Art}}'),
+      p('Subtitle', '{{Titel}}'),
+      p(null, 'Wann: {{Wann}}'),
+      p(null, 'Wo: {{Ort}}'),
+      p(null, 'Anwesend: {{Anwesend}}'),
+      p(null, 'Beschlussfähig: {{Beschlussfähig}}'),
+      p(null, 'Tagesordnung: {{Agenda}}'),
+      p(null, 'Beschlüsse: {{Beschlüsse}}'),
+      p('Heading1', 'Protokoll'),
+      p(null, '{{Tagesordnung}}'),
+    ].join(''),
+  );
+}
+
 /** server: AgendaDocument.defaultTemplate */
 export async function defaultTemplate(Zip: typeof JSZip): Promise<Blob> {
+  return template(
+    Zip,
+    [
+      p('Small', '{{Verein}}'),
+      p('Title', 'Einladung zur {{Art}}'),
+      p('Subtitle', '{{Titel}}'),
+      p(null, 'Wann: {{Wann}}'),
+      p(null, 'Wo: {{Ort}}'),
+      p(null, 'Videokonferenz: {{Video}}'),
+      p(null, 'Grund der Dringlichkeit: {{Dringlichkeit}}'),
+      p('Heading1', 'Tagesordnung'),
+      p('ListParagraph', '{{Tagesordnung}}'),
+      p('Small', 'Einladung versandt am {{Versandt}}.'),
+    ].join(''),
+  );
+}
+
+async function template(Zip: typeof JSZip, body: string): Promise<Blob> {
   const zip = new Zip();
-  const body = [
-    p('Small', '{{Verein}}'),
-    p('Title', 'Einladung zur {{Art}}'),
-    p('Subtitle', '{{Titel}}'),
-    p(null, 'Wann: {{Wann}}'),
-    p(null, 'Wo: {{Ort}}'),
-    p(null, 'Videokonferenz: {{Video}}'),
-    p(null, 'Grund der Dringlichkeit: {{Dringlichkeit}}'),
-    p('Heading1', 'Tagesordnung'),
-    p('ListParagraph', '{{Tagesordnung}}'),
-    p('Small', 'Einladung versandt am {{Versandt}}.'),
-  ].join('');
   zip.file('[Content_Types].xml', CONTENT_TYPES);
   zip.file('_rels/.rels', RELS);
   zip.file('word/_rels/document.xml.rels', DOCUMENT_RELS);

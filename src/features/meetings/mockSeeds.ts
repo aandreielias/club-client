@@ -5,6 +5,8 @@ import type { Trigger } from './triggers';
 import {
   plainFollowUp,
   type ActionRule,
+  type AgendaItem,
+  type Approval,
   type FollowUpKind,
   type FollowUpRule,
   type Majority,
@@ -243,8 +245,27 @@ export function seededRules(): ActionRule[] {
 }
 export type StoredMeeting = Omit<
   Meeting,
-  'online' | 'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage' | 'autoTasks' | 'followUps' | 'assignable' | 'protocolFinalAt'
-> & { presence: Record<string, PresenceMode>; autoTasks?: boolean; frozenElectorate?: string[]; createdBy?: string; protocolFinalAt?: string | null };
+  | 'online'
+  | 'latestInvite'
+  | 'electorate'
+  | 'present'
+  | 'quorate'
+  | 'canManage'
+  | 'autoTasks'
+  | 'followUps'
+  | 'assignable'
+  | 'protocolFinalAt'
+  | 'agendaItems'
+  | 'approvals'
+> & {
+  presence: Record<string, PresenceMode>;
+  autoTasks?: boolean;
+  frozenElectorate?: string[];
+  createdBy?: string;
+  protocolFinalAt?: string | null;
+  agendaItems?: AgendaItem[];
+  approvals?: Approval[];
+};
 /** server: meetings_follow_up */
 export type StoredFollowUp = {
   id: string;

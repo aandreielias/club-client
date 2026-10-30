@@ -2,7 +2,7 @@ import { TASK_STATUS_LABELS } from '../../lib/types';
 // Mirror of the club-server search DTOs (gateway SearchController).
 
 export type HitKind =
-  'APPOINTMENT' | 'TASK' | 'MEMBER' | 'TEAM' | 'ITEM' | 'LOCATION' | 'TOURNAMENT' | 'MEETING' | 'FOLDER' | 'FILE' | 'MAIL' | 'SETTING';
+  'APPOINTMENT' | 'TASK' | 'MEMBER' | 'TEAM' | 'ITEM' | 'LOCATION' | 'TOURNAMENT' | 'MEETING' | 'RESOLUTION' | 'FOLDER' | 'FILE' | 'MAIL' | 'SETTING';
 
 export interface SearchHit {
   kind: HitKind;
@@ -32,6 +32,7 @@ export const HIT_KINDS: readonly { value: HitKind; label: string }[] = [
   { value: 'LOCATION', label: 'Ort' },
   { value: 'TOURNAMENT', label: 'Turnier' },
   { value: 'MEETING', label: 'Sitzung' },
+  { value: 'RESOLUTION', label: 'Beschluss' },
   { value: 'FOLDER', label: 'Ordner' },
   { value: 'FILE', label: 'Datei' },
   { value: 'MAIL', label: 'E-Mail' },
@@ -65,6 +66,8 @@ export function hitTarget(hit: SearchHit): { window: { kind: string; id: string 
       return { window: { kind: 'tournament', id: hit.id } };
     case 'MEETING':
       return { window: { kind: 'meeting', id: hit.id } };
+    case 'RESOLUTION':
+      return { window: { kind: 'resolution', id: hit.id } };
     case 'FILE':
       return { window: { kind: 'file', id: `${hit.folderId}:${hit.id}` } };
     case 'FOLDER':

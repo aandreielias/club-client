@@ -8,7 +8,8 @@
   import { RESOLUTION_CHANGED } from './events';
   import type { Resolution } from './model';
   import ResolutionCard from './ResolutionCard.svelte';
-  import { meetingsApi } from './services';
+  import { noticeText } from './model';
+  import { meetingsApi, resolutionRules } from './services';
 
   /** Umlaufbeschlüsse of the board, newest first. Admin and board only. */
   const list = new Resource(() => meetingsApi.circular());
@@ -28,7 +29,11 @@
       {#each items as r (r.id)}
         <ResolutionCard resolution={r} onchanged={replace} ondeleted={() => void list.load()} />
       {:else}
-        <p class="muted">Der Vorstand kann auch schriftlich beschließen: alle bekommen den Antrag und haben mindestens drei Tage Zeit.</p>
+        <p class="muted">
+          Der Vorstand kann auch schriftlich beschließen: alle bekommen den Antrag und haben mindestens {noticeText(
+            resolutionRules.value.circular.minHours,
+          )} Zeit.
+        </p>
       {/each}
     </div>
   {/snippet}

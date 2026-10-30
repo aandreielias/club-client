@@ -1,5 +1,9 @@
 <script lang="ts">
   import MeetingDetailsEditor from './MeetingDetailsEditor.svelte';
+  import MeetingDraftEditor from './MeetingDraftEditor.svelte';
+  import AgendaEditor from './AgendaEditor.svelte';
+  import { BrowserFile } from '../../lib/files/BrowserFile';
+  import { Resource } from '../../lib/state/Resource.svelte';
   import { bus, commands, session } from '../../lib/container';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
@@ -47,6 +51,26 @@
   /** Online presence only where members may join online. */
   const attendanceFor = (m: Meeting) => ATTENDANCE.filter((a) => a.value !== 'ONLINE' || m.online);
   let editingPlace = $state(false);
+  let editingDraft = $state(false);
+  let editingAgenda = $state(false);
+  let presenceFilter = $state('');
+  // The meeting's motions, for linking agenda items.
+  const motions = new Resource(() => meetingsApi.resolutions(id));
+  const me = session.member.id;
+
+  /** Present members without a mode yet are set present in the room at once. */
+  async function allPresent(m: Meeting) {
+    const missing = m.electorate.filter((p) => !m.present.some((x) => x.memberId === p.memberId)).map((p) => p.memberId);
+    if (missing.length && (await model.setPresenceMany(missing, 'ANALOG'))) view.notify(`${missing.length} als anwesend eingetragen.`);
+  }
+
+  /** The attendance list (who was invited, how they were there) as a CSV file. */
+  function attendanceCsv(m: Meeting) {
+    const label = (id: string) => ATTENDANCE.find((a) => a.value === attendance(m, id))?.label ?? '';
+    const rows = [['Name', 'Anwesenheit'], ...m.electorate.map((p) => [p.name, label(p.memberId)])];
+    const csv = rows.map((r) => r.map((c) => `"${c.replaceAll('"', '""')}"`).join(';')).join('\r\n');
+    BrowserFile.save(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }), `anwesenheit-${m.title}.csv`);
+  }
 
   let protocol = $state('');
   let protocolFor = $state<string | null>(null);
@@ -187,6 +211,17 @@
         {#if m.urgency}<dt>Dringlichkeit</dt>
           <dd>{m.urgency}</dd>{/if}
       </dl>
+      {#if m.canManage && m.status === 'DRAFT'}
+        {#if editingDraft}
+          <MeetingDraftEditor meeting={m} {model} onclose={() => (editingDraft = false)} />
+        {:else}
+          <div>
+            <Button size="sm" icon="edit" tooltip="Titel, Zeit und Dringlichkeit des Entwurfs ändern" onclick={() => (editingDraft = true)}
+              >Entwurf bearbeiten</Button
+            >
+          </div>
+        {/if}
+      {/if}
       {#if m.canManage && m.status !== 'CLOSED'}
         {#if editingPlace}
           <MeetingDetailsEditor meeting={m} {model} onclose={() => (editingPlace = false)} />
@@ -200,12 +235,39 @@
       {/if}
 
       <h2>Tagesordnung</h2>
-      {#if m.agenda}<p class="text">{m.agenda}</p>{:else}<p class="muted">Keine Tagesordnung eingetragen.</p>{/if}
+      {#if editingAgenda}
+        <AgendaEditor meeting={m} {model} motions={motions.value ?? []} onclose={() => (editingAgenda = false)} />
+      {:else}
+        {#if m.agendaItems.length}
+          <ol class="agenda">
+            {#each m.agendaItems as item (item.id)}
+              <li>
+                <span>{item.title}</span>
+                {#if item.resolutionId}<RecordLink kind="resolution" id={item.resolutionId}>Antrag</RecordLink>{/if}
+                {#if item.note}<span class="muted small">{item.note}</span>{/if}
+              </li>
+            {/each}
+          </ol>
+        {:else if m.agenda}<p class="text">{m.agenda}</p>{:else}<p class="muted">Keine Tagesordnung eingetragen.</p>{/if}
+        {#if m.canManage && m.status !== 'CLOSED' && m.status !== 'CANCELLED'}
+          <div>
+            <Button size="sm" icon="edit" onclick={() => (void motions.load(), (editingAgenda = true))}>Tagesordnung bearbeiten</Button>
+          </div>
+        {/if}
+      {/if}
 
       <h2>Unterlagen und Verknüpfungen</h2>
       <MeetingLinks meeting={m} {model} />
 
-      {#if m.status !== 'DRAFT'}
+      {#if m.status === 'OPEN' && m.electorate.some((p) => p.memberId === me) && !m.present.some((p) => p.memberId === me)}
+        <div class="row check-in">
+          <span>Bist du dabei?</span>
+          <Button variant="primary" busy={model.action.busy} onclick={() => void model.checkIn('APP')}>Ich bin da</Button>
+          {#if m.online}<Button busy={model.action.busy} onclick={() => void model.checkIn('ONLINE')}>Online dabei</Button>{/if}
+        </div>
+      {/if}
+
+      {#if m.status !== 'DRAFT' && m.status !== 'CANCELLED'}
         <h2>Anwesenheit</h2>
         <p>
           <Tag tone={m.quorate ? 'green' : 'red'}>{m.quorate ? 'Beschlussfähig' : 'Nicht beschlussfähig'}</Tag>
@@ -215,8 +277,21 @@
               : '…'}</span
           >
         </p>
+        <div class="row">
+          {#if m.electorate.length > 8}
+            <input type="search" bind:value={presenceFilter} placeholder="Name suchen" aria-label="Stimmberechtigte durchsuchen" class="filter" />
+          {/if}
+          {#if m.canManage && m.status !== 'CLOSED'}
+            <Button size="sm" busy={model.action.busy} tooltip="Alle ohne Eintrag als anwesend (ohne App) eintragen" onclick={() => allPresent(m)}
+              >Alle übrigen anwesend</Button
+            >
+          {/if}
+          <Button size="sm" variant="ghost" icon="download" tooltip="Anwesenheitsliste als CSV-Datei" onclick={() => attendanceCsv(m)}>Liste</Button>
+        </div>
         <ul class="people">
-          {#each m.electorate as person (person.memberId)}
+          {#each m.electorate.filter((p) => !presenceFilter || p.name
+                .toLocaleLowerCase()
+                .includes(presenceFilter.toLocaleLowerCase())) as person (person.memberId)}
             <li>
               <RecordLink kind="member" id={person.memberId} allowed={permissions.canSeeMember(person.memberId)}>{person.name}</RecordLink>
               {#if m.canManage && m.status !== 'CLOSED'}
@@ -238,8 +313,8 @@
         </ul>
       {/if}
 
-      {#if m.status !== 'DRAFT'}
-        <h2>Beschlüsse</h2>
+      {#if m.status !== 'CANCELLED' && (m.status !== 'DRAFT' || m.canManage)}
+        <h2>{m.status === 'DRAFT' ? 'Anträge (gehen mit der Einladung hinaus)' : 'Beschlüsse'}</h2>
         <ResolutionList meeting={m} />
       {/if}
 
@@ -278,6 +353,28 @@
         <h2>Protokoll</h2>
         <p class="text">{m.protocol}</p>
       {/if}
+      {#if m.status === 'CLOSED'}
+        <div class="row">
+          {#if m.protocolFinalAt}
+            {#each m.approvals as a (a.memberId)}
+              <Tag tone="green">Genehmigt: {a.name}</Tag>
+            {/each}
+            {#if m.canManage && !m.approvals.some((a) => a.memberId === me)}
+              <Button
+                size="sm"
+                busy={model.action.busy}
+                tooltip="Als Vorsitz oder Schriftführung das Protokoll genehmigen"
+                onclick={() => view.attempt(model.action, () => model.approveProtocol())}>Protokoll genehmigen</Button
+              >
+            {/if}
+          {/if}
+          {#if m.canManage}
+            <Button size="sm" icon="document" busy={model.action.busy} onclick={() => view.attempt(model.action, () => model.generateProtocol())}
+              >Protokoll als Dokument</Button
+            >
+          {/if}
+        </div>
+      {/if}
       <ErrorNote error={model.action.error} />
     </Detail>
   {/snippet}
@@ -296,6 +393,26 @@
   }
   .late {
     color: var(--color-danger);
+  }
+  .agenda {
+    display: grid;
+    gap: var(--space-xs);
+    margin: 0;
+    padding-left: var(--space-lg);
+  }
+  .agenda li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    align-items: baseline;
+  }
+  .check-in {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background: var(--color-accent-soft);
+  }
+  .filter {
+    max-width: 14rem;
   }
   .people {
     display: grid;

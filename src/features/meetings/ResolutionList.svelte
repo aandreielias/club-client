@@ -104,7 +104,7 @@
   {#snippet children(items)}
     <div class="stack">
       {#each items as r (r.id)}
-        <ResolutionCard resolution={r} onchanged={replace} ondeleted={() => void list.load()} />
+        <ResolutionCard resolution={r} meetingOpen={meeting.status === 'OPEN'} onchanged={replace} ondeleted={() => void list.load()} />
       {:else}
         <p class="muted">Noch keine Beschlüsse.</p>
       {/each}

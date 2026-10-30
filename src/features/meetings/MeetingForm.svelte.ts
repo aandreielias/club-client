@@ -1,6 +1,6 @@
 import { FormState } from '../../lib/state/FormState.svelte';
 import { ZonedClock, type LocalDateTime } from '../../lib/time/ZonedClock';
-import type { MeetingType, NewMeeting } from './model';
+import type { Meeting, MeetingPatch, MeetingType, NewMeeting } from './model';
 
 export type MeetingField = 'title' | 'agenda' | 'urgency' | 'start' | 'end' | 'videoUrl';
 type Errors = Partial<Record<MeetingField, string>>;
@@ -66,6 +66,27 @@ export class MeetingForm extends FormState<Errors> {
     super();
     this.start = start;
     this.end = ZonedClock.addMinutes(start, 120);
+  }
+
+  /** A draft to edit: its type, title, urgency and times. */
+  static of(meeting: Meeting, type: MeetingType | null, clock: ZonedClock): MeetingForm {
+    const form = new MeetingForm(clock, clock.toLocal(new Date(meeting.startsAt)));
+    form.type = type;
+    form.title = meeting.title;
+    form.urgency = meeting.urgency ?? '';
+    form.end = clock.toLocal(new Date(meeting.endsAt));
+    form.location = meeting.location ?? '';
+    return form;
+  }
+
+  /** The draft's own fields (place and link have their own editor; the agenda its items). */
+  toPatch(): MeetingPatch {
+    return {
+      title: this.title.trim(),
+      urgency: this.type?.needsReason ? this.urgency.trim() : '',
+      startsAt: this.startsAt,
+      endsAt: this.clock.toInstant(this.end),
+    };
   }
 
   /** Changing the type renames the meeting while the title is empty or still a type's name. */

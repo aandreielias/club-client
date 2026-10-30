@@ -2,7 +2,11 @@ import type { ApiClient } from '../../lib/http/ApiClient';
 import type { RefKind } from '../../lib/records/refs';
 import type {
   Choice,
+  AgendaItem,
   FollowUp,
+  FollowUpSource,
+  ResolutionPatch,
+  ResolutionSummary,
   FollowUpRule,
   Meeting,
   MeetingPatch,
@@ -83,6 +87,46 @@ export class MeetingsApi {
 
   close(id: string, protocol: string): Promise<Meeting> {
     return this.api.post<Meeting>(`${this.path(id)}/close`, { protocol });
+  }
+
+  setAgenda(id: string, items: readonly AgendaItem[]): Promise<Meeting> {
+    return this.api.put<Meeting>(`${this.path(id)}/agenda`, { items });
+  }
+
+  setPresenceMany(id: string, memberIds: readonly string[], mode: PresenceMode | null): Promise<Meeting> {
+    return this.api.put<Meeting>(`${this.path(id)}/presence`, { memberIds, mode });
+  }
+
+  /** The voter themselves, while the meeting is open. */
+  checkIn(id: string, mode: 'APP' | 'ONLINE'): Promise<Meeting> {
+    return this.api.put<Meeting>(`${this.path(id)}/presence/me`, { mode });
+  }
+
+  approveProtocol(id: string): Promise<Meeting> {
+    return this.api.post<Meeting>(`${this.path(id)}/protocol/approve`);
+  }
+
+  /** The protocol as a Word document in the meeting's folder, linked first. */
+  generateProtocol(id: string): Promise<Meeting> {
+    return this.api.post<Meeting>(`${this.path(id)}/protocol-document`);
+  }
+
+  followUpSource(followUpId: string): Promise<FollowUpSource> {
+    return this.api.get<FollowUpSource>(`/api/v1/meetings/follow-ups/${encodeURIComponent(followUpId)}`);
+  }
+
+  updateResolution(id: string, patch: ResolutionPatch): Promise<Resolution> {
+    return this.api.patch<Resolution>(this.resolutionPath(id), patch);
+  }
+
+  /** Every resolution the member sees, newest first; `year`: closed in that year. */
+  async allResolutions(year: number | null = null): Promise<ResolutionSummary[]> {
+    return (await this.api.get<{ items: ResolutionSummary[] }>(`${MeetingsApi.RESOLUTIONS}/all${year ? `?year=${year}` : ''}`)).items;
+  }
+
+  /** The decision's follow-ups later, when the meeting had automatic tasks off. */
+  planFollowUps(id: string): Promise<Resolution> {
+    return this.api.post<Resolution>(`${this.resolutionPath(id)}/plan-follow-ups`);
   }
 
   /** After the meeting: the protocol no longer changes. */

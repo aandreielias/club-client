@@ -1,6 +1,14 @@
 import type { MessageCatalog } from '../../lib/errors/ErrorMessages';
 
 export const MEETING_MESSAGES: MessageCatalog = {
+  'meeting.agenda-invalid': 'Höchstens 50 Punkte mit je bis 200 Zeichen; verknüpfte Anträge müssen zu dieser Sitzung gehören.',
+  'meeting.approve-not-allowed': 'Das Protokoll genehmigen Vorsitz und Schriftführung.',
+  'meeting.check-in-mode': 'Selbst eintragen geht mit der App oder online.',
+  'meeting.protocol-approved': 'Du hast das Protokoll schon genehmigt.',
+  'meeting.protocol-not-final': 'Erst das Protokoll abschließen, dann genehmigen.',
+  'resolution.analog-missing': 'Zuerst die Stimmen im Raum eintragen (auch 0).',
+  'resolution.follow-ups-planned': 'Die Aufgaben dieses Beschlusses gibt es schon.',
+  'resolution.not-passed': 'Nur angenommene Beschlüsse haben Folgeaufgaben.',
   'resolution.ref-unknown': 'Diesen Datensatz gibt es nicht oder du siehst ihn nicht.',
   'resolution.too-many-refs': 'Höchstens 30 verknüpfte Datensätze.',
   'resolution.meeting-not-open': 'Abgestimmt wird in der eröffneten Sitzung.',

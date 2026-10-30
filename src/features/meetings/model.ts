@@ -179,6 +179,10 @@ export interface Meeting {
   protocol: string | null;
   /** Set once the protocol is final; until then it is written from the opening on, also after closing. */
   protocolFinalAt: string | null;
+  /** The agenda as ordered items (the `agenda` text follows them). */
+  agendaItems: AgendaItem[];
+  /** Chair and secretary who approved the final protocol. */
+  approvals: Approval[];
   latestInvite: string;
   /** Who votes and counts for the quorum. */
   electorate: Person[];
@@ -398,6 +402,47 @@ export interface NewMeeting {
   /** Its own link; empty: the type's standing one. */
   videoUrl: string | null;
 }
+
+/** server: MeetingsApi.AgendaItemDto — `resolutionId`: the motion voted on under this item. */
+export interface AgendaItem {
+  id: string | null;
+  title: string;
+  note: string | null;
+  resolutionId: string | null;
+}
+
+export interface Approval {
+  memberId: string;
+  name: string;
+  office: OfficeKind;
+  at: string;
+}
+
+/** server: MeetingsApi.ResolutionSummary — one line of "Beschlüsse". */
+export interface ResolutionSummary {
+  id: string;
+  meetingId: string | null;
+  meetingTitle: string | null;
+  title: string;
+  action: ResolutionAction;
+  status: 'DRAFT' | 'OPEN' | 'CLOSED';
+  result: Result | null;
+  openedAt: string | null;
+  closedAt: string | null;
+}
+
+/** server: MeetingsApi.FollowUpSource */
+export interface FollowUpSource {
+  meetingId: string | null;
+  meetingTitle: string | null;
+  resolutionId: string | null;
+  resolutionTitle: string | null;
+  title: string;
+  waitsForTitle: string | null;
+}
+
+/** A draft motion changes; omitted fields stay. */
+export type ResolutionPatch = Partial<Omit<NewResolution, 'majority'>> & { majority?: Majority | null };
 
 /** Omitted fields stay, '' clears a text. Times only before the invitation, the protocol from the opening until it is final. */
 export type MeetingPatch = Partial<Omit<NewMeeting, 'kind'>> & { protocol?: string };

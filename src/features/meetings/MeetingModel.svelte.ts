@@ -2,7 +2,7 @@ import { Action } from '../../lib/state/Action.svelte';
 import { Resource } from '../../lib/state/Resource.svelte';
 import type { MeetingsApi } from './MeetingsApi';
 import type { RefKind } from '../../lib/records/refs';
-import type { Meeting, PresenceMode } from './model';
+import type { AgendaItem, Meeting, MeetingPatch, PresenceMode } from './model';
 
 /** One meeting and the writes of whoever runs it; every write answers with the whole meeting. */
 export class MeetingModel {
@@ -33,6 +33,31 @@ export class MeetingModel {
   }
 
   /** Place and video link, until the meeting closes. */
+  /** A draft's title, urgency and times. */
+  save(patch: MeetingPatch): Promise<boolean> {
+    return this.write(() => this.api.update(this.id, patch));
+  }
+
+  setAgenda(items: readonly AgendaItem[]): Promise<boolean> {
+    return this.write(() => this.api.setAgenda(this.id, items));
+  }
+
+  setPresenceMany(memberIds: readonly string[], mode: PresenceMode | null): Promise<boolean> {
+    return this.write(() => this.api.setPresenceMany(this.id, memberIds, mode));
+  }
+
+  checkIn(mode: 'APP' | 'ONLINE'): Promise<boolean> {
+    return this.write(() => this.api.checkIn(this.id, mode));
+  }
+
+  approveProtocol(): Promise<boolean> {
+    return this.write(() => this.api.approveProtocol(this.id));
+  }
+
+  generateProtocol(): Promise<boolean> {
+    return this.write(() => this.api.generateProtocol(this.id));
+  }
+
   savePlace(patch: { location: string; videoUrl: string }): Promise<boolean> {
     return this.write(() => this.api.update(this.id, patch));
   }

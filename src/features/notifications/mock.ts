@@ -202,7 +202,8 @@ export class MockNotifications {
       case 'meetings.meeting-invited': {
         const where = data.location ? ` in ${data.location}` : '';
         const video = data.videoUrl ? ` Videokonferenz: ${data.videoUrl}.` : '';
-        const agenda = data.agenda ? `\n\nTagesordnung:\n${data.agenda}` : '';
+        const agenda =
+          (data.agenda ? `\n\nTagesordnung:\n${data.agenda}` : '') + (data.motions?.length ? `\n\nAnträge:\n${data.motions.join('\n')}` : '');
         this.notify(
           data.recipients,
           'MEETING',
@@ -212,6 +213,9 @@ export class MockNotifications {
         );
         break;
       }
+      case 'meetings.meeting-notice':
+        this.notify(data.recipients, 'MEETING', data.title, data.body, data.link);
+        break;
       case 'meetings.meeting-cancelled':
         this.notify(
           data.recipients,

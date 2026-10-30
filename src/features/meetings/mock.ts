@@ -16,7 +16,7 @@ import {
   type TriggerField,
 } from './triggers';
 import { files } from '../files/mock';
-import { defaultTemplate, fill, TEMPLATE_NAME } from './invitationDocument';
+import { defaultTemplate, fill, protocolTemplate, TEMPLATE_NAME } from './invitationDocument';
 import type { RefKind } from '../../lib/records/refs';
 import { ADMIN_BOARD, type Member } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
@@ -43,6 +43,8 @@ import {
   NO_STATUTES,
   SEEDED_CIRCULAR,
   type CircularRules,
+  type FollowUpSource,
+  type ResolutionSummary,
   type ResolutionRules,
   type StatutesPlace,
   AUTOMATIC_FOLLOW_UPS,
@@ -723,7 +725,11 @@ export class MockMeetings {
     }
     if (typeof body.agenda === 'string' && body.agenda.length > 4000) fail(400, 'meeting.agenda-too-long');
     if (typeof body.location === 'string' && body.location.length > 200) fail(400, 'meeting.location-too-long');
+    const before = { Titel: meeting.title, Tagesordnung: meeting.agenda, Ort: meeting.location, Videolink: meeting.videoUrl };
     this.apply(meeting, body);
+    const after = { Titel: meeting.title, Tagesordnung: meeting.agenda, Ort: meeting.location, Videolink: meeting.videoUrl };
+    const changedFields = (Object.keys(before) as (keyof typeof before)[]).filter((k) => before[k] !== after[k]);
+    if (changedFields.length) this.noticeChange(meeting, changedFields);
     this.changed(meeting, 'UPDATED');
     return this.dto(viewer, meeting);
   }
@@ -753,6 +759,7 @@ export class MockMeetings {
         kind: meeting.kind,
         title: meeting.title,
         agenda: meeting.agenda,
+        motions: this.resolutions.data.filter((r) => r.meetingId === meeting.id).map((r) => r.title),
         startsAt: meeting.startsAt,
         location: meeting.location,
         videoUrl: meeting.videoUrl,
@@ -766,6 +773,13 @@ export class MockMeetings {
     if (meeting.status !== 'INVITED') fail(409, 'meeting.not-invited');
     Object.assign(meeting, { status: 'OPEN', openedAt: new Date().toISOString(), frozenElectorate: this.electorate(meeting.kind) });
     this.changed(meeting, 'OPENED');
+    const video = this.type(meeting.kind).online ? (meeting.videoUrl ?? this.type(meeting.kind).videoUrl ?? null) : null;
+    this.notice(
+      this.meetingVoters(meeting),
+      `Sitzung eröffnet: ${meeting.title}`,
+      video ? `Online dabei: ${video}` : 'Die Sitzung hat begonnen.',
+      `/meetings/${id}`,
+    );
     return this.dto(viewer, meeting);
   }
 
@@ -776,6 +790,7 @@ export class MockMeetings {
     const text = typeof protocol === 'string' ? protocol.trim() || null : null;
     Object.assign(meeting, { status: 'CLOSED', closedAt: new Date().toISOString(), protocol: text ?? meeting.protocol, protocolFinalAt: null });
     this.recordEvent({ record: 'MEETING', event: 'CLOSED', attrs: { type: meeting.kind }, date: null });
+    this.notice(this.meetingVoters(meeting), `Sitzung beendet: ${meeting.title}`, 'Beschlüsse und Protokoll sind in der App.', `/meetings/${id}`);
     this.changed(meeting, 'CLOSED');
     return this.dto(viewer, meeting);
   }
@@ -800,6 +815,137 @@ export class MockMeetings {
       type: 'meetings.meeting-cancelled',
       data: { meetingId: meeting.id, recipients: this.meetingVoters(meeting), title: meeting.title, startsAt: meeting.startsAt },
     });
+    return this.dto(viewer, meeting);
+  }
+
+  /** server: MeetingHandlers.setAgenda — ordered items, a motion per item; the agenda text follows them. */
+  setAgenda(viewer: Member, id: string, items: unknown): Meeting {
+    const meeting = this.managed(viewer, id);
+    if (meeting.status === 'CLOSED') fail(409, 'meeting.closed');
+    if (meeting.status === 'CANCELLED') fail(409, 'meeting.cancelled');
+    const given = Array.isArray(items) ? (items as Record<string, any>[]) : [];
+    const motions = this.resolutions.data.filter((r) => r.meetingId === id).map((r) => r.id);
+    if (
+      given.length > 50 ||
+      given.some(
+        (i) =>
+          !String(i.title ?? '').trim() ||
+          String(i.title).trim().length > 200 ||
+          (i.note && String(i.note).length > 1000) ||
+          (i.resolutionId && !motions.includes(i.resolutionId)),
+      )
+    )
+      fail(400, 'meeting.agenda-invalid');
+    meeting.agendaItems = given.map((i) => ({
+      id: i.id ?? crypto.randomUUID(),
+      title: String(i.title).trim(),
+      note: i.note?.trim() || null,
+      resolutionId: i.resolutionId ?? null,
+    }));
+    const before = meeting.agenda;
+    meeting.agenda = meeting.agendaItems.map((i, k) => `${k + 1}. ${i.title}`).join('\n') || null;
+    if (before !== meeting.agenda) this.noticeChange(meeting, ['Tagesordnung']);
+    this.changed(meeting, 'UPDATED');
+    return this.dto(viewer, meeting);
+  }
+
+  /** server: MeetingsApi.MEETING_NOTICE */
+  private notice(recipients: readonly string[], title: string, body: string, link: string): void {
+    mockServer.events.publish({ type: 'meetings.meeting-notice', data: { recipients, title, body, link } });
+  }
+
+  /** server: MeetingHandlers.noticeChanges — after the invitation the electorate hears of changes. */
+  private noticeChange(meeting: StoredMeeting, what: string[]): void {
+    if (meeting.status !== 'INVITED' && meeting.status !== 'OPEN') return;
+    this.notice(this.meetingVoters(meeting), `Geändert: ${meeting.title}`, `Geändert: ${what.join(', ')}.`, `/meetings/${meeting.id}`);
+  }
+
+  setPresenceMany(viewer: Member, id: string, memberIds: unknown, mode: unknown): Meeting {
+    const ids = Array.isArray(memberIds) ? (memberIds as string[]) : [];
+    let last: Meeting | null = null;
+    for (const memberId of ids) last = this.setPresence(viewer, id, memberId, mode);
+    return last ?? this.dto(viewer, this.managed(viewer, id));
+  }
+
+  /** server: MeetingHandlers.checkIn — the voter themselves while the meeting is open. */
+  checkIn(viewer: Member, id: string, mode: unknown): Meeting {
+    const meeting = this.visible(viewer, id);
+    if (meeting.status !== 'OPEN') fail(409, 'meeting.not-open');
+    if (!this.meetingVoters(meeting).includes(viewer.id)) fail(400, 'meeting.not-voter');
+    if (mode !== 'APP' && mode !== 'ONLINE') fail(400, 'meeting.check-in-mode');
+    if (mode === 'ONLINE' && !this.type(meeting.kind).online) fail(400, 'meeting.not-online');
+    if (this.resolutions.data.some((r) => r.meetingId === id && r.status === 'OPEN')) fail(409, 'meeting.vote-open');
+    meeting.presence[viewer.id] = mode as "APP" | "ONLINE";
+    this.changed(meeting, 'PRESENCE');
+    return this.dto(viewer, meeting);
+  }
+
+  /** server: MeetingHandlers.approveProtocol — chair and secretary, once each, after it is final. */
+  approveProtocol(viewer: Member, id: string): Meeting {
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    const meeting = this.visible(viewer, id);
+    if (!this.protocolFinalAt(meeting)) fail(409, 'meeting.protocol-not-final');
+    const offices = this.offices(viewer);
+    const office = offices.includes('CHAIR') ? 'CHAIR' : offices.includes('SECRETARY') ? 'SECRETARY' : fail(403, 'meeting.approve-not-allowed');
+    meeting.approvals ??= [];
+    if (meeting.approvals.some((a) => a.memberId === viewer.id)) fail(409, 'meeting.protocol-approved');
+    meeting.approvals.push({ memberId: viewer.id, name: this.name(viewer.id), office, at: new Date().toISOString() });
+    this.changed(meeting, 'UPDATED');
+    return this.dto(viewer, meeting);
+  }
+
+  /** server: MeetingHandlers.generateProtocol — the protocol as a document in the meeting's folder, linked first. */
+  async generateProtocol(viewer: Member, id: string): Promise<Meeting> {
+    const meeting = this.managed(viewer, id);
+    if (meeting.status !== 'CLOSED') fail(409, 'meeting.not-closed');
+    const { default: JSZip } = await import('jszip');
+    const type = this.type(meeting.kind);
+    const results = this.resolutions.data
+      .filter((r) => r.meetingId === id)
+      .map(
+        (r) =>
+          `${r.title}: ${r.result === 'PASSED' ? 'angenommen' : r.result === 'FAILED' ? 'abgelehnt' : r.result ? 'nicht beschlussfähig' : 'nicht abgestimmt'}`,
+      );
+    const fmt = (iso: string, options: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat('de-AT', { timeZone: this.people.club.timeZone, ...options }).format(new Date(iso));
+    const content = await fill(
+      JSZip,
+      await protocolTemplate(JSZip),
+      {
+        Verein: this.people.clubInfo().name,
+        Art: type.invitationLabel,
+        Titel: meeting.title.toLowerCase() === type.label.toLowerCase() ? null : meeting.title,
+        Wann: `${fmt(meeting.startsAt, { dateStyle: 'full', timeStyle: 'short' })} bis ${fmt(meeting.endsAt, { timeStyle: 'short' })} Uhr`,
+        Ort: meeting.location,
+        Anwesend:
+          Object.keys(meeting.presence)
+            .map((m) => this.name(m))
+            .join(', ') || null,
+        Beschlussfähig: this.quorate(meeting, this.meetingVoters(meeting)) ? 'ja' : 'nein',
+        Agenda: meeting.agenda?.replaceAll('\n', '; ') ?? null,
+        Beschlüsse: results.join('; ') || null,
+      },
+      (meeting.protocol ?? 'Kein Protokolltext eingetragen.')
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean),
+    );
+    const assembly = isAssembly(type);
+    const name = assembly ? 'Mitgliederversammlungen' : 'Vorstandssitzungen';
+    const scope = assembly ? 'ASSEMBLY' : 'BOARD';
+    const parent =
+      files.listFolders(viewer).find((f) => !f.parentId && f.name === name && f.scope === scope) ??
+      files.createFolder(viewer, { name, kind: 'DOCUMENTS', scope, teamIds: [] });
+    const day = meeting.startsAt.slice(0, 10);
+    const folderId =
+      this.documents.data[id]?.folderId && files.listFolders(viewer).some((f) => f.id === this.documents.data[id].folderId)
+        ? this.documents.data[id].folderId
+        : files.createFolder(viewer, { parentId: parent.id, name: `${day} ${meeting.title}`.slice(0, 100), kind: 'DOCUMENTS' }).id;
+    const form = new FormData();
+    form.append('file', new File([content], `Protokoll ${day} ${meeting.title}.docx`));
+    const file = await files.upload({ params: { folderId }, query: new URLSearchParams(), body: form, email: viewer.email } as never);
+    meeting.links = [{ kind: 'FILE' as const, id: file.id, title: file.name, parentId: folderId }, ...(meeting.links ?? [])].slice(0, 30);
+    this.changed(meeting, 'UPDATED');
     return this.dto(viewer, meeting);
   }
 
@@ -1032,13 +1178,89 @@ export class MockMeetings {
     if (next <= r.deadline! || Date.parse(next) <= Date.now() || Date.parse(next) < Date.parse(r.openedAt!) + this.circular.data.minHours * 3_600_000)
       fail(400, 'resolution.deadline-too-short');
     r.deadline = next;
+    this.notice(
+      this.voters(r).filter((v) => !r.ballots.includes(v)),
+      `Länger abstimmen: ${r.title}`,
+      'Der Umlaufbeschluss läuft jetzt länger.',
+      `/resolutions/${r.id}`,
+    );
     tasks.deadline(`deadline-circular-${r.id}`, `Umlaufbeschluss: ${r.title}`, 'Der Umlaufbeschluss schließt dann von selbst.', next, [viewer.id]);
     this.resolutionChanged(r, 'UPDATED');
     return this.resolutionDto(viewer, r);
   }
 
   closeResolution(viewer: Member, id: string): Resolution {
-    return this.resolutionDto(viewer, this.closeNow(this.managedResolution(viewer, id)));
+    const r = this.managedResolution(viewer, id);
+    // server: the room's votes come first (0 when nobody voted there)
+    if (r.meetingId && r.analogYes === null && this.analogPresent(r) > 0) fail(409, 'resolution.analog-missing');
+    return this.resolutionDto(viewer, this.closeNow(r));
+  }
+
+  /** server: ResolutionHandlers.update — a draft motion changes; omitted fields stay. */
+  updateResolution(viewer: Member, id: string, body: Record<string, any>): Resolution {
+    const r = this.managedResolution(viewer, id);
+    if (r.status !== 'DRAFT') fail(409, 'resolution.not-draft');
+    if (body.title != null) r.title = text(body.title, 200, 'resolution.title-invalid') ?? fail(400, 'resolution.title-invalid');
+    if (body.text != null) r.text = text(body.text, 4000, 'resolution.text-too-long');
+    if (body.majority != null) r.majority = body.majority;
+    if (Array.isArray(body.assigneeIds)) r.assigneeIds = body.assigneeIds;
+    if (Array.isArray(body.followUps)) r.ownFollowUps = this.ownFollowUps(viewer, body.followUps, r.action ?? 'GENERAL');
+    this.resolutions.save();
+    this.resolutionChanged(r, 'UPDATED' as never);
+    return this.resolutionDto(viewer, r);
+  }
+
+  /** server: ResolutionHandlers.all — every resolution the viewer sees, newest first. */
+  allResolutions(viewer: Member, year: string | null): { items: ResolutionSummary[] } {
+    const board = this.people.hasRole(viewer, ADMIN_BOARD);
+    const items = this.resolutions.data
+      .filter((r) => !year || (r.closedAt && r.closedAt.startsWith(year)))
+      .map((r) => {
+        const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId) : null;
+        const visible = r.meetingId ? !!meeting && this.maySee(viewer, meeting) : board;
+        return visible
+          ? {
+              id: r.id,
+              meetingId: r.meetingId,
+              meetingTitle: meeting?.title ?? null,
+              title: r.title,
+              action: r.action ?? 'GENERAL',
+              status: r.status,
+              result: r.status === 'CLOSED' ? r.result : null,
+              openedAt: r.openedAt,
+              closedAt: r.closedAt,
+            }
+          : null;
+      })
+      .filter((x): x is ResolutionSummary => !!x)
+      .sort((a, b) => (b.closedAt ?? b.openedAt ?? '').localeCompare(a.closedAt ?? a.openedAt ?? ''));
+    return { items };
+  }
+
+  /** server: ResolutionHandlers.followUpSource */
+  followUpSource(viewer: Member, followUpId: string): FollowUpSource {
+    const f = this.followUps.data.find((x) => x.id === followUpId) ?? fail(404, 'meeting.not-found');
+    const r = f.resolutionId ? this.resolutions.data.find((x) => x.id === f.resolutionId) : null;
+    const meetingId = r ? r.meetingId : f.meetingId;
+    const meeting = meetingId ? this.visible(viewer, meetingId) : null;
+    if (!meeting && !this.people.hasRole(viewer, ADMIN_BOARD)) fail(404, 'meeting.not-found');
+    return {
+      meetingId,
+      meetingTitle: meeting?.title ?? null,
+      resolutionId: r?.id ?? null,
+      resolutionTitle: r?.title ?? null,
+      title: f.title,
+      waitsForTitle: f.waitsFor ? (this.followUps.data.find((x) => x.id === f.waitsFor)?.title ?? null) : null,
+    };
+  }
+
+  /** server: ResolutionHandlers.planLater */
+  planLater(viewer: Member, id: string): Resolution {
+    const r = this.managedResolution(viewer, id);
+    if (r.result !== 'PASSED') fail(409, 'resolution.not-passed');
+    if (this.followUps.data.some((f) => f.resolutionId === id && f.kind !== 'MANUAL')) fail(409, 'resolution.follow-ups-planned');
+    this.planFollowUps(r, r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null);
+    return this.resolutionDto(viewer, r);
   }
 
   vote(viewer: Member, id: string, choice: Choice): Resolution {
@@ -1063,7 +1285,7 @@ export class MockMeetings {
     const r = this.managedResolution(viewer, id);
     if (!r.meetingId) fail(409, 'resolution.circular');
     if (r.status !== 'OPEN') fail(409, 'resolution.not-open');
-    if (r.analogYes !== null) fail(409, 'resolution.analog-already-entered');
+    // server: corrected while the vote is open
     const [yes, no, abstain] = [body.yes, body.no, body.abstain].map((v) =>
       Number.isInteger(v) && v >= 0 ? (v as number) : fail(400, 'resolution.analog-invalid'),
     );
@@ -1096,7 +1318,16 @@ export class MockMeetings {
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null;
     if (result === 'PASSED' && (!meeting || meeting.autoTasks !== false)) this.planFollowUps(r, meeting);
     if (result === 'PASSED') this.recordEvent({ record: 'RESOLUTION', event: 'PASSED', attrs: { decision: r.action ?? 'GENERAL' }, date: null });
-    if (!meeting) tasks.deadlineDone(`deadline-circular-${r.id}`);
+    if (!meeting) {
+      tasks.deadlineDone(`deadline-circular-${r.id}`);
+      const word = result === 'PASSED' ? 'angenommen' : result === 'FAILED' ? 'abgelehnt' : 'ohne ausreichende Beteiligung';
+      this.notice(
+        this.voters(r),
+        `Umlaufbeschluss ${word}: ${r.title}`,
+        `Ja ${r.yes}, Nein ${r.no}, Enthaltung ${r.abstain}.`,
+        `/resolutions/${r.id}`,
+      );
+    }
     this.resolutionChanged(r, 'CLOSED');
     return r;
   }
@@ -1363,7 +1594,7 @@ export class MockMeetings {
   }
 
   private dto(viewer: Member, m: StoredMeeting): Meeting {
-    const { presence, frozenElectorate: _frozen, protocolFinalAt: _final, createdBy: _by, ...rest } = m;
+    const { presence, frozenElectorate: _frozen, protocolFinalAt: _final, createdBy: _by, agendaItems, approvals, ...rest } = m;
     const voters = this.meetingVoters(m);
     const name = (id: string) => {
       const p = this.people.members.data.find((x) => x.id === id);
@@ -1379,6 +1610,8 @@ export class MockMeetings {
       links: m.links ?? [], // mock data stored before links existed
       autoTasks: m.autoTasks !== false,
       protocolFinalAt: this.protocolFinalAt(m),
+      agendaItems: agendaItems ?? [],
+      approvals: approvals ?? [],
       followUps: this.followUpDtos(this.followUps.data.filter((f) => f.meetingId === m.id && !f.resolutionId)),
       latestInvite: latestInvite(this.type(m.kind), m.startsAt),
       electorate: voters.map((id) => ({ memberId: id, name: name(id) })).sort(byName),
@@ -1463,6 +1696,14 @@ mockServer
   .on('POST', '/api/v1/meetings/:id/close', (req) => meetings.close(actor(req), req.params.id, req.body?.protocol))
   .on('POST', '/api/v1/meetings/:id/protocol/final', (req) => meetings.finalizeProtocol(actor(req), req.params.id))
   .on('POST', '/api/v1/meetings/:id/cancel', (req) => meetings.cancel(actor(req), req.params.id))
+  .on('PUT', '/api/v1/meetings/:id/agenda', (req) => meetings.setAgenda(actor(req), req.params.id, req.body?.items))
+  .on('PUT', '/api/v1/meetings/:id/presence/me', (req) => meetings.checkIn(actor(req), req.params.id, req.body?.mode))
+  .on('PUT', '/api/v1/meetings/:id/presence', (req) => meetings.setPresenceMany(actor(req), req.params.id, req.body?.memberIds, req.body?.mode))
+  .on('POST', '/api/v1/meetings/:id/protocol/approve', (req) => meetings.approveProtocol(actor(req), req.params.id))
+  .on('POST', '/api/v1/meetings/:id/protocol-document', (req) => meetings.generateProtocol(actor(req), req.params.id))
+  .on('GET', '/api/v1/meetings/follow-ups/:followUpId', (req) => meetings.followUpSource(actor(req), req.params.followUpId))
+  .on('PATCH', '/api/v1/resolutions/:id', (req) => meetings.updateResolution(actor(req), req.params.id, req.body ?? {}))
+  .on('POST', '/api/v1/resolutions/:id/plan-follow-ups', (req) => meetings.planLater(actor(req), req.params.id))
   .on('GET', '/api/v1/meetings/:id/resolutions', (req) => meetings.listResolutions(actor(req), req.params.id))
   .on('POST', '/api/v1/meetings/:id/resolutions', (req) => meetings.createResolution(actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/resolutions', (req) => meetings.listResolutions(actor(req), null))
@@ -1475,6 +1716,7 @@ mockServer
     const created = meetings.createResolution(viewer, null, body);
     return body.open ? meetings.openResolution(viewer, created.id) : created;
   })
+  .on('GET', '/api/v1/resolutions/all', (req) => meetings.allResolutions(actor(req), req.query.get('year')))
   .on('GET', '/api/v1/resolutions/:id', (req) => meetings.getResolution(actor(req), req.params.id))
   .on('DELETE', '/api/v1/resolutions/:id', (req) => meetings.deleteResolution(actor(req), req.params.id))
   .on('POST', '/api/v1/resolutions/:id/open', (req) => meetings.openResolution(actor(req), req.params.id))

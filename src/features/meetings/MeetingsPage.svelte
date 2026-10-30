@@ -10,6 +10,7 @@
   import Page from '../../ui/Page.svelte';
   import RecordCards, { type RecordCard } from '../../ui/RecordCards.svelte';
   import CircularVotes from './CircularVotes.svelte';
+  import ResolutionsOverview from './ResolutionsOverview.svelte';
   import { MEETING_CHANGED } from './events';
   import { isAssembly, STATUS_LABELS, STATUS_TONES, type MeetingSummary } from './model';
   import { meetingPolicy as policy, meetingsApi, meetingTypes } from './services';
@@ -58,4 +59,5 @@
   </AsyncView>
 
   {#if policy.canCreate()}<CircularVotes />{/if}
+  <ResolutionsOverview />
 </Page>
