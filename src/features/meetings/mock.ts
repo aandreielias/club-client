@@ -875,7 +875,7 @@ export class MockMeetings {
     if (mode !== 'APP' && mode !== 'ONLINE') fail(400, 'meeting.check-in-mode');
     if (mode === 'ONLINE' && !this.type(meeting.kind).online) fail(400, 'meeting.not-online');
     if (this.resolutions.data.some((r) => r.meetingId === id && r.status === 'OPEN')) fail(409, 'meeting.vote-open');
-    meeting.presence[viewer.id] = mode as "APP" | "ONLINE";
+    meeting.presence[viewer.id] = mode as 'APP' | 'ONLINE';
     this.changed(meeting, 'PRESENCE');
     return this.dto(viewer, meeting);
   }
