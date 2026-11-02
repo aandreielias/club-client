@@ -111,7 +111,8 @@
     border-radius: var(--radius-md);
   }
   .item.beschluss {
-    border-left: 3px solid var(--color-accent);
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
   }
   .line {
     flex-wrap: nowrap;
