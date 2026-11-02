@@ -1,6 +1,8 @@
 // Mirrors of the club-server notifications DTOs.
 
 export type NotificationKind =
+  | 'TASK_ACTIVITY'
+  | 'TEAM'
   | 'TASK_ASSIGNED'
   | 'TASK_DUE'
   | 'APPOINTMENT_CANCELLED'
@@ -30,6 +32,8 @@ export interface OutgoingMessage {
   memberIds: string[];
   includeGuardians: boolean;
   refs: { kind: RefKind; id: string }[];
+  /** A received message (inbox id): the answer goes to its sender only; anyone may answer. */
+  replyTo?: string;
 }
 
 export interface Notification {
@@ -73,6 +77,11 @@ export interface NotificationCreated {
 
 export const NOTIFICATION_KINDS: readonly { value: NotificationKind; label: string; hint: string }[] = [
   { value: 'TASK_ASSIGNED', label: 'Neue Aufgaben', hint: 'Wenn dir eine Aufgabe zugewiesen wird.' },
+  {
+    value: 'TASK_ACTIVITY',
+    label: 'Kommentare und erledigte Aufgaben',
+    hint: 'Neue Kommentare zu deinen Aufgaben; wenn eine Aufgabe, die du angelegt hast, erledigt ist.',
+  },
   { value: 'TASK_DUE', label: 'Fällige Aufgaben', hint: 'Etwa einen Tag vor der Fälligkeit.' },
   { value: 'APPOINTMENT_CANCELLED', label: 'Abgesagte Termine', hint: 'Wenn ein Termin für dich ausfällt.' },
   { value: 'APPOINTMENT_CHANGED', label: 'Geänderte Termine', hint: 'Neue Zeit, neuer Ort oder neue Kabine eines kommenden Termins.' },
@@ -84,6 +93,7 @@ export const NOTIFICATION_KINDS: readonly { value: NotificationKind; label: stri
   { value: 'RIDE', label: 'Fahrgemeinschaften', hint: 'Wer in dein Auto steigt oder aussteigt, und wenn deine Mitfahrt ausfällt.' },
   { value: 'ITEM_REMINDER', label: 'Gegenstände mitbringen', hint: 'Etwa einen Tag vor einem Termin, für den du etwas aus dem Inventar hast.' },
   { value: 'CHANGE_DECIDED', label: 'Kontoänderungen', hint: 'Wenn der Vorstand über deine Änderungsanfrage entschieden hat.' },
+  { value: 'TEAM', label: 'Teams', hint: 'Für Vorstand und Admins: wenn Trainer:innen jemanden ins Team aufnehmen möchten.' },
   { value: 'MESSAGE', label: 'Nachrichten vom Verein', hint: 'Nachrichten von Vorstand und Trainer:innen an dich oder dein Team.' },
   { value: 'MAIL', label: 'Neue E-Mails', hint: 'Wenn in deinem Vereins-Postfach oder einem geteilten Postfach eine E-Mail ankommt.' },
   { value: 'MEETING', label: 'Sitzungen', hint: 'Einladungen, Umlaufbeschlüsse und Erinnerungen an Fristen. Werden immer gesendet.' },

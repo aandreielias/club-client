@@ -13,6 +13,9 @@ import type {
   NewAppointment,
   NewAbsence,
   OpenAnswer,
+  Extras,
+  ExtrasInput,
+  MatchList,
   ResponseStatus,
   TeamStats,
   Ride,
@@ -94,6 +97,19 @@ export class CalendarApi {
   /** Answers still to give in the next two weeks, for oneself and one's minors. */
   async openAnswers(): Promise<OpenAnswer[]> {
     return (await this.api.get<{ items: OpenAnswer[] }>('/api/v1/me/open-answers')).items;
+  }
+
+  extras(id: string): Promise<Extras> {
+    return this.api.get<Extras>(`${this.path(id)}/extras`);
+  }
+
+  setExtras(id: string, extras: ExtrasInput): Promise<Extras> {
+    return this.api.put<Extras>(`${this.path(id)}/extras`, extras);
+  }
+
+  /** The team's matches with results in [from, to) (instants, at most 366 days). */
+  teamMatches(teamId: string, from: string, to: string): Promise<MatchList> {
+    return this.api.get<MatchList>(`/api/v1/teams/${encodeURIComponent(teamId)}/matches`, { from, to });
   }
 
   teamStats(teamId: string, from: string, to: string): Promise<TeamStats> {

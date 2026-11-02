@@ -53,6 +53,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/teams/{teamId}/members/{memberId}/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["playerInfo"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tasks/{id}/status": {
         parameters: {
             query?: never;
@@ -597,6 +613,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/appointments/{id}/extras": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["extras"];
+        put: operations["setExtras"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/appointments/{id}/attendance": {
         parameters: {
             query?: never;
@@ -687,6 +719,38 @@ export interface paths {
         get: operations["list_1"];
         put?: never;
         post: operations["create_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teams/{teamId}/player-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["requestPlayer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teams/{teamId}/copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["copy"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1941,6 +2005,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/teams/{id}/matches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["matches"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/teams/{id}/attendance": {
         parameters: {
             query?: never;
@@ -2643,12 +2723,23 @@ export interface components {
             name: string;
             /** @enum {string} */
             teamRole: "COACH" | "PLAYER";
+            /** Format: int32 */
+            jersey: number;
+            position: string;
+            captain: boolean;
         };
         "at.clubserver.teams.api.TeamsApi.TeamDto": {
             /** Format: uuid */
             id: string;
             name: string;
             season: string;
+            archived: boolean;
+        };
+        "at.clubserver.gateway.rest.TeamsController.PlayerInfoBody": {
+            /** Format: int32 */
+            jersey: number;
+            position: string;
+            captain: boolean;
         };
         "at.clubserver.gateway.rest.TasksController.StatusBody": {
             /** @enum {string} */
@@ -3155,7 +3246,7 @@ export interface components {
         };
         "at.clubserver.notifications.api.NotificationsApi.Preference": {
             /** @enum {string} */
-            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "SECURITY" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE";
+            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "SECURITY" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM";
             push: boolean;
             email: boolean;
         };
@@ -3425,6 +3516,25 @@ export interface components {
             unconfirmed: boolean;
             present: boolean;
         };
+        "at.clubserver.gateway.rest.CalendarController.ExtrasBody": {
+            content: string;
+            opponent: string;
+            home: boolean;
+            sets: string[];
+        };
+        "at.clubserver.calendar.api.CalendarApi.Extras": {
+            /** Format: uuid */
+            appointmentId: string;
+            content: string;
+            opponent: string;
+            home: boolean;
+            sets: string[];
+            /** Format: int32 */
+            setsWon: number;
+            /** Format: int32 */
+            setsLost: number;
+            won: boolean;
+        };
         "at.clubserver.gateway.rest.CalendarController.ResponseBody": {
             /** Format: uuid */
             memberId: string;
@@ -3476,6 +3586,15 @@ export interface components {
             teamId: string;
         };
         "at.clubserver.gateway.rest.TeamsController.TeamBody": {
+            name: string;
+            season: string;
+        };
+        "at.clubserver.gateway.rest.TeamsController.PlayerRequestBody": {
+            /** Format: uuid */
+            memberId: string;
+            note: string;
+        };
+        "at.clubserver.gateway.rest.TeamsController.CopyBody": {
             name: string;
             season: string;
         };
@@ -3542,6 +3661,8 @@ export interface components {
             memberIds: string[];
             includeGuardians: boolean;
             refs: components["schemas"]["at.clubserver.platform.RecordRefs.RefInput"][];
+            /** Format: uuid */
+            replyTo: string;
         };
         "at.clubserver.notifications.api.NotificationsApi.MessageSent": {
             /** Format: int32 */
@@ -3906,6 +4027,7 @@ export interface components {
         "at.clubserver.gateway.rest.TeamsController.TeamPatch": {
             name: string;
             season: string;
+            archived: boolean;
         };
         "at.clubserver.gateway.rest.TasksController.TaskPatch": {
             title: string;
@@ -4029,6 +4151,28 @@ export interface components {
         };
         "at.clubserver.teams.api.TeamsApi.TeamList": {
             items: components["schemas"]["at.clubserver.teams.api.TeamsApi.TeamDto"][];
+        };
+        "at.clubserver.calendar.api.CalendarApi.MatchList": {
+            items: components["schemas"]["at.clubserver.calendar.api.CalendarApi.MatchResult"][];
+            /** Format: int32 */
+            won: number;
+            /** Format: int32 */
+            lost: number;
+        };
+        "at.clubserver.calendar.api.CalendarApi.MatchResult": {
+            /** Format: uuid */
+            appointmentId: string;
+            title: string;
+            /** Format: date-time */
+            startsAt: string;
+            opponent: string;
+            home: boolean;
+            sets: string[];
+            /** Format: int32 */
+            setsWon: number;
+            /** Format: int32 */
+            setsLost: number;
+            won: boolean;
         };
         "at.clubserver.attendance.api.AttendanceApi.MemberStats": {
             /** Format: uuid */
@@ -4220,7 +4364,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "SECURITY" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE";
+            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "SECURITY" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM";
             title: string;
             body: string;
             link: string;
@@ -4534,6 +4678,33 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.teams.api.TeamsApi.Roster"];
+                };
+            };
+        };
+    };
+    playerInfo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                teamId: string;
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.TeamsController.PlayerInfoBody"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -5640,6 +5811,54 @@ export interface operations {
             };
         };
     };
+    extras: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.calendar.api.CalendarApi.Extras"];
+                };
+            };
+        };
+    };
+    setExtras: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.CalendarController.ExtrasBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.calendar.api.CalendarApi.Extras"];
+                };
+            };
+        };
+    };
     attendance: {
         parameters: {
             query?: never;
@@ -5834,6 +6053,56 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["at.clubserver.gateway.rest.TeamsController.TeamBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.teams.api.TeamsApi.TeamDto"];
+                };
+            };
+        };
+    };
+    requestPlayer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                teamId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.TeamsController.PlayerRequestBody"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    copy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                teamId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.TeamsController.CopyBody"];
             };
         };
         responses: {
@@ -8620,6 +8889,31 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.teams.api.TeamsApi.Roster"];
+                };
+            };
+        };
+    };
+    matches: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.calendar.api.CalendarApi.MatchList"];
                 };
             };
         };

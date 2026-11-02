@@ -460,13 +460,22 @@ export class MockDirectory {
   }
 
   /** server: TeamHandlers.roster (team members and admin/board, others 404) */
+  /** server: teams_membership jersey/position/captain — teamId → memberId → info */
+  readonly playerInfo = new MockTable<Record<string, Record<string, { jersey: number | null; position: string | null; captain: boolean }>>>(
+    'player-info',
+    () => ({}),
+  );
+
+  /** server: TeamHandlers.roster — the team, admin/board, and guardians of a member. */
   roster(viewer: Member, teamId: string): Roster {
     const team = this.teams.data.find((t) => t.id === teamId);
-    if (!team || (!this.isManager(viewer) && !(teamId in this.teamRoles(viewer.id)))) return fail(404, 'team.not-found');
+    const guardian = this.wardsOf(viewer.id).some((w) => teamId in this.teamRoles(w));
+    if (!team || (!this.isManager(viewer) && !(teamId in this.teamRoles(viewer.id)) && !guardian)) return fail(404, 'team.not-found');
     const entries = this.teamMembers(teamId)
       .flatMap((memberId) => {
         const name = this.name(memberId);
-        return name ? [{ memberId, name, teamRole: this.teamRoles(memberId)[teamId] }] : [];
+        const info = this.playerInfo.data[teamId]?.[memberId] ?? { jersey: null, position: null, captain: false };
+        return name ? [{ memberId, name, teamRole: this.teamRoles(memberId)[teamId], ...info }] : [];
       })
       .sort((a, b) => a.name.localeCompare(b.name));
     return { team, entries };

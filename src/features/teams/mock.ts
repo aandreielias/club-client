@@ -36,6 +36,7 @@ export class MockTeams {
     const team = this.people.teams.data.find((t) => t.id === teamId) ?? fail(404, 'team.not-found');
     const name = typeof body.name === 'string' ? body.name.trim() : team.name;
     const season = typeof body.season === 'string' ? body.season : team.season;
+    if (typeof body.archived === 'boolean') team.archived = body.archived;
     if (!name || name.length > settings.teams.nameMaxLength) fail(400, 'team.name-invalid');
     if (!new RegExp(settings.teams.seasonPattern).test(season)) fail(400, 'team.season-invalid');
     if (this.people.teams.data.some((t) => t.id !== teamId && t.name.toLowerCase() === name.toLowerCase() && t.season === season))
@@ -74,6 +75,65 @@ export class MockTeams {
     return this.people.roster(viewer, teamId);
   }
 
+  /** server: TeamHandlers.requireRunsTeam — admin/board, or a coach of the team (club PIN). */
+  private requireRunsTeam(viewer: Member, teamId: string): void {
+    if (this.people.isManager(viewer)) return this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    if (this.people.teamRoles(viewer.id)[teamId] !== 'COACH') fail(404, 'team.not-found');
+    this.people.requirePrivileged(viewer, ['COACH']);
+  }
+
+  /** server: TeamHandlers.setPlayerInfo — one captain per team. */
+  setPlayerInfo(viewer: Member, teamId: string, memberId: string, body: Record<string, any>): Roster {
+    if (!this.people.teams.data.some((t) => t.id === teamId)) fail(404, 'team.not-found');
+    this.requireRunsTeam(viewer, teamId);
+    if (!(teamId in this.people.teamRoles(memberId))) fail(404, 'member.not-found');
+    const jersey = body.jersey ?? null;
+    const position = typeof body.position === 'string' && body.position.trim() ? body.position.trim() : null;
+    if ((jersey !== null && (!Number.isInteger(jersey) || jersey < 0 || jersey > 99)) || (position?.length ?? 0) > 40)
+      fail(400, 'team.player-info-invalid');
+    const infos = (this.people.playerInfo.data[teamId] ??= {});
+    if (body.captain) for (const info of Object.values(infos)) info.captain = false;
+    infos[memberId] = { jersey, position, captain: !!body.captain };
+    this.people.playerInfo.save();
+    this.people.membershipChanged(teamId, memberId);
+    return this.people.roster(viewer, teamId);
+  }
+
+  /** server: TeamHandlers.copy — next season with the same roster. */
+  copyTeam(viewer: Member, teamId: string, body: Record<string, any>): Team {
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    const from = this.people.teams.data.find((t) => t.id === teamId) ?? fail(404, 'team.not-found');
+    const copy = this.createTeam(viewer, { name: typeof body.name === 'string' && body.name.trim() ? body.name : from.name, season: body.season });
+    for (const memberId of this.people.teamMembers(teamId)) {
+      (this.people.memberships.data[memberId] ??= {})[copy.id] = this.people.teamRoles(memberId)[teamId];
+      const info = this.people.playerInfo.data[teamId]?.[memberId];
+      if (info) (this.people.playerInfo.data[copy.id] ??= {})[memberId] = { ...info };
+    }
+    this.people.memberships.save();
+    this.people.playerInfo.save();
+    return copy;
+  }
+
+  /** server: TeamHandlers.requestPlayer — to admin and board. */
+  requestPlayer(viewer: Member, teamId: string, body: Record<string, any>): void {
+    const team = this.people.teams.data.find((t) => t.id === teamId) ?? fail(404, 'team.not-found');
+    if (this.people.teamRoles(viewer.id)[teamId] !== 'COACH') fail(404, 'team.not-found');
+    const note = typeof body.note === 'string' && body.note.trim() ? body.note.trim() : null;
+    const player = body.memberId ? this.people.name(body.memberId) : null;
+    if ((body.memberId && !player) || (!player && !note) || (note?.length ?? 0) > 500) fail(400, 'team.request-invalid');
+    mockServer.events.publish({
+      type: 'teams.player-requested',
+      data: {
+        teamId,
+        team: `${team.name} ${team.season}`,
+        coach: this.people.name(viewer.id),
+        player,
+        note,
+        recipients: this.people.audienceIds({ roles: ADMIN_BOARD }),
+      },
+    });
+  }
+
   /** Admin/board remove anyone; a coach of the team removes players only. */
   removeTeamMember(viewer: Member, teamId: string, memberId: string): Roster {
     if (!this.people.teams.data.some((t) => t.id === teamId)) fail(404, 'team.not-found');
@@ -98,4 +158,9 @@ mockServer
   .on('PUT', '/api/v1/teams/:id/members/:memberId', (req) =>
     teams.setTeamMember(directory.actor(req), req.params.id, req.params.memberId, req.body?.teamRole),
   )
+  .on('PUT', '/api/v1/teams/:id/members/:memberId/info', (req) =>
+    teams.setPlayerInfo(directory.actor(req), req.params.id, req.params.memberId, req.body ?? {}),
+  )
+  .on('POST', '/api/v1/teams/:id/copy', (req) => teams.copyTeam(directory.actor(req), req.params.id, req.body ?? {}))
+  .on('POST', '/api/v1/teams/:id/player-requests', (req) => teams.requestPlayer(directory.actor(req), req.params.id, req.body ?? {}))
   .on('DELETE', '/api/v1/teams/:id/members/:memberId', (req) => teams.removeTeamMember(directory.actor(req), req.params.id, req.params.memberId));

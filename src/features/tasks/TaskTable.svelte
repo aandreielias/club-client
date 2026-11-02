@@ -17,6 +17,7 @@
     emptyAction,
     toolbar = true,
     limit,
+    check,
   }: {
     list: TaskListModel;
     menu?: (task: Task) => MenuEntry[];
@@ -24,6 +25,8 @@
     emptyAction?: EmptyAction | null;
     toolbar?: boolean;
     limit?: number;
+    /** Choosing rows for a bulk action (task list page). */
+    check?: { checked: (task: Task) => boolean; toggle: (task: Task) => void; label: (task: Task) => string };
   } = $props();
 </script>
 
@@ -33,7 +36,8 @@
   {limit}
   rowKey={(t) => t.id}
   record={(t) => ({ kind: 'task', id: t.id, title: t.title })}
-  onopen={(t) => bus.publish(WINDOW_OPEN, { kind: 'task', id: t.id })}
+  onopen={check ? undefined : (t) => bus.publish(WINDOW_OPEN, { kind: 'task', id: t.id })}
+  {check}
   {menu}
   selected={windows.current?.kind === 'task' ? windows.current.id : null}
   {emptyText}

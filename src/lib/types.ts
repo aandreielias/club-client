@@ -101,12 +101,18 @@ export interface Team {
   id: string;
   name: string;
   season: string;
+  /** A past season: kept with its history, out of pickers. */
+  archived?: boolean;
 }
 
 export interface RosterEntry {
   memberId: string;
   name: string;
   teamRole: TeamRole;
+  /** Shirt number 0–99. */
+  jersey?: number | null;
+  position?: string | null;
+  captain?: boolean;
 }
 
 export interface Roster {

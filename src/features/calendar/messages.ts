@@ -33,6 +33,7 @@ export const CALENDAR_MESSAGES: MessageCatalog = {
   'appointment-type.remind-invalid': 'Erinnerung 1 bis 336 Stunden vor Beginn, oder leer.',
   'attendance.not-a-team-appointment': 'Erinnern geht nur bei Terminen eines Teams.',
   'attendance.presence-not-yet': 'Die Anwesenheit wird eingetragen, sobald der Termin begonnen hat.',
+  'appointment.extras-invalid': 'Inhalt bis 4000, Gegner bis 80 Zeichen, höchstens 5 Sätze wie 25:20.',
   'attendance.closed': 'Der Termin hat schon begonnen. Antworten ist nicht mehr möglich.',
   'attendance.not-in-team': 'Nur Mitglieder des Teams können antworten.',
   'attendance.reason-too-long': `Die Begründung hat höchstens ${limits.reasonMaxLength} Zeichen.`,

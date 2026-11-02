@@ -20,6 +20,10 @@ import {
   type Attendance,
   type AttendanceEntry,
   type MemberStats,
+  type Extras,
+  type ExtrasInput,
+  type MatchList,
+  SET_PATTERN,
   type OpenAnswer,
   type TeamStats,
   type NewAppointment,
@@ -67,6 +71,8 @@ export class MockCalendar {
   readonly absences = new MockTable<StoredAbsence[]>('absences', () => []);
   /** server: attendance_presence — appointmentId → memberId → present */
   readonly presence = new MockTable<Record<string, Record<string, boolean>>>('attendance-presence', () => ({}));
+  /** server: calendar_extra — training plan; opponent, home/away, sets */
+  readonly extrasTable = new MockTable<Record<string, ExtrasInput>>('appointment-extras', () => ({}));
   /** server: attendance_reminder — appointments whose open answers were reminded */
   readonly openReminded = new MockTable<string[]>('attendance-reminded', () => []);
   readonly rides: MockTable<StoredRide[]>;
@@ -266,6 +272,64 @@ export class MockCalendar {
     this.appointments.data.splice(this.appointments.data.indexOf(current), 1);
     this.appointments.save();
     this.changed(member, [current], 'CANCELLED', { silent: true });
+  }
+
+  private static extrasOf(id: string, x: ExtrasInput | undefined): Extras {
+    const e = x ?? { content: null, opponent: null, home: null, sets: [] };
+    let setsWon = 0;
+    let setsLost = 0;
+    for (const set of e.sets) {
+      const [ours, theirs] = set.split(':').map(Number);
+      if (ours > theirs) setsWon++;
+      else if (theirs > ours) setsLost++;
+    }
+    return { appointmentId: id, ...e, setsWon, setsLost, won: e.sets.length ? setsWon > setsLost : null };
+  }
+
+  /** server: CalendarHandlers extras — read by who sees it, written by who may edit it. */
+  extras(member: Member, id: string): Extras {
+    return MockCalendar.extrasOf(id, this.extrasTable.data[this.visible(member, id).id]);
+  }
+
+  setExtras(member: Member, id: string, body: Record<string, any>): Extras {
+    const appointment = this.visible(member, id);
+    this.requireMayEdit(member, appointment.teamId);
+    const content = typeof body.content === 'string' && body.content.trim() ? body.content.trim() : null;
+    const opponent = typeof body.opponent === 'string' && body.opponent.trim() ? body.opponent.trim() : null;
+    const sets: string[] = (Array.isArray(body.sets) ? body.sets : []).map((s: string) => String(s).trim()).filter(Boolean);
+    if ((content?.length ?? 0) > 4000 || (opponent?.length ?? 0) > 80 || sets.length > 5 || sets.some((s) => !SET_PATTERN.test(s)))
+      fail(400, 'appointment.extras-invalid');
+    const extra: ExtrasInput = { content, opponent, home: typeof body.home === 'boolean' ? body.home : null, sets };
+    this.extrasTable.data[id] = extra;
+    this.extrasTable.save();
+    this.changed(member, [appointment], 'UPDATED');
+    return MockCalendar.extrasOf(id, extra);
+  }
+
+  /** server: CalendarHandlers.teamMatches */
+  teamMatches(member: Member, teamId: string, from: string | null, to: string | null): MatchList {
+    const items = this.list(member, from, to, teamId)
+      .filter((a) => !a.cancelled && a.teamId === teamId)
+      .flatMap((a) => {
+        const x = this.extrasTable.data[a.id];
+        if (!x || (!x.opponent && !x.sets.length)) return [];
+        const e = MockCalendar.extrasOf(a.id, x);
+        return [
+          {
+            appointmentId: a.id,
+            title: a.title,
+            startsAt: a.startsAt,
+            opponent: e.opponent,
+            home: e.home,
+            sets: e.sets,
+            setsWon: e.setsWon,
+            setsLost: e.setsLost,
+            won: e.won,
+          },
+        ];
+      })
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+    return { items, won: items.filter((m) => m.won === true).length, lost: items.filter((m) => m.won === false).length };
   }
 
   /** server: AttendanceHandlers.requireRunsTeam */
@@ -1039,6 +1103,9 @@ mockServer
   .on('POST', '/api/v1/appointments/:id/remind-open', (req) => ({ count: calendar.remindOpen(actor(req), req.params.id) }))
   .on('PUT', '/api/v1/appointments/:id/presence', (req) => calendar.setPresence(actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/me/open-answers', (req) => calendar.openAnswers(actor(req)))
+  .on('GET', '/api/v1/appointments/:id/extras', (req) => calendar.extras(actor(req), req.params.id))
+  .on('PUT', '/api/v1/appointments/:id/extras', (req) => calendar.setExtras(actor(req), req.params.id, req.body ?? {}))
+  .on('GET', '/api/v1/teams/:id/matches', (req) => calendar.teamMatches(actor(req), req.params.id, req.query.get('from'), req.query.get('to')))
   .on('GET', '/api/v1/teams/:id/attendance', (req) => calendar.teamStats(actor(req), req.params.id, req.query.get('from'), req.query.get('to')))
   .on('GET', '/api/v1/appointments/:id/links', (req) => calendar.getLinks(actor(req), req.params.id))
   .on('PUT', '/api/v1/appointments/:id/links', (req) => calendar.setLinks(actor(req), req.params.id, req.body ?? {}))

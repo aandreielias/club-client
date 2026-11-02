@@ -354,12 +354,18 @@ export class MockTasks {
         id: crypto.randomUUID(),
         appointmentId: null,
         status: 'OPEN',
-        dueAt: MockTasks.weeksLater(task.dueAt, task.repeatWeeks),
+        dueAt: MockTasks.nextDue(task.dueAt, task.repeatWeeks),
         checklist: MockTasks.items(task.checklist.map((i) => i.text)),
         createdAt: new Date().toISOString(),
         completedAt: null,
       };
       this.tasks.data.push(next);
+      // server: "Benötigt" and attachments come along
+      const links = this.links.table.data[task.id];
+      if (links) {
+        this.links.table.data[next.id] = structuredClone(links);
+        this.links.table.save();
+      }
       task.repeatWeeks = null;
       this.changed(next, 'CREATED');
       MockActivity.record('TASK', next.id, member, 'CREATED', { title: next.title, teamIds: next.teamId ? [next.teamId] : [] });
@@ -370,7 +376,10 @@ export class MockTasks {
     task.completedAt = status === 'DONE' ? (task.completedAt ?? new Date().toISOString()) : null;
     this.tasks.save();
     this.changed(task, 'STATUS');
-    if (finished) this.sourcedDone(task.id);
+    if (finished) {
+      this.sourcedDone(task.id);
+      this.notice('DONE', task, [task.createdBy], member);
+    }
     MockActivity.record('TASK', task.id, member, 'STATUS', { title: task.title, teamIds: task.teamId ? [task.teamId] : [], detail: task.status });
     return this.withComments(task);
   }
@@ -392,6 +401,7 @@ export class MockTasks {
     (this.comments.data[id] ??= []).push({ id: crypto.randomUUID(), authorId: member.id, text, createdAt: new Date().toISOString() });
     this.comments.save();
     this.changed(task, 'COMMENTED');
+    this.notice('COMMENTED', task, [task.createdBy, ...task.assignees, ...this.people.guardiansOf(task.assignees)], member);
     MockActivity.record('TASK', task.id, member, 'COMMENTED', { title: task.title, teamIds: task.teamId ? [task.teamId] : [] });
     return this.withComments(task);
   }
@@ -424,7 +434,19 @@ export class MockTasks {
   private assigned(task: StoredTask, previousAssignees: readonly string[]): void {
     const added = task.assignees.filter((id) => !previousAssignees.includes(id));
     if (!added.length) return;
-    mockServer.events.publish({ type: 'tasks.task-assigned', data: { taskId: task.id, title: task.title, dueAt: task.dueAt, memberIds: added } });
+    // server: guardians of minors among the new assignees hear too
+    const memberIds = [...new Set([...added, ...this.people.guardiansOf(added)])];
+    mockServer.events.publish({ type: 'tasks.task-assigned', data: { taskId: task.id, title: task.title, dueAt: task.dueAt, memberIds } });
+  }
+
+  /** server: TaskPublisher.notice — comments and completion to those involved, never to who did it. */
+  private notice(kind: 'COMMENTED' | 'DONE', task: StoredTask, recipients: string[], actor: Member): void {
+    const to = [...new Set(recipients)].filter((id) => id !== actor.id);
+    if (!to.length) return;
+    mockServer.events.publish({
+      type: 'tasks.task-notice',
+      data: { kind, taskId: task.id, title: task.title, dueAt: task.dueAt, recipients: to, name: `${actor.firstName} ${actor.lastName}` },
+    });
   }
 
   private viewer(member: Member): Viewer {
@@ -482,6 +504,13 @@ export class MockTasks {
   }
 
   /** Same local wall time (club zone) n weeks later. */
+  /** server: Task.nextOccurrence — the first due date in the rhythm still ahead (done late: not an overdue one). */
+  private static nextDue(dueAt: string, weeks: number): string {
+    let next = MockTasks.weeksLater(dueAt, weeks);
+    while (Date.parse(next) <= Date.now()) next = MockTasks.weeksLater(next, weeks);
+    return next;
+  }
+
   private static weeksLater(dueAt: string, weeks: number): string {
     const clock = directory.clock;
     return clock.toInstant(ZonedClock.addMinutes(clock.toLocal(dueAt), weeks * 7 * 24 * 60));

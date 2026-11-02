@@ -28,6 +28,16 @@ export class TeamPolicy {
     return this.permissions.isCoachOf(teamId) && entry.teamRole === 'PLAYER' && entry.memberId !== this.session.member.id;
   }
 
+  /** Shirt number, position, captain: admin/board and the team's coaches (server: TeamHandlers.setPlayerInfo). */
+  canSetPlayerInfo(teamId: string): boolean {
+    return this.permissions.isManager || this.permissions.isCoachOf(teamId);
+  }
+
+  /** Coaches ask admin and board to add someone (server: TeamHandlers.requestPlayer). */
+  canRequestPlayer(teamId: string): boolean {
+    return !this.permissions.isManager && this.permissions.isCoachOf(teamId);
+  }
+
   /** Member profiles open for admin/board, the team's coaches and the member themself (server: requireMaySee). */
   canOpenProfile(teamId: string, entry: RosterEntry): boolean {
     return this.permissions.isManager || this.permissions.isCoachOf(teamId) || entry.memberId === this.session.member.id;

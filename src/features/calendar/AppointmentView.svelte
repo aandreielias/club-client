@@ -21,6 +21,7 @@
   import { AppointmentDetailModel } from './AppointmentDetailModel.svelte';
   import { AppointmentForm } from './AppointmentForm.svelte';
   import AttendancePanel from './AttendancePanel.svelte';
+  import AppointmentExtras from './AppointmentExtras.svelte';
   import { CalendarApi } from './CalendarApi';
   import CancelDialog from './CancelDialog.svelte';
   import { APPOINTMENTS_CHANGED, RESPONSE_CHANGED } from './events';
@@ -186,6 +187,8 @@
         {#if appointment.description}<p class="prose">{appointment.description}</p>{/if}
 
         <LinksSection model={links} editable={policy.canEdit(appointment)} />
+
+        <AppointmentExtras {appointment} editable={policy.canEdit(appointment)} />
 
         <h2>{respondents.length > 1 || respondents[0]?.name !== 'Ich' ? 'Antwort' : 'Meine Antwort'}</h2>
         {#if policy.canRespond(appointment)}

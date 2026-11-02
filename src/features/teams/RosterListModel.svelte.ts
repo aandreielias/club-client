@@ -16,7 +16,9 @@ export class RosterListModel extends ListModel<RosterEntry> {
         defaultSort: { key: 'role', dir: 'asc' },
         searchText: (e) => e.name,
         columns: [
+          { key: 'jersey', label: 'Nr.', value: (e) => e.jersey ?? null, format: (e) => (e.jersey == null ? '' : String(e.jersey)), width: '4rem' },
           { key: 'name', label: 'Name', value: (e) => e.name },
+          { key: 'position', label: 'Position', value: (e) => e.position ?? '', hideOnCompact: true, width: '10rem' },
           {
             key: 'role',
             label: 'Rolle im Team',
@@ -24,7 +26,7 @@ export class RosterListModel extends ListModel<RosterEntry> {
             format: (e) => TEAM_ROLE_LABELS[e.teamRole],
             width: '12rem',
           },
-          { key: 'actions', label: 'Aktionen', value: () => null, sortable: false, width: '7rem', align: 'end' },
+          { key: 'actions', label: 'Aktionen', value: () => null, sortable: false, width: '10rem', align: 'end' },
         ],
         filters: [
           {

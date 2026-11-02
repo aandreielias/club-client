@@ -31,6 +31,8 @@ export class TeamListModel extends ListModel<Team> {
             test: (t, value) => t.season === value,
           },
           { key: 'mine', label: 'Nur meine', kind: 'toggle', test: (t, on) => !on || session.isInTeam(t.id) },
+          // Past seasons stay out of sight until asked for.
+          { key: 'archived', label: 'Archivierte zeigen', kind: 'toggle', always: true, test: (t, on) => !!on || !t.archived },
         ],
       },
       store,

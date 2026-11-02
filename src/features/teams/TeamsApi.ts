@@ -15,7 +15,7 @@ export class TeamsApi {
     return this.api.post<Team>(TeamsApi.BASE, { name, season });
   }
 
-  update(teamId: string, patch: { name?: string; season?: string }): Promise<Team> {
+  update(teamId: string, patch: { name?: string; season?: string; archived?: boolean }): Promise<Team> {
     return this.api.patch<Team>(this.path(teamId), patch);
   }
 
@@ -35,6 +35,21 @@ export class TeamsApi {
 
   removeMember(teamId: string, memberId: string): Promise<Roster> {
     return this.api.delete<Roster>(`${this.path(teamId)}/members/${encodeURIComponent(memberId)}`);
+  }
+
+  /** Shirt number, position, captain (one per team). */
+  setPlayerInfo(teamId: string, memberId: string, info: { jersey: number | null; position: string | null; captain: boolean }): Promise<Roster> {
+    return this.api.put<Roster>(`${this.path(teamId)}/members/${encodeURIComponent(memberId)}/info`, info);
+  }
+
+  /** The next season with the same roster. */
+  copy(teamId: string, season: string, name: string | null = null): Promise<Team> {
+    return this.api.post<Team>(`${this.path(teamId)}/copy`, { season, name });
+  }
+
+  /** A coach asks admin and board to add a member (or a person described in the note). */
+  requestPlayer(teamId: string, memberId: string | null, note: string | null): Promise<void> {
+    return this.api.post(`${this.path(teamId)}/player-requests`, { memberId, note });
   }
 
   private path(teamId: string): string {

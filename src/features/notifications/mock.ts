@@ -25,6 +25,8 @@ const KINDS: readonly NotificationKind[] = [
   'APPOINTMENT_CHANGED',
   'ATTENDANCE',
   'RIDE',
+  'TASK_ACTIVITY',
+  'TEAM',
 ];
 const MAX_LISTED = 100;
 const limits = settings.notifications.message;
@@ -92,9 +94,18 @@ export class MockNotifications {
 
   /** server: MessageHandlers.send; `preview` only counts. */
   send(viewer: Member, body: Record<string, any>, preview: boolean): { recipients: number } {
-    if (preview) this.people.requireRole(viewer, PRIVILEGED);
-    else this.people.requirePrivileged(viewer, PRIVILEGED);
-    const recipients = this.recipients(viewer, body);
+    let recipients: string[];
+    if (body.replyTo) {
+      // server: MessageHandlers.senderOf — anyone answers the sender of a message in their inbox
+      const received = this.list(viewer.id, false).items.find((n) => n.id === body.replyTo);
+      const sender = received?.senderId;
+      if (!sender || sender === viewer.id || !this.people.name(sender)) fail(404, 'message.not-found');
+      recipients = [sender!];
+    } else {
+      if (preview) this.people.requireRole(viewer, PRIVILEGED);
+      else this.people.requirePrivileged(viewer, PRIVILEGED);
+      recipients = this.recipients(viewer, body);
+    }
     if (preview) return { recipients: recipients.length };
     const title = typeof body.title === 'string' ? body.title.trim() : '';
     const text = typeof body.body === 'string' ? body.body.trim() : '';
@@ -212,6 +223,24 @@ export class MockNotifications {
               : `Ort oder Kabine für ${at(data.firstStartsAt)} haben sich geändert.`;
           this.notify(recipients, 'APPOINTMENT_CHANGED', `Geändert: ${data.title}`, body, link);
         }
+        break;
+      }
+      case 'tasks.task-notice': {
+        // server: NotificationHandlers.onTaskNotice
+        const title = data.kind === 'COMMENTED' ? `Neuer Kommentar: ${data.title}` : `Erledigt: ${data.title}`;
+        const body = data.kind === 'COMMENTED' ? `${data.name} hat die Aufgabe kommentiert.` : `${data.name} hat die Aufgabe erledigt.`;
+        this.notify(data.recipients, 'TASK_ACTIVITY', title, body, `/tasks/${data.taskId}`);
+        break;
+      }
+      case 'teams.player-requested': {
+        // server: NotificationHandlers, PLAYER_REQUESTED
+        this.notify(
+          data.recipients,
+          'TEAM',
+          `Neu ins Team: ${data.team}`,
+          `${data.coach} bittet, ${data.player ?? ''} ins Team aufzunehmen. ${data.note ?? ''}`,
+          `/teams/${data.teamId}`,
+        );
         break;
       }
       case 'attendance.notice': {

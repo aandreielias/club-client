@@ -6,6 +6,7 @@ const limits = settings.notifications.message;
 export const NOTIFICATION_MESSAGES: MessageCatalog = {
   'notifications.preferences-missing': 'Die Einstellungen fehlen.',
   'notifications.kind-missing': 'Eine Benachrichtigungsart fehlt.',
+  'message.not-found': 'Diese Nachricht gibt es nicht mehr oder ihr Absender ist nicht mehr im Verein.',
   'notifications.push-token-invalid': 'Das Gerät konnte nicht für Push registriert werden.',
   'message.title-invalid': `Titel mit 1 bis ${limits.titleMaxLength} Zeichen angeben.`,
   'message.body-too-long': `Der Text hat höchstens ${limits.bodyMaxLength} Zeichen.`,

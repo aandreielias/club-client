@@ -126,6 +126,42 @@ export interface MemberStats {
   marked: number;
 }
 
+/** server: CalendarApi.Extras — training plan; match: opponent, home/away, sets ("25:20", ours first). */
+export interface Extras {
+  appointmentId: string;
+  content: string | null;
+  opponent: string | null;
+  home: boolean | null;
+  sets: string[];
+  setsWon: number;
+  setsLost: number;
+  /** null while no sets are entered. */
+  won: boolean | null;
+}
+
+export type ExtrasInput = Pick<Extras, 'content' | 'opponent' | 'home' | 'sets'>;
+
+export interface MatchResult {
+  appointmentId: string;
+  title: string;
+  startsAt: string;
+  opponent: string | null;
+  home: boolean | null;
+  sets: string[];
+  setsWon: number;
+  setsLost: number;
+  won: boolean | null;
+}
+
+export interface MatchList {
+  items: MatchResult[];
+  won: number;
+  lost: number;
+}
+
+/** "25:20" style, ours first (server: CalendarHandlers.SET). */
+export const SET_PATTERN = /^\d{1,2}:\d{1,2}$/;
+
 export interface TeamStats {
   teamId: string;
   from: string;

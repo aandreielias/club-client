@@ -14,7 +14,9 @@
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AddMemberPanel from './AddMemberPanel.svelte';
   import TeamAttendanceSection from '../calendar/TeamAttendanceSection.svelte';
+  import TeamMatchesSection from '../calendar/TeamMatchesSection.svelte';
   import TeamDialog from './TeamDialog.svelte';
+  import TeamActionDialog from './TeamActionDialog.svelte';
   import { Action } from '../../lib/state/Action.svelte';
   import { MEMBERSHIP_CHANGED } from './events';
   import { RosterListModel } from './RosterListModel.svelte';
@@ -40,6 +42,29 @@
 
   let adding = $state(false);
   let editing = $state(false);
+  let dialog = $state<{ kind: 'player' | 'season' | 'request'; entry?: RosterEntry } | null>(null);
+  const archiveAction = new Action();
+
+  function dialogDone(result: unknown) {
+    const kind = dialog?.kind;
+    dialog = null;
+    if (kind === 'player') {
+      model.roster.set(result as never);
+      view.notify('Gespeichert.');
+    } else if (kind === 'season') {
+      directory.forgetTeams();
+      view.notify('Neue Saison angelegt.');
+      view.open('team', (result as { id: string }).id);
+    } else view.notify('Anfrage an Vorstand und Admins gesendet.');
+  }
+
+  async function setArchived(archived: boolean) {
+    if (await view.attempt(archiveAction, () => archiveAction.run(() => teamsApi.update(model.teamId, { archived })))) {
+      directory.forgetTeams();
+      void model.load();
+      view.notify(archived ? 'Team archiviert.' : 'Team wiederhergestellt.');
+    }
+  }
   const deleteAction = new Action();
   backStack.while(
     () => adding,
@@ -108,15 +133,23 @@
 <Detail title={model.roster.value?.team.name ?? 'Team'}>
   {#snippet actions()}
     {#if policy.canAssign() && !adding}<Button variant="primary" onclick={() => (adding = true)}>Mitglied hinzufügen</Button>{/if}
+    {#if policy.canRequestPlayer(model.teamId)}<Button onclick={() => (dialog = { kind: 'request' })}>Spieler:in anfragen</Button>{/if}
     {#if policy.canEdit() && model.roster.value}
       {@const team = model.roster.value.team}
       <Button icon="edit" onclick={() => (editing = true)}>Bearbeiten</Button>
+      <Button onclick={() => (dialog = { kind: 'season' })}>Neue Saison</Button>
+      {#if team.archived}
+        <Button busy={archiveAction.busy} onclick={() => setArchived(false)}>Wiederherstellen</Button>
+      {:else}
+        <Button busy={archiveAction.busy} onclick={() => setArchived(true)}>Archivieren</Button>
+      {/if}
       <Button variant="danger" icon="delete" busy={deleteAction.busy} onclick={() => deleteTeam(team.name)}>Löschen</Button>
     {/if}
   {/snippet}
   {#snippet meta()}
     {#if model.roster.value}
       <Tag tone="gray">Saison {model.roster.value.team.season}</Tag>
+      {#if model.roster.value.team.archived}<Tag tone="gray">Archiviert</Tag>{/if}
       <span class="muted">{model.roster.value.entries.length} Mitglieder</span>
     {/if}
   {/snippet}
@@ -152,7 +185,17 @@
             {:else}
               <Tag tone={entry.teamRole === 'COACH' ? 'blue' : 'green'}>{list.display(entry, column)}</Tag>
             {/if}
+          {:else if column.key === 'name'}
+            {entry.name}{#if entry.captain}&nbsp;<Tag tone="orange">Kapitän:in</Tag>{/if}
           {:else if column.key === 'actions'}
+            {#if policy.canSetPlayerInfo(model.teamId)}
+              <Button
+                size="sm"
+                variant="ghost"
+                onclick={(e) => (e.stopPropagation(), (dialog = { kind: 'player', entry }))}
+                tooltip="Nummer, Position und Kapitän:in von {entry.name}">Nr.</Button
+              >
+            {/if}
             {#if policy.canRemove(model.teamId, entry)}
               <Button
                 size="sm"
@@ -169,8 +212,18 @@
       </DataTable>
     {/snippet}
   </AsyncView>
+  <TeamMatchesSection teamId={model.teamId} />
   <TeamAttendanceSection teamId={model.teamId} />
 </Detail>
+{#if dialog && model.roster.value}
+  <TeamActionDialog
+    kind={dialog.kind}
+    team={model.roster.value.team}
+    entry={dialog.entry ?? null}
+    ondone={dialogDone}
+    onclose={() => (dialog = null)}
+  />
+{/if}
 {#if editing && model.roster.value}<TeamDialog team={model.roster.value.team} onsaved={renamed} onclose={() => (editing = false)} />{/if}
 
 <style>
