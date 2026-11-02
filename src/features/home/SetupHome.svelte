@@ -7,7 +7,6 @@
   import { filesApi } from '../files/services';
   import { locationsApi } from '../locations/services';
   import { mailApi } from '../mail/services';
-  import { resolutionRules } from '../meetings/services';
   import { membersApi } from '../members/services';
   import { setupSteps } from './SetupChecklist';
 
@@ -19,13 +18,12 @@
   const or = <T,>(promise: Promise<T>, fallback: T): Promise<T> => promise.catch(() => fallback);
 
   const steps = new Resource(async () => {
-    const [members, mail, board, locations, folders, rules] = await Promise.all([
+    const [members, mail, board, locations, folders] = await Promise.all([
       or(directory.allMembers(), []),
       or(mailApi.settings(), null),
       or(membersApi.board(), null),
       or(locationsApi.list(), []),
       or(filesApi.folders(), []),
-      or(resolutionRules.load(), null),
     ]);
     const active = members.filter((m) => m.active);
     const admins = active.filter((m) => m.roles.includes('ADMIN')).length;
@@ -36,7 +34,6 @@
       teams: directory.teams.length,
       locations: locations.length,
       folders: folders.length,
-      statutes: !!rules?.statutes.folderId,
       members: active.length - admins,
     };
   });

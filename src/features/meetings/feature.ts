@@ -12,8 +12,6 @@ import MeetingTypeView from './MeetingTypeView.svelte';
 import MeetingView from './MeetingView.svelte';
 import CircularCreateView from './CircularCreateView.svelte';
 import ResolutionPage from './ResolutionPage.svelte';
-import ResolutionRuleCreateView from './ResolutionRuleCreateView.svelte';
-import ResolutionRuleView from './ResolutionRuleView.svelte';
 import ResolutionView from './ResolutionView.svelte';
 import { MEETING_MESSAGES } from './messages';
 
@@ -33,8 +31,6 @@ export const meetingsFeature: Feature = {
     'resolution-new': { component: CircularCreateView, roles: ADMIN_BOARD },
     'meeting-type': { component: MeetingTypeView, page: (key) => `/meeting-types/${encodeURIComponent(key)}`, roles: ADMIN_BOARD },
     'meeting-type-new': { component: MeetingTypeCreateView, roles: ADMIN_BOARD },
-    'resolution-rule': { component: ResolutionRuleView, roles: ADMIN_BOARD },
-    'resolution-rule-new': { component: ResolutionRuleCreateView, roles: ADMIN_BOARD },
   },
   calendar: {
     MEETING: (item) => {

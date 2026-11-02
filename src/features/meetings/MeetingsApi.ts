@@ -2,27 +2,22 @@ import type { ApiClient } from '../../lib/http/ApiClient';
 import type { RefKind } from '../../lib/records/refs';
 import type {
   Choice,
-  AgendaItem,
-  FollowUp,
-  FollowUpSource,
+  AgendaItemInput,
   ResolutionPatch,
   ResolutionSummary,
-  FollowUpRule,
   Meeting,
   MeetingPatch,
   MeetingType,
   MeetingTypeInput,
   MeetingSummary,
-  NewFollowUp,
   NewMeeting,
   NewResolution,
   PresenceMode,
   Resolution,
   ResolutionRules,
-  ResolutionAction,
 } from './model';
 
-/** Typed access to the meetings endpoints. Every write answers with the meeting. */
+/** Typed access to the meetings endpoints. */
 export class MeetingsApi {
   static readonly BASE = '/api/v1/meetings';
   static readonly RESOLUTIONS = '/api/v1/resolutions';
@@ -33,7 +28,7 @@ export class MeetingsApi {
     return this.api.get<ResolutionRules>(`${MeetingsApi.BASE}/resolution-rules`);
   }
 
-  /** Admin/board; every decision once. */
+  /** Admin/board: the circular vote rules. */
   saveResolutionRules(rules: ResolutionRules): Promise<ResolutionRules> {
     return this.api.put<ResolutionRules>(`${MeetingsApi.BASE}/resolution-rules`, rules);
   }
@@ -89,7 +84,8 @@ export class MeetingsApi {
     return this.api.post<Meeting>(`${this.path(id)}/close`, { protocol });
   }
 
-  setAgenda(id: string, items: readonly AgendaItem[]): Promise<Meeting> {
+  /** The whole Tagesordnung; items with a motion are Beschlüsse (server: MeetingsApi.AgendaItemInput). */
+  setAgenda(id: string, items: readonly AgendaItemInput[]): Promise<Meeting> {
     return this.api.put<Meeting>(`${this.path(id)}/agenda`, { items });
   }
 
@@ -111,10 +107,6 @@ export class MeetingsApi {
     return this.api.post<Meeting>(`${this.path(id)}/protocol-document`);
   }
 
-  followUpSource(followUpId: string): Promise<FollowUpSource> {
-    return this.api.get<FollowUpSource>(`/api/v1/meetings/follow-ups/${encodeURIComponent(followUpId)}`);
-  }
-
   updateResolution(id: string, patch: ResolutionPatch): Promise<Resolution> {
     return this.api.patch<Resolution>(this.resolutionPath(id), patch);
   }
@@ -122,11 +114,6 @@ export class MeetingsApi {
   /** Every resolution the member sees, newest first; `year`: closed in that year. */
   async allResolutions(year: number | null = null): Promise<ResolutionSummary[]> {
     return (await this.api.get<{ items: ResolutionSummary[] }>(`${MeetingsApi.RESOLUTIONS}/all${year ? `?year=${year}` : ''}`)).items;
-  }
-
-  /** The decision's follow-ups later, when the meeting had automatic tasks off. */
-  planFollowUps(id: string): Promise<Resolution> {
-    return this.api.post<Resolution>(`${this.resolutionPath(id)}/plan-follow-ups`);
   }
 
   /** After the meeting: the protocol no longer changes. */
@@ -173,15 +160,15 @@ export class MeetingsApi {
     return this.api.post<Resolution>(`${this.path(meetingId)}/resolutions`, resolution);
   }
 
+  /** Created and opened at once; whoever is named (empty: the board) gets the task "umsetzen" once it passes. */
   createCircular(
     title: string,
     text: string | null,
     deadline: string,
-    action: ResolutionAction = 'GENERAL',
     assigneeIds: string[] = [],
-    followUps: FollowUpRule[] = [],
+    implementDue: string | null = null,
   ): Promise<Resolution> {
-    return this.api.post<Resolution>(MeetingsApi.RESOLUTIONS, { title, text, deadline, action, assigneeIds, followUps, open: true });
+    return this.api.post<Resolution>(MeetingsApi.RESOLUTIONS, { title, text, deadline, assigneeIds, implementDue, open: true });
   }
 
   /** Replaces the records linked to a resolution. */
@@ -192,21 +179,6 @@ export class MeetingsApi {
   /** Who carries the resolution out; until it closes. */
   setResolutionAssignees(id: string, assigneeIds: readonly string[]): Promise<Resolution> {
     return this.api.put<Resolution>(`${this.resolutionPath(id)}/assignees`, { assigneeIds });
-  }
-
-  /** A task by hand for a resolution. */
-  addResolutionFollowUp(id: string, followUp: NewFollowUp): Promise<FollowUp> {
-    return this.api.post<FollowUp>(`${this.resolutionPath(id)}/follow-ups`, followUp);
-  }
-
-  /** A task by hand for the meeting. */
-  addMeetingFollowUp(id: string, followUp: NewFollowUp): Promise<FollowUp> {
-    return this.api.post<FollowUp>(`${this.path(id)}/follow-ups`, followUp);
-  }
-
-  /** On: passed resolutions get their follow-up tasks. */
-  setAutoTasks(id: string, on: boolean): Promise<Meeting> {
-    return this.api.put<Meeting>(`${this.path(id)}/auto-tasks`, { on });
   }
 
   deleteResolution(id: string): Promise<void> {

@@ -7,17 +7,7 @@ import type { DownloadLink, FileList, FilePatch, FolderList, FolderPatch } from 
 import type { Item, ItemList, ItemUse, OwnItem, StockInput } from '../../features/inventory/model';
 import type { GeocodeResult, Location } from '../../features/locations/model';
 import type { AddressEntry, Mail, Mailbox, MailboxAdmin, MailPage, MailRef, MailSettings, MailSummary } from '../../features/mail/model';
-import type {
-  ActionRule,
-  Assignable,
-  CircularRules,
-  FollowUpRule,
-  Meeting,
-  MeetingType,
-  Person,
-  Presence,
-  Resolution,
-} from '../../features/meetings/model';
+import type { CircularRules, Meeting, MeetingType, Person, Presence, Resolution } from '../../features/meetings/model';
 import type {
   Board,
   BoardSettings,
@@ -76,14 +66,8 @@ export type Contract = [
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.Person'], Person>,
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.Presence'], Presence>,
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.MeetingDto'], Meeting>,
-  Satisfies<S['at.clubserver.meetings.api.MeetingsApi.Assignable'], Assignable>,
-  Satisfies<
-    With<With<S['at.clubserver.meetings.api.MeetingsApi.FollowUpRule'], 'kind', FollowUpRule['kind']>, 'trigger', FollowUpRule['trigger']>,
-    FollowUpRule
-  >, // rules never MANUAL; fields as in TRIGGER_CATALOG
-  Satisfies<With<S['at.clubserver.meetings.api.MeetingsApi.ActionRule'], 'followUps', FollowUpRule[]>, ActionRule>,
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.CircularRules'], CircularRules>,
-  Satisfies<With<S['at.clubserver.meetings.api.MeetingsApi.ResolutionDto'], 'ownFollowUps', FollowUpRule[]>, Resolution>,
+  Satisfies<S['at.clubserver.meetings.api.MeetingsApi.ResolutionDto'], Resolution>,
   Satisfies<S['at.clubserver.members.api.MembersApi.OfficeDto'], Office>,
   Satisfies<S['at.clubserver.members.api.MembersApi.MembershipKindDto'], MembershipKind>,
   Satisfies<S['at.clubserver.members.api.MembersApi.OfficePair'], OfficePair>,

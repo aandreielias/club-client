@@ -1,21 +1,8 @@
 import { FormState } from '../../lib/state/FormState.svelte';
 import type { OfficeKind } from '../members/MembersApi';
-import {
-  actionLabel,
-  isDayOfYear,
-  MAJORITY_LABELS,
-  type ActionRule,
-  type Majority,
-  type MeetingStep,
-  type MeetingType,
-  type MeetingTypeInput,
-  type Quorum,
-  type ResolutionAction,
-  type StepAnchor,
-} from './model';
+import { isDayOfYear, type Majority, type MeetingStep, type MeetingType, type MeetingTypeInput, type Quorum, type StepAnchor } from './model';
 
-export type MeetingTypeField =
-  'label' | 'invitationLabel' | 'notice' | 'grace' | 'majorities' | 'conveners' | 'actions' | 'dueBy' | 'steps' | 'videoUrl';
+export type MeetingTypeField = 'label' | 'invitationLabel' | 'notice' | 'grace' | 'majorities' | 'conveners' | 'dueBy' | 'steps' | 'videoUrl';
 type Errors = Partial<Record<MeetingTypeField, string>>;
 
 export type NoticeUnit = 'hours' | 'days';
@@ -31,7 +18,6 @@ export class MeetingTypeForm extends FormState<Errors> {
   grace = $state<number | null>(null);
   majorities = $state<Majority[]>(['SIMPLE']);
   conveners = $state<OfficeKind[]>(['CHAIR', 'VICE_CHAIR']);
-  actions = $state<ResolutionAction[]>(['GENERAL']);
   needsReason = $state(false);
   yearly = $state(false);
   /** Day (1-31) and month (1-12) the yearly meeting should be planned by. */
@@ -67,11 +53,7 @@ export class MeetingTypeForm extends FormState<Errors> {
     },
   ]);
 
-  constructor(
-    type: MeetingType | null = null,
-    /** The club's resolution rules: a decision with a fixed majority needs the type to offer it. */
-    private readonly rules: readonly ActionRule[] = [],
-  ) {
+  constructor(type: MeetingType | null = null) {
     super();
     if (!type) return;
     this.label = type.label;
@@ -83,7 +65,6 @@ export class MeetingTypeForm extends FormState<Errors> {
     this.grace = type.graceMinutes;
     this.majorities = [...type.majorities];
     this.conveners = [...type.conveners];
-    this.actions = [...type.actions];
     this.needsReason = type.needsReason;
     this.yearly = !!type.dueBy;
     if (type.dueBy) [this.dueMonth, this.dueDay] = type.dueBy.split('-').map(Number);
@@ -129,7 +110,6 @@ export class MeetingTypeForm extends FormState<Errors> {
       graceMinutes: this.grace || null,
       majorities: this.majorities,
       conveners: this.conveners,
-      actions: this.actions,
       needsReason: this.needsReason,
       dueBy: this.yearly ? `${String(this.dueMonth).padStart(2, '0')}-${String(this.dueDay).padStart(2, '0')}` : null,
       sort: this.sort,
@@ -153,12 +133,7 @@ export class MeetingTypeForm extends FormState<Errors> {
     if (!Number.isInteger(this.notice) || this.notice < 0 || this.noticeHours > 8760) errors.notice = 'Ganze Zahl, höchstens ein Jahr.';
     if (this.grace != null && (!Number.isInteger(this.grace) || this.grace < 1 || this.grace > 1440)) errors.grace = '1 bis 1440 Minuten, oder leer.';
     if (!this.majorities.length) errors.majorities = 'Mindestens eine Mehrheit.';
-    else {
-      const missing = this.rules.find((r) => r.majority && r.action && this.actions.includes(r.action) && !this.majorities.includes(r.majority));
-      if (missing) errors.majorities = `${actionLabel(missing.action!, this.rules)} braucht ${MAJORITY_LABELS[missing.majority!]}.`;
-    }
     if (!this.conveners.length) errors.conveners = 'Mindestens eine Funktion.';
-    if (!this.actions.includes('GENERAL')) errors.actions = 'Sonstige Beschlüsse sind immer möglich.';
     if (this.yearly && !isDayOfYear(this.dueMonth, this.dueDay)) {
       errors.dueBy = 'Diesen Tag gibt es nicht.';
     }

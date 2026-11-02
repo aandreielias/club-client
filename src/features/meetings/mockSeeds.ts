@@ -1,21 +1,15 @@
 // Seed data and stored shapes of the meetings mock (server: the meetings migrations' seeds and tables).
 import type { LinkedRef } from '../../lib/records/refs';
 import type { OfficeKind } from '../members/MembersApi';
-import type { Trigger } from './triggers';
 import {
-  plainFollowUp,
-  type ActionRule,
   type AgendaItem,
   type Approval,
-  type FollowUpKind,
-  type FollowUpRule,
   type Majority,
   type Meeting,
   type MeetingStep,
   type MeetingType,
   type PresenceMode,
   type Resolution,
-  type ResolutionAction,
 } from './model';
 
 const DAY = 86_400_000;
@@ -37,7 +31,6 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     graceMinutes: 30,
     majorities: ALL_MAJORITIES,
     conveners: BOARD_OFFICES,
-    actions: ['GENERAL', 'ELECTION'],
     needsReason: false,
     dueBy: '10-01',
     sort: 1,
@@ -57,7 +50,6 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     graceMinutes: 30,
     majorities: ALL_MAJORITIES,
     conveners: BOARD_OFFICES,
-    actions: ['GENERAL', 'ELECTION', 'HONORARY_GRANT', 'HONORARY_REVOKE', 'STATUTES_CHANGE', 'DISSOLUTION'],
     needsReason: false,
     dueBy: null,
     sort: 2,
@@ -77,7 +69,6 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     graceMinutes: null,
     majorities: ['SIMPLE'],
     conveners: CHAIRS,
-    actions: ['GENERAL', 'CONVENE_ASSEMBLY'],
     needsReason: false,
     dueBy: '10-01',
     sort: 3,
@@ -97,7 +88,6 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     graceMinutes: null,
     majorities: ['THREE_QUARTERS'],
     conveners: CHAIRS,
-    actions: ['GENERAL', 'EXCLUSION', 'CONVENE_ASSEMBLY'],
     needsReason: true,
     dueBy: null,
     sort: 4,
@@ -117,7 +107,6 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     graceMinutes: null,
     majorities: ['SIMPLE'],
     conveners: BOARD_OFFICES,
-    actions: ['GENERAL', 'CONVENE_ASSEMBLY'],
     needsReason: false,
     dueBy: null,
     sort: 5,
@@ -137,7 +126,6 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     graceMinutes: null,
     majorities: ['SIMPLE'],
     conveners: CHAIRS,
-    actions: ['GENERAL', 'CONVENE_ASSEMBLY'],
     needsReason: false,
     dueBy: null,
     sort: 6,
@@ -190,100 +178,16 @@ export function defaultSteps(seeded: boolean): MeetingStep[] {
 }
 for (const t of SEEDED_TYPES) t.steps = defaultSteps(true);
 
-/** server: V54__resolution_rules.sql */
-export function seededRules(): ActionRule[] {
-  const f = (kind: ActionRule['followUps'][number]['kind'], title: string, dueDays: number | null) => ({
-    ...plainFollowUp(kind, title, dueDays),
-    id: crypto.randomUUID(),
-  });
-  return [
-    { action: 'GENERAL', label: null, majority: null, followUps: [f('IMPLEMENT', 'Beschluss umsetzen: {beschluss}', null)], enabled: true },
-    {
-      action: 'HONORARY_GRANT',
-      label: null,
-      majority: null,
-      followUps: [f('ENTER_HONORARY', 'Ehrenmitgliedschaft eintragen: {mitglied}', 7)],
-      enabled: true,
-    },
-    {
-      action: 'HONORARY_REVOKE',
-      label: null,
-      majority: null,
-      followUps: [f('REVOKE_HONORARY', 'Ehrenmitgliedschaft aberkennen: {mitglied}', 7)],
-      enabled: true,
-    },
-    {
-      action: 'ELECTION',
-      label: null,
-      majority: null,
-      followUps: [f('ENTER_OFFICE', 'Funktion eintragen: {funktion} – {mitglied}', 7)],
-      enabled: true,
-    },
-    {
-      action: 'STATUTES_CHANGE',
-      label: null,
-      majority: 'TWO_THIRDS',
-      followUps: [f('UPLOAD_STATUTES', 'Neue Statuten in Dateien hochladen: {beschluss}', 14)],
-      enabled: true,
-    },
-    { action: 'DISSOLUTION', label: null, majority: 'THREE_QUARTERS', followUps: [], enabled: true },
-    {
-      action: 'EXCLUSION',
-      label: null,
-      majority: null,
-      followUps: [f('NOTIFY_EXCLUSION', 'Ausschluss schriftlich mit Gründen mitteilen: {mitglied}', 7)],
-      enabled: true,
-    },
-    {
-      action: 'CONVENE_ASSEMBLY',
-      label: null,
-      majority: null,
-      followUps: [f('CONVENE_ASSEMBLY', 'Außerordentliche Mitgliederversammlung einberufen', 7)],
-      enabled: true,
-    },
-  ];
-}
 export type StoredMeeting = Omit<
   Meeting,
-  | 'online'
-  | 'latestInvite'
-  | 'electorate'
-  | 'present'
-  | 'quorate'
-  | 'canManage'
-  | 'autoTasks'
-  | 'followUps'
-  | 'assignable'
-  | 'protocolFinalAt'
-  | 'agendaItems'
-  | 'approvals'
+  'online' | 'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage' | 'protocolFinalAt' | 'agendaItems' | 'approvals'
 > & {
   presence: Record<string, PresenceMode>;
-  autoTasks?: boolean;
   frozenElectorate?: string[];
   createdBy?: string;
   protocolFinalAt?: string | null;
   agendaItems?: AgendaItem[];
   approvals?: Approval[];
-};
-/** server: meetings_follow_up */
-export type StoredFollowUp = {
-  id: string;
-  meetingId: string | null;
-  resolutionId: string | null;
-  kind: FollowUpKind;
-  memberId: string | null;
-  office: OfficeKind | null;
-  title: string;
-  dueAt: string | null;
-  doneAt: string | null;
-  /** server: meetings_follow_up.waits_for */
-  waitsFor?: string | null;
-  /** server: meetings_follow_up.trigger / started_at (TRIGGER) */
-  trigger?: Trigger | null;
-  startedAt?: string | null;
-  /** server: meetings_follow_up_pending — what its task gets once released. */
-  pending?: { description: string | null; checklist: string[]; assignees: string[]; createdBy: string | null; dueDays: number | null } | null;
 };
 /** Counters hold what was voted, `ballots` only who voted (server: meetings_resolution, meetings_ballot). */
 export type StoredResolution = Pick<
@@ -307,14 +211,11 @@ export type StoredResolution = Pick<
   no: number;
   abstain: number;
   ballots: string[];
-  action?: ResolutionAction;
-  actionMemberId?: string | null;
-  actionOffice?: OfficeKind | null;
   assigneeIds?: string[];
+  /** server: meetings_resolution.implement_due */
+  implementDue?: string | null;
   frozenVoters?: string[];
   createdBy?: string;
-  /** server: meetings_resolution_follow_up */
-  ownFollowUps?: FollowUpRule[];
   links?: LinkedRef[];
 };
 

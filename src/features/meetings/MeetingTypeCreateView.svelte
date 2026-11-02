@@ -5,12 +5,12 @@
   import Detail from '../../ui/Detail.svelte';
   import MeetingTypeEditor from './MeetingTypeEditor.svelte';
   import { MeetingTypeForm } from './MeetingTypeForm.svelte';
-  import { meetingsApi, meetingTypes, resolutionRules } from './services';
+  import { meetingsApi, meetingTypes } from './services';
 
   /** New meeting type in the window; afterwards the window shows it. */
   let { handle }: { id: string; handle: WindowHandle } = $props();
 
-  const form = new MeetingTypeForm(null, resolutionRules.value.items);
+  const form = new MeetingTypeForm(null);
   form.sort = Math.max(0, ...meetingTypes.items.map((t) => t.sort)) + 10;
   // svelte-ignore state_referenced_locally
   const create = new CreateController(bus, handle, 'Neue Sitzungsart');

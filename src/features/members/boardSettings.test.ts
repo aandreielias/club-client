@@ -7,7 +7,7 @@ import { boardWarning } from './messages';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
 
-describe('club rules for offices and resolutions', () => {
+describe('club rules for offices and circular votes', () => {
   it('rename offices, change holders and word the board warnings with them', () => {
     const before = structuredClone(directory.boardSettings.data);
     const changed = structuredClone(before);
@@ -45,39 +45,10 @@ describe('club rules for offices and resolutions', () => {
     for (const m of directory.members.data) directory.syncBoardRole(m);
   });
 
-  it('fix majorities per decision only where every meeting type offers them', () => {
-    const before = structuredClone(meetings.rules.data);
-    const exclusion = before.map((r) => (r.action === 'EXCLUSION' ? { ...r, majority: 'SIMPLE' as const } : r));
-    expect(() => meetings.saveRules(member('vorstand'), { items: exclusion, circular: meetings.circular.data })).toThrow(); // the extraordinary board meeting needs three quarters
-    const wrongKind = before.map((r) =>
-      r.action === 'GENERAL' ? { ...r, followUps: [{ id: null, kind: 'ENTER_OFFICE', title: 'x', dueDays: null }] } : r,
-    );
-    expect(() => meetings.saveRules(member('vorstand'), { items: wrongKind, circular: meetings.circular.data })).toThrow();
-    const extra = before.map((r) =>
-      r.action === 'GENERAL'
-        ? { ...r, followUps: [...r.followUps, { id: null, kind: 'IMPLEMENT', title: 'Protokoll: {beschluss}', dueDays: 3 }] }
-        : r,
-    );
-    expect(
-      meetings.saveRules(member('vorstand'), { items: extra, circular: meetings.circular.data }).items.find((r) => r.action === 'GENERAL')!.followUps,
-    ).toHaveLength(2);
-    expect(() => meetings.saveRules(member('vorstand'), { items: before, circular: { minHours: 0, quorum: 'MORE_THAN_HALF' } })).toThrow();
-    meetings.saveRules(member('vorstand'), { items: before, circular: meetings.circular.data });
-  });
-
-  it('remove a decision from every meeting type, but never the general one', () => {
-    const before = structuredClone(meetings.rules.data);
-    const types = structuredClone(meetings.types.data);
-    const removed = before.map((r) => (r.action === 'EXCLUSION' || r.action === 'GENERAL' ? { ...r, enabled: false } : r));
-    const saved = meetings.saveRules(member('vorstand'), { items: removed, circular: meetings.circular.data });
-    expect(saved.items.find((r) => r.action === 'GENERAL')!.enabled).toBe(true);
-    expect(meetings.types.data.some((t) => t.actions.includes('EXCLUSION'))).toBe(false);
-    const extraBoard = types.find((t) => t.key === 'EXTRA_BOARD')!;
-    expect(() => meetings.saveType(member('vorstand'), 'EXTRA_BOARD', extraBoard)).toThrow(
-      expect.objectContaining({ code: 'meeting-type.action-removed' }),
-    );
-    meetings.saveRules(member('vorstand'), { items: before, circular: meetings.circular.data });
-    meetings.types.data.splice(0, meetings.types.data.length, ...types);
+  it('keep the circular vote rules within bounds', () => {
+    expect(() => meetings.saveRules(member('vorstand'), { circular: { minHours: 0, quorum: 'MORE_THAN_HALF' } })).toThrow();
+    expect(meetings.saveRules(member('vorstand'), { circular: { minHours: 48, quorum: 'MORE_THAN_HALF' } }).circular.minHours).toBe(48);
+    meetings.saveRules(member('vorstand'), { circular: { minHours: 72, quorum: 'MORE_THAN_HALF' } });
   });
 
   it('let the club define membership kinds and office pairs, and keep office holders eligible', () => {

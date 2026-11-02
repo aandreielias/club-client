@@ -8,8 +8,6 @@ export interface SetupFacts {
   teams: number;
   locations: number;
   folders: number;
-  /** Where the statutes live (Einstellungen › Beschlüsse). */
-  statutes: boolean;
   /** Active members who are not admins. */
   members: number;
   /** Seeded settings have no "empty" state: a step counts once the admin opened it from the card. */
@@ -64,10 +62,10 @@ export function setupSteps(f: SetupFacts): SetupStep[] {
     { id: 'locations', label: 'Orte anlegen', detail: 'Plätze und Hallen für Termine.', href: '#/locations', done: f.locations > 0 },
     {
       id: 'files',
-      label: 'Ordner und Statuten-Ablage',
-      detail: 'Ordner für Dokumente, darin die Statuten (Einstellungen › Beschlüsse).',
-      href: f.folders ? '#/settings/resolution-rules' : '#/files',
-      done: f.folders > 0 && f.statutes,
+      label: 'Ordner anlegen',
+      detail: 'Ordner für Dokumente, etwa Statuten und Protokolle.',
+      href: '#/files',
+      done: f.folders > 0,
     },
     {
       id: 'meeting-types',

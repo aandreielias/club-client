@@ -6,13 +6,12 @@
   import Select from '../../ui/Select.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { RESULT_LABELS, RESULT_TONES, type Result, type ResolutionSummary } from './model';
-  import { meetingsApi, resolutionRules } from './services';
+  import { meetingsApi } from './services';
 
-  /** Every resolution the member may see (meetings and circular votes), filtered by year, result and kind of decision. */
+  /** Every resolution the member may see (meetings and circular votes), filtered by year and result. */
   const thisYear = new Date().getFullYear();
   let year = $state<string>('');
   let result = $state<string>('');
-  let decision = $state<string>('');
   const list = new Resource(() => meetingsApi.allResolutions(year ? Number(year) : null));
   $effect(() => {
     void year;
@@ -27,11 +26,7 @@
     { value: '', label: 'Alle Ergebnisse' },
     ...(Object.keys(RESULT_LABELS) as Result[]).map((r) => ({ value: r, label: RESULT_LABELS[r] })),
   ];
-  const DECISIONS = $derived([
-    { value: '', label: 'Alle Beschlussarten' },
-    ...resolutionRules.all().map((a) => ({ value: a, label: resolutionRules.label(a) })),
-  ]);
-  const shown = (items: ResolutionSummary[]) => items.filter((r) => (!result || r.result === result) && (!decision || r.action === decision));
+  const shown = (items: ResolutionSummary[]) => items.filter((r) => !result || r.result === result);
 </script>
 
 <section class="stack">
@@ -39,7 +34,6 @@
   <div class="row filters">
     <Select options={YEARS} bind:value={year} aria-label="Jahr" />
     <Select options={RESULTS} bind:value={result} aria-label="Ergebnis" />
-    <Select options={DECISIONS} bind:value={decision} aria-label="Beschlussart" />
   </div>
   <AsyncView resource={list}>
     {#snippet children(items)}
@@ -50,7 +44,7 @@
             {#if r.result}<Tag tone={RESULT_TONES[r.result]}>{RESULT_LABELS[r.result]}</Tag>{:else if r.status === 'OPEN'}<Tag tone="green">Offen</Tag
               >{:else}<Tag tone="gray">Entwurf</Tag>{/if}
             <span class="muted small">
-              {resolutionRules.label(r.action)} · {r.meetingTitle ?? 'Umlaufbeschluss'}{#if r.closedAt}
+              {r.meetingTitle ?? 'Umlaufbeschluss'}{#if r.closedAt}
                 · {session.format.date(session.clock.localDate(r.closedAt))}{/if}
             </span>
           </li>

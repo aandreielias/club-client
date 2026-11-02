@@ -1,6 +1,6 @@
 <script lang="ts">
   import { autofocus } from '../../ui/autofocus';
-  import { bus, session } from '../../lib/container';
+  import { bus, directory, session } from '../../lib/container';
   import { CreateController } from '../../lib/detail/CreateController.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
@@ -13,11 +13,15 @@
   import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import Select from '../../ui/Select.svelte';
   import { membersApi } from '../members/services';
+  import AgendaItemsEditor from './AgendaItemsEditor.svelte';
   import { MeetingForm } from './MeetingForm.svelte';
-  import { latestInvite } from './model';
+  import { latestInvite, majorities } from './model';
   import { meetingPolicy as policy, meetingsApi, meetingTypes } from './services';
 
-  /** New meeting in the window: only the types the member may convene; afterwards the window shows the meeting. */
+  /**
+   * New meeting in the window: only the types the member may convene. The Tagesordnung with its Beschlüsse is entered right here; "Anlegen
+   * und einladen" sends the invitation at once. Afterwards the window shows the meeting.
+   */
   let { handle }: { id: string; handle: WindowHandle } = $props();
 
   // svelte-ignore state_referenced_locally
@@ -41,14 +45,35 @@
     if (type) form.setType(type);
   }
 
+  // Who may carry a Beschluss out: every active member (admin and board load the list).
+  const people = new Resource(async () =>
+    (await directory.allMembers())
+      .filter((m) => m.active)
+      .map((m) => ({ memberId: m.id, name: `${m.firstName} ${m.lastName}` }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'de')),
+  );
+  void people.load();
+
   const deadline = $derived(form.start && form.type ? latestInvite(form.type, form.startsAt) : null);
   const late = $derived(!!deadline && deadline < new Date().toISOString());
+
+  let inviteNow = false;
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
     form.submitted = true;
     if (!form.valid) return;
-    await create.submit(async () => (await meetingsApi.create(form.toNew())).id, 'meeting', 'Sitzung angelegt. Einladen nicht vergessen.');
+    const invite = inviteNow;
+    inviteNow = false;
+    await create.submit(
+      async () => {
+        const meeting = await meetingsApi.create(form.toNew());
+        if (invite) await meetingsApi.invite(meeting.id);
+        return meeting.id;
+      },
+      'meeting',
+      invite ? 'Sitzung angelegt und eingeladen.' : 'Sitzung angelegt. Einladen nicht vergessen.',
+    );
   }
 </script>
 
@@ -88,12 +113,20 @@
             standing={form.type?.videoUrl ?? null}
             error={form.error('videoUrl')}
           />
-          <Field label="Tagesordnung" hint="Ein Punkt pro Zeile; geht mit der Einladung hinaus." error={form.error('agenda')}>
-            <textarea bind:value={form.agenda} rows="6" maxlength="4000"></textarea>
-          </Field>
+          <fieldset class="stack agenda">
+            <legend>Tagesordnung</legend>
+            <AgendaItemsEditor
+              bind:rows={form.rows}
+              majorities={majorities(form.type)}
+              candidates={people.value ?? []}
+              today={session.clock.today()}
+            />
+            {#if form.error('items')}<p class="error small" role="alert">{form.error('items')}</p>{/if}
+          </fieldset>
           <ErrorNote error={create.save.error} />
           <div class="row">
             <Button type="submit" variant="primary" busy={create.save.busy}>Anlegen</Button>
+            <Button type="submit" busy={create.save.busy} disabled={late} onclick={() => (inviteNow = true)}>Anlegen und einladen</Button>
             <Button variant="ghost" onclick={() => handle.close()}>Abbrechen</Button>
           </div>
         </form>
@@ -105,7 +138,21 @@
 </Detail>
 
 <style>
-  .late {
+  .late,
+  .error {
     color: var(--color-danger);
+  }
+  .error {
+    margin: 0;
+  }
+  .agenda {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  legend {
+    padding: 0;
+    margin-bottom: var(--space-xs);
+    font-weight: 600;
   }
 </style>

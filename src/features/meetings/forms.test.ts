@@ -3,7 +3,7 @@ import { ZonedClock } from '../../lib/time/ZonedClock';
 import { MeetingForm, MeetingPlaceForm } from './MeetingForm.svelte';
 import { MeetingTypeForm } from './MeetingTypeForm.svelte';
 import { SEEDED_TYPES } from './mockSeeds';
-import type { ActionRule, MeetingType } from './model';
+import type { MeetingType } from './model';
 
 const type = (key: string): MeetingType => SEEDED_TYPES.find((t) => t.key === key)!;
 
@@ -20,16 +20,13 @@ describe('MeetingTypeForm', () => {
   });
 
   it('checks what the server checks', () => {
-    const rules: ActionRule[] = [{ action: 'STATUTES_CHANGE', label: null, majority: 'TWO_THIRDS', followUps: [], enabled: true }];
-    const form = new MeetingTypeForm(null, rules);
+    const form = new MeetingTypeForm(null);
     expect(form.errors).toMatchObject({ label: expect.any(String), invitationLabel: expect.any(String) });
     form.label = 'Klausur';
     form.invitationLabel = 'Klausur';
     expect(form.valid).toBe(true);
-    form.actions = ['STATUTES_CHANGE'];
-    expect(form.errors.actions).toBe('Sonstige Beschlüsse sind immer möglich.');
-    form.actions = ['GENERAL', 'STATUTES_CHANGE'];
-    expect(form.errors.majorities).toContain('braucht');
+    form.majorities = [];
+    expect(form.errors.majorities).toBe('Mindestens eine Mehrheit.');
     form.majorities = ['SIMPLE', 'TWO_THIRDS'];
     form.yearly = true;
     [form.dueMonth, form.dueDay] = [2, 30];

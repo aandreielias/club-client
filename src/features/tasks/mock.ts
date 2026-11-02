@@ -94,13 +94,13 @@ export class MockTasks {
       this.assigned(task, []);
     } else if (event.type === 'members.change-decided') {
       this.finish('CHANGE_REQUEST', data.requestId);
-    } else if (event.type === 'meetings.follow-up-created') {
-      // server: TaskHandlers.onFollowUpCreated
+    } else if (event.type === 'meetings.resolution-passed') {
+      // server: SourcedTaskHandlers.onResolutionPassed — once per resolution
       const assignees = (data.assignees as string[])
         .filter((id) => this.people.members.data.some((m) => m.id === id && m.active))
         .sort()
         .slice(0, limits.maxAssignees);
-      if (!assignees.length) return;
+      if (!assignees.length || Object.values(this.sources.data).some((x) => x.kind === 'RESOLUTION' && x.id === data.resolutionId)) return;
       const task: StoredTask = {
         id: crypto.randomUUID(),
         teamId: null,
@@ -111,19 +111,17 @@ export class MockTasks {
         dueAt: data.dueAt ?? null,
         createdBy: data.createdBy ?? assignees[0],
         assignees,
-        checklist: MockTasks.items(Array.isArray(data.checklist) ? data.checklist : []),
+        checklist: [],
         createdAt: new Date().toISOString(),
         completedAt: null,
         repeatWeeks: null,
       };
       this.tasks.data.push(task);
-      this.sources.data[task.id] = { kind: 'MEETING_FOLLOW_UP', id: data.followUpId };
+      this.sources.data[task.id] = { kind: 'RESOLUTION', id: data.resolutionId };
       this.tasks.save();
       this.sources.save();
       this.changed(task, 'CREATED');
       this.assigned(task, []);
-    } else if (event.type === 'meetings.follow-up-done') {
-      this.finish('MEETING_FOLLOW_UP', data.followUpId);
     }
   }
 

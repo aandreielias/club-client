@@ -16,16 +16,14 @@
   import Tag from '../../ui/Tag.svelte';
   import { MEETING_CHANGED } from './events';
   import { MeetingModel } from './MeetingModel.svelte';
-  import ResolutionList from './ResolutionList.svelte';
+  import AgendaView from './AgendaView.svelte';
   import MeetingLinks from './MeetingLinks.svelte';
-  import FollowUpList from './FollowUpList.svelte';
-  import type { NewFollowUp } from './model';
   import RecordLink from '../../ui/RecordLink.svelte';
   import { permissions } from '../../lib/container';
   import { isAssembly, quorumText, STATUS_LABELS, STATUS_TONES, type Meeting, type PresenceMode } from './model';
   import { meetingsApi, meetingTypes } from './services';
 
-  /** One meeting: date, agenda, invitation, presence with the quorum, protocol. Window and page. */
+  /** One meeting: date, Tagesordnung with its Beschlüsse (voted right there), invitation, presence with the quorum, protocol. Window and page. */
   let { id, handle, onclosed }: { id: string; handle?: WindowHandle; onclosed?: () => void } = $props();
 
   // svelte-ignore state_referenced_locally
@@ -54,8 +52,9 @@
   let editingDraft = $state(false);
   let editingAgenda = $state(false);
   let presenceFilter = $state('');
-  // The meeting's motions, for linking agenda items.
-  const motions = new Resource(() => meetingsApi.resolutions(id));
+  // The meeting's Beschlüsse: shown under their agenda items, edited with the agenda.
+  const resolutions = new Resource(() => meetingsApi.resolutions(id));
+  void resolutions.load();
   const me = session.member.id;
 
   /** Present members without a mode yet are set present in the room at once. */
@@ -155,13 +154,6 @@
       view.leave();
   }
 
-  async function addFollowUp(followUp: NewFollowUp): Promise<boolean> {
-    if (!(await model.action.run(() => meetingsApi.addMeetingFollowUp(id, followUp)))) return false;
-    await model.load();
-    view.notify('Aufgabe angelegt.');
-    return true;
-  }
-
   async function saveProtocol() {
     if (await model.saveProtocol(protocol)) view.notify('Protokoll gespeichert.');
   }
@@ -236,22 +228,14 @@
 
       <h2>Tagesordnung</h2>
       {#if editingAgenda}
-        <AgendaEditor meeting={m} {model} motions={motions.value ?? []} onclose={() => (editingAgenda = false)} />
+        <AgendaEditor meeting={m} {model} resolutions={resolutions.value ?? []} onclose={() => ((editingAgenda = false), void resolutions.load())} />
       {:else}
-        {#if m.agendaItems.length}
-          <ol class="agenda">
-            {#each m.agendaItems as item (item.id)}
-              <li>
-                <span>{item.title}</span>
-                {#if item.resolutionId}<RecordLink kind="resolution" id={item.resolutionId}>Antrag</RecordLink>{/if}
-                {#if item.note}<span class="muted small">{item.note}</span>{/if}
-              </li>
-            {/each}
-          </ol>
-        {:else if m.agenda}<p class="text">{m.agenda}</p>{:else}<p class="muted">Keine Tagesordnung eingetragen.</p>{/if}
+        <AgendaView meeting={m} {resolutions} />
         {#if m.canManage && m.status !== 'CLOSED' && m.status !== 'CANCELLED'}
           <div>
-            <Button size="sm" icon="edit" onclick={() => (void motions.load(), (editingAgenda = true))}>Tagesordnung bearbeiten</Button>
+            <Button size="sm" icon="edit" onclick={() => (void resolutions.load(), (editingAgenda = true))}
+              >Tagesordnung und Beschlüsse bearbeiten</Button
+            >
           </div>
         {/if}
       {/if}
@@ -313,29 +297,6 @@
         </ul>
       {/if}
 
-      {#if m.status !== 'CANCELLED' && (m.status !== 'DRAFT' || m.canManage)}
-        <h2>{m.status === 'DRAFT' ? 'Anträge (gehen mit der Einladung hinaus)' : 'Beschlüsse'}</h2>
-        <ResolutionList meeting={m} />
-      {/if}
-
-      {#if m.status !== 'DRAFT' && (m.canManage || m.followUps.length)}
-        <h2>Aufgaben</h2>
-        <div class="stack">
-          {#if m.canManage}
-            <label class="check">
-              <input
-                type="checkbox"
-                checked={m.autoTasks}
-                disabled={model.action.busy}
-                onchange={(e) => void model.setAutoTasks(e.currentTarget.checked)}
-              />
-              Angenommene Beschlüsse erzeugen automatisch Aufgaben
-            </label>
-          {/if}
-          <FollowUpList followUps={m.followUps} canAdd={m.canManage} candidates={m.assignable} contextTitle={m.title} add={addFollowUp} />
-        </div>
-      {/if}
-
       {#if (m.status === 'OPEN' || (m.status === 'CLOSED' && !m.protocolFinalAt)) && m.canManage}
         <h2>Protokoll</h2>
         <div class="stack">
@@ -393,18 +354,6 @@
   }
   .late {
     color: var(--color-danger);
-  }
-  .agenda {
-    display: grid;
-    gap: var(--space-xs);
-    margin: 0;
-    padding-left: var(--space-lg);
-  }
-  .agenda li {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-sm);
-    align-items: baseline;
   }
   .check-in {
     padding: var(--space-sm) var(--space-md);

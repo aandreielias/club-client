@@ -5,8 +5,8 @@
   import type { Person } from './model';
 
   /**
-   * Choosing a few people as removable chips (who carries out a resolution or a task). `candidates`: who may be chosen (those present
-   * who can do it); `known` names people chosen earlier who are no candidates any more.
+   * Choosing a few people as removable chips (who carries out a Beschluss). `candidates`: who may be chosen (active members);
+   * `known` names people chosen earlier who are no candidates any more.
    */
   let {
     value = $bindable(),
@@ -58,7 +58,7 @@
     {#if candidates.length}
       <Select bind:value={pick} {placeholder} {options} aria-label={label} onchange={add} />
     {:else}
-      <span class="muted small">Niemand anwesend, der das übernehmen kann; ohne Auswahl übernimmt der Vorstand.</span>
+      <span class="muted small">Ohne Auswahl übernimmt der Vorstand.</span>
     {/if}
   {/if}
 </div>

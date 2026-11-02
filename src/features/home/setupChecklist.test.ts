@@ -8,7 +8,6 @@ const fresh: SetupFacts = {
   teams: 0,
   locations: 0,
   folders: 0,
-  statutes: false,
   members: 0,
   visited: new Set(),
 };
@@ -26,11 +25,10 @@ describe('setupSteps', () => {
       admins: 2,
       teams: 1,
       folders: 2,
-      statutes: false,
       visited: new Set(['membership']),
     });
     const done = steps.filter((s) => s.done).map((s) => s.id);
-    expect(done).toEqual(['admins', 'membership', 'teams']); // folders without a statutes place stay open
-    expect(steps.find((s) => s.id === 'files')?.href).toBe('#/settings/resolution-rules');
+    expect(done).toEqual(['admins', 'membership', 'teams', 'files']);
+    expect(steps.find((s) => s.id === 'files')?.href).toBe('#/files');
   });
 });

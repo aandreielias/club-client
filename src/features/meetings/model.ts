@@ -1,7 +1,6 @@
 import type { LinkedRef } from '../../lib/records/refs';
 import type { Hue } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
-import type { Trigger } from './triggers';
 
 // Mirrors of the club-server meetings DTOs. API times are UTC instants.
 
@@ -90,7 +89,6 @@ export interface MeetingType {
   majorities: Majority[];
   /** Offices that convene it; admins always may. */
   conveners: OfficeKind[];
-  actions: ResolutionAction[];
   /** States the reason of its urgency in the invitation. */
   needsReason: boolean;
   /** Held yearly, planned by this day ("MM-DD"). */
@@ -194,209 +192,38 @@ export interface Meeting {
   canManage: boolean;
   /** Linked records (files, members, appointments, ...) with the title they had when linked. */
   links: LinkedRef[];
-  /** Passed resolutions get their follow-up tasks. */
-  autoTasks: boolean;
-  /** The meeting's own tasks (those of its resolutions are on the resolutions). */
-  followUps: FollowUp[];
-  /** Who runs it: those present; `manager` (admin, board) for tasks that need those rights. */
-  assignable: Assignable[];
-}
-
-export interface Assignable extends Person {
-  manager: boolean;
-}
-
-// --- follow-up tasks (server: MeetingsApi.FollowUpDto, FollowUpPlanner) ---
-
-/** The built-in decisions; the club adds its own (`DECISION_…`, named in its ActionRule), which behave like GENERAL. */
-export type BuiltinAction =
-  'GENERAL' | 'HONORARY_GRANT' | 'HONORARY_REVOKE' | 'ELECTION' | 'STATUTES_CHANGE' | 'DISSOLUTION' | 'EXCLUSION' | 'CONVENE_ASSEMBLY';
-
-/** A decision key: a built-in one or the club's own. */
-export type ResolutionAction = string;
-
-export const ACTION_LABELS: Readonly<Record<BuiltinAction, string>> = {
-  GENERAL: 'Sonstiger Beschluss',
-  HONORARY_GRANT: 'Ehrenmitgliedschaft verleihen',
-  HONORARY_REVOKE: 'Ehrenmitgliedschaft aberkennen',
-  ELECTION: 'Wahl in eine Funktion',
-  STATUTES_CHANGE: 'Statutenänderung',
-  DISSOLUTION: 'Auflösung des Vereins',
-  EXCLUSION: 'Ausschluss eines Mitglieds',
-  CONVENE_ASSEMBLY: 'Außerordentliche Mitgliederversammlung einberufen',
-};
-
-export const ACTION_ORDER: readonly BuiltinAction[] = Object.keys(ACTION_LABELS) as BuiltinAction[];
-
-/** One of the club's own decisions (server: MeetingsApi.ActionRule.own). */
-export const isOwnAction = (action: ResolutionAction): boolean => !(action in ACTION_LABELS);
-
-/** The decision's name: built-in, or the club's from its rule. */
-export function actionLabel(action: ResolutionAction, rules: readonly ActionRule[] = []): string {
-  return ACTION_LABELS[action as BuiltinAction] ?? rules.find((r) => r.action === action)?.label ?? action;
-}
-
-/** Every decision in display order: built-in ones, then the club's own by name. */
-export function allActions(rules: readonly ActionRule[]): ResolutionAction[] {
-  const own = rules
-    .filter((r) => r.action && isOwnAction(r.action))
-    .sort((a, b) => (a.label ?? '').localeCompare(b.label ?? '', 'de'))
-    .map((r) => r.action!);
-  return [...ACTION_ORDER, ...own];
-}
-
-/** server: FollowUpPlanner.actions — `null` = circular vote (with the club's own decisions). */
-export function actions(type: MeetingType | null, rules: readonly ActionRule[] = []): ResolutionAction[] {
-  const all = allActions(rules);
-  return type ? all.filter((a) => type.actions.includes(a)) : all.filter((a) => a === 'GENERAL' || a === 'CONVENE_ASSEMBLY' || isOwnAction(a));
-}
-
-export const actionNeedsMember = (a: ResolutionAction): boolean => ['HONORARY_GRANT', 'HONORARY_REVOKE', 'ELECTION', 'EXCLUSION'].includes(a);
-
-/** server: MeetingsApi.FollowUpRule — `title` fills {beschluss}, {mitglied}, {funktion}; `dueDays` null: no due date. */
-/**
- * server: MeetingsApi.FollowUpAssignee — who carries out a follow-up: DEFAULT the resolution's assignees (else the managers present, else
- * the board), BOARD, OFFICE the holders of `office` (the board while vacant), MANAGER who started the meeting or vote, MEMBER the member
- * the decision is about.
- */
-export type FollowUpAssignee = 'DEFAULT' | 'BOARD' | 'OFFICE' | 'MANAGER' | 'MEMBER';
-
-export const ASSIGNEE_LABELS: Readonly<Record<FollowUpAssignee, string>> = {
-  DEFAULT: 'Wie im Beschluss gewählt',
-  BOARD: 'Vorstand',
-  OFFICE: 'Eine Funktion',
-  MANAGER: 'Wer die Sitzung leitet',
-  MEMBER: 'Betroffenes Mitglied',
-};
-
-/** server: FollowUp.AUTOMATIC — kinds that finish themselves once their effect is entered. */
-export const AUTOMATIC_FOLLOW_UPS: readonly FollowUpKind[] = [
-  'ENTER_HONORARY',
-  'REVOKE_HONORARY',
-  'ENTER_OFFICE',
-  'CONVENE_ASSEMBLY',
-  'UPLOAD_STATUTES',
-];
-
-/** A follow-up for the resolution's assignees, without description or checklist, at once. */
-export const plainFollowUp = (kind: FollowUpRule['kind'], title: string, dueDays: number | null): FollowUpRule => ({
-  id: null,
-  kind,
-  title,
-  dueDays,
-  assignTo: 'DEFAULT',
-  office: null,
-  description: null,
-  checklist: [],
-  afterPrevious: false,
-  trigger: null,
-});
-
-/** server: FollowUpPlanner.NAMES_MEMBER — built-in decisions about one member. */
-export const NAMES_MEMBER: readonly ResolutionAction[] = ['HONORARY_GRANT', 'HONORARY_REVOKE', 'ELECTION', 'EXCLUSION'];
-
-/**
- * server: MeetingsApi.FollowUpRule — `title`, `description` and `checklist` fill {beschluss}, {mitglied}, {funktion}; `dueDays` counted
- * from the start; `afterPrevious`: starts only once the follow-up before it is done.
- */
-export interface FollowUpRule {
-  /** null until saved. */
-  id: string | null;
-  kind: Exclude<FollowUpKind, 'MANUAL'>;
-  title: string;
-  dueDays: number | null;
-  assignTo: FollowUpAssignee;
-  office: OfficeKind | null;
-  description: string | null;
-  checklist: string[];
-  afterPrevious: boolean;
-  /** TRIGGER: what finishes it. */
-  trigger: Trigger | null;
-}
-
-/**
- * server: MeetingsApi.ActionRule — `action` null: a new decision of the club's own (the server gives it a key); `label`: its name (null for
- * built-ins); `majority`: fixed for the decision (statute change, dissolution), null: the resolution picks.
- */
-export interface ActionRule {
-  action: ResolutionAction | null;
-  label: string | null;
-  majority: Majority | null;
-  followUps: FollowUpRule[];
-  /** false: the club removed this decision, no meeting type offers it (GENERAL always stays). */
-  enabled: boolean;
-}
-
-/** Follow-up kinds that finish themselves, each only after its own decision (server: FollowUpPlanner.OWN_ACTION). */
-export const OWN_ACTION: Partial<Record<FollowUpKind, BuiltinAction>> = {
-  ENTER_HONORARY: 'HONORARY_GRANT',
-  REVOKE_HONORARY: 'HONORARY_REVOKE',
-  ENTER_OFFICE: 'ELECTION',
-  NOTIFY_EXCLUSION: 'EXCLUSION',
-  CONVENE_ASSEMBLY: 'CONVENE_ASSEMBLY',
-  UPLOAD_STATUTES: 'STATUTES_CHANGE',
-};
-
-/** How a follow-up gets done ("Erledigt durch"). */
-export const FOLLOW_UP_KIND_LABELS: Readonly<Record<Exclude<FollowUpKind, 'MANUAL'>, string>> = {
-  IMPLEMENT: 'Von Hand abhaken',
-  ENTER_HONORARY: 'Von selbst, wenn die Ehrenmitgliedschaft eingetragen ist',
-  REVOKE_HONORARY: 'Von selbst, wenn die Ehrenmitgliedschaft aberkannt ist',
-  ENTER_OFFICE: 'Von selbst, wenn die Funktion eingetragen ist',
-  NOTIFY_EXCLUSION: 'Von Hand: Ausschluss mitteilen',
-  CONVENE_ASSEMBLY: 'Von selbst, wenn zur Mitgliederversammlung eingeladen ist',
-  UPLOAD_STATUTES: 'Von selbst, wenn die neuen Statuten hochgeladen sind',
-  TRIGGER: 'Von selbst, wenn … (Datei, Termin, Sitzung, Beschluss, Funktion, Mitglied, Turnier)',
-};
-
-/** server: FollowUpKind.targeted — open to every decision and motion, each waiting for a folder, meeting type or appointment type. */
-export const TARGETED_FOLLOW_UPS: readonly FollowUpKind[] = ['TRIGGER'];
-
-export type FollowUpKind =
-  | 'IMPLEMENT'
-  | 'ENTER_HONORARY'
-  | 'REVOKE_HONORARY'
-  | 'ENTER_OFFICE'
-  | 'NOTIFY_EXCLUSION'
-  | 'CONVENE_ASSEMBLY'
-  | 'UPLOAD_STATUTES'
-  | 'TRIGGER'
-  | 'MANUAL';
-
-export interface FollowUp {
-  id: string;
-  resolutionId: string | null;
-  kind: FollowUpKind;
-  title: string;
-  /** Finishes itself when its effect is entered (honorary membership, office, invitation). */
-  automatic: boolean;
-  dueAt: string | null;
-  /** null while the task is being created, or while it waits. */
-  taskId: string | null;
-  taskStatus: 'OPEN' | 'IN_PROGRESS' | 'DONE' | null;
-  /** The follow-up it starts after. */
-  waitsFor: string | null;
-  /** No task yet: `waitsFor` is not done. */
-  waiting: boolean;
-}
-
-export interface NewFollowUp {
-  title: string;
-  description: string | null;
-  /** Empty = the board. */
-  assigneeIds: string[];
-  dueAt: string | null;
-  checklist: string[];
-  /** An open follow-up of the same meeting or resolution it starts after. */
-  waitsFor: string | null;
 }
 
 export type MeetingSummary = Pick<Meeting, 'id' | 'kind' | 'title' | 'startsAt' | 'endsAt' | 'location' | 'status'>;
 
+/**
+ * server: MeetingsApi.MotionInput — what a Beschluss proposes: its text, the majority (null: the type's simple one), who carries it out
+ * (empty: the board) and by when.
+ */
+export interface Motion {
+  text: string | null;
+  majority: Majority | null;
+  assigneeIds: string[];
+  implementDue: string | null;
+}
+
+/**
+ * server: MeetingsApi.AgendaItemInput — an agenda item; with `motion` a Beschluss titled like the item (created, or its draft updated);
+ * `resolutionId` without a motion keeps the item's resolution as it is; a left-out draft goes.
+ */
+export interface AgendaItemInput {
+  id: string | null;
+  title: string;
+  note: string | null;
+  resolutionId: string | null;
+  motion: Motion | null;
+}
+
 export interface NewMeeting {
   kind: MeetingKind;
   title: string;
-  agenda: string | null;
+  /** The Tagesordnung, Beschlüsse among the items. */
+  items: AgendaItemInput[];
   urgency: string | null;
   startsAt: string;
   endsAt: string;
@@ -426,28 +253,17 @@ export interface ResolutionSummary {
   meetingId: string | null;
   meetingTitle: string | null;
   title: string;
-  action: ResolutionAction;
   status: 'DRAFT' | 'OPEN' | 'CLOSED';
   result: Result | null;
   openedAt: string | null;
   closedAt: string | null;
 }
 
-/** server: MeetingsApi.FollowUpSource */
-export interface FollowUpSource {
-  meetingId: string | null;
-  meetingTitle: string | null;
-  resolutionId: string | null;
-  resolutionTitle: string | null;
-  title: string;
-  waitsForTitle: string | null;
-}
-
-/** A draft motion changes; omitted fields stay. */
-export type ResolutionPatch = Partial<Omit<NewResolution, 'majority'>> & { majority?: Majority | null };
+/** A draft Beschluss changes; omitted fields stay; `clearDue` removes the due date. */
+export type ResolutionPatch = Partial<Omit<NewResolution, 'majority'>> & { majority?: Majority | null; clearDue?: boolean };
 
 /** Omitted fields stay, '' clears a text. Times only before the invitation, the protocol from the opening until it is final. */
-export type MeetingPatch = Partial<Omit<NewMeeting, 'kind'>> & { protocol?: string };
+export type MeetingPatch = Partial<Omit<NewMeeting, 'kind' | 'items'>> & { protocol?: string };
 
 // --- resolutions (server: MeetingsApi.ResolutionDto) ---
 
@@ -460,7 +276,7 @@ export type Result = 'PASSED' | 'FAILED' | 'NOT_QUORATE';
 
 export const MAJORITY_LABELS: Readonly<Record<Majority, string>> = {
   SIMPLE: 'Mehr als die Hälfte',
-  TWO_THIRDS: 'Zwei Drittel (Statutenänderung)',
+  TWO_THIRDS: 'Zwei Drittel',
   THREE_QUARTERS: 'Drei Viertel',
 };
 
@@ -482,24 +298,9 @@ export interface CircularRules {
 
 export const SEEDED_CIRCULAR: CircularRules = { minHours: 72, quorum: 'MORE_THAN_HALF' };
 
-/** server: MeetingsApi.ActionRules. */
-/**
- * server: MeetingsApi.StatutesPlace — where the club keeps its statutes: a new version of the file finishes "Neue Statuten hochladen";
- * without a file, any upload into the folder. Names are the last known ones.
- */
-export interface StatutesPlace {
-  fileId: string | null;
-  fileName: string | null;
-  folderId: string | null;
-  folderName: string | null;
-}
-
-export const NO_STATUTES: StatutesPlace = { fileId: null, fileName: null, folderId: null, folderName: null };
-
+/** server: MeetingsApi.ResolutionRules — how circular votes of the board run. */
 export interface ResolutionRules {
-  items: ActionRule[];
   circular: CircularRules;
-  statutes: StatutesPlace;
 }
 
 export interface Resolution {
@@ -533,29 +334,22 @@ export interface Resolution {
   canManage: boolean;
   /** Circular votes: board members who have not voted yet (for who runs it). */
   pending: Person[];
-  action: ResolutionAction;
-  /** Whom it is about (honorary membership, election, exclusion). */
-  actionMember: Person | null;
-  actionOffice: OfficeKind | null;
   /** Who carries it out; empty = the board. */
   assignees: Person[];
-  followUps: FollowUp[];
-  /** Who runs it: possible assignees (before closing: of its plan; afterwards: everyone present). */
-  assignable: Person[];
+  /** By when it is to be carried out (ISO date). */
+  implementDue: string | null;
+  /** Its task "umsetzen", once passed. */
+  taskId: string | null;
+  taskStatus: 'OPEN' | 'IN_PROGRESS' | 'DONE' | null;
   links: LinkedRef[];
-  /** Follow-ups given with the motion, created after the decision's own ones once it passes. */
-  ownFollowUps: FollowUpRule[];
 }
 
 export interface NewResolution {
   title: string;
   text: string | null;
-  /** null where the action fixes it. */
+  /** null: the meeting type's simple majority. */
   majority: Majority | null;
-  action: ResolutionAction;
-  actionMemberId: string | null;
-  actionOffice: OfficeKind | null;
+  /** Empty = the board. */
   assigneeIds: string[];
-  /** Tasks of its own (IMPLEMENT), after the decision's ones. */
-  followUps: FollowUpRule[];
+  implementDue: string | null;
 }

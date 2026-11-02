@@ -9,6 +9,7 @@ import { MeetingPolicy } from './MeetingPolicy';
 import { MeetingTypeForm } from './MeetingTypeForm.svelte';
 import { tasks } from '../tasks/mock';
 import { meetings } from './mock';
+import { mockServer } from '../../lib/mock/MockServer';
 import { SEEDED_TYPES } from './mockSeeds';
 import { latestInvite, type MeetingType } from './model';
 
@@ -186,75 +187,97 @@ describe('invitation document', () => {
   });
 });
 
-describe('follow-up tasks', () => {
-  it('a passed honorary membership becomes a task that finishes when it is entered', async () => {
-    const { tasks } = await import('../tasks/mock');
-    const mv = meetings.create(member('vorstand'), { kind: 'EXTRA_ASSEMBLY', title: 'aoMV', startsAt: inDays(15), endsAt: inDays(15.1) });
-    meetings.invite(member('vorstand'), mv.id);
-    for (const id of ['vorstand', 'kassier', 'schrift', 'beisitz', 'beisitz2', 'admin']) meetings.setPresence(member('vorstand'), mv.id, id, 'APP');
-    const opened = meetings.open(member('vorstand'), mv.id);
-    expect(opened.present.length * 2).toBeGreaterThanOrEqual(opened.electorate.length);
-    expect(() => meetings.createResolution(member('vorstand'), mv.id, { title: 'Statuten', majority: 'SIMPLE', action: 'STATUTES_CHANGE' })).toThrow(
-      expect.objectContaining({ code: 'resolution.majority-mismatch' }),
-    );
-    const r = meetings.createResolution(member('vorstand'), mv.id, {
-      title: 'Ehrenmitglied Lena',
-      majority: 'SIMPLE',
-      action: 'HONORARY_GRANT',
-      actionMemberId: 'spielerin',
-      assigneeIds: ['schrift'],
+describe('Beschlüsse and their tasks', () => {
+  it('are entered with the meeting, show in the invitation and become one task once passed', () => {
+    const invited: Record<string, any>[] = [];
+    const stop = mockServer.events.subscribe((e) => e.type === 'meetings.meeting-invited' && invited.push(e.data as Record<string, any>));
+    const mv = meetings.create(member('vorstand'), {
+      kind: 'EXTRA_ASSEMBLY',
+      title: 'aoMV',
+      startsAt: inDays(15),
+      endsAt: inDays(15.1),
+      items: [
+        { title: 'Begrüßung' },
+        { title: 'Ehrenmitglied Lena', motion: { text: 'Lena wird Ehrenmitglied.', assigneeIds: ['schrift'], implementDue: '2030-01-31' } },
+        { title: 'Beitrag', motion: { text: 'Plus 10 €.', majority: 'TWO_THIRDS' } },
+      ],
     });
-    meetings.openResolution(member('vorstand'), r.id);
-    for (const id of ['vorstand', 'kassier', 'schrift']) meetings.vote(member(id), r.id, 'YES');
-    const closed = meetings.closeResolution(member('vorstand'), r.id);
-    expect(closed.followUps).toEqual([
-      expect.objectContaining({ kind: 'ENTER_HONORARY', title: 'Ehrenmitgliedschaft eintragen: Lena Spielerin', automatic: true }),
+    expect(mv.agenda).toBe('1. Begrüßung\n2. Ehrenmitglied Lena\n3. Beitrag');
+    const [lena, beitrag] = [mv.agendaItems[1].resolutionId!, mv.agendaItems[2].resolutionId!];
+    expect(meetings.getResolution(member('vorstand'), lena)).toMatchObject({
+      majority: 'SIMPLE',
+      implementDue: '2030-01-31',
+      assignees: [{ memberId: 'schrift' }],
+    });
+    expect(meetings.getResolution(member('vorstand'), beitrag).majority).toBe('TWO_THIRDS');
+
+    meetings.invite(member('vorstand'), mv.id);
+    stop();
+    expect(invited[0].items).toEqual([
+      { title: 'Begrüßung', resolution: false, motion: null },
+      { title: 'Ehrenmitglied Lena', resolution: true, motion: 'Lena wird Ehrenmitglied.' },
+      { title: 'Beitrag', resolution: true, motion: 'Plus 10 €.' },
     ]);
-    const task = tasks.get(member('schrift'), closed.followUps[0].taskId!);
-    expect(task).toMatchObject({ assignees: ['schrift'], status: 'OPEN', source: { kind: 'MEETING_FOLLOW_UP' } });
 
-    directory.setMembership(member('vorstand'), 'spielerin', { membershipTypes: ['HONORARY'] });
-    expect(tasks.get(member('schrift'), task.id).status).toBe('DONE');
+    for (const id of ['vorstand', 'kassier', 'schrift', 'beisitz', 'beisitz2', 'admin']) meetings.setPresence(member('vorstand'), mv.id, id, 'APP');
+    meetings.open(member('vorstand'), mv.id);
+    for (const r of [lena, beitrag]) {
+      meetings.openResolution(member('vorstand'), r);
+      for (const id of ['vorstand', 'kassier', 'schrift']) meetings.vote(member(id), r, r === lena || id === 'vorstand' ? 'YES' : 'NO');
+    }
+    const passed = meetings.closeResolution(member('vorstand'), lena);
+    const failed = meetings.closeResolution(member('vorstand'), beitrag);
+    expect(failed).toMatchObject({ result: 'FAILED', taskId: null });
+    const task = tasks.get(member('schrift'), passed.taskId!);
+    expect(task).toMatchObject({ title: 'Ehrenmitglied Lena umsetzen', assignees: ['schrift'], source: { kind: 'RESOLUTION', id: lena } });
+    expect(task.description).toContain('Lena wird Ehrenmitglied.');
 
-    // Lena votes from the next meeting on: this one keeps the electorate it opened with.
-    expect(meetings.get(member('vorstand'), mv.id).electorate.map((p) => p.memberId)).not.toContain('spielerin');
-    expect(() => meetings.setPresence(member('vorstand'), mv.id, 'spielerin', 'APP')).toThrow(expect.objectContaining({ code: 'meeting.not-voter' }));
-    meetings.setAutoTasks(member('vorstand'), mv.id, false);
-    const quiet = meetings.createResolution(member('vorstand'), mv.id, { title: 'Sonstiges', majority: 'SIMPLE' });
-    meetings.openResolution(member('vorstand'), quiet.id);
-    for (const id of ['vorstand', 'kassier', 'schrift']) meetings.vote(member(id), quiet.id, 'YES');
-    expect(meetings.closeResolution(member('vorstand'), quiet.id).followUps).toEqual([]);
-    const manual = meetings.addFollowUp(member('vorstand'), { meetingId: mv.id }, { title: 'Protokoll verteilen' });
-    expect(manual).toMatchObject({ kind: 'MANUAL', taskId: expect.any(String) });
-    // only those present, and for tasks that need admin or board rights only admins and board members
-    expect(() => meetings.addFollowUp(member('vorstand'), { meetingId: mv.id }, { title: 'X', assigneeIds: ['spieler'] })).toThrow(
-      expect.objectContaining({ code: 'meeting.assignee-not-allowed' }),
+    // a voted Beschluss stays on the agenda; Lena votes from the next meeting on
+    expect(() => meetings.setAgenda(member('vorstand'), mv.id, [{ title: 'Nur das' }])).toThrow(
+      expect.objectContaining({ code: 'meeting.agenda-motion-voted' }),
     );
-    expect(() =>
-      meetings.createResolution(member('vorstand'), mv.id, {
-        title: 'Ehrenmitglied',
-        majority: 'SIMPLE',
-        action: 'HONORARY_GRANT',
-        actionMemberId: 'neu',
-        assigneeIds: ['trainer'],
-      }),
-    ).toThrow(expect.objectContaining({ code: 'meeting.assignee-not-allowed' }));
-    const meetingNow = meetings.get(member('vorstand'), mv.id);
-    expect(meetingNow.assignable.find((a) => a.memberId === 'admin')).toMatchObject({ manager: true });
+    expect(() => meetings.setPresence(member('vorstand'), mv.id, 'spielerin', 'APP')).toThrow(expect.objectContaining({ code: 'meeting.not-voter' }));
 
-    const linked = meetings.setResolutionLinks(member('vorstand'), r.id, [
+    const linked = meetings.setResolutionLinks(member('vorstand'), lena, [
       { kind: 'MEMBER', id: 'spielerin' },
       { kind: 'MEETING', id: 'mt-past' },
     ]);
     expect(linked.links.map((l) => l.title)).toEqual(['Lena Spielerin', 'Ordentliche Vorstandssitzung']);
   });
+
+  it('change drafts with the agenda, and add a Beschluss during the meeting as the last item', () => {
+    const mv = meetings.create(member('vorstand'), {
+      kind: 'SIMPLE_BOARD',
+      title: 'VS',
+      startsAt: inDays(15),
+      endsAt: inDays(15.1),
+      items: [
+        { title: 'Bälle', motion: { text: '10 Bälle.' } },
+        { title: 'Weg', motion: { text: 'x' } },
+      ],
+    });
+    const [balls, gone] = [mv.agendaItems[0].resolutionId!, mv.agendaItems[1].resolutionId!];
+    const changed = meetings.setAgenda(member('vorstand'), mv.id, [
+      { id: mv.agendaItems[0].id, title: 'Bälle und Netze', resolutionId: balls, motion: { text: '10 Bälle, 2 Netze.', assigneeIds: ['kassier'] } },
+    ]);
+    expect(changed.agendaItems).toHaveLength(1);
+    expect(() => meetings.getResolution(member('vorstand'), gone)).toThrow(expect.objectContaining({ status: 404 }));
+    expect(meetings.getResolution(member('vorstand'), balls)).toMatchObject({ title: 'Bälle und Netze', text: '10 Bälle, 2 Netze.' });
+    expect(() => meetings.createResolution(member('vorstand'), mv.id, { title: 'x', assigneeIds: ['nobody'] })).toThrow(
+      expect.objectContaining({ code: 'meeting.assignee-unknown' }),
+    );
+    const added = meetings.createResolution(member('vorstand'), mv.id, { title: 'Spontan' });
+    expect(meetings.get(member('vorstand'), mv.id).agendaItems.at(-1)).toMatchObject({ title: 'Spontan', resolutionId: added.id });
+    meetings.deleteResolution(member('vorstand'), added.id);
+    expect(meetings.get(member('vorstand'), mv.id).agendaItems).toHaveLength(1);
+  });
 });
 
 describe('meeting types', () => {
   it('edit a seeded type and refuse rules that contradict each other', () => {
-    const form = new MeetingTypeForm(type('EXTRA_BOARD'), meetings.rules.data);
+    const form = new MeetingTypeForm(type('EXTRA_BOARD'));
     expect([form.notice, form.noticeUnit, form.needsReason]).toEqual([2, 'days', true]);
-    form.actions = [...form.actions, 'STATUTES_CHANGE'];
+    form.majorities = [];
     expect(Object.keys(form.errors)).toEqual(['majorities']);
     form.majorities = ['TWO_THIRDS', 'THREE_QUARTERS'];
     form.yearly = true;
@@ -312,37 +335,7 @@ describe('deadlines as tasks', () => {
   });
 });
 
-describe('mock own decisions and online meetings', () => {
-  it('lets the club add its own decision, offered in circular votes and types', () => {
-    const current = { items: structuredClone(meetings.rules.data), circular: { ...meetings.circular.data } };
-    const saved = meetings.saveRules(member('vorstand'), {
-      ...current,
-      items: [
-        ...current.items,
-        {
-          action: null,
-          label: 'Budget',
-          majority: null,
-          enabled: true,
-          followUps: [{ id: null, kind: 'IMPLEMENT', title: 'Budget umsetzen', dueDays: 14 }],
-        },
-      ],
-    });
-    const own = saved.items.find((r) => r.label === 'Budget')!;
-    expect(own.action).toMatch(/^DECISION_[A-Z0-9]{12}$/);
-    const circular = meetings.createResolution(member('vorstand'), null, { title: 'Budget 2027', deadline: inDays(4), action: own.action });
-    expect(circular.action).toBe(own.action);
-    expect(() => meetings.createResolution(member('vorstand'), null, { title: 'x', deadline: inDays(4), action: 'DECISION_NOPE' })).toThrow(
-      expect.objectContaining({ code: 'resolution.action-unknown' }),
-    );
-    // Removed, never deleted; only IMPLEMENT follow-ups and a name.
-    expect(() => meetings.saveRules(member('vorstand'), current)).toThrow(expect.objectContaining({ code: 'action-rules.invalid' }));
-    const wrongKind = saved.items.map((r) => (r === own ? { ...r, followUps: [{ id: null, kind: 'ENTER_OFFICE', title: 'x', dueDays: null }] } : r));
-    expect(() => meetings.saveRules(member('vorstand'), { ...current, items: wrongKind })).toThrow(
-      expect.objectContaining({ code: 'action-rules.kind-invalid' }),
-    );
-  });
-
+describe('mock online meetings', () => {
   it('shows the link of online kinds and lets online members vote in the app', () => {
     const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(16), endsAt: inDays(16.1) });
     expect(mv).toMatchObject({ online: false, videoUrl: null });

@@ -9,15 +9,17 @@
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import DateTimeInput from '../../ui/DateTimeInput.svelte';
-  import Select from '../../ui/Select.svelte';
+  import DateInput from '../../ui/DateInput.svelte';
   import MemberChips from './MemberChips.svelte';
-  import MotionFollowUps from './MotionFollowUps.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
-  import { boardSettings, membersApi } from '../members/services';
-  import { noticeText, QUORUM_LABELS, type FollowUpRule, type ResolutionAction } from './model';
+  import { noticeText, QUORUM_LABELS } from './model';
+  import { activePeople } from './people';
   import { meetingsApi, resolutionRules } from './services';
 
-  /** New circular vote: the motion goes to the whole board at once and runs at least the club's shortest voting time. */
+  /**
+   * New circular vote: the motion goes to the whole board at once and runs at least the club's shortest voting time. Once passed, whoever
+   * is named (nobody: the Vorstand) gets the task "<Titel> umsetzen", due on the chosen day.
+   */
   let { handle }: { id: string; handle: WindowHandle } = $props();
 
   // svelte-ignore state_referenced_locally
@@ -28,16 +30,10 @@
   let text = $state('');
   let deadline = $state(`${ZonedClock.addDays(earliest.slice(0, 10), 1)}T20:00`);
   let submitted = $state(false);
-  let action = $state<ResolutionAction>('GENERAL');
   let assignees = $state<string[]>([]);
-  let followUps = $state<FollowUpRule[]>([]);
-  const actionOptions = resolutionRules.forType(null).map((a) => ({ value: a, label: resolutionRules.label(a) }));
-  // server: circular votes run among the board, which also carries them out.
-  const board = new Resource(async () => {
-    const people = new Map((await membersApi.board()).offices.filter((o) => boardSettings.isBoard(o.office)).map((o) => [o.memberId, o.name]));
-    return [...people].map(([memberId, name]) => ({ memberId, name })).sort((a, b) => a.name.localeCompare(b.name));
-  });
-  void board.load();
+  let implementDue = $state('');
+  const people = new Resource(activePeople);
+  void people.load();
   // Checked again when sending: the form may have been open for a while.
   let tooSoon = $derived(deadline < earliest);
 
@@ -53,9 +49,8 @@
           title.trim(),
           text.trim() || null,
           session.clock.toInstant(deadline),
-          action,
           assignees,
-          followUps,
+          implementDue || null,
         );
         return opened.id;
       },
@@ -82,16 +77,10 @@
     >
       <DateTimeInput bind:value={deadline} min={earliest} required />
     </Field>
-    <Field label="Art des Beschlusses" hint="Bestimmt die Aufgabe, die nach der Annahme entsteht.">
-      <Select bind:value={action} options={actionOptions} />
+    <MemberChips bind:value={assignees} candidates={people.value ?? []} label="Umsetzung durch" placeholder="Umsetzung durch (sonst Vorstand)" />
+    <Field label="Umsetzen bis (optional)" hint="Fälligkeit der Aufgabe, wenn der Beschluss angenommen ist.">
+      <DateInput bind:value={implementDue} min={session.clock.today()} />
     </Field>
-    <MemberChips
-      bind:value={assignees}
-      candidates={board.value ?? []}
-      label="Verantwortlich für die Umsetzung"
-      placeholder="Verantwortlich (leer = Vorstand)"
-    />
-    <MotionFollowUps {action} bind:followUps />
     <ErrorNote error={create.save.error} />
     <div class="row">
       <Button type="submit" variant="primary" busy={create.save.busy}>An den Vorstand schicken</Button>

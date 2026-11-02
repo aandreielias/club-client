@@ -309,22 +309,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/meetings/{id}/auto-tasks": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["autoTasks"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/meetings/{id}/agenda": {
         parameters: {
             query?: never;
@@ -837,22 +821,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/resolutions/{id}/plan-follow-ups": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["planFollowUps"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/resolutions/{id}/open": {
         parameters: {
             query?: never;
@@ -863,22 +831,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["open"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/resolutions/{id}/follow-ups": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["followUp"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1215,22 +1167,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["invitationDocument"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/meetings/{id}/follow-ups": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["followUp_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2101,38 +2037,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/meetings/trigger-catalog": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["triggerCatalog"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/meetings/follow-ups/{followUpId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["followUpSource"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -2714,7 +2618,7 @@ export interface components {
         };
         "at.clubserver.tasks.api.TasksApi.Source": {
             /** @enum {string} */
-            kind: "CHANGE_REQUEST" | "MEETING_FOLLOW_UP" | "MEETING_REMINDER";
+            kind: "CHANGE_REQUEST" | "RESOLUTION" | "MEETING_REMINDER";
             /** Format: uuid */
             id: string;
         };
@@ -2823,41 +2727,6 @@ export interface components {
             /** Format: uuid */
             id: string;
         };
-        "at.clubserver.meetings.api.MeetingsApi.FollowUpDto": {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            resolutionId: string;
-            /** @enum {string} */
-            kind: "IMPLEMENT" | "ENTER_HONORARY" | "REVOKE_HONORARY" | "ENTER_OFFICE" | "NOTIFY_EXCLUSION" | "CONVENE_ASSEMBLY" | "UPLOAD_STATUTES" | "TRIGGER" | "MANUAL";
-            title: string;
-            automatic: boolean;
-            /** Format: date-time */
-            dueAt: string;
-            /** Format: uuid */
-            taskId: string;
-            /** @enum {string} */
-            taskStatus: "OPEN" | "IN_PROGRESS" | "DONE";
-            /** Format: uuid */
-            waitsFor: string;
-            waiting: boolean;
-        };
-        "at.clubserver.meetings.api.MeetingsApi.FollowUpRule": {
-            /** Format: uuid */
-            id: string;
-            /** @enum {string} */
-            kind: "IMPLEMENT" | "ENTER_HONORARY" | "REVOKE_HONORARY" | "ENTER_OFFICE" | "NOTIFY_EXCLUSION" | "CONVENE_ASSEMBLY" | "UPLOAD_STATUTES" | "TRIGGER" | "MANUAL";
-            title: string;
-            /** Format: int32 */
-            dueDays: number;
-            /** @enum {string} */
-            assignTo: "DEFAULT" | "BOARD" | "OFFICE" | "MANAGER" | "MEMBER";
-            office: string;
-            description: string;
-            checklist: string[];
-            afterPrevious: boolean;
-            trigger: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Trigger"];
-        };
         "at.clubserver.meetings.api.MeetingsApi.Person": {
             /** Format: uuid */
             memberId: string;
@@ -2905,36 +2774,14 @@ export interface components {
             canVote: boolean;
             canManage: boolean;
             pending: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"][];
-            action: string;
-            actionMember: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"];
-            actionOffice: string;
             assignees: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"][];
-            followUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpDto"][];
-            assignable: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"][];
-            links: components["schemas"]["at.clubserver.platform.RecordRefs.RefDto"][];
-            ownFollowUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpRule"][];
-        };
-        "at.clubserver.meetings.api.MeetingsApi.Trigger": {
+            /** Format: date */
+            implementDue: string;
+            /** Format: uuid */
+            taskId: string;
             /** @enum {string} */
-            record: "FILE" | "APPOINTMENT" | "MEETING" | "RESOLUTION" | "OFFICE" | "MEMBER" | "TOURNAMENT";
-            event: string;
-            conditions: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.TriggerCondition"][];
-            window: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.TriggerWindow"];
-        };
-        "at.clubserver.meetings.api.MeetingsApi.TriggerCondition": {
-            field: string;
-            value: string;
-            label: string;
-        };
-        "at.clubserver.meetings.api.MeetingsApi.TriggerWindow": {
-            /** Format: int32 */
-            fromDays: number;
-            /** Format: int32 */
-            toDays: number;
-            /** Format: date */
-            fromDate: string;
-            /** Format: date */
-            toDate: string;
+            taskStatus: "OPEN" | "IN_PROGRESS" | "DONE";
+            links: components["schemas"]["at.clubserver.platform.RecordRefs.RefDto"][];
         };
         "at.clubserver.platform.RecordRefs.RefDto": {
             /** @enum {string} */
@@ -3025,12 +2872,6 @@ export interface components {
             /** Format: date-time */
             at: string;
         };
-        "at.clubserver.meetings.api.MeetingsApi.Assignable": {
-            /** Format: uuid */
-            memberId: string;
-            name: string;
-            manager: boolean;
-        };
         "at.clubserver.meetings.api.MeetingsApi.MeetingDto": {
             /** Format: uuid */
             id: string;
@@ -3061,9 +2902,6 @@ export interface components {
             quorate: boolean;
             canManage: boolean;
             links: components["schemas"]["at.clubserver.platform.RecordRefs.RefDto"][];
-            autoTasks: boolean;
-            followUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpDto"][];
-            assignable: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Assignable"][];
             /** Format: date-time */
             protocolFinalAt: string;
             agendaItems: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.AgendaItemDto"][];
@@ -3087,11 +2925,25 @@ export interface components {
         "at.clubserver.gateway.rest.MeetingsController.MeetingLinksBody": {
             refs: components["schemas"]["at.clubserver.platform.RecordRefs.RefInput"][];
         };
-        "at.clubserver.gateway.rest.MeetingsController.AutoTasksBody": {
-            on: boolean;
-        };
         "at.clubserver.gateway.rest.MeetingsController.AgendaBody": {
-            items: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.AgendaItemDto"][];
+            items: components["schemas"]["at.clubserver.gateway.rest.MeetingsController.AgendaItemBody"][];
+        };
+        "at.clubserver.gateway.rest.MeetingsController.AgendaItemBody": {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            note: string;
+            /** Format: uuid */
+            resolutionId: string;
+            motion: components["schemas"]["at.clubserver.gateway.rest.MeetingsController.MotionBody"];
+        };
+        "at.clubserver.gateway.rest.MeetingsController.MotionBody": {
+            text: string;
+            /** @enum {string} */
+            majority: "SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS";
+            assigneeIds: string[];
+            /** Format: date */
+            implementDue: string;
         };
         "at.clubserver.gateway.rest.MeetingsController.MeetingTypeBody": {
             label: string;
@@ -3106,7 +2958,6 @@ export interface components {
             graceMinutes: number;
             majorities: ("SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS")[];
             conveners: string[];
-            actions: string[];
             needsReason: boolean;
             dueBy: string;
             /** Format: int32 */
@@ -3147,7 +2998,6 @@ export interface components {
             graceMinutes: number;
             majorities: ("SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS")[];
             conveners: string[];
-            actions: string[];
             needsReason: boolean;
             dueBy: string;
             /** Format: int32 */
@@ -3159,18 +3009,8 @@ export interface components {
             inUse: boolean;
             steps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.StepDto"][];
         };
-        "at.clubserver.gateway.rest.MeetingsController.ActionRulesBody": {
-            items: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.ActionRule"][];
+        "at.clubserver.gateway.rest.MeetingsController.ResolutionRulesBody": {
             circular: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.CircularRules"];
-            statutes: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.StatutesPlace"];
-        };
-        "at.clubserver.meetings.api.MeetingsApi.ActionRule": {
-            action: string;
-            label: string;
-            /** @enum {string} */
-            majority: "SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS";
-            followUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpRule"][];
-            enabled: boolean;
         };
         "at.clubserver.meetings.api.MeetingsApi.CircularRules": {
             /** Format: int32 */
@@ -3178,18 +3018,8 @@ export interface components {
             /** @enum {string} */
             quorum: "AT_LEAST_HALF" | "MORE_THAN_HALF" | "AT_LEAST_THREE_QUARTERS";
         };
-        "at.clubserver.meetings.api.MeetingsApi.StatutesPlace": {
-            /** Format: uuid */
-            fileId: string;
-            fileName: string;
-            /** Format: uuid */
-            folderId: string;
-            folderName: string;
-        };
-        "at.clubserver.meetings.api.MeetingsApi.ActionRules": {
-            items: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.ActionRule"][];
+        "at.clubserver.meetings.api.MeetingsApi.ResolutionRules": {
             circular: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.CircularRules"];
-            statutes: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.StatutesPlace"];
         };
         "at.clubserver.gateway.rest.NotificationsController.PushTokenBody": {
             token: string;
@@ -3594,9 +3424,9 @@ export interface components {
             text: string;
             /** Format: date-time */
             deadline: string;
-            action: string;
             assigneeIds: string[];
-            followUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpRule"][];
+            /** Format: date */
+            implementDue: string;
             open: boolean;
         };
         "at.clubserver.gateway.rest.ResolutionsController.VoteBody": {
@@ -3608,16 +3438,6 @@ export interface components {
             memberId: string;
             /** @enum {string} */
             choice: "YES" | "NO" | "ABSTAIN";
-        };
-        "at.clubserver.gateway.rest.ResolutionsController.FollowUpBody": {
-            title: string;
-            description: string;
-            assigneeIds: string[];
-            /** Format: date-time */
-            dueAt: string;
-            checklist: string[];
-            /** Format: uuid */
-            waitsFor: string;
         };
         "at.clubserver.gateway.rest.ResolutionsController.AnalogBody": {
             /** Format: int32 */
@@ -3684,7 +3504,7 @@ export interface components {
         "at.clubserver.gateway.rest.MeetingsController.MeetingBody": {
             kind: string;
             title: string;
-            agenda: string;
+            items: components["schemas"]["at.clubserver.gateway.rest.MeetingsController.AgendaItemBody"][];
             urgency: string;
             /** Format: date-time */
             startsAt: string;
@@ -3698,22 +3518,9 @@ export interface components {
             text: string;
             /** @enum {string} */
             majority: "SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS";
-            action: string;
-            /** Format: uuid */
-            actionMemberId: string;
-            actionOffice: string;
             assigneeIds: string[];
-            followUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpRule"][];
-        };
-        "at.clubserver.gateway.rest.MeetingsController.FollowUpBody": {
-            title: string;
-            description: string;
-            assigneeIds: string[];
-            /** Format: date-time */
-            dueAt: string;
-            checklist: string[];
-            /** Format: uuid */
-            waitsFor: string;
+            /** Format: date */
+            implementDue: string;
         };
         "at.clubserver.gateway.rest.MeetingsController.CloseBody": {
             protocol: string;
@@ -3993,12 +3800,10 @@ export interface components {
             text: string;
             /** @enum {string} */
             majority: "SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS";
-            action: string;
-            /** Format: uuid */
-            actionMemberId: string;
-            actionOffice: string;
             assigneeIds: string[];
-            followUps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpRule"][];
+            /** Format: date */
+            implementDue: string;
+            clearDue: boolean;
         };
         "at.clubserver.gateway.rest.MembersController.ProfileBody": {
             firstName: string;
@@ -4011,7 +3816,6 @@ export interface components {
         };
         "at.clubserver.gateway.rest.MeetingsController.MeetingPatch": {
             title: string;
-            agenda: string;
             urgency: string;
             /** Format: date-time */
             startsAt: string;
@@ -4189,7 +3993,6 @@ export interface components {
             meetingId: string;
             meetingTitle: string;
             title: string;
-            action: string;
             /** @enum {string} */
             status: "DRAFT" | "OPEN" | "CLOSED";
             /** @enum {string} */
@@ -4258,26 +4061,6 @@ export interface components {
         };
         "at.clubserver.meetings.api.MeetingsApi.MeetingTypeList": {
             items: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.MeetingTypeDto"][];
-        };
-        "at.clubserver.meetings.api.MeetingsApi.TriggerCatalogDto": {
-            records: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.TriggerRecordDto"][];
-        };
-        "at.clubserver.meetings.api.MeetingsApi.TriggerRecordDto": {
-            /** @enum {string} */
-            record: "FILE" | "APPOINTMENT" | "MEETING" | "RESOLUTION" | "OFFICE" | "MEMBER" | "TOURNAMENT";
-            events: string[];
-            fields: string[];
-            window: boolean;
-        };
-        "at.clubserver.meetings.api.MeetingsApi.FollowUpSource": {
-            /** Format: uuid */
-            meetingId: string;
-            meetingTitle: string;
-            /** Format: uuid */
-            resolutionId: string;
-            resolutionTitle: string;
-            title: string;
-            waitsForTitle: string;
         };
         "at.clubserver.gateway.rest.MembersController.Me": {
             member: components["schemas"]["at.clubserver.members.api.MembersApi.MemberDto"];
@@ -5108,32 +4891,6 @@ export interface operations {
             };
         };
     };
-    autoTasks: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["at.clubserver.gateway.rest.MeetingsController.AutoTasksBody"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.MeetingDto"];
-                };
-            };
-        };
-    };
     agenda: {
         parameters: {
             query?: never;
@@ -5221,7 +4978,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.ActionRules"];
+                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.ResolutionRules"];
                 };
             };
         };
@@ -5235,7 +4992,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["at.clubserver.gateway.rest.MeetingsController.ActionRulesBody"];
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.MeetingsController.ResolutionRulesBody"];
             };
         };
         responses: {
@@ -5245,7 +5002,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.ActionRules"];
+                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.ResolutionRules"];
                 };
             };
         };
@@ -6270,28 +6027,6 @@ export interface operations {
             };
         };
     };
-    planFollowUps: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.ResolutionDto"];
-                };
-            };
-        };
-    };
     open: {
         parameters: {
             query?: never;
@@ -6310,32 +6045,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.ResolutionDto"];
-                };
-            };
-        };
-    };
-    followUp: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["at.clubserver.gateway.rest.ResolutionsController.FollowUpBody"];
-            };
-        };
-        responses: {
-            /** @description Created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpDto"];
                 };
             };
         };
@@ -6923,32 +6632,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.MeetingDto"];
-                };
-            };
-        };
-    };
-    followUp_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["at.clubserver.gateway.rest.MeetingsController.FollowUpBody"];
-            };
-        };
-        responses: {
-            /** @description Created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpDto"];
                 };
             };
         };
@@ -9031,48 +8714,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.ChangeRequestDto"];
-                };
-            };
-        };
-    };
-    triggerCatalog: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.TriggerCatalogDto"];
-                };
-            };
-        };
-    };
-    followUpSource: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                followUpId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.FollowUpSource"];
                 };
             };
         };

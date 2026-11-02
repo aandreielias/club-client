@@ -9,16 +9,17 @@
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
   import Tag from '../../ui/Tag.svelte';
-  import { boardSettings } from '../members/services';
-  import FollowUpList from './FollowUpList.svelte';
+  import { Resource } from '../../lib/state/Resource.svelte';
+  import RecordLink from '../../ui/RecordLink.svelte';
+  import { activePeople } from './people';
   import LinkList from './LinkList.svelte';
   import MemberChips from './MemberChips.svelte';
-  import { CHOICE_LABELS, MAJORITY_LABELS, RESULT_LABELS, RESULT_TONES, type Choice, type NewFollowUp, type Resolution } from './model';
-  import { meetingsApi, resolutionRules } from './services';
+  import { CHOICE_LABELS, MAJORITY_LABELS, RESULT_LABELS, RESULT_TONES, type Choice, type Resolution } from './model';
+  import { meetingsApi } from './services';
 
   /**
    * One resolution: motion, required majority, secret vote (only the count of votes while open, the split after closing),
-   * the room's sums for members without the app, written votes of a circular vote.
+   * the room's sums for members without the app, written votes of a circular vote. Once passed, it links its task "umsetzen".
    */
   let {
     resolution: r,
@@ -34,6 +35,11 @@
   } = $props();
 
   const action = new Action();
+  // Who may carry it out, for who runs it while it is not closed.
+  const people = new Resource(activePeople);
+  // svelte-ignore state_referenced_locally
+  if (r.canManage && r.status !== 'CLOSED') void people.load();
+  const TASK_STATUS = { OPEN: 'offen', IN_PROGRESS: 'in Arbeit', DONE: 'erledigt' } as const;
   const choices = (Object.keys(CHOICE_LABELS) as Choice[]).map((c) => ({ value: c, label: CHOICE_LABELS[c] }));
 
   let roomYes = $state(0);
@@ -98,12 +104,6 @@
     await write(() => meetingsApi.setResolutionAssignees(r.id, ids));
   }
 
-  async function addFollowUp(followUp: NewFollowUp): Promise<boolean> {
-    if (!(await action.attempt(() => meetingsApi.addResolutionFollowUp(r.id, followUp)))) return false;
-    await write(() => meetingsApi.resolution(r.id), 'Aufgabe angelegt.');
-    return true;
-  }
-
   /** Circular votes only run longer; the deadline task follows on the server. */
   let extending = $state(false);
   let newDeadline = $state('');
@@ -160,23 +160,25 @@
     </span>
   </header>
   {#if r.text}<p class="text">{r.text}</p>{/if}
-  {#if r.action !== 'GENERAL'}
-    <p class="small">
-      {resolutionRules.label(r.action)}{#if r.actionMember}: {r.actionMember.name}{/if}{#if r.actionOffice}
-        als {boardSettings.label(r.actionOffice)}{/if}
-    </p>
-  {/if}
   {#if r.canManage && r.status !== 'CLOSED'}
     <MemberChips
       value={r.assignees.map((a) => a.memberId)}
-      candidates={r.assignable}
+      candidates={people.value ?? []}
       known={r.assignees}
-      label="Verantwortlich für die Umsetzung"
-      placeholder="Verantwortlich (leer = Vorstand)"
+      label="Umsetzung durch"
+      placeholder="Umsetzung durch (sonst Vorstand)"
       onchange={setAssignees}
     />
   {:else if r.assignees.length}
-    <p class="muted small">Verantwortlich: {r.assignees.map((a) => a.name).join(', ')}</p>
+    <p class="muted small">Umsetzung durch: {r.assignees.map((a) => a.name).join(', ')}</p>
+  {/if}
+  {#if r.implementDue && !r.taskId}<p class="muted small">Umsetzen bis {session.format.date(r.implementDue)}</p>{/if}
+  {#if r.taskId}
+    <p class="small">
+      Aufgabe: <RecordLink kind="task" id={r.taskId}>{r.title} umsetzen</RecordLink>{#if r.taskStatus}<span class="muted">
+          · {TASK_STATUS[r.taskStatus]}</span
+        >{/if}
+    </p>
   {/if}
   {#if r.deadline && r.status !== 'CLOSED'}
     <div class="row">
@@ -246,25 +248,6 @@
     <p class="muted small">
       Höchstens {r.analogPresent} Stimmen: so viele sind ohne App da. Vor dem Schließen eintragen (auch 0); bis dahin lässt es sich korrigieren.
     </p>
-  {/if}
-
-  {#if r.status !== 'CLOSED' && r.ownFollowUps.length}
-    <p class="muted small">
-      Bei Annahme zusätzlich: {r.ownFollowUps.map((f, i) => `${i + 1}. ${f.title.replaceAll('{beschluss}', r.title)}`).join(' · ')}
-    </p>
-  {/if}
-  {#if r.status === 'CLOSED' && r.result === 'PASSED' && r.canManage && !r.followUps.some((f) => f.kind !== 'MANUAL')}
-    <div>
-      <Button
-        size="sm"
-        busy={action.busy}
-        tooltip="Die Folgeaufgaben der Beschlussart jetzt anlegen"
-        onclick={() => write(() => meetingsApi.planFollowUps(r.id), 'Aufgaben angelegt.')}>Aufgaben jetzt erzeugen</Button
-      >
-    </div>
-  {/if}
-  {#if r.status === 'CLOSED' && (r.followUps.length || r.canManage)}
-    <FollowUpList followUps={r.followUps} canAdd={r.canManage} candidates={r.assignable} contextTitle={r.title} add={addFollowUp} />
   {/if}
 
   {#if r.links.length || r.canManage}

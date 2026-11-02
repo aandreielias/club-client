@@ -14,7 +14,6 @@
   import MeetingStepDialog from './MeetingStepDialog.svelte';
   import type { MeetingTypeForm } from './MeetingTypeForm.svelte';
   import TimelineBar from './TimelineBar.svelte';
-  import { resolutionRules } from './services';
   import {
     ACTION_KIND_LABELS,
     AUDIENCE_LABELS,
@@ -78,22 +77,6 @@
       })),
   );
   const MAJORITIES = (Object.keys(MAJORITY_LABELS) as Majority[]).map((m) => ({ value: m, label: MAJORITY_LABELS[m], hint: MAJORITY_HINTS[m] }));
-
-  /** Each decision with what it brings: a fixed majority and its follow-up tasks. */
-  const decisions = $derived(
-    resolutionRules.all().map((a) => {
-      const rule = resolutionRules.value.items.find((r) => r.action === a);
-      const tasks = rule?.followUps.length ?? 0;
-      const hint = [
-        a === 'GENERAL' && 'Immer möglich',
-        rule?.majority && `braucht ${MAJORITY_LABELS[rule.majority]}`,
-        tasks ? `${tasks} ${tasks === 1 ? 'Folgeaufgabe' : 'Folgeaufgaben'}` : 'ohne Folgeaufgaben',
-      ]
-        .filter(Boolean)
-        .join(' · ');
-      return { value: a, label: resolutionRules.label(a), hint, disabled: a === 'GENERAL' };
-    }),
-  );
 
   const stepName = (step: MeetingStep) => (step.system ? SYSTEM_STEP_LABELS[step.system] : step.title || 'Ohne Titel');
 
@@ -201,11 +184,12 @@
 
   <fieldset>
     <legend>Beschlüsse</legend>
-    <Field label="Mögliche Mehrheiten" error={form.error('majorities')}>
+    <Field
+      label="Mögliche Mehrheiten"
+      hint="Jeder Beschluss wählt eine davon; vorgegeben ist die einfache Mehrheit."
+      error={form.error('majorities')}
+    >
       <OptionList label="Mögliche Mehrheiten" options={MAJORITIES} bind:value={form.majorities} />
-    </Field>
-    <Field label="Was Beschlüsse entscheiden dürfen" hint="Daraus entstehen nach dem Beschluss die Folgeaufgaben." error={form.error('actions')}>
-      <OptionList label="Was Beschlüsse entscheiden dürfen" options={decisions} bind:value={form.actions} />
     </Field>
   </fieldset>
 

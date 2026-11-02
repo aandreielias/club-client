@@ -2,7 +2,7 @@ import { Action } from '../../lib/state/Action.svelte';
 import { Resource } from '../../lib/state/Resource.svelte';
 import type { MeetingsApi } from './MeetingsApi';
 import type { RefKind } from '../../lib/records/refs';
-import type { AgendaItem, Meeting, MeetingPatch, PresenceMode } from './model';
+import type { AgendaItemInput, Meeting, MeetingPatch, PresenceMode } from './model';
 
 /** One meeting and the writes of whoever runs it; every write answers with the whole meeting. */
 export class MeetingModel {
@@ -38,7 +38,8 @@ export class MeetingModel {
     return this.write(() => this.api.update(this.id, patch));
   }
 
-  setAgenda(items: readonly AgendaItem[]): Promise<boolean> {
+  /** The whole Tagesordnung with its Beschlüsse. */
+  setAgenda(items: readonly AgendaItemInput[]): Promise<boolean> {
     return this.write(() => this.api.setAgenda(this.id, items));
   }
 
@@ -80,10 +81,6 @@ export class MeetingModel {
 
   generateInvitation(): Promise<boolean> {
     return this.write(() => this.api.generateInvitation(this.id));
-  }
-
-  setAutoTasks(on: boolean): Promise<boolean> {
-    return this.write(() => this.api.setAutoTasks(this.id, on));
   }
 
   setLinks(refs: readonly { kind: RefKind; id: string }[]): Promise<boolean> {

@@ -19,7 +19,7 @@
     STEP_ANCHOR_TEXT,
     SYSTEM_STEP_LABELS,
   } from './model';
-  import { meetingPolicy as policy, meetingsApi, meetingTypes, resolutionRules } from './services';
+  import { meetingPolicy as policy, meetingsApi, meetingTypes } from './services';
 
   /** One meeting type with its rules and the steps around each meeting; admin and board edit it. Window and page. */
   let { id, handle, onclosed }: { id: string; handle?: WindowHandle; onclosed?: () => void } = $props();
@@ -61,7 +61,7 @@
     {/snippet}
     {#snippet actions()}
       {#if !edit.form && policy.canEditTypes()}
-        <Button icon="edit" onclick={() => edit.edit(new MeetingTypeForm(type, resolutionRules.value.items))}>Bearbeiten</Button>
+        <Button icon="edit" onclick={() => edit.edit(new MeetingTypeForm(type))}>Bearbeiten</Button>
         {#if type.archived}
           <Button tooltip="Wieder für neue Sitzungen anbieten" onclick={() => setArchived(false)}>Wiederherstellen</Button>
         {:else if type.inUse}
@@ -92,8 +92,6 @@
             .map((m) => MAJORITY_LABELS[m])
             .join(', ')}
         </dd>
-        <dt>Beschlüsse</dt>
-        <dd>{type.actions.map((a) => resolutionRules.label(a)).join(', ')}</dd>
         {#if type.dueBy}<dt>Jährlich</dt>
           <dd>geplant bis {type.dueBy.split('-').reverse().join('.')}.</dd>{/if}
         {#if type.needsReason}<dt>Dringlichkeit</dt>
