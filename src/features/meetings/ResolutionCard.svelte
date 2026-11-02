@@ -60,18 +60,23 @@
     if (await bus.request(CONFIRM, { title, message, confirmLabel })) await write(request, success);
   }
 
-  const open = () =>
+  /** Show of hands: opens at once, the counts row appears. */
+  const openByHand = () => write(() => meetingsApi.openResolution(r.id, 'HAND'));
+  /** Secretly in the app: every present voter gets the vote buttons. */
+  const openInApp = () =>
     confirmThen(
-      'Abstimmung öffnen',
-      r.meetingId ? 'Stimmberechtigte in der App können jetzt abstimmen.' : 'Der Antrag geht per E-Mail und App an den ganzen Vorstand.',
+      'Geheim in der App abstimmen',
+      r.meetingId
+        ? 'Alle Anwesenden stimmen jetzt auf ihrem Handy ab; du schließt die Abstimmung.'
+        : 'Der Antrag geht per E-Mail und App an den ganzen Vorstand.',
       'Öffnen',
-      () => meetingsApi.openResolution(r.id),
+      () => meetingsApi.openResolution(r.id, r.meetingId ? 'APP' : null),
       'Abstimmung geöffnet.',
     );
   const close = () =>
     confirmThen(
       'Abstimmung schließen',
-      `${r.ballots} von ${r.voters} haben in der App abgestimmt.${r.analogPresent && !r.analogEntered ? ' Die Stimmen im Raum sind noch nicht erfasst.' : ''}`,
+      `${r.ballots} von ${r.meetingId ? r.presentVoters : r.voters} haben abgestimmt.`,
       'Schließen',
       () => meetingsApi.closeResolution(r.id),
       'Abstimmung geschlossen.',
@@ -84,14 +89,9 @@
       () => meetingsApi.vote(r.id, choice),
       'Stimme abgegeben.',
     );
-  const enterRoom = () =>
-    confirmThen(
-      'Stimmen im Raum erfassen',
-      `Ja ${roomYes}, Nein ${roomNo}, Enthaltung ${roomAbstain}. Das lässt sich nur einmal eintragen.`,
-      'Erfassen',
-      () => meetingsApi.analogVotes(r.id, roomYes, roomNo, roomAbstain),
-      'Stimmen im Raum erfasst.',
-    );
+  /** Show of hands: counts and closing in one step. */
+  const handResult = (yes: number, no: number, abstain: number) =>
+    write(() => meetingsApi.handResult(r.id, yes, no, abstain), 'Ergebnis eingetragen.');
 
   async function recordWritten() {
     if (!writtenBy || !writtenChoice) return;
@@ -196,9 +196,11 @@
     {/if}
   {/if}
 
-  {#if r.status === 'OPEN'}
+  {#if r.status === 'OPEN' && r.voteMode === 'HAND'}
+    <p class="muted small">Abstimmung per Handzeichen · {r.presentVoters} Stimmberechtigte anwesend</p>
+  {:else if r.status === 'OPEN'}
     <p class="muted small">
-      {r.ballots} von {r.voters} abgestimmt{r.analogPresent ? ` · ${r.analogPresent} ohne App${r.analogEntered ? ' (erfasst)' : ''}` : ''}
+      {r.meetingId ? `Geheim in der App: ${r.ballots} von ${r.presentVoters} Anwesenden haben abgestimmt` : `${r.ballots} von ${r.voters} abgestimmt`}
     </p>
     {#if r.canVote}
       <div class="row">
@@ -212,7 +214,7 @@
   {:else if r.status === 'CLOSED'}
     <p class="small">
       Ja {r.yes! + (r.analogYes ?? 0)} · Nein {r.no! + (r.analogNo ?? 0)} · Enthaltung {r.abstain! + (r.analogAbstain ?? 0)}
-      {#if r.analogEntered}<span class="muted">(davon im Raum: {r.analogYes} · {r.analogNo} · {r.analogAbstain})</span>{/if}
+      <span class="muted">· {r.voteMode === 'HAND' ? 'per Handzeichen' : 'geheim in der App'}</span>
     </p>
   {/if}
 
@@ -232,22 +234,21 @@
     </form>
   {/if}
 
-  {#if r.canManage && r.status === 'OPEN' && r.meetingId && r.analogPresent && !r.analogEntered}
+  {#if r.canManage && r.status === 'OPEN' && r.voteMode === 'HAND'}
     <form
-      class="inline"
+      class="hands"
       onsubmit={(e) => {
         e.preventDefault();
-        void enterRoom();
+        void handResult(roomYes, roomNo, roomAbstain);
       }}
     >
-      <Field label="Im Raum: Ja"><input type="number" min="0" bind:value={roomYes} /></Field>
-      <Field label="Nein"><input type="number" min="0" bind:value={roomNo} /></Field>
-      <Field label="Enthaltung"><input type="number" min="0" bind:value={roomAbstain} /></Field>
-      <Button type="submit" busy={action.busy} disabled={roomSum > r.analogPresent}>Stimmen im Raum erfassen</Button>
+      <label>Ja <input type="number" min="0" max={r.presentVoters} bind:value={roomYes} /></label>
+      <label>Nein <input type="number" min="0" max={r.presentVoters} bind:value={roomNo} /></label>
+      <label>Enthaltung <input type="number" min="0" max={r.presentVoters} bind:value={roomAbstain} /></label>
+      <Button type="submit" variant="primary" busy={action.busy} disabled={roomSum > r.presentVoters}>Ergebnis eintragen</Button>
+      <Button busy={action.busy} onclick={() => handResult(r.presentVoters, 0, 0)}>Einstimmig</Button>
     </form>
-    <p class="muted small">
-      Höchstens {r.analogPresent} Stimmen: so viele sind ohne App da. Vor dem Schließen eintragen (auch 0); bis dahin lässt es sich korrigieren.
-    </p>
+    {#if roomSum > r.presentVoters}<p class="error small" role="alert">Mehr Stimmen als Anwesende ({r.presentVoters}).</p>{/if}
   {/if}
 
   {#if r.links.length || r.canManage}
@@ -265,8 +266,13 @@
       {#if r.status === 'DRAFT'}
         {#if !editing}<Button variant="ghost" icon="edit" onclick={startEdit}>Bearbeiten</Button>{/if}
         <Button variant="ghost" busy={action.busy} onclick={remove}>Entwurf löschen</Button>
-        {#if meetingOpen}<Button variant="primary" busy={action.busy} onclick={open}>Abstimmung öffnen</Button>{/if}
-      {:else}
+        {#if r.meetingId && meetingOpen}
+          <Button variant="primary" busy={action.busy} onclick={openByHand}>Per Handzeichen</Button>
+          <Button busy={action.busy} onclick={openInApp}>Geheim in der App</Button>
+        {:else if !r.meetingId}
+          <Button variant="primary" busy={action.busy} onclick={openInApp}>An den Vorstand schicken</Button>
+        {/if}
+      {:else if r.voteMode !== 'HAND'}
         <Button busy={action.busy} onclick={close}>Abstimmung schließen</Button>
       {/if}
     </div>
@@ -275,6 +281,24 @@
 </article>
 
 <style>
+  .hands {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: var(--space-sm);
+  }
+  .hands label {
+    display: grid;
+    gap: var(--space-xxs);
+    font-size: var(--font-size-sm);
+  }
+  .hands input {
+    width: 5rem;
+  }
+  .error {
+    margin: 0;
+    color: var(--color-danger);
+  }
   .resolution {
     display: grid;
     gap: var(--space-sm);
@@ -306,8 +330,5 @@
     flex-wrap: wrap;
     align-items: end;
     gap: var(--space-md);
-  }
-  .inline input {
-    width: 6rem;
   }
 </style>

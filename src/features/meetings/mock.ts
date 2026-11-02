@@ -43,6 +43,7 @@ import {
   type MeetingStep,
   type Quorum,
   type Resolution,
+  type VoteMode,
   type StepAnchor,
   type StepAudience,
 } from './model';
@@ -474,23 +475,21 @@ export class MockMeetings {
     this.notice(this.meetingVoters(meeting), `Geändert: ${meeting.title}`, `Geändert: ${what.join(', ')}.`, `/meetings/${meeting.id}`);
   }
 
-  setPresenceMany(viewer: Member, id: string, memberIds: unknown, mode: unknown): Meeting {
+  setPresenceMany(viewer: Member, id: string, memberIds: unknown, present: unknown): Meeting {
     const ids = Array.isArray(memberIds) ? (memberIds as string[]) : [];
     let last: Meeting | null = null;
-    for (const memberId of ids) last = this.setPresence(viewer, id, memberId, mode);
+    for (const memberId of ids) last = this.setPresence(viewer, id, memberId, present);
     return last ?? this.dto(viewer, this.managed(viewer, id));
   }
 
   /** server: MeetingHandlers.checkIn — the voter themselves while the meeting is open. */
-  checkIn(viewer: Member, id: string, mode: unknown): Meeting {
+  checkIn(viewer: Member, id: string): Meeting {
     const meeting = this.visible(viewer, id);
     if (meeting.status !== 'OPEN') fail(409, 'meeting.not-open');
     if (!this.meetingVoters(meeting).includes(viewer.id)) fail(400, 'meeting.not-voter');
-    if (mode !== 'APP' && mode !== 'ONLINE') fail(400, 'meeting.check-in-mode');
     if (this.type(meeting.kind).selfCheckIn === false) fail(409, 'meeting.check-in-off');
-    if (mode === 'ONLINE' && !this.type(meeting.kind).online) fail(400, 'meeting.not-online');
     if (this.resolutions.data.some((r) => r.meetingId === id && r.status === 'OPEN')) fail(409, 'meeting.vote-open');
-    meeting.presence[viewer.id] = mode as 'APP' | 'ONLINE';
+    meeting.presence[viewer.id] = true;
     this.changed(meeting, 'PRESENCE');
     return this.dto(viewer, meeting);
   }
@@ -569,16 +568,15 @@ export class MockMeetings {
     return m.protocolFinalAt !== undefined ? m.protocolFinalAt : m.status === 'CLOSED' ? m.closedAt : null;
   }
 
-  setPresence(viewer: Member, id: string, memberId: string, mode: unknown): Meeting {
+  /** server: MeetingHandlers.setPresence — Anwesend or not; fixed while a vote is open. */
+  setPresence(viewer: Member, id: string, memberId: string, present: unknown): Meeting {
     const meeting = this.managed(viewer, id);
     if (meeting.status === 'DRAFT') fail(409, 'meeting.not-invited');
     if (meeting.status === 'CLOSED') fail(409, 'meeting.closed');
     if (meeting.status === 'CANCELLED') fail(409, 'meeting.cancelled');
-    // server: no switching between app and room while a vote runs
     if (this.resolutions.data.some((r) => r.meetingId === id && r.status === 'OPEN')) fail(409, 'meeting.vote-open');
     if (!this.meetingVoters(meeting).includes(memberId)) fail(400, 'meeting.not-voter');
-    if (mode === 'ONLINE' && !this.type(meeting.kind).online) fail(400, 'meeting.not-online');
-    if (mode === 'APP' || mode === 'ANALOG' || mode === 'ONLINE') meeting.presence[memberId] = mode;
+    if (present === true) meeting.presence[memberId] = true;
     else delete meeting.presence[memberId];
     this.changed(meeting, 'PRESENCE');
     return this.dto(viewer, meeting);
@@ -737,15 +735,23 @@ export class MockMeetings {
     this.resolutionChanged(r, 'DELETED');
   }
 
-  openResolution(viewer: Member, id: string): Resolution {
+  /** server: ResolutionHandlers.open — a meeting vote by show of hands or secretly in the app; circular votes in the app. */
+  openResolution(viewer: Member, id: string, mode: unknown = null): Resolution {
     const r = this.managedResolution(viewer, id);
     if (r.status !== 'DRAFT') fail(409, 'resolution.not-draft');
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null;
+    if (meeting && mode !== 'HAND' && mode !== 'APP') fail(400, 'resolution.vote-mode-missing');
     if (meeting && meeting.status !== 'OPEN') fail(409, 'resolution.meeting-not-open');
     if (meeting && !this.quorate(meeting, this.meetingVoters(meeting))) fail(409, 'resolution.not-quorate');
     if (!meeting && Date.parse(r.deadline!) < Date.now() + this.circular.data.minHours * 3_600_000) fail(400, 'resolution.deadline-too-short');
     const voters = this.voters(r);
-    Object.assign(r, { status: 'OPEN', openedAt: new Date().toISOString(), voters: voters.length, frozenVoters: meeting ? undefined : voters });
+    Object.assign(r, {
+      status: 'OPEN',
+      openedAt: new Date().toISOString(),
+      voters: voters.length,
+      frozenVoters: meeting ? undefined : voters,
+      voteMode: meeting ? (mode as VoteMode) : 'APP',
+    });
     this.resolutionChanged(r, 'OPENED');
     if (!meeting) {
       this.circularTask(r, viewer.id);
@@ -779,8 +785,8 @@ export class MockMeetings {
 
   closeResolution(viewer: Member, id: string): Resolution {
     const r = this.managedResolution(viewer, id);
-    // server: the room's votes come first (0 when nobody voted there)
-    if (r.meetingId && r.analogYes === null && this.analogPresent(r) > 0) fail(409, 'resolution.analog-missing');
+    // server: a show of hands needs its counts first
+    if (r.voteMode === 'HAND' && r.analogYes === null) fail(409, 'resolution.analog-missing');
     return this.resolutionDto(viewer, this.closeNow(r));
   }
 
@@ -838,9 +844,8 @@ export class MockMeetings {
     const r = this.resolution(viewer, id);
     if (!this.voters(r).includes(viewer.id)) fail(403, 'resolution.not-voter');
     if (r.meetingId) {
-      const mode = this.meetings.data.find((m) => m.id === r.meetingId)!.presence[viewer.id];
-      if (!mode) fail(409, 'resolution.not-present');
-      if (mode === 'ANALOG') fail(409, 'resolution.vote-analog');
+      if (r.voteMode === 'HAND') fail(409, 'resolution.vote-by-hand');
+      if (!this.meetings.data.find((m) => m.id === r.meetingId)!.presence[viewer.id]) fail(409, 'resolution.not-present');
     }
     return this.resolutionDto(viewer, this.cast(r, viewer.id, choice));
   }
@@ -852,18 +857,20 @@ export class MockMeetings {
     return this.resolutionDto(viewer, this.cast(r, memberId, choice));
   }
 
-  analogVotes(viewer: Member, id: string, body: Record<string, any>): Resolution {
+  /** server: ResolutionHandlers.analog — show of hands, at most the voters present; `close` ends the vote with them. */
+  analogVotes(viewer: Member, id: string, body: Record<string, any>, close = false): Resolution {
     const r = this.managedResolution(viewer, id);
     if (!r.meetingId) fail(409, 'resolution.circular');
     if (r.status !== 'OPEN') fail(409, 'resolution.not-open');
+    if (r.voteMode !== 'HAND') fail(409, 'resolution.vote-in-app');
     // server: corrected while the vote is open
     const [yes, no, abstain] = [body.yes, body.no, body.abstain].map((v) =>
       Number.isInteger(v) && v >= 0 ? (v as number) : fail(400, 'resolution.analog-invalid'),
     );
-    if (yes + no + abstain > this.analogPresent(r)) fail(409, 'resolution.analog-exceeds-present');
+    if (yes + no + abstain > this.presentVoters(r)) fail(409, 'resolution.analog-exceeds-present');
     Object.assign(r, { analogYes: yes, analogNo: no, analogAbstain: abstain });
     this.resolutionChanged(r, 'VOTED');
-    return this.resolutionDto(viewer, r);
+    return this.resolutionDto(viewer, close ? this.closeNow(r) : r);
   }
 
   private cast(r: StoredResolution, voter: string, choice: Choice): StoredResolution {
@@ -925,11 +932,12 @@ export class MockMeetings {
     return r.status !== 'DRAFT' && r.frozenVoters?.length ? r.frozenVoters : this.people.electorate('BOARD');
   }
 
-  private analogPresent(r: StoredResolution): number {
+  /** Voters present now: the most a show of hands may count. */
+  private presentVoters(r: StoredResolution): number {
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId) : null;
     if (!meeting) return 0;
     const voters = this.meetingVoters(meeting);
-    return Object.entries(meeting.presence).filter(([id, mode]) => mode === 'ANALOG' && voters.includes(id)).length;
+    return Object.keys(meeting.presence).filter((id) => voters.includes(id)).length;
   }
 
   private runsCircular(viewer: Member): boolean {
@@ -965,7 +973,7 @@ export class MockMeetings {
     const voters = this.voters(r);
     const manages = this.managesResolution(viewer, r);
     const task = r.result === 'PASSED' ? tasks.sourced('RESOLUTION', [r.id])[r.id] : undefined;
-    const mode = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)!.presence[viewer.id] : 'APP';
+    const present = r.meetingId ? !!this.meetings.data.find((m) => m.id === r.meetingId)!.presence[viewer.id] : true;
     const name = (id: string) => {
       const p = this.people.members.data.find((x) => x.id === id);
       return p ? `${p.firstName} ${p.lastName}` : '–';
@@ -979,10 +987,12 @@ export class MockMeetings {
       analogNo: closed ? r.analogNo : null,
       analogAbstain: closed ? r.analogAbstain : null,
       analogEntered: r.analogYes !== null,
-      analogPresent: this.analogPresent(r),
+      voteMode: r.voteMode ?? null,
+      presentVoters: this.presentVoters(r),
       ballots: ballots.length,
       voted: ballots.includes(viewer.id),
-      canVote: r.status === 'OPEN' && !ballots.includes(viewer.id) && voters.includes(viewer.id) && (mode === 'APP' || mode === 'ONLINE'),
+      canVote:
+        r.status === 'OPEN' && !ballots.includes(viewer.id) && voters.includes(viewer.id) && (!r.meetingId || (r.voteMode === 'APP' && present)),
       canManage: manages,
       pending:
         !r.meetingId && r.status === 'OPEN' && manages
@@ -1172,8 +1182,8 @@ export class MockMeetings {
       approvals: approvals ?? [],
       latestInvite: latestInvite(this.type(m.kind), m.startsAt),
       electorate: voters.map((id) => ({ memberId: id, name: name(id) })).sort(byName),
-      present: Object.entries(presence)
-        .map(([id, mode]) => ({ memberId: id, name: name(id), mode }))
+      present: Object.keys(presence)
+        .map((id) => ({ memberId: id, name: name(id) }))
         .sort(byName),
       quorate: this.quorate(m, voters),
       canManage: this.mayConvene(viewer, m.kind) || this.offices(viewer).includes('SECRETARY'),
@@ -1235,8 +1245,8 @@ mockServer
   .on('POST', '/api/v1/meetings/:id/protocol/final', (req) => meetings.finalizeProtocol(actor(req), req.params.id))
   .on('POST', '/api/v1/meetings/:id/cancel', (req) => meetings.cancel(actor(req), req.params.id))
   .on('PUT', '/api/v1/meetings/:id/agenda', (req) => meetings.setAgenda(actor(req), req.params.id, req.body?.items))
-  .on('PUT', '/api/v1/meetings/:id/presence/me', (req) => meetings.checkIn(actor(req), req.params.id, req.body?.mode))
-  .on('PUT', '/api/v1/meetings/:id/presence', (req) => meetings.setPresenceMany(actor(req), req.params.id, req.body?.memberIds, req.body?.mode))
+  .on('PUT', '/api/v1/meetings/:id/presence/me', (req) => meetings.checkIn(actor(req), req.params.id))
+  .on('PUT', '/api/v1/meetings/:id/presence', (req) => meetings.setPresenceMany(actor(req), req.params.id, req.body?.memberIds, req.body?.present))
   .on('POST', '/api/v1/meetings/:id/protocol/approve', (req) => meetings.approveProtocol(actor(req), req.params.id))
   .on('POST', '/api/v1/meetings/:id/protocol-document', (req) => meetings.generateProtocol(actor(req), req.params.id))
   .on('PATCH', '/api/v1/resolutions/:id', (req) => meetings.updateResolution(actor(req), req.params.id, req.body ?? {}))
@@ -1255,16 +1265,17 @@ mockServer
   .on('GET', '/api/v1/resolutions/all', (req) => meetings.allResolutions(actor(req), req.query.get('year')))
   .on('GET', '/api/v1/resolutions/:id', (req) => meetings.getResolution(actor(req), req.params.id))
   .on('DELETE', '/api/v1/resolutions/:id', (req) => meetings.deleteResolution(actor(req), req.params.id))
-  .on('POST', '/api/v1/resolutions/:id/open', (req) => meetings.openResolution(actor(req), req.params.id))
+  .on('POST', '/api/v1/resolutions/:id/open', (req) => meetings.openResolution(actor(req), req.params.id, req.body?.mode ?? null))
   .on('POST', '/api/v1/resolutions/:id/close', (req) => meetings.closeResolution(actor(req), req.params.id))
   .on('PUT', '/api/v1/resolutions/:id/deadline', (req) => meetings.extendDeadline(actor(req), req.params.id, req.body?.deadline))
   .on('POST', '/api/v1/resolutions/:id/vote', (req) => meetings.vote(actor(req), req.params.id, req.body?.choice))
   .on('POST', '/api/v1/resolutions/:id/recorded-vote', (req) => meetings.recordVote(actor(req), req.params.id, req.body?.memberId, req.body?.choice))
   .on('POST', '/api/v1/resolutions/:id/analog-votes', (req) => meetings.analogVotes(actor(req), req.params.id, req.body ?? {}))
+  .on('POST', '/api/v1/resolutions/:id/hand-result', (req) => meetings.analogVotes(actor(req), req.params.id, req.body ?? {}, true))
   .on('POST', '/api/v1/meetings/:id/invitation-document', (req) => meetings.generateInvitation(actor(req), req.params.id))
   .on('PUT', '/api/v1/resolutions/:id/links', (req) => meetings.setResolutionLinks(actor(req), req.params.id, req.body?.refs))
   .on('PUT', '/api/v1/resolutions/:id/assignees', (req) => meetings.setResolutionAssignees(actor(req), req.params.id, req.body ?? {}))
   .on('PUT', '/api/v1/meetings/:id/links', (req) => meetings.setLinks(actor(req), req.params.id, req.body?.refs))
   .on('PUT', '/api/v1/meetings/:id/presence/:memberId', (req) =>
-    meetings.setPresence(actor(req), req.params.id, req.params.memberId, req.body?.mode),
+    meetings.setPresence(actor(req), req.params.id, req.params.memberId, req.body?.present),
   );

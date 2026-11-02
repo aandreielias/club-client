@@ -77,18 +77,18 @@ describe('mock meetings', () => {
     expect(() => meetings.invite(member('vorstand'), late.id)).toThrow(expect.objectContaining({ code: 'meeting.notice-too-short' }));
 
     const mv = meetings.create(member('vorstand'), body(20));
-    expect(() => meetings.setPresence(member('vorstand'), mv.id, 'admin', 'APP')).toThrow(expect.objectContaining({ code: 'meeting.not-invited' }));
+    expect(() => meetings.setPresence(member('vorstand'), mv.id, 'admin', true)).toThrow(expect.objectContaining({ code: 'meeting.not-invited' }));
     meetings.invite(member('vorstand'), mv.id);
     // extraordinary and honorary members vote; ordinary ones do not
     const electorate = meetings.get(member('vorstand'), mv.id).electorate.map((p) => p.memberId);
     expect(electorate).toHaveLength(12);
     expect(electorate).toContain('ehren');
     expect(electorate).not.toContain('spielerin');
-    expect(() => meetings.setPresence(member('vorstand'), mv.id, 'spielerin', 'APP')).toThrow(expect.objectContaining({ code: 'meeting.not-voter' }));
+    expect(() => meetings.setPresence(member('vorstand'), mv.id, 'spielerin', true)).toThrow(expect.objectContaining({ code: 'meeting.not-voter' }));
     for (const id of ['vorstand', 'kassier', 'schrift', 'beisitz', 'beisitz2']) {
-      expect(meetings.setPresence(member('vorstand'), mv.id, id, 'APP').quorate).toBe(false);
+      expect(meetings.setPresence(member('vorstand'), mv.id, id, true).quorate).toBe(false);
     }
-    expect(meetings.setPresence(member('vorstand'), mv.id, 'trainer', 'ANALOG').quorate).toBe(true); // 6 of 12
+    expect(meetings.setPresence(member('vorstand'), mv.id, 'trainer', true).quorate).toBe(true); // 6 of 12
 
     expect(() => meetings.get(member('gast'), mv.id)).toThrow(expect.objectContaining({ code: 'meeting.not-found' }));
     expect(meetings.get(member('helfer'), mv.id).canManage).toBe(false);
@@ -99,27 +99,46 @@ describe('mock meetings', () => {
 });
 
 describe('mock resolutions', () => {
-  it('count app votes and room sums, secret until closed', () => {
+  it('vote secretly in the app, only those present, secret until closed', () => {
     const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(15), endsAt: inDays(15.1) });
     meetings.invite(member('vorstand'), mv.id);
-    for (const id of ['vorstand', 'kassier', 'schrift', 'beisitz', 'beisitz2']) meetings.setPresence(member('vorstand'), mv.id, id, 'APP');
-    meetings.setPresence(member('vorstand'), mv.id, 'trainer', 'ANALOG');
+    for (const id of ['vorstand', 'kassier', 'schrift', 'beisitz', 'beisitz2', 'trainer']) meetings.setPresence(member('vorstand'), mv.id, id, true);
     const draft = meetings.createResolution(member('vorstand'), mv.id, { title: 'Statutenänderung', majority: 'TWO_THIRDS' });
-    expect(() => meetings.openResolution(member('vorstand'), draft.id)).toThrow(expect.objectContaining({ code: 'resolution.meeting-not-open' }));
+    expect(() => meetings.openResolution(member('vorstand'), draft.id, 'APP')).toThrow(
+      expect.objectContaining({ code: 'resolution.meeting-not-open' }),
+    );
     meetings.open(member('vorstand'), mv.id);
-    expect(meetings.openResolution(member('vorstand'), draft.id).analogPresent).toBe(1);
+    expect(() => meetings.openResolution(member('vorstand'), draft.id)).toThrow(expect.objectContaining({ code: 'resolution.vote-mode-missing' }));
+    expect(meetings.openResolution(member('vorstand'), draft.id, 'APP')).toMatchObject({ voteMode: 'APP', presentVoters: 6 });
 
-    expect(() => meetings.vote(member('trainer'), draft.id, 'YES')).toThrow(expect.objectContaining({ code: 'resolution.vote-analog' }));
+    expect(() => meetings.vote(member('ehren'), draft.id, 'YES')).toThrow(expect.objectContaining({ code: 'resolution.not-present' }));
     const voted = meetings.vote(member('vorstand'), draft.id, 'YES');
     expect(voted).toMatchObject({ voted: true, ballots: 1, yes: null });
     expect(() => meetings.vote(member('vorstand'), draft.id, 'NO')).toThrow(expect.objectContaining({ code: 'resolution.already-voted' }));
-    expect(() => meetings.analogVotes(member('vorstand'), draft.id, { yes: 1, no: 1, abstain: 0 })).toThrow(
-      expect.objectContaining({ code: 'resolution.analog-exceeds-present' }),
+    expect(() => meetings.analogVotes(member('vorstand'), draft.id, { yes: 1, no: 0, abstain: 0 })).toThrow(
+      expect.objectContaining({ code: 'resolution.vote-in-app' }),
     );
-    meetings.analogVotes(member('vorstand'), draft.id, { yes: 0, no: 1, abstain: 0 });
+    meetings.vote(member('kassier'), draft.id, 'NO');
     expect(() => meetings.close(member('vorstand'), mv.id, null)).toThrow(expect.objectContaining({ code: 'meeting.votes-open' }));
     // 1:1 misses two thirds
-    expect(meetings.closeResolution(member('vorstand'), draft.id)).toMatchObject({ result: 'FAILED', yes: 1, analogNo: 1 });
+    expect(meetings.closeResolution(member('vorstand'), draft.id)).toMatchObject({ result: 'FAILED', yes: 1, no: 1 });
+  });
+
+  it('vote by show of hands: counts at most those present, "Einstimmig" closes at once', () => {
+    const mv = meetings.create(member('vorstand'), { kind: 'SIMPLE_BOARD', title: 'VS', startsAt: inDays(15), endsAt: inDays(15.1) });
+    meetings.invite(member('vorstand'), mv.id);
+    for (const id of ['vorstand', 'kassier', 'schrift']) meetings.setPresence(member('vorstand'), mv.id, id, true);
+    meetings.open(member('vorstand'), mv.id);
+    const draft = meetings.createResolution(member('vorstand'), mv.id, { title: 'Netze' });
+    meetings.openResolution(member('vorstand'), draft.id, 'HAND');
+    expect(() => meetings.vote(member('kassier'), draft.id, 'YES')).toThrow(expect.objectContaining({ code: 'resolution.vote-by-hand' }));
+    expect(() => meetings.closeResolution(member('vorstand'), draft.id)).toThrow(expect.objectContaining({ code: 'resolution.analog-missing' }));
+    expect(() => meetings.analogVotes(member('vorstand'), draft.id, { yes: 4, no: 0, abstain: 0 })).toThrow(
+      expect.objectContaining({ code: 'resolution.analog-exceeds-present' }),
+    );
+    expect(() => meetings.setPresence(member('vorstand'), mv.id, 'beisitz', true)).toThrow(expect.objectContaining({ code: 'meeting.vote-open' }));
+    const closed = meetings.analogVotes(member('vorstand'), draft.id, { yes: 3, no: 0, abstain: 0 }, true);
+    expect(closed).toMatchObject({ status: 'CLOSED', result: 'PASSED', voteMode: 'HAND', analogYes: 3 });
   });
 
   it('run circular votes among the board with written votes', () => {
@@ -219,10 +238,10 @@ describe('Beschlüsse and their tasks', () => {
       { title: 'Beitrag', resolution: true, motion: 'Plus 10 €.' },
     ]);
 
-    for (const id of ['vorstand', 'kassier', 'schrift', 'beisitz', 'beisitz2', 'admin']) meetings.setPresence(member('vorstand'), mv.id, id, 'APP');
+    for (const id of ['vorstand', 'kassier', 'schrift', 'beisitz', 'beisitz2', 'admin']) meetings.setPresence(member('vorstand'), mv.id, id, true);
     meetings.open(member('vorstand'), mv.id);
     for (const r of [lena, beitrag]) {
-      meetings.openResolution(member('vorstand'), r);
+      meetings.openResolution(member('vorstand'), r, 'APP');
       for (const id of ['vorstand', 'kassier', 'schrift']) meetings.vote(member(id), r, r === lena || id === 'vorstand' ? 'YES' : 'NO');
     }
     const passed = meetings.closeResolution(member('vorstand'), lena);
@@ -236,7 +255,7 @@ describe('Beschlüsse and their tasks', () => {
     expect(() => meetings.setAgenda(member('vorstand'), mv.id, [{ title: 'Nur das' }])).toThrow(
       expect.objectContaining({ code: 'meeting.agenda-motion-voted' }),
     );
-    expect(() => meetings.setPresence(member('vorstand'), mv.id, 'spielerin', 'APP')).toThrow(expect.objectContaining({ code: 'meeting.not-voter' }));
+    expect(() => meetings.setPresence(member('vorstand'), mv.id, 'spielerin', true)).toThrow(expect.objectContaining({ code: 'meeting.not-voter' }));
 
     const linked = meetings.setResolutionLinks(member('vorstand'), lena, [
       { kind: 'MEMBER', id: 'spielerin' },
@@ -336,13 +355,10 @@ describe('deadlines as tasks', () => {
 });
 
 describe('mock online meetings', () => {
-  it('shows the link of online kinds and lets online members vote in the app', () => {
+  it('shows the link of online kinds; who joins by video is Anwesend and votes in the app', () => {
     const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(16), endsAt: inDays(16.1) });
     expect(mv).toMatchObject({ online: false, videoUrl: null });
     meetings.invite(member('vorstand'), mv.id);
-    expect(() => meetings.setPresence(member('vorstand'), mv.id, 'kassier', 'ONLINE')).toThrow(
-      expect.objectContaining({ code: 'meeting.not-online' }),
-    );
     // The kind turns online with a standing link: its meetings show it.
     const assembly = meetings.types.data.find((t) => t.key === 'ASSEMBLY')!;
     Object.assign(assembly, { online: true, videoUrl: 'https://meet.example/mv' });
@@ -350,11 +366,11 @@ describe('mock online meetings', () => {
       const online = meetings.get(member('vorstand'), mv.id);
       expect(online).toMatchObject({ online: true, videoUrl: 'https://meet.example/mv' });
       expect(meetings.update(member('vorstand'), mv.id, { videoUrl: 'https://meet.example/heute' }).videoUrl).toBe('https://meet.example/heute');
-      meetings.setPresence(member('vorstand'), mv.id, 'kassier', 'ONLINE');
-      for (const p of online.electorate.filter((e) => e.memberId !== 'kassier')) meetings.setPresence(member('vorstand'), mv.id, p.memberId, 'APP');
+      meetings.setPresence(member('vorstand'), mv.id, 'kassier', true);
+      for (const p of online.electorate.filter((e) => e.memberId !== 'kassier')) meetings.setPresence(member('vorstand'), mv.id, p.memberId, true);
       meetings.open(member('vorstand'), mv.id);
       const draft = meetings.createResolution(member('vorstand'), mv.id, { title: 'Online', majority: 'SIMPLE' });
-      meetings.openResolution(member('vorstand'), draft.id);
+      meetings.openResolution(member('vorstand'), draft.id, 'APP');
       expect(meetings.vote(member('kassier'), draft.id, 'YES')).toMatchObject({ voted: true });
       // Without a standing link each meeting needs its own.
       assembly.videoUrl = null;

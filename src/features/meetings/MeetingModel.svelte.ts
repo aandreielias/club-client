@@ -2,7 +2,7 @@ import { Action } from '../../lib/state/Action.svelte';
 import { Resource } from '../../lib/state/Resource.svelte';
 import type { MeetingsApi } from './MeetingsApi';
 import type { RefKind } from '../../lib/records/refs';
-import type { AgendaItemInput, Meeting, MeetingPatch, PresenceMode } from './model';
+import type { AgendaItemInput, Meeting, MeetingPatch } from './model';
 
 /** One meeting and the writes of whoever runs it; every write answers with the whole meeting. */
 export class MeetingModel {
@@ -43,12 +43,12 @@ export class MeetingModel {
     return this.write(() => this.api.setAgenda(this.id, items));
   }
 
-  setPresenceMany(memberIds: readonly string[], mode: PresenceMode | null): Promise<boolean> {
-    return this.write(() => this.api.setPresenceMany(this.id, memberIds, mode));
+  setPresenceMany(memberIds: readonly string[], present: boolean): Promise<boolean> {
+    return this.write(() => this.api.setPresenceMany(this.id, memberIds, present));
   }
 
-  checkIn(mode: 'APP' | 'ONLINE'): Promise<boolean> {
-    return this.write(() => this.api.checkIn(this.id, mode));
+  checkIn(): Promise<boolean> {
+    return this.write(() => this.api.checkIn(this.id));
   }
 
   approveProtocol(): Promise<boolean> {
@@ -75,8 +75,8 @@ export class MeetingModel {
     return this.write(() => this.api.update(this.id, { protocol }));
   }
 
-  setPresence(memberId: string, mode: PresenceMode | null): Promise<boolean> {
-    return this.write(() => this.api.setPresence(this.id, memberId, mode));
+  setPresence(memberId: string, present: boolean): Promise<boolean> {
+    return this.write(() => this.api.setPresence(this.id, memberId, present));
   }
 
   generateInvitation(): Promise<boolean> {

@@ -10,7 +10,6 @@
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
-  import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import Detail from '../../ui/Detail.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Tag from '../../ui/Tag.svelte';
@@ -20,7 +19,7 @@
   import MeetingLinks from './MeetingLinks.svelte';
   import RecordLink from '../../ui/RecordLink.svelte';
   import { permissions } from '../../lib/container';
-  import { isAssembly, quorumText, STATUS_LABELS, STATUS_TONES, type Meeting, type PresenceMode } from './model';
+  import { isAssembly, quorumText, STATUS_LABELS, STATUS_TONES, type Meeting } from './model';
   import { meetingsApi, meetingTypes } from './services';
 
   /** One meeting: date, Tagesordnung with its Beschlüsse (voted right there), invitation, presence with the quorum, protocol. Window and page. */
@@ -39,15 +38,6 @@
     changed: () => void model.load(),
   });
 
-  type Attendance = PresenceMode | 'NONE';
-  const ATTENDANCE: { value: Attendance; label: string; hint: string }[] = [
-    { value: 'NONE', label: 'Fehlt', hint: 'Nicht da' },
-    { value: 'APP', label: 'App', hint: 'Im Raum, stimmt in der App ab' },
-    { value: 'ONLINE', label: 'Online', hint: 'Per Video dabei, stimmt in der App ab' },
-    { value: 'ANALOG', label: 'Anwesend', hint: 'Im Raum ohne App, stimmt über die Schriftführung ab' },
-  ];
-  /** Online presence only where members may join online. */
-  const attendanceFor = (m: Meeting) => ATTENDANCE.filter((a) => a.value !== 'ONLINE' || m.online);
   let editingPlace = $state(false);
   let editingDraft = $state(false);
   let editingAgenda = $state(false);
@@ -57,16 +47,15 @@
   void resolutions.load();
   const me = session.member.id;
 
-  /** Present members without a mode yet are set present in the room at once. */
+  /** Everyone not yet marked is set Anwesend at once (then untick who is missing). */
   async function allPresent(m: Meeting) {
-    const missing = m.electorate.filter((p) => !m.present.some((x) => x.memberId === p.memberId)).map((p) => p.memberId);
-    if (missing.length && (await model.setPresenceMany(missing, 'ANALOG'))) view.notify(`${missing.length} als anwesend eingetragen.`);
+    const missing = m.electorate.filter((p) => !isPresent(m, p.memberId)).map((p) => p.memberId);
+    if (missing.length && (await model.setPresenceMany(missing, true))) view.notify(`${missing.length} als anwesend eingetragen.`);
   }
 
-  /** The attendance list (who was invited, how they were there) as a CSV file. */
+  /** The attendance list (who was invited, Anwesend or Fehlt) as a CSV file. */
   function attendanceCsv(m: Meeting) {
-    const label = (id: string) => ATTENDANCE.find((a) => a.value === attendance(m, id))?.label ?? '';
-    const rows = [['Name', 'Anwesenheit'], ...m.electorate.map((p) => [p.name, label(p.memberId)])];
+    const rows = [['Name', 'Anwesenheit'], ...m.electorate.map((p) => [p.name, isPresent(m, p.memberId) ? 'Anwesend' : 'Fehlt'])];
     const csv = rows.map((r) => r.map((c) => `"${c.replaceAll('"', '""')}"`).join(';')).join('\r\n');
     BrowserFile.save(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }), `anwesenheit-${m.title}.csv`);
   }
@@ -82,7 +71,7 @@
     }
   });
 
-  const attendance = (m: Meeting, memberId: string): Attendance => m.present.find((p) => p.memberId === memberId)?.mode ?? 'NONE';
+  const isPresent = (m: Meeting, memberId: string): boolean => m.present.some((p) => p.memberId === memberId);
   const presentVoters = (m: Meeting) => m.present.filter((p) => m.electorate.some((e) => e.memberId === p.memberId)).length;
   const late = (m: Meeting) => m.latestInvite < new Date().toISOString();
 
@@ -246,8 +235,7 @@
       {#if m.status === 'OPEN' && meetingTypes.get(m.kind)?.selfCheckIn !== false && m.electorate.some((p) => p.memberId === me) && !m.present.some((p) => p.memberId === me)}
         <div class="row check-in">
           <span>Bist du dabei?</span>
-          <Button variant="primary" busy={model.action.busy} onclick={() => void model.checkIn('APP')}>Ich bin da</Button>
-          {#if m.online}<Button busy={model.action.busy} onclick={() => void model.checkIn('ONLINE')}>Online dabei</Button>{/if}
+          <Button variant="primary" busy={model.action.busy} onclick={() => void model.checkIn()}>Ich bin da</Button>
         </div>
       {/if}
 
@@ -266,8 +254,8 @@
             <input type="search" bind:value={presenceFilter} placeholder="Name suchen" aria-label="Stimmberechtigte durchsuchen" class="filter" />
           {/if}
           {#if m.canManage && m.status !== 'CLOSED'}
-            <Button size="sm" busy={model.action.busy} tooltip="Alle ohne Eintrag als anwesend (ohne App) eintragen" onclick={() => allPresent(m)}
-              >Alle übrigen anwesend</Button
+            <Button size="sm" busy={model.action.busy} tooltip="Alle als anwesend eintragen; danach abhaken, wer fehlt" onclick={() => allPresent(m)}
+              >Alle anwesend</Button
             >
           {/if}
           <Button size="sm" variant="ghost" icon="download" tooltip="Anwesenheitsliste als CSV-Datei" onclick={() => attendanceCsv(m)}>Liste</Button>
@@ -279,16 +267,17 @@
             <li>
               <RecordLink kind="member" id={person.memberId} allowed={permissions.canSeeMember(person.memberId)}>{person.name}</RecordLink>
               {#if m.canManage && m.status !== 'CLOSED'}
-                <ChoiceGroup
-                  name="presence-{person.memberId}"
-                  label="Anwesenheit von {person.name}"
-                  size="sm"
-                  options={attendanceFor(m)}
-                  disabled={model.action.busy}
-                  bind:value={() => attendance(m, person.memberId), (v) => v && void model.setPresence(person.memberId, v === 'NONE' ? null : v)}
-                />
+                <label class="check">
+                  <input
+                    type="checkbox"
+                    checked={isPresent(m, person.memberId)}
+                    disabled={model.action.busy}
+                    onchange={(e) => void model.setPresence(person.memberId, e.currentTarget.checked)}
+                  />
+                  Anwesend
+                </label>
               {:else}
-                <span class="muted small">{ATTENDANCE.find((a) => a.value === attendance(m, person.memberId))?.label}</span>
+                <span class="small" class:muted={!isPresent(m, person.memberId)}>{isPresent(m, person.memberId) ? 'Anwesend' : 'Fehlt'}</span>
               {/if}
             </li>
           {:else}

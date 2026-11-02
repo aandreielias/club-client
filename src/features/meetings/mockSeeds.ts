@@ -8,8 +8,8 @@ import {
   type Meeting,
   type MeetingStep,
   type MeetingType,
-  type PresenceMode,
   type Resolution,
+  type VoteMode,
 } from './model';
 
 const DAY = 86_400_000;
@@ -182,7 +182,8 @@ export type StoredMeeting = Omit<
   Meeting,
   'online' | 'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage' | 'protocolFinalAt' | 'agendaItems' | 'approvals'
 > & {
-  presence: Record<string, PresenceMode>;
+  /** Voters marked Anwesend (older stored data carries a mode string: still truthy). */
+  presence: Record<string, true>;
   frozenElectorate?: string[];
   createdBy?: string;
   protocolFinalAt?: string | null;
@@ -211,6 +212,8 @@ export type StoredResolution = Pick<
   no: number;
   abstain: number;
   ballots: string[];
+  /** server: meetings_resolution.vote_mode */
+  voteMode?: VoteMode | null;
   assigneeIds?: string[];
   /** server: meetings_resolution.implement_due */
   implementDue?: string | null;
@@ -246,7 +249,7 @@ export function seedMeetings(): StoredMeeting[] {
       invitedAt: ago(20 * 24 * 60),
       openedAt: ago(10),
       protocol: '1. Begrüßung durch den Vorsitz, 8 von 12 Stimmberechtigten anwesend.',
-      presence: { vorstand: 'APP', kassier: 'APP', schrift: 'APP', beisitz: 'APP', beisitz2: 'APP', admin: 'APP', eltern: 'ANALOG', ehren: 'ANALOG' },
+      presence: { vorstand: true, kassier: true, schrift: true, beisitz: true, beisitz2: true, admin: true, eltern: true, ehren: true },
       links: [
         { kind: 'MEMBER', id: 'kassier', title: 'Karin Kassier', parentId: null },
         { kind: 'MEETING', id: 'mt-past', title: 'Ordentliche Vorstandssitzung', parentId: null },
@@ -267,7 +270,7 @@ export function seedMeetings(): StoredMeeting[] {
       openedAt: at(-40, 17),
       closedAt: at(-40, 19),
       protocol: '1. Jahresvoranschlag besprochen und angenommen.\n2. Hallenmiete: siehe Beschluss.',
-      presence: { vorstand: 'APP', kassier: 'APP', schrift: 'APP', beisitz: 'APP', beisitz2: 'ANALOG' },
+      presence: { vorstand: true, kassier: true, schrift: true, beisitz: true, beisitz2: true },
     },
     {
       ...base,
@@ -310,6 +313,7 @@ export function seedResolutions(): StoredResolution[] {
       text: 'Der Vorstand schlägt 60 € pro Jahr vor (bisher 50 €).',
       majority: 'SIMPLE',
       status: 'OPEN',
+      voteMode: 'APP',
       voters: 12,
       openedAt: iso(now - 5 * 60_000),
       yes: 1,
@@ -342,12 +346,13 @@ export function seedResolutions(): StoredResolution[] {
       openedAt: iso(now - 40 * DAY),
       closedAt: iso(now - 40 * DAY + 600_000),
       result: 'PASSED',
-      analogYes: 1,
+      voteMode: 'HAND',
+      analogYes: 4,
       analogNo: 0,
-      analogAbstain: 0,
-      yes: 3,
+      analogAbstain: 1,
+      yes: 0,
       no: 0,
-      abstain: 1,
+      abstain: 0,
       ballots: ['vorstand', 'kassier', 'schrift', 'beisitz'],
     },
     {

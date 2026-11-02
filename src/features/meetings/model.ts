@@ -7,9 +7,8 @@ import type { OfficeKind } from '../members/MembersApi';
 /** Key of a club-defined meeting type (server: meetings_type); seeded with ASSEMBLY, BOARD, … */
 export type MeetingKind = string;
 export type MeetingStatus = 'DRAFT' | 'INVITED' | 'OPEN' | 'CLOSED' | 'CANCELLED';
-/** APP votes in the app; ANALOG is there without the app (in the room or on video). */
-/** APP: votes in the app; ANALOG: votes through the minute taker; ONLINE: joins by video, votes in the app. */
-export type PresenceMode = 'APP' | 'ANALOG' | 'ONLINE';
+/** server: MeetingsApi.VoteMode — HAND: show of hands, who runs it enters the counts; APP: secretly in the app. */
+export type VoteMode = 'HAND' | 'APP';
 
 export const STATUS_LABELS: Readonly<Record<MeetingStatus, string>> = {
   DRAFT: 'Entwurf',
@@ -155,10 +154,6 @@ export interface Person {
   name: string;
 }
 
-export interface Presence extends Person {
-  mode: PresenceMode;
-}
-
 export interface Meeting {
   id: string;
   kind: MeetingKind;
@@ -186,7 +181,8 @@ export interface Meeting {
   latestInvite: string;
   /** Who votes and counts for the quorum. */
   electorate: Person[];
-  present: Presence[];
+  /** Voters marked Anwesend. */
+  present: Person[];
   quorate: boolean;
   /** The viewer may edit, invite, take presence, open and close. */
   canManage: boolean;
@@ -324,8 +320,10 @@ export interface Resolution {
   analogNo: number | null;
   analogAbstain: number | null;
   analogEntered: boolean;
-  /** Members present without the app: the most the room may add. */
-  analogPresent: number;
+  /** How a meeting vote runs; null while a draft, APP for circular votes. */
+  voteMode: VoteMode | null;
+  /** Voters present now: the most a show of hands may count. */
+  presentVoters: number;
   result: Result | null;
   openedAt: string | null;
   closedAt: string | null;

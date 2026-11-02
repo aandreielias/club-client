@@ -837,6 +837,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/resolutions/{id}/hand-result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["handResult"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/resolutions/{id}/close": {
         parameters: {
             query?: never;
@@ -2762,8 +2778,10 @@ export interface components {
             /** Format: int32 */
             analogAbstain: number;
             analogEntered: boolean;
+            /** @enum {string} */
+            voteMode: "HAND" | "APP";
             /** Format: int32 */
-            analogPresent: number;
+            presentVoters: number;
             /** @enum {string} */
             result: "PASSED" | "FAILED" | "NOT_QUORATE";
             /** Format: date-time */
@@ -2853,8 +2871,7 @@ export interface components {
         };
         "at.clubserver.gateway.rest.MeetingsController.PresenceManyBody": {
             memberIds: string[];
-            /** @enum {string} */
-            mode: "APP" | "ANALOG" | "ONLINE";
+            present: boolean;
         };
         "at.clubserver.meetings.api.MeetingsApi.AgendaItemDto": {
             /** Format: uuid */
@@ -2898,7 +2915,7 @@ export interface components {
             /** Format: date-time */
             latestInvite: string;
             electorate: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"][];
-            present: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Presence"][];
+            present: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"][];
             quorate: boolean;
             canManage: boolean;
             links: components["schemas"]["at.clubserver.platform.RecordRefs.RefDto"][];
@@ -2907,20 +2924,8 @@ export interface components {
             agendaItems: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.AgendaItemDto"][];
             approvals: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Approval"][];
         };
-        "at.clubserver.meetings.api.MeetingsApi.Presence": {
-            /** Format: uuid */
-            memberId: string;
-            name: string;
-            /** @enum {string} */
-            mode: "APP" | "ANALOG" | "ONLINE";
-        };
         "at.clubserver.gateway.rest.MeetingsController.PresenceBody": {
-            /** @enum {string} */
-            mode: "APP" | "ANALOG" | "ONLINE";
-        };
-        "at.clubserver.gateway.rest.MeetingsController.CheckInBody": {
-            /** @enum {string} */
-            mode: "APP" | "ANALOG" | "ONLINE";
+            present: boolean;
         };
         "at.clubserver.gateway.rest.MeetingsController.MeetingLinksBody": {
             refs: components["schemas"]["at.clubserver.platform.RecordRefs.RefInput"][];
@@ -3438,6 +3443,10 @@ export interface components {
             memberId: string;
             /** @enum {string} */
             choice: "YES" | "NO" | "ABSTAIN";
+        };
+        "at.clubserver.gateway.rest.ResolutionsController.OpenBody": {
+            /** @enum {string} */
+            mode: "HAND" | "APP";
         };
         "at.clubserver.gateway.rest.ResolutionsController.AnalogBody": {
             /** Format: int32 */
@@ -4848,11 +4857,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["at.clubserver.gateway.rest.MeetingsController.CheckInBody"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {
@@ -6036,7 +6041,37 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.ResolutionsController.OpenBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.ResolutionDto"];
+                };
+            };
+        };
+    };
+    handResult: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.ResolutionsController.AnalogBody"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {

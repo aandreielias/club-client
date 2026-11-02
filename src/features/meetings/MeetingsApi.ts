@@ -12,9 +12,9 @@ import type {
   MeetingSummary,
   NewMeeting,
   NewResolution,
-  PresenceMode,
   Resolution,
   ResolutionRules,
+  VoteMode,
 } from './model';
 
 /** Typed access to the meetings endpoints. */
@@ -89,13 +89,13 @@ export class MeetingsApi {
     return this.api.put<Meeting>(`${this.path(id)}/agenda`, { items });
   }
 
-  setPresenceMany(id: string, memberIds: readonly string[], mode: PresenceMode | null): Promise<Meeting> {
-    return this.api.put<Meeting>(`${this.path(id)}/presence`, { memberIds, mode });
+  setPresenceMany(id: string, memberIds: readonly string[], present: boolean): Promise<Meeting> {
+    return this.api.put<Meeting>(`${this.path(id)}/presence`, { memberIds, present });
   }
 
   /** The voter themselves, while the meeting is open. */
-  checkIn(id: string, mode: 'APP' | 'ONLINE'): Promise<Meeting> {
-    return this.api.put<Meeting>(`${this.path(id)}/presence/me`, { mode });
+  checkIn(id: string): Promise<Meeting> {
+    return this.api.put<Meeting>(`${this.path(id)}/presence/me`);
   }
 
   approveProtocol(id: string): Promise<Meeting> {
@@ -136,9 +136,8 @@ export class MeetingsApi {
     return this.api.put<Meeting>(`${this.path(id)}/links`, { refs: refs.map(({ kind, id: refId }) => ({ kind, id: refId })) });
   }
 
-  /** null = not there. */
-  setPresence(id: string, memberId: string, mode: PresenceMode | null): Promise<Meeting> {
-    return this.api.put<Meeting>(`${this.path(id)}/presence/${encodeURIComponent(memberId)}`, { mode });
+  setPresence(id: string, memberId: string, present: boolean): Promise<Meeting> {
+    return this.api.put<Meeting>(`${this.path(id)}/presence/${encodeURIComponent(memberId)}`, { present });
   }
 
   // --- resolutions ---
@@ -185,8 +184,9 @@ export class MeetingsApi {
     return this.api.delete(this.resolutionPath(id));
   }
 
-  openResolution(id: string): Promise<Resolution> {
-    return this.api.post<Resolution>(`${this.resolutionPath(id)}/open`);
+  /** A meeting vote by show of hands or secretly in the app; circular votes need no mode. */
+  openResolution(id: string, mode: VoteMode | null = null): Promise<Resolution> {
+    return this.api.post<Resolution>(`${this.resolutionPath(id)}/open`, mode ? { mode } : undefined);
   }
 
   /** A circular vote runs longer (server: ResolutionHandlers.extend). */
@@ -210,6 +210,11 @@ export class MeetingsApi {
   /** Meetings: the room's sums for members without the app, once. */
   analogVotes(id: string, yes: number, no: number, abstain: number): Promise<Resolution> {
     return this.api.post<Resolution>(`${this.resolutionPath(id)}/analog-votes`, { yes, no, abstain });
+  }
+
+  /** Show of hands: the counts and closing in one step ("Einstimmig", "Ergebnis eintragen"). */
+  handResult(id: string, yes: number, no: number, abstain: number): Promise<Resolution> {
+    return this.api.post<Resolution>(`${this.resolutionPath(id)}/hand-result`, { yes, no, abstain });
   }
 
   private resolutionPath(id: string): string {
