@@ -10,6 +10,7 @@ const member = (extra: Partial<Member> = {}): Member => ({
   id: 'm1',
   email: 'anna@x.at',
   firstName: 'Anna',
+  middleName: null,
   lastName: 'Muster',
   birthDate: '2001-02-03',
   phone: '+43 660 1',
@@ -28,7 +29,7 @@ const member = (extra: Partial<Member> = {}): Member => ({
 describe('member CSV', () => {
   it('round-trips an export into an import', () => {
     const csv = membersToCsv([member()]);
-    expect(csv.startsWith('﻿Vorname;Nachname;E-Mail;')).toBe(true);
+    expect(csv.startsWith('﻿Vorname;Zweiter Vorname;Nachname;E-Mail;')).toBe(true);
     const parsed = parseMemberImport(csv.replace('anna@x.at', 'anna2@x.at'), TODAY, new Set(['anna@x.at']), GRANTABLE);
     expect(parsed.problems).toEqual([]);
     expect(parsed.rows).toEqual([
@@ -37,6 +38,7 @@ describe('member CSV', () => {
         invitation: {
           email: 'anna2@x.at',
           firstName: 'Anna',
+          middleName: null,
           lastName: 'Muster',
           birthDate: '2001-02-03',
           phone: '+43 660 1',
@@ -54,7 +56,7 @@ describe('member CSV', () => {
 
   it('quotes cells and defuses formulas', () => {
     const csv = membersToCsv([member({ lastName: 'A;"B"', firstName: '=CMD()' })]);
-    expect(csv).toContain(`'=CMD();"A;""B""";`);
+    expect(csv).toContain(`'=CMD();;"A;""B""";`);
     expect(parseCsv('a;"x;\n""y""";c\r\n1;2;3', ';')).toEqual([
       ['a', 'x;\n"y"', 'c'],
       ['1', '2', '3'],
@@ -65,10 +67,10 @@ describe('member CSV', () => {
     const csv = [
       'E-Mail,Vorname,Nachname,Geburtsdatum,Rollen',
       'a@x.at,A,One,03.05.2010,Spieler:in',
-      'a@x.at,A,Two,,',
+      'a@x.at,A,Two,03.05.2010,',
       'b@x.at,B,Three,gestern,',
-      'c@x.at,C,Four,,Admin',
-      'not-an-email,D,Five,,',
+      'c@x.at,C,Four,03.05.2010,Admin',
+      'not-an-email,D,Five,03.05.2010,',
       ',,,,',
     ].join('\n');
     const parsed = parseMemberImport(csv, TODAY, new Set(), GRANTABLE);
@@ -78,19 +80,29 @@ describe('member CSV', () => {
     expect(parsed.problems.map((p) => p.line)).toEqual([3, 4, 5, 6]);
     expect(parsed.problems[3].text).toMatch(/^E-Mail:/);
     expect(parseMemberImport('Name;Mail\nx;y', TODAY, new Set(), GRANTABLE).problems).toEqual([
-      { line: 1, text: 'Spalten fehlen: Vorname, Nachname, E-Mail.' },
+      { line: 1, text: 'Spalten fehlen: Vorname, Nachname, E-Mail, Geburtsdatum.' },
     ]);
   });
 
-  it('imports a child without e-mail when a guardian is given', () => {
-    const csv = ['E-Mail;Vorname;Nachname;Erziehungsberechtigte:r', ';Kim;Klein;eltern@x.at', ';Ola;Ohne;'].join('\n');
+  it('needs the private e-mail and the birth date in every line, and reads the middle name', () => {
+    const csv = [
+      'E-Mail;Vorname;Zweiter Vorname;Nachname;Geburtsdatum;Erziehungsberechtigte:r',
+      'kim@x.at;Kim;Maria;Klein;01.02.2012;eltern@x.at',
+      ';Ola;;Ohne;01.02.2012;',
+      'ida@x.at;Ida;;Ohne;;',
+    ].join('\n');
     const parsed = parseMemberImport(csv, TODAY, new Set(), GRANTABLE);
-    expect(parsed.rows.map((r) => [r.invitation.email, r.guardianEmail])).toEqual([[null, 'eltern@x.at']]);
-    expect(parsed.problems).toEqual([{ line: 3, text: expect.stringMatching(/^E-Mail fehlt/) }]);
+    expect(parsed.rows.map((r) => [r.invitation.email, r.invitation.middleName, r.guardianEmail])).toEqual([['kim@x.at', 'Maria', 'eltern@x.at']]);
+    expect(parsed.problems.map((p) => p.line)).toEqual([3, 4]);
   });
 
   it('keeps importing after a failed line', async () => {
-    const parsed = parseMemberImport('Vorname;Nachname;E-Mail;Ehrenmitglied\nA;B;a@x.at;ja\nC;D;c@x.at;nein', TODAY, new Set(), GRANTABLE);
+    const parsed = parseMemberImport(
+      'Vorname;Nachname;E-Mail;Geburtsdatum;Ehrenmitglied\nA;B;a@x.at;2000-01-01;ja\nC;D;c@x.at;2000-01-01;nein',
+      TODAY,
+      new Set(),
+      GRANTABLE,
+    );
     const api = {
       invite: vi.fn().mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce({ id: 'n2' }),
       setMembership: vi.fn(),

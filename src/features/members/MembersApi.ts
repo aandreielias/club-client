@@ -1,12 +1,13 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
 import type { Member, MemberList, MembershipType, Role } from '../../lib/types';
 
+/** The membership application: names, private e-mail (the login) and birth date; the rest is optional. */
 export interface Invitation {
-  /** null: no login; the guardians act for the member. */
-  email: string | null;
+  email: string;
   firstName: string;
+  middleName: string | null;
   lastName: string;
-  birthDate: string | null;
+  birthDate: string;
   phone: string | null;
   photoConsent: boolean;
   /** Optional guardian (e.g. a parent) for a minor, linked right away. */
@@ -138,12 +139,13 @@ export interface Board {
 }
 
 /** Account data a member cannot change alone; admin/board decide on a request. */
-export type ChangeField = 'EMAIL' | 'FIRST_NAME' | 'LAST_NAME' | 'BIRTH_DATE';
+export type ChangeField = 'EMAIL' | 'FIRST_NAME' | 'MIDDLE_NAME' | 'LAST_NAME' | 'BIRTH_DATE';
 export type ChangeStatus = 'OPEN' | 'APPROVED' | 'REJECTED';
 
 export const CHANGE_FIELD_LABELS: Readonly<Record<ChangeField, string>> = {
   EMAIL: 'E-Mail',
   FIRST_NAME: 'Vorname',
+  MIDDLE_NAME: 'Zweiter Vorname',
   LAST_NAME: 'Nachname',
   BIRTH_DATE: 'Geburtsdatum',
 };
@@ -162,7 +164,10 @@ export interface ChangeRequest {
   decidedAt: string | null;
 }
 
-export type ProfilePatch = Partial<Pick<Member, 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'photoConsent'>>;
+export type ProfilePatch = Partial<Pick<Member, 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'photoConsent'>> & {
+  /** '' removes it. */
+  middleName?: string;
+};
 
 /** Typed access to the member administration endpoints. */
 /** A guardian or ward on a member's profile; `canOpen`: the viewer may open that profile too (server: MembersApi.Relative). */

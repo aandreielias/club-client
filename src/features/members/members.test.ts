@@ -13,6 +13,7 @@ const member = (id: string, roles: Role[], extra: Partial<Member> = {}): Member 
   id,
   email: `${id}@x.at`,
   firstName: id,
+  middleName: null,
   lastName: 'Test',
   birthDate: '2000-01-01',
   phone: null,
@@ -37,7 +38,7 @@ function policyFor(roles: Role[]): MemberPolicy {
 describe('InviteForm', () => {
   it('validates e-mail, names and birth date like the server', () => {
     const form = new InviteForm(TODAY);
-    expect(Object.keys(form.errors).sort()).toEqual(['email', 'firstName', 'lastName', 'membershipType']);
+    expect(Object.keys(form.errors).sort()).toEqual(['birthDate', 'email', 'firstName', 'lastName', 'membershipType']);
     form.membershipType = 'ORDINARY'; // chosen on purpose
     form.email = 'jörg@verein.at';
     form.firstName = 'Jörg';
@@ -46,15 +47,16 @@ describe('InviteForm', () => {
     form.email = 'Joerg@Verein.at ';
     form.birthDate = '2030-01-01';
     expect(Object.keys(form.errors)).toEqual(['birthDate']);
-    form.birthDate = '';
+    form.birthDate = '2001-02-03';
     form.phone = 'abc';
     expect(Object.keys(form.errors)).toEqual(['phone']);
     form.phone = ' +43 660 1234567 ';
     expect(form.toInvitation()).toEqual({
       email: 'joerg@verein.at',
       firstName: 'Jörg',
+      middleName: null,
       lastName: 'Muster',
-      birthDate: null,
+      birthDate: '2001-02-03',
       phone: '+43 660 1234567',
       photoConsent: false,
       guardianId: null,
@@ -64,17 +66,20 @@ describe('InviteForm', () => {
   });
 });
 
-describe('InviteForm without login', () => {
-  it('needs no e-mail and sends none', () => {
+describe('InviteForm', () => {
+  it('needs the private e-mail and the birth date; the middle name is optional', () => {
     const form = new InviteForm(TODAY);
     form.firstName = 'Kim';
     form.lastName = 'Klein';
     form.membershipType = 'NONE';
     expect(form.errors.email).toBeDefined();
-    form.withoutLogin = true;
-    form.email = 'ignored@x.at';
+    expect(form.errors.birthDate).toBeDefined();
+    form.email = 'Kim@X.at';
+    form.birthDate = '2010-04-01';
     expect(form.valid).toBe(true);
-    expect(form.toInvitation().email).toBeNull();
+    expect(form.toInvitation()).toMatchObject({ email: 'kim@x.at', middleName: null, birthDate: '2010-04-01' });
+    form.middleName = ' Maria ';
+    expect(form.toInvitation().middleName).toBe('Maria');
   });
 });
 

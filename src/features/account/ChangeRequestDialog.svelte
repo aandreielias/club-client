@@ -18,6 +18,9 @@
 
   const label = $derived(field ? CHANGE_FIELD_LABELS[field] : '');
   const type = $derived(field === 'EMAIL' ? 'email' : field === 'BIRTH_DATE' ? 'date' : 'text');
+  /** server: an empty middle name asks to remove it. */
+  const mayBeEmpty = $derived(field === 'MIDDLE_NAME');
+  const ready = $derived(mayBeEmpty || !!value.trim());
 
   function close() {
     field = null;
@@ -28,7 +31,7 @@
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (field && value.trim() && (await requests.send(field, value, note))) {
+    if (field && ready && (await requests.send(field, value, note))) {
       close();
       onsent();
     }
@@ -38,11 +41,11 @@
 <Dialog open={field !== null} title="{label} ändern lassen" onclose={close}>
   <form class="stack" onsubmit={submit} {@attach autofocus}>
     <p class="muted">Der Vorstand bekommt die Anfrage als Aufgabe. Du wirst benachrichtigt, sobald entschieden ist.</p>
-    <Field label="Neue Angabe: {label}">
+    <Field label="Neue Angabe: {label}" hint={mayBeEmpty ? 'Leer lassen, um ihn zu entfernen.' : undefined}>
       <input
         {type}
         bind:value
-        required
+        required={!mayBeEmpty}
         maxlength={type === 'text' ? settings.members.nameMaxLength : undefined}
         max={type === 'date' ? ZonedClock.addDays(session.clock.today(), -1) : undefined}
       />
@@ -52,7 +55,7 @@
     </Field>
     <ErrorNote error={requests.sendAction.error} />
     <div class="row">
-      <Button type="submit" variant="primary" busy={requests.sendAction.busy} disabled={!value.trim()}>Anfrage senden</Button>
+      <Button type="submit" variant="primary" busy={requests.sendAction.busy} disabled={!ready}>Anfrage senden</Button>
       <Button variant="ghost" onclick={close}>Abbrechen</Button>
     </div>
   </form>

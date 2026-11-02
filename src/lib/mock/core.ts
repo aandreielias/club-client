@@ -51,6 +51,7 @@ function seedMember(
     id,
     email: `${id}@example.at`,
     firstName,
+    middleName: null,
     lastName,
     birthDate,
     phone: null,
@@ -575,13 +576,16 @@ export class MockDirectory {
     const roles = MockDirectory.roles(body.roles);
     if (roles.includes('ADMIN') && !this.hasRole(viewer, ['ADMIN'])) fail(403, 'access.denied');
     if (roles.includes('BOARD')) fail(409, 'member.board-by-office');
-    // server: no e-mail = no login; the guardians act for the member
-    const email = body.email ? MockDirectory.email(body.email) : null;
-    if (email && this.members.data.some((m) => m.email === email)) fail(409, 'member.email-taken');
+    // server: the application needs the private e-mail (the login) and the birth date; tournament guests no birth date
+    if (!body.email) fail(400, 'member.email-required');
+    if (!body.birthDate && !guestOnly(roles)) fail(400, 'member.birth-date-required');
+    const email = MockDirectory.email(body.email);
+    if (this.members.data.some((m) => m.email === email)) fail(409, 'member.email-taken');
     const member: Member = {
       id: crypto.randomUUID(),
       email,
       firstName: MockDirectory.name(body.firstName, 'member.first-name-invalid'),
+      middleName: null,
       lastName: MockDirectory.name(body.lastName, 'member.last-name-invalid'),
       birthDate: null,
       phone: null,
@@ -593,9 +597,14 @@ export class MockDirectory {
       memberSince: body.membershipType ? this.clock.today() : null,
       voter: false,
       eligible: false,
-      login: !!email,
+      login: true,
     };
-    this.applyProfile(member, { birthDate: body.birthDate || undefined, phone: body.phone ?? undefined, photoConsent: body.photoConsent });
+    this.applyProfile(member, {
+      middleName: body.middleName ?? undefined,
+      birthDate: body.birthDate || undefined,
+      phone: body.phone ?? undefined,
+      photoConsent: body.photoConsent,
+    });
     if (body.guardianId != null && !this.members.data.some((m) => m.id === body.guardianId && m.active)) fail(404, 'member.not-found');
     this.members.data.push(member);
     this.saveMembers();
@@ -660,6 +669,7 @@ export class MockDirectory {
     Object.assign(target, {
       email: `geloescht-${target.id}@example.invalid`,
       firstName: 'Gelöschtes',
+      middleName: null,
       lastName: 'Mitglied',
       birthDate: null,
       phone: null,
@@ -908,7 +918,7 @@ export class MockDirectory {
   }
 
   applyProfile(member: Member, patch: Record<string, unknown>): Member {
-    const { firstName, lastName, birthDate, phone, photoConsent } = patch;
+    const { firstName, middleName, lastName, birthDate, phone, photoConsent } = patch;
     if (birthDate !== undefined) {
       if (typeof birthDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate) || isNaN(Date.parse(birthDate))) {
         return fail(400, 'member.birth-date-invalid');
@@ -927,6 +937,8 @@ export class MockDirectory {
     }
     if (firstName !== undefined) member.firstName = MockDirectory.name(firstName, 'member.first-name-invalid');
     if (lastName !== undefined) member.lastName = MockDirectory.name(lastName, 'member.last-name-invalid');
+    // server: Member - optional, an empty one removes it
+    if (typeof middleName === 'string') member.middleName = middleName.trim() ? MockDirectory.name(middleName, 'member.middle-name-invalid') : null;
     if (typeof photoConsent === 'boolean') member.photoConsent = photoConsent;
     this.saveMembers();
     return member;

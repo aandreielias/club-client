@@ -100,7 +100,7 @@
 
 <AsyncView resource={model.member}>
   {#snippet children(member)}
-    <Detail title={editing ? 'Profil bearbeiten' : `${member.firstName} ${member.lastName}`}>
+    <Detail title={editing ? 'Profil bearbeiten' : [member.firstName, member.middleName, member.lastName].filter(Boolean).join(' ')}>
       {#snippet actions()}
         {#if !editing && policy.canEditProfile(member)}<Button onclick={() => (editing = true)}>Profil bearbeiten</Button>{/if}
       {/snippet}
@@ -114,7 +114,7 @@
         <ProfileEditor {member} {model} ondone={() => (editing = false)} />
       {:else}
         <dl class="props">
-          <dt>E-Mail</dt>
+          <dt>Private E-Mail</dt>
           <dd>
             {#if member.email}<a href="mailto:{member.email}">{member.email}</a>{:else}–{/if}
           </dd>

@@ -3,7 +3,7 @@ import { settings } from '../../settings';
 import type { Member, MembershipType, Role } from '../../lib/types';
 import type { Invitation, ProfilePatch } from './MembersApi';
 
-export type MemberField = 'email' | 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'roles' | 'membershipType';
+export type MemberField = 'email' | 'firstName' | 'middleName' | 'lastName' | 'birthDate' | 'phone' | 'roles' | 'membershipType';
 export type MemberFormErrors = Partial<Record<MemberField, string>>;
 
 const limits = settings.members;
@@ -17,8 +17,8 @@ function nameError(value: string): string | undefined {
   return !name || name.length > limits.nameMaxLength ? `1 bis ${limits.nameMaxLength} Zeichen.` : undefined;
 }
 
-function birthDateError(value: string, today: string): string | undefined {
-  if (!value) return undefined;
+function birthDateError(value: string, today: string, required = false): string | undefined {
+  if (!value) return required ? 'Geburtsdatum angeben.' : undefined;
   if (value >= today) return 'Das Datum liegt nicht in der Vergangenheit.';
   if (value < limits.earliestBirthDate) return 'Das Datum ist zu früh.';
   return undefined;
@@ -32,6 +32,7 @@ function phoneError(value: string): string | undefined {
 abstract class MemberFormBase extends FormState<MemberFormErrors> {
   email = $state('');
   firstName = $state('');
+  middleName = $state('');
   lastName = $state('');
   birthDate = $state('');
   phone = $state('');
@@ -46,37 +47,42 @@ abstract class MemberFormBase extends FormState<MemberFormErrors> {
     return false;
   }
 
+  /** The application needs the birth date; a profile edit may leave a hidden or missing one empty. */
+  protected get birthDateRequired(): boolean {
+    return false;
+  }
+
   protected validate(): MemberFormErrors {
     const errors: MemberFormErrors = {};
     const email = this.email.trim();
     if ((email || !this.emailOptional) && (!EMAIL.test(email) || email.includes('ß'))) errors.email = EMAIL_ERROR;
     errors.firstName = nameError(this.firstName);
+    if (this.middleName.trim().length > limits.nameMaxLength) errors.middleName = `Höchstens ${limits.nameMaxLength} Zeichen.`;
     errors.lastName = nameError(this.lastName);
-    errors.birthDate = birthDateError(this.birthDate, this.today);
+    errors.birthDate = birthDateError(this.birthDate, this.today, this.birthDateRequired);
     errors.phone = phoneError(this.phone);
     return Object.fromEntries(Object.entries(errors).filter(([, e]) => e)) as MemberFormErrors;
   }
 }
 
-/** New account from the membership application: e-mail, name, optional birth date, phone, guardian, roles. */
+/** New account from the membership application: names, private e-mail, birth date; phone, guardian, membership, roles. */
 export class InviteForm extends MemberFormBase {
   guardianId = $state('');
   roles = $state<Role[]>(['PLAYER']);
   /** Chosen on purpose: the kind decides vote and eligibility. */
   membershipType = $state<MembershipType | 'NONE' | ''>('');
-  /** No account (a child, someone without e-mail): guardians act for them; an admin invites them later. */
-  withoutLogin = $state(false);
 
-  protected get emailOptional(): boolean {
-    return this.withoutLogin;
+  protected get birthDateRequired(): boolean {
+    return true;
   }
 
   toInvitation(): Invitation {
     return {
-      email: this.withoutLogin ? null : this.email.trim().toLowerCase(),
+      email: this.email.trim().toLowerCase(),
       firstName: this.firstName.trim(),
+      middleName: this.middleName.trim() || null,
       lastName: this.lastName.trim(),
-      birthDate: this.birthDate || null,
+      birthDate: this.birthDate,
       phone: this.phone.trim() || null,
       photoConsent: this.photoConsent,
       guardianId: this.guardianId || null,
@@ -100,6 +106,7 @@ export class ProfileForm extends MemberFormBase {
     super(today);
     this.email = original.email ?? '';
     this.firstName = original.firstName;
+    this.middleName = original.middleName ?? '';
     this.lastName = original.lastName;
     this.birthDate = original.birthDate ?? '';
     this.phone = original.phone ?? '';
@@ -122,6 +129,7 @@ export class ProfileForm extends MemberFormBase {
     const patch: ProfilePatch = {};
     const o = this.original;
     if (this.firstName.trim() !== o.firstName) patch.firstName = this.firstName.trim();
+    if ((this.middleName.trim() || null) !== o.middleName) patch.middleName = this.middleName.trim();
     if (this.lastName.trim() !== o.lastName) patch.lastName = this.lastName.trim();
     if (this.birthDate && this.birthDate !== o.birthDate) patch.birthDate = this.birthDate;
     // '' clears the number; null would mean "unchanged" to the server.

@@ -11,6 +11,7 @@ const me: Me = {
     id: 'm1',
     email: 'c@x.at',
     firstName: 'Clara',
+    middleName: null,
     lastName: 'Coach',
     birthDate: null,
     phone: null,

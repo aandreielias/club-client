@@ -33,6 +33,7 @@ describe('TaskPolicy', () => {
         id: 'parent',
         email: 'p@x.at',
         firstName: 'P',
+        middleName: null,
         lastName: 'P',
         birthDate: null,
         phone: null,

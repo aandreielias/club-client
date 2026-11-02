@@ -10,6 +10,7 @@ import type { Invitation, Membership, MembersApi } from './MembersApi';
 /** Columns of the member CSV; the export writes all, the import reads all but "Status". */
 const HEADER = [
   'Vorname',
+  'Zweiter Vorname',
   'Nachname',
   'E-Mail',
   'Geburtsdatum',
@@ -24,10 +25,11 @@ const HEADER = [
 /** Read by the import only: who the guardian is (their e-mail, a member or a line of the same file) and the teams (names). */
 type ImportOnly = 'Erziehungsberechtigte:r' | 'Teams';
 type Column = (typeof HEADER)[number] | ImportOnly;
-const REQUIRED: readonly Column[] = ['Vorname', 'Nachname', 'E-Mail'];
+const REQUIRED: readonly Column[] = ['Vorname', 'Nachname', 'E-Mail', 'Geburtsdatum'];
 const FIELD_COLUMNS: Readonly<Record<MemberField, Column>> = {
   email: 'E-Mail',
   firstName: 'Vorname',
+  middleName: 'Zweiter Vorname',
   lastName: 'Nachname',
   birthDate: 'Geburtsdatum',
   phone: 'Telefon',
@@ -70,6 +72,7 @@ export function membersToCsv(members: readonly Member[], labels: MembershipLabel
   const lines = members.map((m) =>
     [
       m.firstName,
+      m.middleName ?? '',
       m.lastName,
       m.email ?? '',
       m.birthDate ?? '',
@@ -163,13 +166,9 @@ export function parseMemberImport(
 
     const form = new InviteForm(today);
     form.firstName = get('Vorname');
+    form.middleName = header.includes('Zweiter Vorname') ? get('Zweiter Vorname') : '';
     form.lastName = get('Nachname');
     form.email = get('E-Mail');
-    // Without e-mail (a child): no login, the guardian of the same file or club gets the messages.
-    if (!form.email) {
-      if (!get('Erziehungsberechtigte:r')) return fail('E-Mail fehlt; ohne E-Mail nur mit Erziehungsberechtigter:m (ohne eigenen Login).');
-      form.withoutLogin = true;
-    }
     form.phone = get('Telefon');
     form.photoConsent = get('Fotoeinwilligung').toLowerCase() === 'ja';
 

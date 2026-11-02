@@ -2979,6 +2979,7 @@ export interface components {
             id: string;
             email: string;
             firstName: string;
+            middleName: string;
             lastName: string;
             /** Format: date */
             birthDate: string;
@@ -3645,6 +3646,7 @@ export interface components {
             /** Format: email */
             email: string;
             firstName: string;
+            middleName: string;
             lastName: string;
             /** Format: date */
             birthDate: string;
@@ -3666,7 +3668,7 @@ export interface components {
             memberId: string;
             memberName: string;
             /** @enum {string} */
-            field: "EMAIL" | "FIRST_NAME" | "LAST_NAME" | "BIRTH_DATE";
+            field: "EMAIL" | "FIRST_NAME" | "MIDDLE_NAME" | "LAST_NAME" | "BIRTH_DATE";
             currentValue: string;
             newValue: string;
             note: string;
@@ -3721,7 +3723,7 @@ export interface components {
         };
         "at.clubserver.gateway.rest.MembersController.ChangeRequestBody": {
             /** @enum {string} */
-            field: "EMAIL" | "FIRST_NAME" | "LAST_NAME" | "BIRTH_DATE";
+            field: "EMAIL" | "FIRST_NAME" | "MIDDLE_NAME" | "LAST_NAME" | "BIRTH_DATE";
             value: string;
             note: string;
         };
@@ -4000,6 +4002,7 @@ export interface components {
         };
         "at.clubserver.gateway.rest.MembersController.ProfileBody": {
             firstName: string;
+            middleName: string;
             lastName: string;
             /** Format: date */
             birthDate: string;

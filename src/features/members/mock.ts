@@ -384,15 +384,22 @@ export class MockChangeRequests {
 
   /** Same checks as the change itself, on a copy (server: ChangeRequest.open). */
   private normalized(member: Member, field: ChangeField, value: unknown): string {
+    if (field === 'MIDDLE_NAME' && typeof value === 'string' && !value.trim()) return ''; // server: empty removes it
     if (typeof value !== 'string' || !value.trim()) return fail(400, 'change-request.value-missing');
     if (field === 'EMAIL') return MockDirectory.email(value);
     const copy = this.people.applyProfileCopy(member, { [PROFILE_KEYS[field]]: value.trim() });
-    return String(copy[PROFILE_KEYS[field]]);
+    return String(copy[PROFILE_KEYS[field]] ?? '');
   }
 
   private dto(row: ChangeRequestRow): ChangeRequest {
     const member = this.member(row.memberId);
-    const current = { EMAIL: member.email, FIRST_NAME: member.firstName, LAST_NAME: member.lastName, BIRTH_DATE: member.birthDate }[row.field];
+    const current = {
+      EMAIL: member.email,
+      FIRST_NAME: member.firstName,
+      MIDDLE_NAME: member.middleName,
+      LAST_NAME: member.lastName,
+      BIRTH_DATE: member.birthDate,
+    }[row.field];
     return { ...row, memberName: `${member.firstName} ${member.lastName}`, currentValue: current };
   }
 
@@ -406,8 +413,8 @@ export class MockChangeRequests {
 }
 
 type ChangeRequestRow = Omit<ChangeRequest, 'memberName' | 'currentValue'>;
-const FIELDS: readonly ChangeField[] = ['EMAIL', 'FIRST_NAME', 'LAST_NAME', 'BIRTH_DATE'];
-const PROFILE_KEYS = { FIRST_NAME: 'firstName', LAST_NAME: 'lastName', BIRTH_DATE: 'birthDate', EMAIL: 'email' } as const;
+const FIELDS: readonly ChangeField[] = ['EMAIL', 'FIRST_NAME', 'MIDDLE_NAME', 'LAST_NAME', 'BIRTH_DATE'];
+const PROFILE_KEYS = { FIRST_NAME: 'firstName', MIDDLE_NAME: 'middleName', LAST_NAME: 'lastName', BIRTH_DATE: 'birthDate', EMAIL: 'email' } as const;
 const fail = MockServer.fail;
 
 export const changeRequests = new MockChangeRequests(directory);

@@ -37,13 +37,16 @@
 <form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
   <div class="grid">
     {#if policy.canChangeEmail(member)}
-      <Field label="E-Mail" hint="Ändert auch die Anmeldung." error={form.error('email')}>
+      <Field label="Private E-Mail" hint="Ändert auch die Anmeldung." error={form.error('email')}>
         <input type="email" bind:value={form.email} autocomplete="off" required />
       </Field>
     {/if}
     {#if names}
       <Field label="Vorname" error={form.error('firstName')}>
         <input bind:value={form.firstName} maxlength={max} required />
+      </Field>
+      <Field label="Zweiter Vorname" error={form.error('middleName')}>
+        <input bind:value={form.middleName} maxlength={max} />
       </Field>
       <Field label="Nachname" error={form.error('lastName')}>
         <input bind:value={form.lastName} maxlength={max} required />

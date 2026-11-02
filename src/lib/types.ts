@@ -70,6 +70,8 @@ export interface Member {
   /** null: a member without a login (a child, someone without e-mail); guardians act for them. */
   email: string | null;
   firstName: string;
+  /** Optional second given name; null when none. */
+  middleName: string | null;
   lastName: string;
   /** ISO date; null when unset or hidden from the viewer. */
   birthDate: string | null;

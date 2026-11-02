@@ -10,18 +10,38 @@ const member = (id: string): Member => directory.members.data.find((m) => m.id =
 
 describe('mock members admin', () => {
   it('invites with the server rules', () => {
-    expect(() => directory.invite(member('vorstand'), { email: 'x@b.at', firstName: 'X', lastName: 'Y', roles: ['ADMIN'] })).toThrow(
-      expect.objectContaining({ code: 'access.denied' }),
+    expect(() => directory.invite(member('vorstand'), { firstName: 'X', lastName: 'Y', birthDate: '2000-01-01', roles: [] })).toThrow(
+      expect.objectContaining({ code: 'member.email-required' }),
     );
-    expect(() => directory.invite(member('vorstand'), { email: 'admin@example.at', firstName: 'X', lastName: 'Y', roles: [] })).toThrow(
-      expect.objectContaining({ code: 'member.email-taken' }),
+    expect(() => directory.invite(member('vorstand'), { email: 'x@b.at', firstName: 'X', lastName: 'Y', roles: [] })).toThrow(
+      expect.objectContaining({ code: 'member.birth-date-required' }),
     );
-    const invited = directory.invite(member('vorstand'), { email: 'Neu@Verein.AT', firstName: ' Nina ', lastName: 'Neu', roles: ['PLAYER'] });
+    expect(() =>
+      directory.invite(member('vorstand'), { email: 'x@b.at', firstName: 'X', lastName: 'Y', birthDate: '2000-01-01', roles: ['ADMIN'] }),
+    ).toThrow(expect.objectContaining({ code: 'access.denied' }));
+    expect(() =>
+      directory.invite(member('vorstand'), { email: 'admin@example.at', firstName: 'X', lastName: 'Y', birthDate: '2000-01-01', roles: [] }),
+    ).toThrow(expect.objectContaining({ code: 'member.email-taken' }));
+    const invited = directory.invite(member('vorstand'), {
+      email: 'Neu@Verein.AT',
+      firstName: ' Nina ',
+      lastName: 'Neu',
+      birthDate: '2000-01-01',
+      roles: ['PLAYER'],
+    });
     expect(invited).toMatchObject({ email: 'neu@verein.at', firstName: 'Nina', photoConsent: false, active: true });
   });
 
   it('takes the whole application form: phone, photo consent and a guardian', () => {
-    const body = { email: 'kind@verein.at', firstName: 'Kim', lastName: 'Kind', roles: ['PLAYER'], phone: '+43 1 234', photoConsent: true };
+    const body = {
+      email: 'kind@verein.at',
+      firstName: 'Kim',
+      lastName: 'Kind',
+      birthDate: '2012-01-01',
+      roles: ['PLAYER'],
+      phone: '+43 1 234',
+      photoConsent: true,
+    };
     expect(() => directory.invite(member('vorstand'), { ...body, guardianId: 'nobody' })).toThrow(
       expect.objectContaining({ code: 'member.not-found' }),
     );

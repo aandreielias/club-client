@@ -38,37 +38,27 @@
 </script>
 
 <Detail title="Neues Konto anlegen">
-  <p class="muted">
-    Daten aus dem Aufnahmeantrag eintragen. Die Person bekommt eine E-Mail mit einem Link, legt ihr Passwort fest und ergänzt fehlende Angaben.
-  </p>
+  <p class="muted">Daten aus dem Aufnahmeantrag eintragen. Die Person bekommt an ihre private E-Mail einen Link und legt ihr Passwort fest.</p>
   <form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
-    <label class="check"
-      ><input type="checkbox" bind:checked={form.withoutLogin} /> Ohne eigenen Login (etwa ein Kind): Erziehungsberechtigte bekommen die Nachrichten</label
-    >
-    {#if !form.withoutLogin}
-      <Field label="E-Mail" error={form.error('email')}>
-        <input type="email" bind:value={form.email} autocomplete="off" required />
-      </Field>
-    {/if}
-    <div class="grid-2">
+    <div class="grid-3">
       <Field label="Vorname" error={form.error('firstName')}>
         <input bind:value={form.firstName} maxlength={max} required />
+      </Field>
+      <Field label="Zweiter Vorname (optional)" error={form.error('middleName')}>
+        <input bind:value={form.middleName} maxlength={max} />
       </Field>
       <Field label="Nachname" error={form.error('lastName')}>
         <input bind:value={form.lastName} maxlength={max} required />
       </Field>
     </div>
-    <Field label="Geburtsdatum (optional)" hint="Sonst fragt die Website beim ersten Anmelden danach." error={form.error('birthDate')}>
-      <DateInput bind:value={form.birthDate} max={today} min={settings.members.earliestBirthDate} />
-    </Field>
-    <Field label="Telefon (optional)" error={form.error('phone')}>
-      <input type="tel" bind:value={form.phone} maxlength={settings.profile.phoneMaxLength} autocomplete="off" />
-    </Field>
-    <Field label="Erziehungsberechtigte:r (optional)" hint="Für Minderjährige: sieht danach Termine, Aufgaben und das Geburtsdatum.">
-      <Select bind:value={form.guardianId} placeholder="Keine" options={guardianOptions} />
-      {#if !guardianOptions.length}<p class="muted small">Eltern zuerst anlegen (als „Kein Mitglied“), dann das Kind.</p>{/if}
-    </Field>
-    <label class="check"><input type="checkbox" bind:checked={form.photoConsent} /> Einverständnis für Fotos liegt vor</label>
+    <div class="grid-2">
+      <Field label="Private E-Mail" hint="Für die Anmeldung und die Einladung." error={form.error('email')}>
+        <input type="email" bind:value={form.email} autocomplete="off" required />
+      </Field>
+      <Field label="Geburtsdatum" error={form.error('birthDate')}>
+        <DateInput bind:value={form.birthDate} max={today} min={settings.members.earliestBirthDate} required />
+      </Field>
+    </div>
     <Field
       label="Mitgliedschaft"
       hint="Mitglied ab heute. Nur mit Stimmrecht gehört jemand zur Mitgliederversammlung, nur wählbar in eine Funktion. Ehrenmitglied wird man durch Beschluss."
@@ -76,6 +66,19 @@
     >
       <Select bind:value={form.membershipType} placeholder="Bitte wählen" options={membershipKinds.inviteChoices()} aria-label="Mitgliedschaft" />
     </Field>
+    <details class="more">
+      <summary>Weitere Angaben (optional)</summary>
+      <div class="stack">
+        <Field label="Telefon" error={form.error('phone')}>
+          <input type="tel" bind:value={form.phone} maxlength={settings.profile.phoneMaxLength} autocomplete="off" />
+        </Field>
+        <Field label="Erziehungsberechtigte:r" hint="Für Minderjährige: sieht danach Termine, Aufgaben und das Geburtsdatum.">
+          <Select bind:value={form.guardianId} placeholder="Keine" options={guardianOptions} />
+          {#if !guardianOptions.length}<p class="muted small">Eltern zuerst anlegen (als „Kein Mitglied“), dann das Kind.</p>{/if}
+        </Field>
+        <label class="check"><input type="checkbox" bind:checked={form.photoConsent} /> Einverständnis für Fotos liegt vor</label>
+      </div>
+    </details>
     <RoleChecklist bind:value={form.roles} allowed={policy.grantableRoles()} legend="Rollen" />
     <ErrorNote error={create.save.error} />
     <div class="row">
@@ -84,3 +87,15 @@
     </div>
   </form>
 </Detail>
+
+<style>
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: var(--space-md);
+  }
+  .more summary {
+    cursor: pointer;
+    margin-bottom: var(--space-sm);
+  }
+</style>
