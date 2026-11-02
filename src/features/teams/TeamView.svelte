@@ -58,6 +58,52 @@
     } else view.notify('Anfrage an Vorstand und Admins gesendet.');
   }
 
+  // Several members at once: a new role (admin/board) or out of the team (also coaches, for players).
+  let selecting = $state(false);
+  let chosen = $state<ReadonlySet<string>>(new Set());
+  let bulkRole = $state<TeamRole | ''>('');
+  const picked = $derived((model.roster.value?.entries ?? []).filter((e) => chosen.has(e.memberId)));
+
+  function toggleChosen(entry: RosterEntry) {
+    const next = new Set(chosen);
+    if (!next.delete(entry.memberId)) next.add(entry.memberId);
+    chosen = next;
+  }
+
+  function stopSelecting() {
+    selecting = false;
+    chosen = new Set();
+    bulkRole = '';
+  }
+
+  async function bulkSetRole() {
+    const role = bulkRole;
+    if (!role) return;
+    for (const entry of picked)
+      if (entry.teamRole !== role && !(await view.attempt(model.assignAction, () => model.assign(entry.memberId, role)))) break;
+    view.notify('Rollen geändert.');
+    stopSelecting();
+  }
+
+  async function bulkRemove() {
+    const removable = picked.filter((e) => policy.canRemove(model.teamId, e));
+    const request = {
+      title: 'Aus dem Team entfernen',
+      message: `${removable.length} ${removable.length === 1 ? 'Mitglied wird' : 'Mitglieder werden'} aus dem Team entfernt.${removable.length < picked.length ? ' Andere darfst du nicht entfernen.' : ''}`,
+      confirmLabel: 'Entfernen',
+      danger: true,
+    };
+    const ok = await view.confirm(
+      request,
+      async () => {
+        for (const entry of removable) if (!(await view.attempt(model.removeAction, () => model.remove(entry)))) return false;
+        return true;
+      },
+      'Aus dem Team entfernt.',
+    );
+    if (ok) stopSelecting();
+  }
+
   async function setArchived(archived: boolean) {
     if (await view.attempt(archiveAction, () => archiveAction.run(() => teamsApi.update(model.teamId, { archived })))) {
       directory.forgetTeams();
@@ -133,6 +179,17 @@
 <Detail title={model.roster.value?.team.name ?? 'Team'}>
   {#snippet actions()}
     {#if policy.canAssign() && !adding}<Button variant="primary" onclick={() => (adding = true)}>Mitglied hinzufügen</Button>{/if}
+    {#if selecting}
+      <span class="muted">{chosen.size} ausgewählt</span>
+      {#if policy.canAssign()}
+        <Select inline aria-label="Neue Rolle" placeholder="Rolle …" value={bulkRole} options={ROLE_OPTIONS} onchange={(r) => (bulkRole = r)} />
+        <Button disabled={!chosen.size || !bulkRole} busy={model.busy} onclick={bulkSetRole}>Rolle setzen</Button>
+      {/if}
+      <Button variant="danger" disabled={!chosen.size} busy={model.busy} onclick={bulkRemove}>Entfernen</Button>
+      <Button variant="ghost" onclick={stopSelecting}>Fertig</Button>
+    {:else if policy.canAssign() || policy.canSetPlayerInfo(model.teamId)}
+      <Button onclick={() => (selecting = true)}>Auswählen</Button>
+    {/if}
     {#if policy.canRequestPlayer(model.teamId)}<Button onclick={() => (dialog = { kind: 'request' })}>Spieler:in anfragen</Button>{/if}
     {#if policy.canEdit() && model.roster.value}
       {@const team = model.roster.value.team}
@@ -163,7 +220,8 @@
       <DataTable
         model={list}
         rowKey={(e) => e.memberId}
-        onopen={open}
+        onopen={selecting ? undefined : open}
+        check={selecting ? { checked: (e) => chosen.has(e.memberId), toggle: toggleChosen, label: (e) => `${e.name} auswählen` } : undefined}
         record={(e) => (permissions.canSeeMember(e.memberId) ? { kind: 'member', id: e.memberId, title: e.name } : null)}
         menu={rowMenu}
         emptyText="Noch keine Mitglieder im Team."
@@ -183,7 +241,7 @@
                 />
               </span>
             {:else}
-              <Tag tone={entry.teamRole === 'COACH' ? 'blue' : 'green'}>{list.display(entry, column)}</Tag>
+              <Tag tone={entry.teamRole === 'PLAYER' ? 'green' : 'blue'}>{list.display(entry, column)}</Tag>
             {/if}
           {:else if column.key === 'name'}
             {entry.name}{#if entry.captain}&nbsp;<Tag tone="orange">Kapitän:in</Tag>{/if}

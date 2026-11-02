@@ -19,6 +19,7 @@ import {
   type StepUp,
   type Team,
   type TeamRole,
+  coaches,
 } from '../types';
 import { SEEDED_MEMBERSHIP_KINDS, type BoardSettings, type MembershipKind } from '../../features/members/MembersApi';
 import { MockEventBus, type MockAudience } from './MockEventBus';
@@ -105,12 +106,12 @@ export const OFFICES: readonly string[] = ['CHAIR', 'VICE_CHAIR', 'TREASURER', '
 /** server: V53__office_settings.sql — the seeded rules for the offices and the board. */
 const SEEDED_BOARD_SETTINGS: BoardSettings = {
   offices: [
-    { office: 'CHAIR', label: 'Vorsitz', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3, board: true },
-    { office: 'VICE_CHAIR', label: 'Stellvertretung', enabled: true, minHolders: 0, maxHolders: 1, termYears: 3, board: true },
-    { office: 'TREASURER', label: 'Kassier:in', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3, board: true },
-    { office: 'SECRETARY', label: 'Schriftführung', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3, board: true },
-    { office: 'BOARD_MEMBER', label: 'Vorstandsmitglied', enabled: true, minHolders: 0, maxHolders: null, termYears: 3, board: true },
-    { office: 'AUDITOR', label: 'Rechnungsprüfung', enabled: true, minHolders: 2, maxHolders: 2, termYears: 3, board: false },
+    { office: 'CHAIR', label: 'Vorsitz', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3, board: true, duty: 'CHAIR' },
+    { office: 'VICE_CHAIR', label: 'Stellvertretung', enabled: true, minHolders: 0, maxHolders: 1, termYears: 3, board: true, duty: 'NONE' },
+    { office: 'TREASURER', label: 'Kassier:in', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3, board: true, duty: 'NONE' },
+    { office: 'SECRETARY', label: 'Schriftführung', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3, board: true, duty: 'SECRETARY' },
+    { office: 'BOARD_MEMBER', label: 'Vorstandsmitglied', enabled: true, minHolders: 0, maxHolders: null, termYears: 3, board: true, duty: 'NONE' },
+    { office: 'AUDITOR', label: 'Rechnungsprüfung', enabled: true, minHolders: 2, maxHolders: 2, termYears: 3, board: false, duty: 'NONE' },
   ],
   minBoardSize: 3,
   oddBoardSize: true,
@@ -210,6 +211,10 @@ export class MockDirectory {
     for (const o of this.boardSettings.data.offices) {
       if (o.board === undefined) {
         o.board = o.office !== 'AUDITOR';
+        changed = true;
+      }
+      if (o.duty === undefined) {
+        o.duty = o.office === 'CHAIR' ? 'CHAIR' : o.office === 'SECRETARY' ? 'SECRETARY' : 'NONE';
         changed = true;
       }
     }
@@ -861,7 +866,7 @@ export class MockDirectory {
 
   isCoachOf(coachId: string, memberId: string): boolean {
     const coach = this.teamRoles(coachId);
-    return Object.keys(this.teamRoles(memberId)).some((teamId) => coach[teamId] === 'COACH');
+    return Object.keys(this.teamRoles(memberId)).some((teamId) => coaches(coach[teamId]));
   }
 
   /** Birth date only for self, admins, guardians and coaches of the member's teams. */

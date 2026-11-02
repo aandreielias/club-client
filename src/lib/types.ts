@@ -9,9 +9,13 @@ export type Role = 'ADMIN' | 'BOARD' | 'COACH' | 'PLAYER' | 'PARENT' | 'VOLUNTEE
 /** Only GUEST (server: Actor.guestOnly). */
 export const guestOnly = (roles: readonly Role[]): boolean => roles.length === 1 && roles[0] === 'GUEST';
 
-export type TeamRole = 'COACH' | 'PLAYER';
+/** ASSISTANT: co-coach, with the same rights in the team as COACH (server: TeamRole.coaches). */
+export type TeamRole = 'COACH' | 'ASSISTANT' | 'PLAYER';
 
-export const TEAM_ROLE_LABELS: Readonly<Record<TeamRole, string>> = { PLAYER: 'Spieler:in', COACH: 'Trainer:in' };
+/** Coaches and co-coaches run the team. */
+export const coaches = (role: TeamRole | null | undefined): boolean => role === 'COACH' || role === 'ASSISTANT';
+
+export const TEAM_ROLE_LABELS: Readonly<Record<TeamRole, string>> = { PLAYER: 'Spieler:in', COACH: 'Trainer:in', ASSISTANT: 'Co-Trainer:in' };
 
 /** Task status names, shown by the tasks and search features. */
 export const TASK_STATUS_LABELS = { OPEN: 'Offen', IN_PROGRESS: 'In Arbeit', DONE: 'Erledigt' } as const;

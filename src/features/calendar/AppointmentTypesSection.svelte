@@ -4,6 +4,7 @@
   import { saveOrder } from '../../lib/detail/saveOrder';
   import { Action } from '../../lib/state/Action.svelte';
   import SettingsList from '../../ui/SettingsList.svelte';
+  import HolidaysSection from './HolidaysSection.svelte';
   import { appointmentTypes, calendarApi } from './services';
 
   /** Einstellungen › Termine (admin/board): the club's kinds of appointments; each opens in the window, the order is dragged. */
@@ -56,6 +57,7 @@
     onretry={reload}
     emptyText="Noch keine Terminarten."
   />
+  <HolidaysSection />
 </div>
 
 <style>

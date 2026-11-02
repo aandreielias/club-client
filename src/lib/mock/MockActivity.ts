@@ -1,4 +1,4 @@
-import type { Member } from '../types';
+import { coaches, type Member } from '../types';
 import { directory, type MockDirectory } from './core';
 import { MockServer, mockServer } from './MockServer';
 import { MockTable } from './MockTable';
@@ -70,7 +70,7 @@ export class MockActivity {
   feed(member: Member, kind: string | null, before: string | null, limit: number) {
     this.requirePrivileged(member);
     const roles = this.people.teamRoles(member.id);
-    const coached = Object.keys(roles).filter((t) => roles[t] === 'COACH');
+    const coached = Object.keys(roles).filter((t) => coaches(roles[t]));
     const all = this.people.isManager(member);
     if (!all && !coached.length) return { items: [], next: null };
     const max = Math.min(Math.max(limit || 50, 1), MockActivity.FEED_LIMIT);

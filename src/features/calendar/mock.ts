@@ -7,7 +7,7 @@ import { itemUseSources, MockLinks, type ItemUse } from '../../lib/mock/MockLink
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import { ZonedClock, type LocalDate } from '../../lib/time/ZonedClock';
-import type { Member } from '../../lib/types';
+import { coaches, type Member } from '../../lib/types';
 import {
   HUES,
   SEEDED_APPOINTMENT_TYPES,
@@ -20,6 +20,7 @@ import {
   type Attendance,
   type AttendanceEntry,
   type MemberStats,
+  type Holiday,
   type Extras,
   type ExtrasInput,
   type MatchList,
@@ -71,6 +72,10 @@ export class MockCalendar {
   readonly absences = new MockTable<StoredAbsence[]>('absences', () => []);
   /** server: attendance_presence — appointmentId → memberId → present */
   readonly presence = new MockTable<Record<string, Record<string, boolean>>>('attendance-presence', () => ({}));
+  /** server: calendar_holiday */
+  readonly holidays = new MockTable<Holiday[]>('holidays', () => []);
+  /** server: calendar_series — seriesId → weeks between occurrences */
+  readonly intervals = new MockTable<Record<string, number>>('series-intervals', () => ({}));
   /** server: calendar_extra — training plan; opponent, home/away, sets */
   readonly extrasTable = new MockTable<Record<string, ExtrasInput>>('appointment-extras', () => ({}));
   /** server: attendance_reminder — appointments whose open answers were reminded */
@@ -149,6 +154,10 @@ export class MockCalendar {
     const first = MockCalendar.validated(this.placed({ ...body, id: '', seriesId: null, cancelled: false, rides }, body.locationId ?? null));
     const starts = this.occurrences(first.startsAt, body.repeatUntil, body.intervalWeeks);
     const seriesId = starts.length > 1 || body.repeatUntil ? crypto.randomUUID() : null;
+    if (seriesId) {
+      this.intervals.data[seriesId] = body.intervalWeeks ?? 1;
+      this.intervals.save();
+    }
     const duration = Date.parse(first.endsAt) - Date.parse(first.startsAt);
     const created = starts.map((startsAt) => ({
       ...first,
@@ -332,14 +341,80 @@ export class MockCalendar {
     return { items, won: items.filter((m) => m.won === true).length, lost: items.filter((m) => m.won === false).length };
   }
 
+  /** server: CalendarHandlers.saveHoliday / deleteHoliday (admin/board) */
+  saveHoliday(member: Member, id: string | null, body: Record<string, any>): Holiday {
+    this.people.requirePrivileged(member, ['ADMIN', 'BOARD']);
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    const date = /^\d{4}-\d{2}-\d{2}$/;
+    if (!name || name.length > 80 || !date.test(body.from) || !date.test(body.to) || body.to < body.from) fail(400, 'holiday.invalid');
+    const holiday: Holiday = { id: id ?? crypto.randomUUID(), name, from: body.from, to: body.to };
+    const index = this.holidays.data.findIndex((h) => h.id === id);
+    if (id && index < 0) fail(404, 'holiday.not-found');
+    if (index >= 0) this.holidays.data[index] = holiday;
+    else this.holidays.data.push(holiday);
+    this.holidays.data.sort((a, b) => a.from.localeCompare(b.from));
+    this.holidays.save();
+    return holiday;
+  }
+
+  deleteHoliday(member: Member, id: string): void {
+    this.people.requirePrivileged(member, ['ADMIN', 'BOARD']);
+    const index = this.holidays.data.findIndex((h) => h.id === id);
+    if (index < 0) fail(404, 'holiday.not-found');
+    this.holidays.data.splice(index, 1);
+    this.holidays.save();
+  }
+
+  /** server: CalendarHandlers.extend — after the last occurrence, in the stored rhythm, with the last one's details. */
+  extend(member: Member, id: string, repeatUntil: string | undefined): Appointment[] {
+    const any = this.visible(member, id);
+    this.requireMayEdit(member, any.teamId);
+    if (!any.seriesId) fail(400, 'appointment.not-a-series');
+    const series = this.appointments.data.filter((a) => a.seriesId === any.seriesId).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+    const last = series[series.length - 1];
+    const interval = this.intervals.data[any.seriesId!] ?? 1;
+    const clock = this.people.clock;
+    const local = clock.toLocal(last.startsAt);
+    const nextDay = ZonedClock.addDays(local.slice(0, 10), 7 * interval);
+    if (!repeatUntil || repeatUntil < nextDay) fail(400, 'appointment.repeat-until-invalid');
+    const duration = Date.parse(last.endsAt) - Date.parse(last.startsAt);
+    const added: Appointment[] = [];
+    for (let date = nextDay; date <= repeatUntil!; date = ZonedClock.addDays(date, 7 * interval)) {
+      if (this.holidays.data.some((h) => h.from <= date && date <= h.to)) continue;
+      const startsAt = clock.toInstant(`${date}T${local.slice(11)}`);
+      added.push({
+        ...last,
+        id: crypto.randomUUID(),
+        cancelled: false,
+        cancelReason: null,
+        startsAt,
+        endsAt: new Date(Date.parse(startsAt) + duration).toISOString(),
+      });
+    }
+    this.appointments.data.push(...added);
+    this.appointments.save();
+    this.changed(member, added, 'CREATED');
+    return added;
+  }
+
+  /** server: AttendanceHandlers.myAnswers — own and the minors' answers to what the member sees. */
+  myAnswers(member: Member, from: string | null, to: string | null): { appointmentId: string; memberId: string; status: ResponseStatus }[] {
+    const people = new Set([member.id, ...this.people.wardsOf(member.id)]);
+    return this.list(member, from, to, null).flatMap((a) =>
+      Object.entries(this.responses.data[a.id] ?? {})
+        .filter(([id]) => people.has(id))
+        .map(([memberId, r]) => ({ appointmentId: a.id, memberId, status: r.status })),
+    );
+  }
+
   /** server: AttendanceHandlers.requireRunsTeam */
   private requireRunsTeam(member: Member, teamId: string | null): void {
     if (this.people.isManager(member)) return;
-    if (!teamId || this.people.teamRoles(member.id)[teamId] !== 'COACH') fail(403, 'access.denied');
+    if (!teamId || !coaches(this.people.teamRoles(member.id)[teamId])) fail(403, 'access.denied');
   }
 
   private coachesOf(teamId: string): string[] {
-    return this.people.teamMembers(teamId).filter((id) => this.people.teamRoles(id)[teamId] === 'COACH');
+    return this.people.teamMembers(teamId).filter((id) => coaches(this.people.teamRoles(id)[teamId]));
   }
 
   private absentOn(memberId: string, startsAt: string): StoredAbsence | undefined {
@@ -376,7 +451,7 @@ export class MockCalendar {
     const answers = this.responses.data[appointment.id] ?? {};
     const open = this.people
       .teamMembers(teamId)
-      .filter((id) => this.people.teamRoles(id)[teamId] !== 'COACH' && !answers[id] && !this.absentOn(id, appointment.startsAt));
+      .filter((id) => !coaches(this.people.teamRoles(id)[teamId]) && !answers[id] && !this.absentOn(id, appointment.startsAt));
     this.notice('OPEN_REMINDER', [...open, ...this.people.guardiansOf(open)], appointment);
     return open.length;
   }
@@ -440,7 +515,7 @@ export class MockCalendar {
     const held = this.appointments.data.filter(
       (a) => a.teamId === teamId && !a.cancelled && a.startsAt >= start && a.startsAt < end && a.startsAt < now,
     );
-    const players = this.people.teamMembers(teamId).filter((id) => this.people.teamRoles(id)[teamId] !== 'COACH');
+    const players = this.people.teamMembers(teamId).filter((id) => !coaches(this.people.teamRoles(id)[teamId]));
     const items: MemberStats[] = players
       .flatMap((id) => {
         const name = this.people.name(id);
@@ -501,7 +576,7 @@ export class MockCalendar {
     // server: an absence on the appointment's local day counts as NO until the member answers.
     const day = this.people.clock.localDate(appointment.startsAt);
     const showReasons =
-      this.people.isManager(member) || (appointment.teamId !== null && this.people.teamRoles(member.id)[appointment.teamId] === 'COACH');
+      this.people.isManager(member) || (appointment.teamId !== null && coaches(this.people.teamRoles(member.id)[appointment.teamId]));
     const entries: AttendanceEntry[] = [...expected]
       .flatMap((memberId): AttendanceEntry[] => {
         const name = this.people.name(memberId);
@@ -743,7 +818,7 @@ export class MockCalendar {
       this.people.requirePrivileged(member, ['ADMIN', 'BOARD']);
       return;
     }
-    if (this.people.teamRoles(member.id)[teamId] !== 'COACH') fail(403, 'access.denied');
+    if (!coaches(this.people.teamRoles(member.id)[teamId])) fail(403, 'access.denied');
     this.people.requirePrivileged(member, ['COACH']);
   }
 
@@ -758,6 +833,8 @@ export class MockCalendar {
     const starts: string[] = [];
     for (let date = local.slice(0, 10); date <= repeatUntil; date = ZonedClock.addDays(date, 7 * interval)) {
       if (starts.length === limits.maxSeriesOccurrences) fail(400, 'appointment.series-too-long');
+      // server: WeeklySeries skips the club's holidays
+      if (this.holidays.data.some((h) => h.from <= date && date <= h.to)) continue;
       starts.push(clock.toInstant(`${date}T${local.slice(11)}`));
     }
     return starts;
@@ -1103,6 +1180,12 @@ mockServer
   .on('POST', '/api/v1/appointments/:id/remind-open', (req) => ({ count: calendar.remindOpen(actor(req), req.params.id) }))
   .on('PUT', '/api/v1/appointments/:id/presence', (req) => calendar.setPresence(actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/me/open-answers', (req) => calendar.openAnswers(actor(req)))
+  .on('GET', '/api/v1/me/answers', (req) => ({ items: calendar.myAnswers(actor(req), req.query.get('from'), req.query.get('to')) }))
+  .on('GET', '/api/v1/calendar/holidays', (req) => (actor(req), { items: calendar.holidays.data }))
+  .on('POST', '/api/v1/calendar/holidays', (req) => calendar.saveHoliday(actor(req), null, req.body ?? {}))
+  .on('PUT', '/api/v1/calendar/holidays/:id', (req) => calendar.saveHoliday(actor(req), req.params.id, req.body ?? {}))
+  .on('DELETE', '/api/v1/calendar/holidays/:id', (req) => calendar.deleteHoliday(actor(req), req.params.id))
+  .on('POST', '/api/v1/appointments/:id/extend', (req) => ({ items: calendar.extend(actor(req), req.params.id, req.body?.repeatUntil) }))
   .on('GET', '/api/v1/appointments/:id/extras', (req) => calendar.extras(actor(req), req.params.id))
   .on('PUT', '/api/v1/appointments/:id/extras', (req) => calendar.setExtras(actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/teams/:id/matches', (req) => calendar.teamMatches(actor(req), req.params.id, req.query.get('from'), req.query.get('to')))

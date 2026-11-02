@@ -105,7 +105,7 @@ export class MockBoard {
   }
 
   /** server: BoardRules.validate(OfficeSetting) */
-  private static office(o: Record<string, any>, office: string, board: boolean): OfficeSetting {
+  private static office(o: Record<string, any>, office: string, board: boolean, duty: OfficeSetting['duty'] = 'NONE'): OfficeSetting {
     const int = (v: unknown, min: number, max: number) => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
     const label = typeof o.label === 'string' ? o.label.trim() : '';
     if (!label || label.length > 40) fail(400, 'board-settings.label-invalid');
@@ -114,18 +114,32 @@ export class MockBoard {
       fail(400, 'board-settings.holders-invalid');
     }
     if (!int(o.termYears, 1, 10)) fail(400, 'board-settings.term-invalid');
-    return { office, label, enabled: o.enabled !== false, minHolders: o.minHolders, maxHolders: max, termYears: o.termYears, board };
+    return { office, label, enabled: o.enabled !== false, minHolders: o.minHolders, maxHolders: max, termYears: o.termYears, board, duty };
   }
 
   /** server: MembershipHandlers.addOffice — key OFFICE_…, after the others, at most 40. */
   addOffice(viewer: Member, body: Record<string, any>): BoardSettings {
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
-    const office = MockBoard.office({ ...body, enabled: true }, generatedKey('OFFICE'), !!body.board);
+    const duty = ['CHAIR', 'SECRETARY'].includes(body.duty) ? body.duty : 'NONE';
+    const office = MockBoard.office({ ...body, enabled: true }, generatedKey('OFFICE'), !!body.board, duty);
     if (this.people.boardSettings.data.offices.length >= 40) fail(409, 'board-settings.too-many-offices');
     this.people.boardSettings.data.offices.push(office);
     this.people.boardSettings.save();
     mockServer.events.publish({ type: 'members.board-settings-changed', data: {} });
     return this.people.boardSettings.data;
+  }
+
+  /** server: MembershipHandlers.deleteOffice — only a club office never held and named by no meeting type. */
+  deleteOffice(viewer: Member, office: string, namedByMeetings: boolean): BoardSettings {
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    if (OFFICES.includes(office) || namedByMeetings || this.people.offices.data.some((o) => o.office === office)) fail(409, 'office.in-use');
+    const settings = this.people.boardSettings.data;
+    if (!settings.offices.some((o) => o.office === office)) fail(404, 'office.not-found');
+    settings.offices = settings.offices.filter((o) => o.office !== office);
+    settings.combinations = settings.combinations.filter((p) => p.a !== office && p.b !== office);
+    this.people.boardSettings.save();
+    mockServer.events.publish({ type: 'members.board-settings-changed', data: {} });
+    return settings;
   }
 
   /** server: MembershipHandlers.saveSettings and BoardRules.validate — every office once, in the club's order. */
@@ -140,7 +154,10 @@ export class MockBoard {
     const offices = list.map((o) => {
       // the seeded ones keep their place on or off the board
       if (OFFICES.includes(o.office) && o.board !== undefined && !!o.board !== (o.office !== 'AUDITOR')) fail(400, 'board-settings.offices-invalid');
-      return MockBoard.office(o, o.office, OFFICES.includes(o.office) ? o.office !== 'AUDITOR' : !!o.board);
+      const seededDuty = o.office === 'CHAIR' ? 'CHAIR' : o.office === 'SECRETARY' ? 'SECRETARY' : 'NONE';
+      if (OFFICES.includes(o.office) && o.duty !== undefined && o.duty !== seededDuty) fail(400, 'board-settings.offices-invalid');
+      const duty = OFFICES.includes(o.office) ? seededDuty : ['CHAIR', 'SECRETARY'].includes(o.duty) ? o.duty : 'NONE';
+      return MockBoard.office(o, o.office, OFFICES.includes(o.office) ? o.office !== 'AUDITOR' : !!o.board, duty);
     });
     const combinations: OfficePair[] = Array.isArray(body.combinations) ? body.combinations : fail(400, 'board-settings.combination-invalid');
     if (combinations.some((p) => !p || !keys.includes(p.a) || !keys.includes(p.b) || p.a === p.b)) {
@@ -228,6 +245,10 @@ export class MockBoard {
 
 export const board = new MockBoard(directory);
 
+/** server: MeetingsApi.OFFICE_IN_USE — the meetings mock registers its check (no import cycle). */
+export const officeUses: ((office: string) => boolean)[] = [];
+const officeNamedByMeetings = (office: string): boolean => officeUses.some((uses) => uses(office));
+
 /** server: members_member.first_login_at — invited through the mock and never "signed in" (seeded members all have). */
 const pendingInvites = new Set<string>();
 
@@ -286,6 +307,9 @@ mockServer
   .on('GET', '/api/v1/board/settings', (req) => (directory.actor(req), directory.boardSettings.data))
   .on('PUT', '/api/v1/board/settings', (req) => board.saveBoardSettings(directory.actor(req), req.body ?? {}))
   .on('POST', '/api/v1/board/settings/offices', (req) => board.addOffice(directory.actor(req), req.body ?? {}))
+  .on('DELETE', '/api/v1/board/settings/offices/:office', (req) =>
+    board.deleteOffice(directory.actor(req), req.params.office, officeNamedByMeetings(req.params.office)),
+  )
   .on('POST', '/api/v1/board/offices', (req) => board.assignOffice(directory.actor(req), req.body ?? {}))
   .on('POST', '/api/v1/board/offices/:id/end', (req) => board.endOffice(directory.actor(req), req.params.id));
 

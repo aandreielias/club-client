@@ -162,6 +162,14 @@ export interface MatchList {
 /** "25:20" style, ours first (server: CalendarHandlers.SET). */
 export const SET_PATTERN = /^\d{1,2}:\d{1,2}$/;
 
+/** server: CalendarApi.HolidayDto — days the club does not train or play (club-local dates, both inclusive). */
+export interface Holiday {
+  id: string;
+  name: string;
+  from: string;
+  to: string;
+}
+
 export interface TeamStats {
   teamId: string;
   from: string;

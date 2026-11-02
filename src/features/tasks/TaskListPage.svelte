@@ -5,6 +5,9 @@
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import Button from '../../ui/Button.svelte';
+  import Dialog from '../../ui/Dialog.svelte';
+  import Field from '../../ui/Field.svelte';
+  import Select from '../../ui/Select.svelte';
   import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
   import { windowMenu } from '../../lib/window/windowMenu';
   import TaskTable from './TaskTable.svelte';
@@ -79,6 +82,29 @@
     void list.load();
   }
 
+  // Reassigning: to one person who may get every picked task (the team's roster when they share a team, else everyone).
+  let assigning = $state(false);
+  let assignee = $state('');
+  let people = $state<readonly { memberId: string; name: string }[]>([]);
+  async function openAssign() {
+    const teams = new Set(picked.map((t) => t.teamId));
+    const team = teams.size === 1 ? [...teams][0] : null;
+    await directory.loadRosters();
+    people = await directory.candidates(team);
+    assignee = '';
+    assigning = true;
+  }
+
+  async function bulkAssign() {
+    const to = assignee;
+    assigning = false;
+    await bulk(
+      `${directory.nameOf(to)} zugewiesen`,
+      (t) => tasksApi.update(t.id, { assignees: [to] }),
+      (t) => taskPolicy.canManage(t),
+    );
+  }
+
   async function bulkDelete() {
     const ok = await bus.request(CONFIRM, {
       title: 'Aufgaben löschen',
@@ -123,6 +149,7 @@
             (t) => taskPolicy.canWork(t) && t.status === 'DONE',
           )}>Wieder öffnen</Button
       >
+      <Button busy={bulkBusy} disabled={!chosen.size} onclick={openAssign}>Zuweisen</Button>
       <Button variant="danger" busy={bulkBusy} disabled={!chosen.size} onclick={bulkDelete}>Auswahl löschen</Button>
       <Button variant="ghost" onclick={stopSelecting}>Fertig</Button>
     {:else}
@@ -145,3 +172,16 @@
       : null}
   />
 </Page>
+
+<Dialog open={assigning} title="Aufgaben zuweisen" onclose={() => (assigning = false)}>
+  <div class="stack">
+    <p>Die {picked.length} ausgewählten Aufgaben bekommt künftig nur noch diese Person.</p>
+    <Field label="An">
+      <Select bind:value={assignee} placeholder="Bitte wählen" options={people.map((p) => ({ value: p.memberId, label: p.name }))} />
+    </Field>
+    <div class="row">
+      <Button variant="primary" disabled={!assignee} onclick={bulkAssign}>Zuweisen</Button>
+      <Button variant="ghost" onclick={() => (assigning = false)}>Abbrechen</Button>
+    </div>
+  </div>
+</Dialog>

@@ -117,7 +117,11 @@ export interface MailSettings {
   dailyLimit: number;
   /** false while the server runs without a mail provider: club mail is not kept (read-only, ignored on save). */
   keepsMail: boolean;
+  /** Who gets a personal mailbox automatically: everyone with a login, club members only, or nobody (admins assign by hand). */
+  personalFor: PersonalFor;
 }
+
+export type PersonalFor = 'ALL' | 'CLUB_MEMBERS' | 'NONE';
 
 /** server: MailSettings.personalAddress — "Jürgen Groß" → "juergengross", ASCII only. */
 export function personalLocal(firstName: string, lastName: string): string {

@@ -18,6 +18,11 @@
     onsubmit,
   }: { form: OfficeSettingForm; action: Action; submitLabel?: string; oncancel: () => void; onsubmit: () => void } = $props();
 
+  const DUTIES = [
+    { value: 'NONE', label: 'Keine besondere' },
+    { value: 'CHAIR', label: 'Wie der Vorsitz (Protokoll freigeben)' },
+    { value: 'SECRETARY', label: 'Wie die Schriftführung (Protokoll, Aufgaben)' },
+  ] as const;
   const BOARD = [
     { value: 'on', label: 'Gehört zum Vorstand' },
     { value: 'off', label: 'Außerhalb des Vorstands' },
@@ -63,6 +68,9 @@
         options={BOARD}
         bind:value={() => (form.board ? 'on' : 'off'), (v) => (form.board = v === 'on')}
       />
+    </Field>
+    <Field label="In Sitzungen" hint="Wer diese Funktion innehat, übernimmt diese Aufgaben in Sitzungen.">
+      <ChoiceGroup name="office-duty" label="In Sitzungen" options={DUTIES} bind:value={form.duty} />
     </Field>
   {/if}
   {#if form.enabled}

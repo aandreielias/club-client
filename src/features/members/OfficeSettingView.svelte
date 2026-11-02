@@ -7,7 +7,8 @@
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import Tag from '../../ui/Tag.svelte';
-  import type { OfficeKind } from './MembersApi';
+  import { Action } from '../../lib/state/Action.svelte';
+  import { SEEDED_OFFICES, type OfficeKind } from './MembersApi';
   import OfficeSettingEditor from './OfficeSettingEditor.svelte';
   import { OfficeSettingForm, partnersOf } from './OfficeSettingForm.svelte';
   import { boardSettings, membersApi } from './services';
@@ -30,6 +31,24 @@
   view.title(() => office?.label);
   const partners = $derived(boardSettings.value ? partnersOf(boardSettings.value, id as OfficeKind).map((o) => boardSettings.label(o)) : []);
 
+  const deleteAction = new Action();
+
+  /** Only a club office nobody ever held and no Sitzungsart or decision names; others are switched off. */
+  async function remove(label: string) {
+    const request = {
+      title: 'Funktion löschen',
+      message: `„${label}“ wird gelöscht. Das geht nur, wenn sie nie vergeben war und keine Sitzungsart sie nennt; sonst stelle sie auf „Nicht besetzt“.`,
+      confirmLabel: 'Löschen',
+      danger: true,
+    };
+    const ok = await view.confirm(
+      request,
+      () => view.attempt(deleteAction, () => deleteAction.run(async () => (boardSettings.value = await membersApi.deleteOffice(id)))),
+      'Funktion gelöscht.',
+    );
+    if (ok) view.leave();
+  }
+
   /** The rest of the board settings is sent as the server has it now. */
   async function submit() {
     await edit.submit(
@@ -48,6 +67,9 @@
     {#snippet actions()}
       {#if !edit.form && session.hasRole(...ADMIN_BOARD) && boardSettings.value}
         <Button icon="edit" onclick={() => edit.edit(new OfficeSettingForm(boardSettings.value!, office.office))}>Bearbeiten</Button>
+        {#if !SEEDED_OFFICES.includes(office.office)}
+          <Button variant="danger" icon="delete" busy={deleteAction.busy} onclick={() => remove(office.label)}>Löschen</Button>
+        {/if}
       {/if}
     {/snippet}
 
@@ -57,6 +79,8 @@
       </div>
     {:else}
       <dl class="props">
+        <dt>In Sitzungen</dt>
+        <dd>{office.duty === 'CHAIR' ? 'wie der Vorsitz' : office.duty === 'SECRETARY' ? 'wie die Schriftführung' : '–'}</dd>
         <dt>Vorstand</dt>
         <dd>{office.board ? 'gehört zum Vorstand' : 'außerhalb des Vorstands'}</dd>
         <dt>In Verwendung</dt>

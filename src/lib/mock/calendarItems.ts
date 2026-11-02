@@ -5,7 +5,7 @@ import { tasks } from '../../features/tasks/mock';
 import { tournaments } from '../../features/tournaments/mock';
 import type { CalendarItem } from '../calendar/CalendarSources';
 import { ZonedClock } from '../time/ZonedClock';
-import { PRIVILEGED, type Member } from '../types';
+import { PRIVILEGED, type Member, coaches } from '../types';
 import { directory } from './core';
 import { MockServer, mockServer } from './MockServer';
 
@@ -38,9 +38,29 @@ export function items(viewer: Member, from: string, to: string): CalendarItem[] 
   const toDay = clock.localDate(new Date(Date.parse(to) - 1));
   const board = directory.isManager(viewer);
   const coached = Object.entries(directory.teamRoles(viewer.id))
-    .filter(([, r]) => r === 'COACH')
+    .filter(([, r]) => coaches(r))
     .map(([t]) => t);
   const out: CalendarItem[] = [];
+
+  // server: CalendarHandlers.calendarItems — the club's holidays for everyone
+  for (const h of calendar.holidays.data) {
+    if (h.to < fromDay || h.from > toDay) continue;
+    out.push({
+      ...base,
+      kind: 'holiday',
+      id: h.id,
+      title: h.name,
+      start: clock.toInstant(`${h.from}T00:00`),
+      end: clock.toInstant(`${ZonedClock.addDays(h.to, 1)}T00:00`),
+      allDay: true,
+      category: 'HOLIDAY',
+      teamId: null,
+      inactive: false,
+      detail: null,
+      movable: false,
+      resizable: false,
+    });
+  }
 
   for (const a of calendar.list(viewer, from, to, null)) {
     const editable = !a.cancelled && (board || (!!a.teamId && coached.includes(a.teamId)));

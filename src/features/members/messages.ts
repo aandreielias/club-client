@@ -52,6 +52,7 @@ export const MEMBER_MESSAGES: MessageCatalog = {
   'board-settings.too-many-offices': 'Höchstens 40 Funktionen.',
   'member.already-signed-in': 'Dieses Mitglied hat sich schon angemeldet; eine neue Einladung ist nicht nötig.',
   'office.already-ended': 'Diese Funktion ist schon beendet.',
+  'office.in-use': 'Diese Funktion war schon vergeben oder eine Sitzungsart nennt sie; stelle sie auf „Nicht besetzt“.',
   'office.not-found': 'Diese Funktion gibt es nicht mehr.',
   'office.disabled': 'Der Verein nutzt diese Funktion nicht (Einstellungen › Funktionen).',
   'board-settings.offices-invalid': 'Jede Funktion genau einmal angeben.',

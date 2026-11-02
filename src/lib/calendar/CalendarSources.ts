@@ -45,13 +45,15 @@ export interface CalendarEntry {
   item: { kind: string; id: string };
   movable: boolean;
   resizable: boolean;
+  /** The member's own answer (or a minor's) to an appointment; null: not answered or no appointment. */
+  answer?: 'YES' | 'NO' | 'MAYBE' | null;
 }
 
 /** A feature's look of its items: hue and label from the item's detail (e.g. appointment type). */
 export type CalendarStyle = (item: CalendarItem) => Partial<Pick<CalendarEntry, 'hue' | 'label' | 'title'>>;
 
 /** Kinds without a window: offices go to their page, absences open nothing (they say all there is). */
-const PAGES: Readonly<Record<string, string | null>> = { absence: null, office: '/board' };
+const PAGES: Readonly<Record<string, string | null>> = { absence: null, office: '/board', holiday: null };
 
 /**
  * The calendar's one source: everything with a date the member sees, collected by the server from every module
@@ -88,10 +90,19 @@ export class CalendarSources {
 
   /** Entries overlapping [from, to) of the enabled categories (all when `enabled` is omitted), sorted by start. */
   async load(from: string, to: string, enabled?: ReadonlySet<string>): Promise<CalendarEntry[]> {
-    const items = (await this.api.get<{ items: CalendarItem[] }>('/api/v1/calendar/items', { from, to })).items;
+    const [items, answers] = await Promise.all([
+      this.api.get<{ items: CalendarItem[] }>('/api/v1/calendar/items', { from, to }).then((r) => r.items),
+      // Own and the minors' answers mark the appointments (own first); an older server just shows no marks.
+      this.api
+        .get<{ items: { appointmentId: string; memberId: string; status: 'YES' | 'NO' | 'MAYBE' }[] }>('/api/v1/me/answers', { from, to })
+        .then((r) => r.items)
+        .catch(() => []),
+    ]);
+    const answerOf = new Map<string, 'YES' | 'NO' | 'MAYBE'>();
+    for (const a of answers) if (!answerOf.has(a.appointmentId) || a.status === 'YES') answerOf.set(a.appointmentId, a.status);
     return items
       .filter((i) => !enabled || enabled.has(i.category))
-      .map((i) => this.entry(i))
+      .map((i) => ({ ...this.entry(i), answer: i.kind === 'appointment' ? (answerOf.get(i.id) ?? null) : null }))
       .sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
   }
 

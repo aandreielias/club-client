@@ -5,6 +5,7 @@
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
   import { ROLE_LABELS } from '../../lib/types';
   import Field from '../../ui/Field.svelte';
+  import Select from '../../ui/Select.svelte';
   import SettingsForm from '../../ui/SettingsForm.svelte';
   import SettingsList from '../../ui/SettingsList.svelte';
   import type { MailSettings } from './model';
@@ -18,7 +19,12 @@
   const reload = () => void load.run(() => mailboxes.load());
   reload();
 
-  const draft = new SettingsDraft<MailSettings>({ domain: null, dailyLimit: 200, keepsMail: true });
+  const draft = new SettingsDraft<MailSettings>({ domain: null, dailyLimit: 200, keepsMail: true, personalFor: 'ALL' });
+  const PERSONAL_FOR = [
+    { value: 'ALL', label: 'Alle mit eigenem Login' },
+    { value: 'CLUB_MEMBERS', label: 'Nur Vereinsmitglieder (mit Mitgliedsart)' },
+    { value: 'NONE', label: 'Niemand automatisch' },
+  ] as const;
   const settingsLoad = new Action();
   void settingsLoad.run(async () => draft.load(await mailApi.settings()));
 
@@ -72,6 +78,9 @@
             placeholder="mein-verein.at"
             autocomplete="off"
           />
+        </Field>
+        <Field label="Persönliches Postfach für" hint="Wer beim Einladen automatisch vornamenachname@… bekommt. Einzelne vergibst du unten selbst.">
+          <Select bind:value={draft.value.personalFor} options={PERSONAL_FOR} />
         </Field>
         <Field label="Empfänger pro Tag" hint="So viele Empfänger darf ein Mitglied an einem Tag anschreiben (Schutz vor Spam).">
           <input type="number" min="1" max="10000" bind:value={draft.value.dailyLimit} class="short" />

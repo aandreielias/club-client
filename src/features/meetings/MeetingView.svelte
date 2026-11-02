@@ -259,7 +259,7 @@
       <h2>Unterlagen und Verknüpfungen</h2>
       <MeetingLinks meeting={m} {model} />
 
-      {#if m.status === 'OPEN' && m.electorate.some((p) => p.memberId === me) && !m.present.some((p) => p.memberId === me)}
+      {#if m.status === 'OPEN' && meetingTypes.get(m.kind)?.selfCheckIn !== false && m.electorate.some((p) => p.memberId === me) && !m.present.some((p) => p.memberId === me)}
         <div class="row check-in">
           <span>Bist du dabei?</span>
           <Button variant="primary" busy={model.action.busy} onclick={() => void model.checkIn('APP')}>Ich bin da</Button>

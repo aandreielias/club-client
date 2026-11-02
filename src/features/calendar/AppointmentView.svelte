@@ -9,6 +9,11 @@
   import ActivitySection from '../../ui/ActivitySection.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
+  import DateInput from '../../ui/DateInput.svelte';
+  import Dialog from '../../ui/Dialog.svelte';
+  import ErrorNote from '../../ui/ErrorNote.svelte';
+  import Field from '../../ui/Field.svelte';
+  import { Action } from '../../lib/state/Action.svelte';
   import Detail from '../../ui/Detail.svelte';
   import LinksSection from '../../ui/LinksSection.svelte';
   import LocationMap from '../../ui/LocationMap.svelte';
@@ -82,6 +87,18 @@
     if (await detail.respond(status, detail.entryOf(target)?.reason ?? '', target)) view.notify('Antwort gespeichert.');
   }
 
+  // More weeks of a series (who may edit it), in its rhythm, holidays skipped.
+  let extendOpen = $state(false);
+  let extendTo = $state('');
+  const extendAction = new Action();
+  async function extend(appointment: Appointment) {
+    let count = 0;
+    if (await extendAction.run(async () => (count = (await calendarApi.extend(appointment.id, extendTo)).length))) {
+      extendOpen = false;
+      view.notify(count ? `${count} weitere Termine angelegt.` : 'Keine weiteren Termine (Ferien).');
+    }
+  }
+
   async function restore() {
     if (await view.attempt(detail.restoreAction, () => detail.restore())) view.notify('Absage zurückgenommen.');
   }
@@ -134,6 +151,7 @@
           <Button icon="edit" onclick={() => edit.edit(AppointmentForm.edit(session.clock, appointment, appointmentTypes))}>Bearbeiten</Button>
           <Button variant="danger" onclick={() => (cancelOpen = true)}>Absagen</Button>
           <Button variant="ghost" icon="delete" busy={detail.deleteAction.busy} onclick={() => remove(appointment)}>Löschen</Button>
+          {#if appointment.seriesId}<Button onclick={() => ((extendTo = ''), (extendOpen = true))}>Serie verlängern</Button>{/if}
         {:else if !edit.form && policy.canRestore(appointment)}
           <Button busy={detail.restoreAction.busy} onclick={restore}>Absage zurücknehmen</Button>
         {/if}
@@ -219,6 +237,19 @@
 
         <ActivitySection kind="APPOINTMENT" id={appointment.id} />
 
+        {#if policy.canEdit(appointment) && appointment.seriesId}
+          <Dialog open={extendOpen} title="Serie verlängern" onclose={() => (extendOpen = false)}>
+            <div class="stack">
+              <p>Die Serie geht im selben Rhythmus weiter, mit Zeit, Ort und Einstellungen des letzten Termins. Ferien werden ausgelassen.</p>
+              <Field label="Bis einschließlich"><DateInput bind:value={extendTo} min={session.clock.today()} /></Field>
+              <ErrorNote error={extendAction.error} />
+              <div class="row">
+                <Button variant="primary" busy={extendAction.busy} disabled={!extendTo} onclick={() => extend(appointment)}>Verlängern</Button>
+                <Button variant="ghost" onclick={() => (extendOpen = false)}>Abbrechen</Button>
+              </div>
+            </div>
+          </Dialog>
+        {/if}
         {#if policy.canEdit(appointment)}
           <CancelDialog bind:open={cancelOpen} {detail} {appointment} oncancelled={() => view.notify('Termin abgesagt.')} />
         {/if}

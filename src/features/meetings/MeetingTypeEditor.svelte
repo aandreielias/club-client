@@ -247,6 +247,7 @@
 
   <fieldset>
     <legend>Online-Teilnahme</legend>
+    <label class="check"><input type="checkbox" bind:checked={form.selfCheckIn} /> Stimmberechtigte melden sich in der App selbst als anwesend</label>
     <label class="check"><input type="checkbox" bind:checked={form.online} /> Online-Teilnahme möglich (Link in jeder Sitzung dieser Art)</label>
     {#if form.online}
       <div class="nested">

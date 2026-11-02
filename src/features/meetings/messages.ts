@@ -1,6 +1,7 @@
 import type { MessageCatalog } from '../../lib/errors/ErrorMessages';
 
 export const MEETING_MESSAGES: MessageCatalog = {
+  'meeting.check-in-off': 'Bei dieser Sitzungsart trägt die Sitzungsleitung die Anwesenheit ein.',
   'meeting.agenda-invalid': 'Höchstens 50 Punkte mit je bis 200 Zeichen; verknüpfte Anträge müssen zu dieser Sitzung gehören.',
   'meeting.approve-not-allowed': 'Das Protokoll genehmigen Vorsitz und Schriftführung.',
   'meeting.check-in-mode': 'Selbst eintragen geht mit der App oder online.',

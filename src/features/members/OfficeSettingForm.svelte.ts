@@ -1,5 +1,5 @@
 import { FormState } from '../../lib/state/FormState.svelte';
-import { SEEDED_OFFICES, type BoardSettings, type OfficeInput, type OfficeKind, type OfficeSetting } from './MembersApi';
+import { SEEDED_OFFICES, type BoardSettings, type OfficeDuty, type OfficeInput, type OfficeKind, type OfficeSetting } from './MembersApi';
 
 type Errors = Partial<Record<'label' | 'holders' | 'termYears', string>>;
 
@@ -19,6 +19,7 @@ export class OfficeSettingForm extends FormState<Errors> {
   maxHolders = $state<number | null>(1);
   termYears = $state(3);
   board = $state(false);
+  duty = $state<OfficeDuty>('NONE');
   partners = $state<OfficeKind[]>([]);
   /** '' for a new office (the server makes the key). */
   readonly office: OfficeKind;
@@ -38,6 +39,7 @@ export class OfficeSettingForm extends FormState<Errors> {
       this.maxHolders = setting.maxHolders;
       this.termYears = setting.termYears;
       this.board = setting.board;
+      this.duty = setting.duty ?? 'NONE';
     }
     this.partners = partnersOf(settings, office);
   }
@@ -57,7 +59,14 @@ export class OfficeSettingForm extends FormState<Errors> {
   }
 
   toNew(): OfficeInput {
-    return { label: this.label.trim(), board: this.board, minHolders: this.minHolders, maxHolders: this.maxHolders, termYears: this.termYears };
+    return {
+      label: this.label.trim(),
+      board: this.board,
+      minHolders: this.minHolders,
+      maxHolders: this.maxHolders,
+      termYears: this.termYears,
+      duty: this.duty,
+    };
   }
 
   /** The whole settings with this office and its pairs replaced. */
@@ -70,6 +79,7 @@ export class OfficeSettingForm extends FormState<Errors> {
       maxHolders: this.maxHolders,
       termYears: this.termYears,
       board: this.board,
+      duty: this.duty,
     };
     return {
       ...settings,

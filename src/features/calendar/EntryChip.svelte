@@ -44,7 +44,8 @@
   );
 
   const time = $derived(showTime ? session.format.time(entry.start) : '');
-  const hint = $derived(`${entry.label}: ${entry.title}\n${when()}`);
+  const ANSWERS = { YES: 'Zugesagt', MAYBE: 'Vielleicht', NO: 'Abgesagt' } as const;
+  const hint = $derived(`${entry.label}: ${entry.title}\n${when()}${entry.answer ? `\n${ANSWERS[entry.answer]}` : ''}`);
   /** A record opens in the window; absences and offices have pages instead. */
   function open() {
     if (entry.window) bus.publish(WINDOW_OPEN, { kind: entry.window.kind, id: entry.window.id });
@@ -80,6 +81,9 @@
   onclick={(e) => (e.stopPropagation(), open())}
 >
   {#if time}<span class="time">{time}</span>{/if}
+  {#if entry.answer}<span class="answer {entry.answer.toLowerCase()}" aria-label={ANSWERS[entry.answer]}
+      >{entry.answer === 'YES' ? '✓' : entry.answer === 'NO' ? '✗' : '?'}</span
+    >{/if}
   {#if handles}
     {#each edges as edge (edge)}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -202,6 +206,15 @@
   }
   .fill .title {
     white-space: normal;
+  }
+  .answer {
+    font-weight: var(--font-weight-bold);
+  }
+  .answer.yes {
+    color: var(--color-success, var(--color-tag-green-text));
+  }
+  .answer.no {
+    color: var(--color-danger);
   }
   .inactive .title {
     color: var(--color-text-muted);

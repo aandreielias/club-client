@@ -5,7 +5,7 @@ import type { MockEvent } from '../../lib/mock/MockEventBus';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import { isImportant, type MessageRef, type Notification, type NotificationKind, type Preference, type RefKind } from './model';
-import { PRIVILEGED, type Member } from '../../lib/types';
+import { PRIVILEGED, type Member, coaches } from '../../lib/types';
 import { settings } from '../../settings';
 import { resolveRef } from '../../lib/mock/recordRefs';
 import { meetings } from '../meetings/mock';
@@ -134,7 +134,7 @@ export class MockNotifications {
       this.people.audienceIds({ everyone: true }).forEach((id) => recipients.add(id));
     } else {
       const coached = Object.entries(this.people.teamRoles(viewer.id))
-        .filter(([, role]) => role === 'COACH')
+        .filter(([, role]) => coaches(role))
         .map(([team]) => team);
       for (const teamId of teamIds) {
         if (!manager && !coached.includes(teamId)) fail(403, 'access.denied');

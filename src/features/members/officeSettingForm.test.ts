@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 import type { BoardSettings, OfficeKind } from './MembersApi';
 import { OfficeSettingForm, partnersOf } from './OfficeSettingForm.svelte';
 
-const office = (o: OfficeKind, label: string) => ({ office: o, label, enabled: true, minHolders: 1, maxHolders: 1, termYears: 3, board: true });
+const office = (o: OfficeKind, label: string) => ({
+  office: o,
+  label,
+  enabled: true,
+  minHolders: 1,
+  maxHolders: 1,
+  termYears: 3,
+  board: true,
+  duty: 'NONE' as const,
+});
 const settings = (): BoardSettings => ({
   offices: [office('CHAIR', 'Obfrau'), office('VICE_CHAIR', 'Stellvertretung'), office('TREASURER', 'Kassa'), office('SECRETARY', 'Schrift')],
   minBoardSize: 3,

@@ -103,7 +103,11 @@ export interface OfficeSetting {
   termYears: number;
   /** Its holders are on the Vorstand (BOARD role, board size); fixed for the seeded ones (all but AUDITOR). */
   board: boolean;
+  /** What it does in meetings: the chair's part, the secretary's, or none (fixed for the seeded chair and secretary). */
+  duty: OfficeDuty;
 }
+
+export type OfficeDuty = 'NONE' | 'CHAIR' | 'SECRETARY';
 
 /** server: MembersController.NewOfficeBody — a function of the club's own. */
 export type OfficeInput = Omit<OfficeSetting, 'office' | 'enabled'>;
@@ -233,6 +237,11 @@ export class MembersApi {
   /** Admin/board with step-up; running offices keep their terms. */
   saveBoardSettings(settings: BoardSettings): Promise<BoardSettings> {
     return this.api.put<BoardSettings>('/api/v1/board/settings', settings);
+  }
+
+  /** Only a club office never held and named nowhere (`office.in-use`: switch it off instead). */
+  deleteOffice(office: OfficeKind): Promise<BoardSettings> {
+    return this.api.delete<BoardSettings>(`/api/v1/board/settings/offices/${encodeURIComponent(office)}`);
   }
 
   /** A function of the club's own (key generated); answers every office's settings. */

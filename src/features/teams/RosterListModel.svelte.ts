@@ -22,7 +22,7 @@ export class RosterListModel extends ListModel<RosterEntry> {
           {
             key: 'role',
             label: 'Rolle im Team',
-            value: (e) => (e.teamRole === 'COACH' ? 0 : 1),
+            value: (e) => ({ COACH: 0, ASSISTANT: 1, PLAYER: 2 })[e.teamRole],
             format: (e) => TEAM_ROLE_LABELS[e.teamRole],
             width: '12rem',
           },

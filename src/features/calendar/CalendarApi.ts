@@ -13,6 +13,7 @@ import type {
   NewAppointment,
   NewAbsence,
   OpenAnswer,
+  Holiday,
   Extras,
   ExtrasInput,
   MatchList,
@@ -97,6 +98,26 @@ export class CalendarApi {
   /** Answers still to give in the next two weeks, for oneself and one's minors. */
   async openAnswers(): Promise<OpenAnswer[]> {
     return (await this.api.get<{ items: OpenAnswer[] }>('/api/v1/me/open-answers')).items;
+  }
+
+  async holidays(): Promise<Holiday[]> {
+    return (await this.api.get<{ items: Holiday[] }>('/api/v1/calendar/holidays')).items;
+  }
+
+  /** Admin/board with step-up; new weekly series skip these days. */
+  saveHoliday(id: string | null, holiday: Omit<Holiday, 'id'>): Promise<Holiday> {
+    return id
+      ? this.api.put<Holiday>(`/api/v1/calendar/holidays/${encodeURIComponent(id)}`, holiday)
+      : this.api.post<Holiday>('/api/v1/calendar/holidays', holiday);
+  }
+
+  deleteHoliday(id: string): Promise<void> {
+    return this.api.delete(`/api/v1/calendar/holidays/${encodeURIComponent(id)}`);
+  }
+
+  /** More weeks of a series, in its rhythm, until the date (holidays skipped); returns the new occurrences. */
+  async extend(id: string, repeatUntil: string): Promise<Appointment[]> {
+    return (await this.api.post<AppointmentList>(`${this.path(id)}/extend`, { repeatUntil })).items;
   }
 
   extras(id: string): Promise<Extras> {

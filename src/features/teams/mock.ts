@@ -1,7 +1,7 @@
 // Team admin endpoints of the mock server (server: TeamHandlers); the team tables stay on the directory, which every mock reads.
 import { directory, type MockDirectory } from '../../lib/mock/core';
 import { MockServer, mockServer } from '../../lib/mock/MockServer';
-import { ADMIN_BOARD, type Member, type Roster, type Team, type TeamRole } from '../../lib/types';
+import { ADMIN_BOARD, coaches, type Member, type Roster, type Team, type TeamRole } from '../../lib/types';
 import { settings } from '../../settings';
 import { calendar } from '../calendar/mock';
 import { files } from '../files/mock';
@@ -63,11 +63,11 @@ export class MockTeams {
     if (!this.people.teams.data.some((t) => t.id === teamId)) fail(404, 'team.not-found');
     // Not coaches: membership would let them read any member's birth date and contact data.
     if (!this.people.isManager(viewer)) {
-      if (this.people.teamRoles(viewer.id)[teamId] === 'COACH') fail(403, 'access.denied');
+      if (coaches(this.people.teamRoles(viewer.id)[teamId])) fail(403, 'access.denied');
       fail(404, 'team.not-found');
     }
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
-    if (teamRole !== 'COACH' && teamRole !== 'PLAYER') fail(400, 'request.invalid');
+    if (teamRole !== 'COACH' && teamRole !== 'ASSISTANT' && teamRole !== 'PLAYER') fail(400, 'request.invalid');
     if (!this.people.name(memberId)) fail(404, 'member.not-found');
     (this.people.memberships.data[memberId] ??= {})[teamId] = teamRole as TeamRole;
     this.people.memberships.save();
@@ -78,7 +78,7 @@ export class MockTeams {
   /** server: TeamHandlers.requireRunsTeam — admin/board, or a coach of the team (club PIN). */
   private requireRunsTeam(viewer: Member, teamId: string): void {
     if (this.people.isManager(viewer)) return this.people.requirePrivileged(viewer, ADMIN_BOARD);
-    if (this.people.teamRoles(viewer.id)[teamId] !== 'COACH') fail(404, 'team.not-found');
+    if (!coaches(this.people.teamRoles(viewer.id)[teamId])) fail(404, 'team.not-found');
     this.people.requirePrivileged(viewer, ['COACH']);
   }
 
@@ -117,7 +117,7 @@ export class MockTeams {
   /** server: TeamHandlers.requestPlayer — to admin and board. */
   requestPlayer(viewer: Member, teamId: string, body: Record<string, any>): void {
     const team = this.people.teams.data.find((t) => t.id === teamId) ?? fail(404, 'team.not-found');
-    if (this.people.teamRoles(viewer.id)[teamId] !== 'COACH') fail(404, 'team.not-found');
+    if (!coaches(this.people.teamRoles(viewer.id)[teamId])) fail(404, 'team.not-found');
     const note = typeof body.note === 'string' && body.note.trim() ? body.note.trim() : null;
     const player = body.memberId ? this.people.name(body.memberId) : null;
     if ((body.memberId && !player) || (!player && !note) || (note?.length ?? 0) > 500) fail(400, 'team.request-invalid');
@@ -140,7 +140,7 @@ export class MockTeams {
     if (this.people.isManager(viewer)) {
       this.people.requirePrivileged(viewer, ADMIN_BOARD);
     } else {
-      if (this.people.teamRoles(viewer.id)[teamId] !== 'COACH') fail(404, 'team.not-found');
+      if (!coaches(this.people.teamRoles(viewer.id)[teamId])) fail(404, 'team.not-found');
       this.people.requirePrivileged(viewer, ['COACH']);
       if ((this.people.teamRoles(memberId)[teamId] ?? 'PLAYER') !== 'PLAYER') fail(403, 'access.denied');
     }

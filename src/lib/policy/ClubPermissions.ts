@@ -1,6 +1,6 @@
 import type { TeamDirectory } from '../directory/TeamDirectory.svelte';
 import type { SessionStore } from '../session/SessionStore.svelte';
-import { ADMIN_BOARD, PRIVILEGED, type Team } from '../types';
+import { ADMIN_BOARD, coaches, PRIVILEGED, type Team } from '../types';
 
 /**
  * The club-wide permission pattern shared by calendar and tasks (server: requireMayEdit /
@@ -39,7 +39,7 @@ export class ClubPermissions {
   isCoachOf(teamId: string): boolean {
     if (!this.isCoach || !this.session.isInTeam(teamId)) return false;
     const role = this.directory.teamRole(teamId, this.session.member.id);
-    return role === null || role === 'COACH';
+    return role === null || coaches(role);
   }
 
   canManage(teamId: string | null): boolean {

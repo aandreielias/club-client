@@ -133,6 +133,25 @@ describe('mock calendar', () => {
     expect(stats.items.find((m) => m.memberId === 'spieler')).toMatchObject({ present: 1, marked: 1 });
   });
 
+  it('skips holidays in new series, extends a series in its rhythm and marks own answers', () => {
+    stepUp('admin');
+    calendar.saveHoliday(member('admin'), null, { name: 'Ferien', from: '2027-02-08', to: '2027-02-14' });
+    const created = calendar.create(
+      member('admin'),
+      draft('t-u16', { startsAt: '2027-02-01T17:00:00.000Z', endsAt: '2027-02-01T18:30:00.000Z', repeatUntil: '2027-02-15', intervalWeeks: 1 }),
+    );
+    expect(created.map((a) => a.startsAt.slice(0, 10))).toEqual(['2027-02-01', '2027-02-15']);
+    const added = calendar.extend(member('admin'), created[0].id, '2027-03-01');
+    expect(added.map((a) => a.startsAt.slice(0, 10))).toEqual(['2027-02-22', '2027-03-01']);
+    calendar.respond(member('spieler'), created[0].id, { status: 'YES' });
+    expect(calendar.myAnswers(member('eltern'), '2027-01-01T00:00:00Z', '2027-04-01T00:00:00Z')).toContainEqual({
+      appointmentId: created[0].id,
+      memberId: 'spieler',
+      status: 'YES',
+    });
+    for (const h of [...calendar.holidays.data]) calendar.deleteHoliday(member('admin'), h.id);
+  });
+
   it('car pools: one seat per member and appointment, full cars refuse', () => {
     stepUp('admin');
     const [created] = calendar.create(member('admin'), draft(null, { type: 'MATCH', title: 'Auswärts' }));

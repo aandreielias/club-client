@@ -100,6 +100,8 @@ export interface MeetingType {
   /** Members may join its meetings online; each shows its own link or the type's standing `videoUrl`. */
   online: boolean;
   videoUrl: string | null;
+  /** Voters check themselves in while a meeting is open; off: who runs it enters presence. Missing on old data: on. */
+  selfCheckIn?: boolean;
   /** Meetings of this type exist: it can be archived, not deleted. */
   inUse: boolean;
   steps: MeetingStep[];

@@ -41,6 +41,7 @@ export class MeetingTypeForm extends FormState<Errors> {
   archived = $state(false);
   /** Online participation for every meeting of the type, with an optional standing link (e.g. the board's video room). */
   online = $state(false);
+  selfCheckIn = $state(true);
   videoUrl = $state('');
   /** What happens around each meeting; a new type starts with the server's two reminders. */
   steps = $state<MeetingStep[]>([
@@ -89,6 +90,7 @@ export class MeetingTypeForm extends FormState<Errors> {
     this.sort = type.sort;
     this.archived = type.archived;
     this.online = type.online;
+    this.selfCheckIn = type.selfCheckIn !== false;
     this.videoUrl = type.videoUrl ?? '';
     this.steps = type.steps.map((s) => ({ ...s }));
   }
@@ -133,6 +135,7 @@ export class MeetingTypeForm extends FormState<Errors> {
       sort: this.sort,
       archived: this.archived,
       online: this.online,
+      selfCheckIn: this.selfCheckIn,
       videoUrl: this.online ? this.videoUrl.trim() || null : null,
       steps: this.steps.map((s) =>
         s.system ? { ...s, title: null, body: null } : { ...s, title: s.title?.trim() ?? '', body: s.body?.trim() || null },

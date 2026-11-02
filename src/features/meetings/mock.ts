@@ -20,6 +20,7 @@ import { defaultTemplate, fill, protocolTemplate, TEMPLATE_NAME } from './invita
 import type { RefKind } from '../../lib/records/refs';
 import { ADMIN_BOARD, type Member } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
+import { officeUses } from '../members/mock';
 import { tasks } from '../tasks/mock';
 import {
   ALL_MAJORITIES,
@@ -871,6 +872,7 @@ export class MockMeetings {
     if (meeting.status !== 'OPEN') fail(409, 'meeting.not-open');
     if (!this.meetingVoters(meeting).includes(viewer.id)) fail(400, 'meeting.not-voter');
     if (mode !== 'APP' && mode !== 'ONLINE') fail(400, 'meeting.check-in-mode');
+    if (this.type(meeting.kind).selfCheckIn === false) fail(409, 'meeting.check-in-off');
     if (mode === 'ONLINE' && !this.type(meeting.kind).online) fail(400, 'meeting.not-online');
     if (this.resolutions.data.some((r) => r.meetingId === id && r.status === 'OPEN')) fail(409, 'meeting.vote-open');
     meeting.presence[viewer.id] = mode as 'APP' | 'ONLINE';
@@ -1525,6 +1527,7 @@ export class MockMeetings {
       archived: !!body.archived,
       online: !!body.online,
       videoUrl: body.online && typeof body.videoUrl === 'string' && body.videoUrl.trim() ? body.videoUrl.trim() : null,
+      selfCheckIn: body.selfCheckIn !== false,
       inUse: false,
       steps: checkedSteps(body.steps),
     };
@@ -1563,7 +1566,13 @@ export class MockMeetings {
   }
 
   private offices(viewer: Member): OfficeKind[] {
-    return this.people.officesOf(viewer.id);
+    // server: MeetingAccess.viewer — a club office with the chair's or secretary's duty acts as CHAIR or SECRETARY
+    const held = this.people.officesOf(viewer.id);
+    const duties = held.flatMap((o) => {
+      const duty = this.people.boardSettings.data.offices.find((s) => s.office === o)?.duty;
+      return duty === 'CHAIR' || duty === 'SECRETARY' ? [duty] : [];
+    });
+    return [...new Set([...held, ...duties])];
   }
 
   /** server: MeetingType.mayConvene */
@@ -1663,6 +1672,12 @@ export class MockMeetings {
 }
 
 export const meetings = new MockMeetings(directory);
+
+// server: MeetingsApi.OFFICE_IN_USE — a convener of a type, or an office follow-up of a decision
+officeUses.push(
+  (office) =>
+    meetings.types.data.some((t) => t.conveners.includes(office)) || meetings.rules.data.some((r) => r.followUps.some((f) => f.office === office)),
+);
 const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer

@@ -85,7 +85,10 @@ export class MockMail {
   /** member → send times and recipient counts of the last two days (server: mail_sent) */
   readonly sent = new MockTable<Record<string, { at: number; recipients: number }[]>>('mail-sent', () => ({}));
   /** server: mail_setting */
-  readonly settings = new MockTable<Omit<MailSettings, 'keepsMail'>>('mail-settings', () => ({ domain: DOMAIN, dailyLimit: limits.dailyLimit }));
+  readonly settings = new MockTable<Omit<MailSettings, 'keepsMail' | 'personalFor'> & { personalFor?: MailSettings['personalFor'] }>(
+    'mail-settings',
+    () => ({ domain: DOMAIN, dailyLimit: limits.dailyLimit }),
+  );
 
   constructor(private readonly people: MockDirectory) {
     this.mailboxes = new MockTable('mailboxes', () => this.seedMailboxes());
@@ -230,7 +233,12 @@ export class MockMail {
 
   /** server: MailGateway.keepsMail — the mock keeps its mail in the browser, but like the dev server's memory gateway nothing is delivered. */
   private settingsDto(): MailSettings {
-    return { domain: this.settings.data.domain, dailyLimit: this.settings.data.dailyLimit, keepsMail: false };
+    return {
+      domain: this.settings.data.domain,
+      dailyLimit: this.settings.data.dailyLimit,
+      keepsMail: false,
+      personalFor: this.settings.data.personalFor ?? 'ALL',
+    };
   }
 
   saveMailSettings(viewer: Member, body: Record<string, any>): MailSettings {
@@ -239,8 +247,9 @@ export class MockMail {
     if (domain && !/^[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(domain)) fail(400, 'mail.domain-invalid');
     const dailyLimit = Number(body.dailyLimit);
     if (!Number.isInteger(dailyLimit) || dailyLimit < 1 || dailyLimit > 10_000) fail(400, 'mail.daily-limit-invalid');
-    const changed = domain !== this.settings.data.domain;
-    Object.assign(this.settings.data, { domain, dailyLimit });
+    const personalFor = ['ALL', 'CLUB_MEMBERS', 'NONE'].includes(body.personalFor) ? body.personalFor : 'ALL';
+    const changed = domain !== this.settings.data.domain || personalFor !== (this.settings.data.personalFor ?? 'ALL');
+    Object.assign(this.settings.data, { domain, dailyLimit, personalFor });
     this.settings.save();
     // server: MailboxHandlers.saveSettings — a new domain gives every audience member without one a personal mailbox
     if (changed && domain) for (const m of this.people.members.data.filter((m) => m.active)) this.giveMailbox(m.id);
@@ -275,6 +284,9 @@ export class MockMail {
     const domain = this.settings.data.domain;
     const member = this.people.members.data.find((m) => m.id === memberId);
     if (!domain || !member || this.mailboxes.data.some((b) => b.memberId === memberId)) return;
+    // server: MailSettings.personalFor and members without a login
+    const personalFor = this.settings.data.personalFor ?? 'ALL';
+    if (member.login === false || personalFor === 'NONE' || (personalFor === 'CLUB_MEMBERS' && !member.membershipTypes.length)) return;
     const local = personalLocal(member.firstName, member.lastName);
     let address = `${local}@${domain}`;
     for (let n = 2; this.mailboxes.data.some((b) => b.address === address); n++) address = `${local}${n}@${domain}`;

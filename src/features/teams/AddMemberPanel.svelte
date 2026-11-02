@@ -2,7 +2,7 @@
   import { bus, directory } from '../../lib/container';
   import { TOAST } from '../../channels';
   import { Resource } from '../../lib/state/Resource.svelte';
-  import { TEAM_ROLE_LABELS, type TeamRole } from '../../lib/types';
+  import { TEAM_ROLE_LABELS, type TeamRole, coaches } from '../../lib/types';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -20,7 +20,7 @@
   /** A team coach without the COACH role can't plan the team's appointments; admins grant it right here. */
   let grantCoach = $state(true);
   const picked = $derived((members.value ?? []).find((m) => m.id === memberId) ?? null);
-  const needsCoach = $derived(role === 'COACH' && !!picked && !picked.roles.includes('COACH'));
+  const needsCoach = $derived(coaches(role) && !!picked && !picked.roles.includes('COACH'));
   const mayGrant = $derived(!!picked && memberPolicy.canSetRoles(picked));
 
   void members.load();

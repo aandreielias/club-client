@@ -9,7 +9,7 @@ import type { Member } from '../../lib/types';
 import { ZonedClock } from '../../lib/time/ZonedClock';
 import type { NewTask, Task, TaskComment, TaskPatch, TaskSource, TaskStatus } from './model';
 import type { MockEvent } from '../../lib/mock/MockEventBus';
-import { ADMIN_BOARD } from '../../lib/types';
+import { ADMIN_BOARD, coaches } from '../../lib/types';
 import { CHANGE_FIELD_LABELS, type ChangeField } from '../members/MembersApi';
 
 type StoredTask = Omit<Task, 'comments' | 'source'>;
@@ -33,7 +33,7 @@ class Viewer {
     const own = people.teamRoles(member.id);
     this.board = people.isManager(member);
     this.teamIds = new Set(Object.keys(own));
-    this.coachTeamIds = new Set(Object.keys(own).filter((team) => own[team] === 'COACH'));
+    this.coachTeamIds = new Set(Object.keys(own).filter((team) => coaches(own[team])));
     this.self = new Set([member.id, ...people.wardsOf(member.id)]);
   }
 
