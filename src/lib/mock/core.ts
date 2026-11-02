@@ -466,6 +466,13 @@ export class MockDirectory {
   }
 
   /** server: MemberHandlers.list (admin/board; birth dates for admins only) */
+  /** server: MemberHandlers.allNames - every member (not guests) reads the names of all members; profiles stay restricted. */
+  allNames(): { names: Record<string, string> } {
+    return {
+      names: Object.fromEntries(this.members.data.filter((m) => !guestOnly(m.roles)).map((m) => [m.id, `${m.firstName} ${m.lastName}`])),
+    };
+  }
+
   list(viewer: Member): MemberList {
     this.requirePrivileged(viewer, ADMIN_BOARD);
     const items = [...this.members.data]
@@ -1026,4 +1033,5 @@ mockServer
     return { items: directory.teams.data.filter((t) => !mine || t.id in own) };
   })
   .on('GET', '/api/v1/teams/:id/roster', (req) => directory.roster(directory.actor(req), req.params.id))
-  .on('GET', '/api/v1/members', (req) => directory.list(directory.actor(req)));
+  .on('GET', '/api/v1/members', (req) => directory.list(directory.actor(req)))
+  .on('GET', '/api/v1/members/names', (req) => (directory.actor(req), directory.allNames()));

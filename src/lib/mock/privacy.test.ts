@@ -20,6 +20,13 @@ describe('mock access requests and audit log', () => {
     );
   });
 
+  it('lets every member read all names, but not other profiles', () => {
+    const { names } = mockServer.handle('GET', '/api/v1/members/names', undefined, as('spielerin')) as { names: Record<string, string> };
+    expect(names.vorstand).toBeTruthy();
+    expect(names.admin).toBeTruthy();
+    expect(() => mockServer.handle('GET', '/api/v1/members/vorstand', undefined, as('spielerin'))).toThrow(expect.objectContaining({ status: 404 }));
+  });
+
   it('logs privileged writes and member reads for admins only', () => {
     mockServer.handle('PUT', '/api/v1/members/spieler/roles', { roles: ['PLAYER', 'VOLUNTEER'] }, as('admin'));
     mockServer.handle('GET', '/api/v1/members/spieler', undefined, as('vorstand'));

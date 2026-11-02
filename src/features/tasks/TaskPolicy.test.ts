@@ -26,7 +26,7 @@ const task = (assignees: string[]): Task => ({
 
 describe('TaskPolicy', () => {
   it("counts the tasks of the member's minors as own", () => {
-    const api = new ApiClient({ send: vi.fn(), upload: vi.fn(), url: (p) => p }, async () => false);
+    const api = new ApiClient({ send: vi.fn(), upload: vi.fn(), url: (p) => p });
     const session = new SessionStore(api);
     session.me = {
       member: {

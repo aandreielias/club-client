@@ -5,8 +5,8 @@ import type { Member, MemberList, Roster, RosterEntry, Team, TeamRole } from '..
 
 /**
  * Shared lookup of teams, rosters and member names. Feature DTOs carry only ids, so pages resolve
- * names here. Sources: GET /teams (everyone), rosters (team members and admin/board) and the
- * member list (admin/board, loaded only on explicit request).
+ * names here. Sources: GET /teams (everyone), GET /members/names (every member's name, for everyone),
+ * rosters (team members and admin/board) and the member list (admin/board, loaded only on explicit request).
  */
 export class TeamDirectory {
   /** All teams of the club. */
@@ -17,6 +17,7 @@ export class TeamDirectory {
   #pendingRosters = new Map<string, Promise<Roster | null>>();
   #teamsLoad: Promise<void> | null = null;
   #membersLoad: Promise<readonly Member[]> | null = null;
+  #namesLoad: Promise<void> | null = null;
   /** Bumped by clear(): answers to requests of the previous member are dropped. */
   #generation = 0;
 
@@ -65,11 +66,25 @@ export class TeamDirectory {
     return pending;
   }
 
-  /** Loads the rosters of the given teams (plus the member's own teams) for name lookups. */
+  /** Loads the rosters of the given teams (plus the member's own teams) and every member's name for name lookups. */
   async loadRosters(teamIds: Iterable<string | null> = []): Promise<void> {
     const ids = new Set([...teamIds].filter((id): id is string => !!id));
     this.session.teams.forEach((t) => ids.add(t.id));
-    await Promise.all([...ids].map((id) => this.roster(id)));
+    await Promise.all([this.loadNames(), ...[...ids].map((id) => this.roster(id))]);
+  }
+
+  /** Every member's name once per session (guests get none; a failure is asked again next time). */
+  loadNames(): Promise<void> {
+    const generation = this.#generation;
+    this.#namesLoad ??= this.api
+      .get<{ names: Record<string, string> }>('/api/v1/members/names')
+      .then(({ names }) => {
+        if (generation === this.#generation) this.remember(Object.entries(names).map(([memberId, name]) => ({ memberId, name })));
+      })
+      .catch(() => {
+        this.#namesLoad = null;
+      });
+    return this.#namesLoad;
   }
 
   /** Every member (admin/board only). */
@@ -142,6 +157,7 @@ export class TeamDirectory {
     this.#rosters = {};
     this.#pendingRosters.clear();
     this.#membersLoad = null;
+    this.#namesLoad = null;
     this.#teamsLoad = null;
     this.teams = [];
   }

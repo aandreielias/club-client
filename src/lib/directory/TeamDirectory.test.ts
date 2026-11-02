@@ -48,9 +48,10 @@ function setup() {
   const send = vi.fn<Transport['send']>(async (_method, path) => {
     const roster = /\/teams\/(\w+)\/roster/.exec(path);
     if (roster) return rosters[roster[1]];
+    if (path === '/api/v1/members/names') return { names: { m1: 'Clara Coach', m2: 'Pia Player', m3: 'Max Member' } };
     throw new Error(`unexpected ${path}`);
   });
-  const api = new ApiClient({ send, upload: vi.fn(), url: (p) => p }, async () => false);
+  const api = new ApiClient({ send, upload: vi.fn(), url: (p) => p });
   const session = new SessionStore(api);
   session.me = me;
   const directory = new TeamDirectory(api, session);
@@ -64,7 +65,14 @@ describe('TeamDirectory', () => {
     await Promise.all([directory.loadRosters(), directory.loadRosters(['a'])]);
     expect(directory.nameOf('m2')).toBe('Pia Player');
     expect(directory.nameOf('m1')).toBe('Clara Coach');
-    expect(send).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenCalledTimes(3); // names once, rosters a and b once each
+  });
+
+  it('knows members outside the own teams by name', async () => {
+    const { directory } = setup();
+    expect(directory.nameOf('m3')).toBe('Mitglied');
+    await directory.loadRosters();
+    expect(directory.nameOf('m3')).toBe('Max Member');
   });
 
   it('lets permissions use exact team roles once rosters are loaded', async () => {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { directory } from '../../lib/container';
   import Button from '../../ui/Button.svelte';
   import Select from '../../ui/Select.svelte';
   import type { Person } from './model';
@@ -26,7 +27,7 @@
   } = $props();
 
   const options = $derived(candidates.filter((p) => !value.includes(p.memberId)).map((p) => ({ value: p.memberId, label: p.name })));
-  const nameOf = (id: string) => [...candidates, ...known].find((p) => p.memberId === id)?.name ?? 'Mitglied';
+  const nameOf = (id: string) => [...candidates, ...known].find((p) => p.memberId === id)?.name ?? directory.nameOf(id);
 
   let pick = $state('');
 

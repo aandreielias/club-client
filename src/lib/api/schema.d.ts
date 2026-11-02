@@ -2037,6 +2037,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/members/names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["names"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/members/invitations": {
         parameters: {
             query?: never;
@@ -4209,6 +4225,11 @@ export interface components {
             memberId: string;
             name: string;
             canOpen: boolean;
+        };
+        "at.clubserver.members.api.MembersApi.MemberNames": {
+            names: {
+                [key: string]: string;
+            };
         };
         "at.clubserver.members.api.MembersApi.MemberIds": {
             ids: string[];
@@ -8923,6 +8944,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.Family"];
+                };
+            };
+        };
+    };
+    names: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.MemberNames"];
                 };
             };
         };

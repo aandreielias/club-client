@@ -18,7 +18,7 @@ const DAY = 86_400_000;
 const inDays = (days: number) => new Date(Date.now() + days * DAY).toISOString();
 
 function policyFor(roles: Role[]): MeetingPolicy {
-  const session = new SessionStore(new ApiClient({ send: vi.fn(), upload: vi.fn(), url: (p) => p }, async () => false));
+  const session = new SessionStore(new ApiClient({ send: vi.fn(), upload: vi.fn(), url: (p) => p }));
   session.me = { member: { ...member('spielerin'), roles }, teams: [], missing: [], wardIds: [], wardNames: {} };
   return new MeetingPolicy(session);
 }
