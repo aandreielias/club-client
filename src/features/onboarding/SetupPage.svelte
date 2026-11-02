@@ -11,7 +11,7 @@
 
   /**
    * First start of a new club (admin only): the club's name and the admin's own name; "Verein anlegen" saves both and opens the
-   * app. The rest (address, season, …) waits in Einstellungen › Verein. The first save needs no PIN (server: ClubSettings.save).
+   * app. The rest (address, season, …) waits in Einstellungen › Verein.
    */
   let { onlogout }: { onlogout: () => void } = $props();
 

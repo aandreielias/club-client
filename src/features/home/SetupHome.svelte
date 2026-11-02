@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { auth, directory, preferences, store } from '../../lib/container';
+  import { directory, preferences, store } from '../../lib/container';
   import { Resource } from '../../lib/state/Resource.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
@@ -19,9 +19,8 @@
   const or = <T,>(promise: Promise<T>, fallback: T): Promise<T> => promise.catch(() => fallback);
 
   const steps = new Resource(async () => {
-    const [members, authenticator, mail, board, locations, folders, rules] = await Promise.all([
+    const [members, mail, board, locations, folders, rules] = await Promise.all([
       or(directory.allMembers(), []),
-      or(auth.totpFactor(), null),
       or(mailApi.settings(), null),
       or(membersApi.board(), null),
       or(locationsApi.list(), []),
@@ -32,7 +31,6 @@
     const admins = active.filter((m) => m.roles.includes('ADMIN')).length;
     return {
       admins,
-      authenticator: !!authenticator,
       mailDomain: !!mail?.domain,
       offices: board?.offices.length ?? 0,
       teams: directory.teams.length,

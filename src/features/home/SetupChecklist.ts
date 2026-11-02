@@ -2,8 +2,6 @@
 export interface SetupFacts {
   /** Active members with the ADMIN role. */
   admins: number;
-  /** The viewer set up the authenticator app (admins and board confirm with it). */
-  authenticator: boolean;
   mailDomain: boolean;
   /** Running offices on the board page. */
   offices: number;
@@ -40,13 +38,6 @@ export function setupSteps(f: SetupFacts): SetupStep[] {
       href: '#/members',
       done: f.admins >= 2,
       warn: f.admins < 2,
-    },
-    {
-      id: 'authenticator',
-      label: 'Authenticator-App einrichten',
-      detail: 'Admins und Vorstand bestätigen heikle Änderungen damit.',
-      href: '#/settings/security',
-      done: f.authenticator,
     },
     {
       id: 'membership',

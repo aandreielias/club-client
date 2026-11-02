@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { directory, MockDirectory } from '../../lib/mock/core';
+import { directory } from '../../lib/mock/core';
 import { MockSocket } from '../../lib/mock/MockSocket';
 import { mockServer } from '../../lib/mock/MockServer';
 import type { Member } from '../../lib/types';
@@ -29,7 +29,6 @@ async function connect(id: string) {
 describe('mock notifications', () => {
   it('creates an inbox entry for newly assigned members and announces it live', async () => {
     const { received, socket } = await connect('spieler');
-    directory.stepUp(member('trainer'), MockDirectory.PIN);
     tasks.create(member('trainer'), {
       teamId: 't-u16',
       appointmentId: null,
@@ -66,26 +65,7 @@ describe('mock notifications', () => {
     expect(await closed).toBe(4403);
   });
 
-  it('tells the other privileged members when the club PIN changes and keeps security messages on', () => {
-    directory.confirm(member('admin'));
-    directory.setClubPin(member('admin'), 'k7m2q');
-    directory.setClubPin(member('admin'), MockDirectory.PIN);
-    const changed = (id: string) => notifications.list(id, true).items.filter((n) => n.title === 'Der Vereins-PIN wurde geändert');
-    for (const id of ['vorstand', 'trainer']) {
-      expect(changed(id)[0], id).toMatchObject({
-        kind: 'SECURITY',
-        link: '/me/security',
-        body: 'Frag beim Vorstand nach dem neuen PIN. Wusstest du nichts davon? Melde dich beim Vorstand.',
-      });
-    }
-    expect(changed('admin')).toEqual([]);
-    expect(changed('spielerin')).toEqual([]);
-    const prefs = notifications.setPreferences('vorstand', [{ kind: 'SECURITY', push: false, email: false }]);
-    expect(prefs.find((p) => p.kind === 'SECURITY')).toEqual({ kind: 'SECURITY', push: true, email: true }); // important: always sent
-  });
-
   it('tells the team and its guardians when an admin cancels a team appointment, not the whole board, nor the admin', () => {
-    directory.confirm(member('admin'));
     const target = upcoming('t-u16');
     calendar.cancel(member('admin'), target.id, false);
     const title = `Abgesagt: ${target.title}`;
@@ -96,7 +76,6 @@ describe('mock notifications', () => {
   });
 
   it('tells every active member when a club-wide appointment is cancelled', () => {
-    directory.confirm(member('vorstand'));
     const target = upcoming(null);
     calendar.cancel(member('vorstand'), target.id, false);
     const title = `Abgesagt: ${target.title}`;
@@ -104,7 +83,6 @@ describe('mock notifications', () => {
   });
 
   it('sends messages: coaches only to their teams, guardians read along, linked records as the sender sees them', () => {
-    directory.stepUp(member('trainer'), MockDirectory.PIN);
     const appointment = upcoming('t-u16');
     const body = {
       title: 'Hallenwechsel',

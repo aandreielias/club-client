@@ -20,7 +20,7 @@ export const TEAM_ROLE_LABELS: Readonly<Record<TeamRole, string>> = { PLAYER: 'S
 /** Task status names, shown by the tasks and search features. */
 export const TASK_STATUS_LABELS = { OPEN: 'Offen', IN_PROGRESS: 'In Arbeit', DONE: 'Erledigt' } as const;
 
-/** Roles that need a PIN and a step-up for privileged changes (server: Actor.PRIVILEGED). */
+/** Roles that change club data (server: Actor.PRIVILEGED). */
 export const PRIVILEGED: readonly Role[] = ['ADMIN', 'BOARD', 'COACH'];
 
 /** Admin and board: they manage the whole club (server: checks for Role.ADMIN, Role.BOARD; not the server's MANAGERS, which adds coaches). */
@@ -136,24 +136,6 @@ export interface Me {
   wardNames: Record<string, string>;
 }
 
-export interface Device {
-  id: string;
-  name: string;
-  createdAt: string;
-  lastUsedAt: string | null;
-}
-
-export interface SecurityStatus {
-  clubPinSet: boolean;
-  clubPinChangedAt: string | null;
-  /** Too many wrong club-PIN tries by this member; an admin must unlock. */
-  pinLocked: boolean;
-  stepUpUntil: string | null;
-  devices: Device[];
-  /** Admin and board confirm with their authenticator app instead of the club PIN. */
-  mfaRequired: boolean;
-}
-
 /** server: AuditLog.AuditEntry */
 export interface AuditEntry {
   id: number;
@@ -164,8 +146,4 @@ export interface AuditEntry {
   route: string;
   params: Record<string, string>;
   status: number;
-}
-
-export interface StepUp {
-  until: string;
 }

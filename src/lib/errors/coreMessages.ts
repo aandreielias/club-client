@@ -14,16 +14,9 @@ export const STATUS_MESSAGES: Readonly<Record<number, string>> = {
 
 export const UNKNOWN_MESSAGE = 'Unbekannter Fehler.';
 
-/** Codes shared by every feature (gateway, login, profile, club PIN). */
+/** Codes shared by every feature (gateway, login, profile). */
 export const CORE_MESSAGES: MessageCatalog = {
-  'auth.step-up-required': 'Dafür bitte zuerst bestätigen (Code aus der Authenticator-App oder Vereins-PIN).',
   'audit.area-invalid': 'Unbekannter Bereich im Protokoll.',
-  'auth.mfa-required': 'Admin und Vorstand bestätigen mit ihrer Authenticator-App, nicht mit dem Vereins-PIN.',
-  'auth.mfa-not-recent': 'Die Bestätigung mit der Authenticator-App ist abgelaufen. Bitte gib einen neuen Code ein.',
-  'auth.device-name-invalid': 'Gerätename mit 1 bis 60 Zeichen angeben.',
-  'auth.device-key-invalid': 'Dieses Gerät konnte nicht eingerichtet werden. Bitte erneut versuchen.',
-  'auth.device-verification-failed': 'Das Gerät konnte nicht bestätigt werden. Bitte erneut versuchen.',
-  'auth.too-many-devices': 'Es sind schon 5 Geräte eingerichtet. Zuerst ein altes entfernen.',
   network: 'Server nicht erreichbar. Bitte Verbindung prüfen.',
   timeout: 'Der Server antwortet nicht rechtzeitig. Bitte erneut versuchen.',
   'access.denied': 'Dafür fehlt die Berechtigung.',
@@ -32,12 +25,6 @@ export const CORE_MESSAGES: MessageCatalog = {
   'request.too-large': 'Die Anfrage ist zu groß.',
   'idempotency.in-progress': 'Die Anfrage wird noch verarbeitet.',
   'auth.unknown-member': 'Zu diesem Login gibt es kein aktives Mitglied.',
-  'auth.session-missing': 'Sitzung abgelaufen. Bitte neu anmelden.',
-  'auth.pin-format': 'Der Vereins-PIN muss genau 5 Buchstaben oder Ziffern haben.',
-  'auth.pin-too-simple': 'Dieser PIN ist zu leicht zu erraten.',
-  'auth.pin-wrong': 'Falscher Vereins-PIN.',
-  'auth.pin-locked': 'Der Vereins-PIN ist für dich gesperrt. Ein Admin muss die Sperre aufheben.',
-  'auth.club-pin-not-set': 'Es gibt noch keinen Vereins-PIN. Admin oder Vorstand legen ihn in den Einstellungen fest.',
   'profile.birth-date-required': 'Bitte zuerst das Geburtsdatum eintragen.',
   'member.not-found': 'Mitglied nicht gefunden.',
   'team.not-found': 'Team nicht gefunden.',

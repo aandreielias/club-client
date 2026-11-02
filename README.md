@@ -16,8 +16,8 @@ npm run build    # dist/, deployed to GitHub Pages by .github/workflows/deploy.y
 
 `VITE_API_MODE` (see `.env.example`):
 
-- `mock` (default): the API is answered in the browser (`src/lib/mock`, `src/features/*/mock.ts`), and data is kept in localStorage. The login page lists test accounts. Coaches confirm with the club PIN `73915`; admin and board set up a simulated authenticator app, and any 6 digits count as its code. To reset the data, clear the site data.
-- `http`: real club-server + Supabase login. Needs `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`. Admin and board confirm with an authenticator app (Supabase TOTP, `SupabaseAuthProvider`), coaches with the club PIN.
+- `mock` (default): the API is answered in the browser (`src/lib/mock`, `src/features/*/mock.ts`), and data is kept in localStorage. The login page lists test accounts. To reset the data, clear the site data.
+- `http`: real club-server + Supabase login. Needs `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (`SupabaseAuthProvider`).
 
 ## Event bus
 
@@ -40,7 +40,7 @@ Reactive state is still read directly from services where it is rendered (`sessi
 - `src/lib/`: framework-free core classes.
   - `http/`: `ApiClient`, `HttpTransport`, `ProblemError`, plus the `Transport` interface.
   - `auth/`: the `AuthProvider` interface with `DevAuthProvider` and `SupabaseAuthProvider`, and `AuthService`.
-  - `router/`, `session/`, `security/` (step-up), `notify/`, `errors/` (`ErrorMessages` registry).
+  - `router/`, `session/`, `notify/`, `errors/` (`ErrorMessages` registry).
   - `time/`: `ZonedClock` for club time-zone conversion and `Formatter`.
   - `state/`: `Resource` for async reads and `Action` for writes.
   - `detail/`: `DetailController` (window title, leave, confirmed writes, live watch of the shown record), `EditSession` (edit form + save) and `CreateController` ("new" windows). Every record view builds on these.

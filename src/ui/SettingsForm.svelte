@@ -23,7 +23,7 @@
     intro?: string;
     draft: SettingsDraft<T>;
     onsave: (value: T) => Promise<T>;
-    /** Shown in the save bar, e.g. that saving asks for the PIN. */
+    /** Shown in the save bar, e.g. who the change reaches. */
     hint?: string;
     children: Snippet;
   } = $props();

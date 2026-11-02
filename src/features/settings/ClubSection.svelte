@@ -7,7 +7,7 @@
   import Select from '../../ui/Select.svelte';
   import SettingsForm from '../../ui/SettingsForm.svelte';
 
-  /** Club facts for every member (admin/board edit, with step-up); empty fields take the server's defaults (club.yml). */
+  /** Club facts for every member (admin/board edit); empty fields take the server's defaults (club.yml). */
   interface ClubForm {
     name: string;
     shortName: string;
@@ -47,7 +47,6 @@
   <SettingsForm
     title="Verein"
     intro="Gilt für alle Mitglieder: Name in Seitenleiste, E-Mails, Kalender-Abo und Einladungen. Leere Felder nehmen den Standard des Servers."
-    hint="Speichern fragt nach Code oder PIN."
     {draft}
     onsave={save}
   >

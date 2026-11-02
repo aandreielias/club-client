@@ -14,7 +14,6 @@
   import { MemberListModel } from './MemberListModel.svelte';
   import { boardSettings, memberPolicy as policy, membersApi, membershipKinds } from './services';
 
-  // The list needs a step-up: the PIN dialog appears on first load.
   const list = new MemberListModel(membersApi, store);
   void list.load();
   useBus(bus, [MEMBER_INVITED, MEMBER_DEACTIVATED], () => void list.load());

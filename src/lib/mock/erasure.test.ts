@@ -18,7 +18,6 @@ describe('mock GDPR erasure', () => {
     const requestTask = tasks.tasks.data.find((t) => t.title.includes('David Spieler'));
     expect(requestTask).toBeDefined();
 
-    directory.confirm(member('admin'));
     mockServer.handle('POST', `/api/v1/members/${player.id}/deactivate`, undefined, 'admin@example.at');
     mockServer.handle('POST', `/api/v1/members/${player.id}/erase`, undefined, 'admin@example.at');
 

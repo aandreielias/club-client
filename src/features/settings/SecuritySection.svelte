@@ -1,30 +1,14 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { auth, bus, session, stepUp } from '../../lib/container';
+  import { auth, bus } from '../../lib/container';
   import { TOAST } from '../../channels';
   import { PasswordPolicy } from '../../lib/auth/PasswordPolicy';
   import { Action } from '../../lib/state/Action.svelte';
-  import { Resource } from '../../lib/state/Resource.svelte';
-  import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
-  import Tag from '../../ui/Tag.svelte';
-  import { ADMIN_BOARD } from '../../lib/types';
 
-  const pinLength = settings.security.pinLength;
   const policy = new PasswordPolicy(settings.auth.passwordMinLength);
-  const security = new Resource(() => session.security());
-  void security.load();
-  const usesTotp = session.hasRole(...ADMIN_BOARD);
-  const totp = new Resource(() => auth.totpFactor());
-  if (usesTotp) void totp.load();
-
-  const canSetClubPin = session.hasRole(...ADMIN_BOARD);
-  const pinAction = new Action();
-  let newPin = $state('');
-  let repeatPin = $state('');
-  let pinMismatch = $state(false);
 
   const passwordAction = new Action();
   let currentPassword = $state('');
@@ -38,17 +22,6 @@
     return null;
   });
 
-  async function changeClubPin(event: SubmitEvent) {
-    event.preventDefault();
-    pinMismatch = newPin !== repeatPin;
-    if (pinMismatch) return;
-    if (await pinAction.run(() => session.setClubPin(newPin))) {
-      newPin = repeatPin = '';
-      bus.publish(TOAST, { text: 'Vereins-PIN gespeichert.' });
-      void security.load();
-    }
-  }
-
   async function changePassword(event: SubmitEvent) {
     event.preventDefault();
     passwordSubmitted = true;
@@ -59,80 +32,9 @@
       bus.publish(TOAST, { text: 'Passwort geändert.' });
     }
   }
-
-  async function confirmNow() {
-    if (await stepUp.request()) {
-      void security.load();
-      if (usesTotp) void totp.load();
-    }
-  }
 </script>
 
 <div class="stack section">
-  {#if usesTotp}
-    <h3>Authenticator-App</h3>
-    <AsyncView resource={totp}>
-      {#snippet children(factor)}
-        <div class="row">
-          {#if factor}
-            <Tag tone="green">Eingerichtet</Tag>
-            <span class="muted"
-              >Admin und Vorstand bestätigen Änderungen mit einem Code aus ihrer App. Neues Handy? Ein Admin setzt die Sicherheit zurück.</span
-            >
-          {:else}
-            <span class="muted">Admin und Vorstand bestätigen Änderungen mit einem Code aus einer Authenticator-App.</span>
-            <Button size="sm" onclick={confirmNow}>Jetzt einrichten</Button>
-          {/if}
-        </div>
-      {/snippet}
-    </AsyncView>
-  {/if}
-
-  <h3>Vereins-PIN</h3>
-  <AsyncView resource={security}>
-    {#snippet children(status)}
-      <div class="stack">
-        {#if !status.clubPinSet}
-          {#if canSetClubPin}
-            <p>Es gibt noch keinen Vereins-PIN. Lege ihn fest und gib ihn persönlich an die Trainer:innen weiter.</p>
-          {:else if session.isPrivileged}
-            <p class="muted">Noch kein Vereins-PIN – frag den Vorstand.</p>
-          {/if}
-        {:else if session.isPrivileged && !status.mfaRequired}
-          <div class="row">
-            {#if status.stepUpUntil}
-              <Tag tone="green">Bestätigt bis {session.format.time(status.stepUpUntil)}</Tag>
-            {:else}
-              <span class="muted">Änderungen mit erweiterten Rechten brauchen eine Bestätigung mit dem Vereins-PIN.</span>
-              <Button size="sm" onclick={confirmNow}>Jetzt bestätigen</Button>
-            {/if}
-          </div>
-        {/if}
-        {#if status.pinLocked}<p class="danger" role="alert">Der Vereins-PIN ist für dich gesperrt. Ein Admin muss die Sperre aufheben.</p>{/if}
-
-        {#if canSetClubPin}
-          <form class="stack readable" onsubmit={changeClubPin}>
-            {#if status.clubPinChangedAt}
-              <p class="muted">Zuletzt geändert am {session.format.dateTime(status.clubPinChangedAt)}.</p>
-            {/if}
-            <div class="grid-2">
-              <Field label="Neuer Vereins-PIN" hint="{pinLength} Buchstaben oder Ziffern">
-                <input type="password" bind:value={newPin} minlength={pinLength} maxlength={pinLength} autocomplete="off" required />
-              </Field>
-              <Field label="Neuen Vereins-PIN wiederholen" error={pinMismatch ? 'Die PINs stimmen nicht überein.' : null}>
-                <input type="password" bind:value={repeatPin} minlength={pinLength} maxlength={pinLength} autocomplete="off" required />
-              </Field>
-            </div>
-            <ErrorNote error={pinAction.error} />
-            <div>
-              <Button type="submit" busy={pinAction.busy}>{status.clubPinSet ? 'Vereins-PIN ändern' : 'Vereins-PIN festlegen'}</Button>
-            </div>
-          </form>
-        {/if}
-      </div>
-    {/snippet}
-  </AsyncView>
-
   <h3>Passwort</h3>
   <form class="stack readable" onsubmit={changePassword} novalidate>
     <!-- Lets password managers pair the fields with the account. -->
@@ -156,11 +58,5 @@
 <style>
   h3 {
     margin: var(--space-sm) 0 0;
-  }
-  p {
-    margin: 0;
-  }
-  .danger {
-    color: var(--color-danger);
   }
 </style>

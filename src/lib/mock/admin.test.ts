@@ -7,14 +7,9 @@ import { mockServer } from './MockServer';
 import { MockSocket } from './MockSocket';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
-const stepUp = (id: string) => directory.confirm(member(id));
 
 describe('mock members admin', () => {
   it('invites with the server rules', () => {
-    expect(() => directory.invite(member('vorstand'), { email: 'a@b.at', firstName: 'A', lastName: 'B', roles: [] })).toThrow(
-      expect.objectContaining({ code: 'auth.step-up-required' }),
-    );
-    stepUp('vorstand');
     expect(() => directory.invite(member('vorstand'), { email: 'x@b.at', firstName: 'X', lastName: 'Y', roles: ['ADMIN'] })).toThrow(
       expect.objectContaining({ code: 'access.denied' }),
     );
@@ -37,7 +32,6 @@ describe('mock members admin', () => {
   });
 
   it('gives BOARD only with a board office (server: MembershipHandlers)', () => {
-    stepUp('vorstand');
     const today = directory.clock.today();
     expect(() => board.assignOffice(member('vorstand'), { memberId: 'spielerin', office: 'TREASURER', startsOn: today })).toThrow(
       expect.objectContaining({ code: 'office.not-eligible' }),
@@ -55,8 +49,6 @@ describe('mock members admin', () => {
     expect(() => directory.setMembership(member('vorstand'), 'trainer', { membershipTypes: ['ORDINARY'] })).toThrow(
       expect.objectContaining({ code: 'member.holds-office' }),
     );
-    expect(() => directory.setRoles(member('admin'), 'trainer', ['COACH'])).toThrow(expect.objectContaining({ code: 'auth.step-up-required' }));
-    stepUp('admin');
     expect(() => directory.setRoles(member('admin'), 'trainer', ['COACH'])).toThrow(expect.objectContaining({ code: 'member.board-by-office' }));
     board.endOffice(member('vorstand'), office.id);
     expect(member('trainer').roles).not.toContain('BOARD');
@@ -70,12 +62,10 @@ describe('mock members admin', () => {
   });
 
   it('protects admin roles and self-deactivation', () => {
-    stepUp('admin');
     expect(() => directory.setRoles(member('admin'), 'admin', ['BOARD'])).toThrow(
       expect.objectContaining({ code: 'member.cannot-remove-own-admin' }),
     );
     expect(() => directory.deactivate(member('admin'), 'admin')).toThrow(expect.objectContaining({ code: 'member.cannot-deactivate-self' }));
-    stepUp('vorstand');
     expect(() => directory.deactivate(member('vorstand'), 'admin')).toThrow(expect.objectContaining({ code: 'access.denied' }));
   });
 
@@ -84,28 +74,22 @@ describe('mock members admin', () => {
     const closed = new Promise<number>((resolve) => (socket.onclose = (e) => resolve(e.code)));
     socket.onmessage = vi.fn();
     socket.send(JSON.stringify({ type: 'auth', token: 'dev:neu@example.at' }));
-    stepUp('admin');
     directory.deactivate(member('admin'), 'neu');
     expect(directory.teamRoles('neu')).toEqual({});
     expect(await closed).toBe(4403);
     expect(directory.findActive('neu@example.at')).toBeNull();
   });
 
-  it('links guardians and resets security', () => {
-    stepUp('admin');
+  it('links guardians', () => {
     expect(() => directory.linkGuardian(member('admin'), 'spieler', 'spieler')).toThrow(expect.objectContaining({ code: 'member.guardian-is-self' }));
     directory.linkGuardian(member('admin'), 'spielerin', 'eltern');
     expect(directory.wards.data.eltern).toEqual(['spieler', 'spielerin']);
     expect(directory.wardsOf('eltern')).toEqual(['spieler']); // Lena is an adult: the link is kept but gives no rights
-    stepUp('trainer');
-    directory.resetSecurity(member('admin'), 'trainer');
-    expect(directory.securityStatus(member('trainer'))).toMatchObject({ clubPinSet: true, pinLocked: false, stepUpUntil: null });
   });
 });
 
 describe('mock teams admin', () => {
   it('creates teams and manages rosters with the server rules', () => {
-    stepUp('vorstand');
     expect(() => teams.createTeam(member('vorstand'), { name: 'Herren', season: '2026-27' })).toThrow(
       expect.objectContaining({ code: 'team.season-invalid' }),
     );
@@ -116,7 +100,6 @@ describe('mock teams admin', () => {
     const roster = teams.setTeamMember(member('vorstand'), team.id, 'trainer', 'COACH');
     expect(roster.entries).toEqual([expect.objectContaining({ memberId: 'trainer', teamRole: 'COACH' })]);
 
-    stepUp('trainer'); // ended by the reset in the previous test
     expect(() => teams.setTeamMember(member('trainer'), 't-u16', 'spielerin', 'PLAYER')).toThrow(expect.objectContaining({ code: 'access.denied' }));
     expect(() => teams.setTeamMember(member('spielerin'), 't-u16', 'neu', 'PLAYER')).toThrow(expect.objectContaining({ code: 'team.not-found' }));
     teams.removeTeamMember(member('trainer'), 't-u16', 'spieler');

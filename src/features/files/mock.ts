@@ -502,7 +502,7 @@ export class MockFiles {
     else fail(403, 'access.denied');
   }
 
-  /** Delete and tag: the uploader, or a folder manager (with step-up). */
+  /** Delete and tag: the uploader, or a folder manager. */
   private requireModify(viewer: Viewer, folder: StoredFolder, file: StoredFile): void {
     if (viewer.canManage(folder)) this.requireManage(viewer, folder);
     else if (file.uploadedBy !== viewer.member.id) fail(403, 'access.denied');

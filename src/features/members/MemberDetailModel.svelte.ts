@@ -10,7 +10,6 @@ export class MemberDetailModel {
   readonly rolesAction = new Action();
   readonly membershipAction = new Action();
   readonly guardianAction = new Action();
-  readonly resetAction = new Action();
   readonly deactivateAction = new Action();
   readonly reactivateAction = new Action();
   readonly eraseAction = new Action();
@@ -55,10 +54,6 @@ export class MemberDetailModel {
 
   linkGuardian(guardianId: string): Promise<boolean> {
     return this.write(this.guardianAction, () => this.api.linkGuardian(this.id, guardianId));
-  }
-
-  resetSecurity(): Promise<boolean> {
-    return this.resetAction.run(() => this.api.resetSecurity(this.id));
   }
 
   deactivate(): Promise<boolean> {

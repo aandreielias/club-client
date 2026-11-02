@@ -71,7 +71,6 @@ describe('MeetingForm', () => {
 
 describe('mock meetings', () => {
   it('invite within the notice period, take presence and decide the quorum', () => {
-    directory.confirm(member('vorstand'));
     const body = (days: number) => ({ kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(days), endsAt: inDays(days + 0.1) });
     const late = meetings.create(member('vorstand'), body(10));
     expect(() => meetings.invite(member('vorstand'), late.id)).toThrow(expect.objectContaining({ code: 'meeting.notice-too-short' }));
@@ -100,7 +99,6 @@ describe('mock meetings', () => {
 
 describe('mock resolutions', () => {
   it('count app votes and room sums, secret until closed', () => {
-    directory.confirm(member('vorstand'));
     const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(15), endsAt: inDays(15.1) });
     meetings.invite(member('vorstand'), mv.id);
     for (const id of ['vorstand', 'kassier', 'schrift', 'beisitz', 'beisitz2']) meetings.setPresence(member('vorstand'), mv.id, id, 'APP');
@@ -124,7 +122,6 @@ describe('mock resolutions', () => {
   });
 
   it('run circular votes among the board with written votes', () => {
-    directory.confirm(member('vorstand'));
     const soon = meetings.createResolution(member('vorstand'), null, { title: 'Bälle', deadline: inDays(2) });
     expect(() => meetings.openResolution(member('vorstand'), soon.id)).toThrow(expect.objectContaining({ code: 'resolution.deadline-too-short' }));
     const r = meetings.createResolution(member('vorstand'), null, { title: 'Bälle', deadline: inDays(4) });
@@ -141,7 +138,6 @@ describe('mock resolutions', () => {
 
 describe('meeting links', () => {
   it('link records as the manager sees them, never the meeting itself', () => {
-    directory.confirm(member('vorstand'));
     const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(25), endsAt: inDays(25.1) });
     const linked = meetings.setLinks(member('vorstand'), mv.id, [
       { kind: 'MEMBER', id: 'kassier' },
@@ -164,7 +160,6 @@ describe('meeting links', () => {
 describe('invitation document', () => {
   it('is stored in the meeting folder and becomes a new version when generated again', async () => {
     const { files } = await import('../files/mock');
-    directory.confirm(member('vorstand'));
     const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV Test', startsAt: inDays(30), endsAt: inDays(30.1) });
     const first = await meetings.generateInvitation(member('vorstand'), mv.id);
     expect(first.links[0]).toMatchObject({ kind: 'FILE', title: expect.stringMatching(/^Einladung .* MV Test\.docx$/) });
@@ -194,7 +189,6 @@ describe('invitation document', () => {
 describe('follow-up tasks', () => {
   it('a passed honorary membership becomes a task that finishes when it is entered', async () => {
     const { tasks } = await import('../tasks/mock');
-    directory.confirm(member('vorstand'));
     const mv = meetings.create(member('vorstand'), { kind: 'EXTRA_ASSEMBLY', title: 'aoMV', startsAt: inDays(15), endsAt: inDays(15.1) });
     meetings.invite(member('vorstand'), mv.id);
     for (const id of ['vorstand', 'kassier', 'schrift', 'beisitz', 'beisitz2', 'admin']) meetings.setPresence(member('vorstand'), mv.id, id, 'APP');
@@ -286,7 +280,6 @@ describe('meeting types', () => {
   });
 
   it('are created by the board, used by meetings and then only archived', () => {
-    directory.confirm(member('vorstand'));
     expect(() => meetings.saveType(member('spielerin'), null, {})).toThrow();
     const created = meetings.saveType(member('vorstand'), null, { ...new MeetingTypeForm().toInput(), label: 'Klausur', invitationLabel: 'Klausur' });
     expect(created.key).toMatch(/^TYPE_/);
@@ -302,7 +295,6 @@ describe('meeting types', () => {
 
 describe('deadlines as tasks', () => {
   it('turn a draft invitation deadline into a board task that follows the meeting and ends with the invitation', () => {
-    directory.confirm(member('vorstand'));
     const starts = inDays(30);
     const draft = meetings.create(member('vorstand'), { kind: 'BOARD', title: 'Fristtest', startsAt: starts, endsAt: inDays(30.1) });
     const task = () => tasks.tasks.data.find((t) => t.title === 'Einladen: Fristtest')!;
@@ -322,7 +314,6 @@ describe('deadlines as tasks', () => {
 
 describe('mock own decisions and online meetings', () => {
   it('lets the club add its own decision, offered in circular votes and types', () => {
-    directory.confirm(member('vorstand'));
     const current = { items: structuredClone(meetings.rules.data), circular: { ...meetings.circular.data } };
     const saved = meetings.saveRules(member('vorstand'), {
       ...current,
@@ -353,7 +344,6 @@ describe('mock own decisions and online meetings', () => {
   });
 
   it('shows the link of online kinds and lets online members vote in the app', () => {
-    directory.confirm(member('vorstand'));
     const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(16), endsAt: inDays(16.1) });
     expect(mv).toMatchObject({ online: false, videoUrl: null });
     meetings.invite(member('vorstand'), mv.id);

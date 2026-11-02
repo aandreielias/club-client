@@ -13,7 +13,7 @@ export interface KeyEventLike extends KeyInput {
 /**
  * Turns key presses into commands. Handles sequences (G, then K) with a timeout, stays out of the
  * way while the user types (only Mod/Ctrl/Alt combos and Escape, also Shift+Escape, reach commands then), and leaves
- * native modal dialogs (PIN, confirmations) alone.
+ * native modal dialogs (confirmations) alone.
  */
 export class KeyboardService {
   /** Steps typed so far of an unfinished sequence. */

@@ -75,7 +75,7 @@ export class MockTeams {
     return this.people.roster(viewer, teamId);
   }
 
-  /** server: TeamHandlers.requireRunsTeam — admin/board, or a coach of the team (club PIN). */
+  /** server: TeamHandlers.requireRunsTeam — admin/board, or a coach of the team. */
   private requireRunsTeam(viewer: Member, teamId: string): void {
     if (this.people.isManager(viewer)) return this.people.requirePrivileged(viewer, ADMIN_BOARD);
     if (!coaches(this.people.teamRoles(viewer.id)[teamId])) fail(404, 'team.not-found');

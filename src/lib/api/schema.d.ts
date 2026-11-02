@@ -517,22 +517,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/club/pin": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["setClubPin"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/calendar/types/{key}": {
         parameters: {
             query?: never;
@@ -997,22 +981,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/members/{id}/security/reset": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["resetSecurity"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/members/{id}/reactivate": {
         parameters: {
             query?: never;
@@ -1317,70 +1285,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/me/step-up": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["stepUp"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/step-up/mfa": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["stepUpWithMfa"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/step-up/device": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["stepUpWithDevice"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/step-up/challenge": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["challenge"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/me/push-tokens/remove": {
         parameters: {
             query?: never;
@@ -1440,22 +1344,6 @@ export interface paths {
         put?: never;
         post: operations["issueFeed"];
         delete: operations["revokeFeed"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/devices": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["addDevice"];
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2245,22 +2133,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/me/security": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["security"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/me/open-answers": {
         parameters: {
             query?: never;
@@ -2608,22 +2480,6 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["unlinkGuardian"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/devices/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["removeDevice"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3328,7 +3184,7 @@ export interface components {
         };
         "at.clubserver.notifications.api.NotificationsApi.Preference": {
             /** @enum {string} */
-            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "SECURITY" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM";
+            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM";
             push: boolean;
             email: boolean;
         };
@@ -3484,9 +3340,6 @@ export interface components {
             seasonStartMonth: number;
             ridesEnabled: boolean;
             configured: boolean;
-        };
-        "at.clubserver.gateway.rest.MembersController.ClubPinBody": {
-            pin: string;
         };
         "at.clubserver.gateway.rest.CalendarController.AppointmentTypeBody": {
             label: string;
@@ -3847,42 +3700,8 @@ export interface components {
         "at.clubserver.gateway.rest.MeetingsController.CloseBody": {
             protocol: string;
         };
-        "at.clubserver.gateway.rest.MembersController.VerifyPinBody": {
-            pin: string;
-        };
-        "at.clubserver.members.api.MembersApi.StepUp": {
-            /** Format: date-time */
-            until: string;
-        };
-        "at.clubserver.gateway.rest.MembersController.DeviceStepUpBody": {
-            /** Format: uuid */
-            deviceId: string;
-            /** Format: uuid */
-            challengeId: string;
-            signature: string;
-        };
-        "at.clubserver.members.api.MembersApi.Challenge": {
-            /** Format: uuid */
-            id: string;
-            challenge: string;
-            /** Format: date-time */
-            expiresAt: string;
-        };
         "at.clubserver.gateway.rest.CalendarController.FeedUrl": {
             url: string;
-        };
-        "at.clubserver.gateway.rest.MembersController.DeviceBody": {
-            name: string;
-            publicKey: string;
-        };
-        "at.clubserver.members.api.MembersApi.DeviceDto": {
-            /** Format: uuid */
-            id: string;
-            name: string;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            lastUsedAt: string;
         };
         "at.clubserver.gateway.rest.MembersController.ChangeRequestBody": {
             /** @enum {string} */
@@ -4445,16 +4264,6 @@ export interface components {
                 [key: string]: string;
             };
         };
-        "at.clubserver.members.api.MembersApi.SecurityStatus": {
-            clubPinSet: boolean;
-            /** Format: date-time */
-            clubPinChangedAt: string;
-            pinLocked: boolean;
-            /** Format: date-time */
-            stepUpUntil: string;
-            devices: components["schemas"]["at.clubserver.members.api.MembersApi.DeviceDto"][];
-            mfaRequired: boolean;
-        };
         "at.clubserver.attendance.api.AttendanceApi.OpenAnswer": {
             /** Format: uuid */
             appointmentId: string;
@@ -4474,7 +4283,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "SECURITY" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM";
+            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM";
             title: string;
             body: string;
             link: string;
@@ -5722,28 +5531,6 @@ export interface operations {
             };
         };
     };
-    setClubPin: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["at.clubserver.gateway.rest.MembersController.ClubPinBody"];
-            };
-        };
-        responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     updateType_1: {
         parameters: {
             query?: never;
@@ -6713,26 +6500,6 @@ export interface operations {
             };
         };
     };
-    resetSecurity: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     reactivate: {
         parameters: {
             query?: never;
@@ -7254,94 +7021,6 @@ export interface operations {
             };
         };
     };
-    stepUp: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["at.clubserver.gateway.rest.MembersController.VerifyPinBody"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.StepUp"];
-                };
-            };
-        };
-    };
-    stepUpWithMfa: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.StepUp"];
-                };
-            };
-        };
-    };
-    stepUpWithDevice: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["at.clubserver.gateway.rest.MembersController.DeviceStepUpBody"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.StepUp"];
-                };
-            };
-        };
-    };
-    challenge: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.Challenge"];
-                };
-            };
-        };
-    };
     removePushToken: {
         parameters: {
             query?: never;
@@ -7437,30 +7116,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-        };
-    };
-    addDevice: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["at.clubserver.gateway.rest.MembersController.DeviceBody"];
-            };
-        };
-        responses: {
-            /** @description Created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.DeviceDto"];
-                };
             };
         };
     };
@@ -9398,26 +9053,6 @@ export interface operations {
             };
         };
     };
-    security: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.SecurityStatus"];
-                };
-            };
-        };
-    };
     openAnswers: {
         parameters: {
             query?: never;
@@ -9903,26 +9538,6 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.MemberDto"];
                 };
-            };
-        };
-    };
-    removeDevice: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };

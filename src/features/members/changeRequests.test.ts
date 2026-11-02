@@ -29,7 +29,6 @@ describe('mock change requests', () => {
     expect(() => tasks.get(member('spielerin'), task.id)).toThrow(expect.objectContaining({ status: 404 }));
 
     expect(() => changeRequests.decide(member('trainer'), request.id, true)).toThrow();
-    directory.confirm(member('vorstand'));
     changeRequests.decide(member('vorstand'), request.id, true);
     expect(member('spielerin').email).toBe('lena@neu.at');
     expect(taskFor(request.id).status).toBe('DONE');
@@ -45,7 +44,6 @@ describe('mock change requests', () => {
       expect.objectContaining({ code: 'member.email-taken' }),
     );
     const request = changeRequests.request(member('neu'), { field: 'LAST_NAME', value: 'Neumann' });
-    directory.confirm(member('admin'));
     changeRequests.decide(member('admin'), request.id, false);
     expect(member('neu').lastName).toBe('Neu');
     expect(notifications.list('neu', true).items[0].title).toBe('Änderung abgelehnt: Nachname');

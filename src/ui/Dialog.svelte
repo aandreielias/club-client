@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  /** Small modal prompt (PIN, confirm, short forms). Details open in the WindowHost instead. */
+  /** Small modal prompt (confirm, short forms). Details open in the WindowHost instead. */
   let {
     open,
     title,

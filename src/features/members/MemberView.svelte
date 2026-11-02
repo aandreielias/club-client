@@ -62,16 +62,6 @@
     }
   }
 
-  async function resetSecurity(member: Member) {
-    const request = {
-      title: 'Sperre aufheben und Geräte entfernen',
-      message: `${member.firstName} ${member.lastName} kann den Vereins-PIN wieder eingeben. Face-ID-Geräte und laufende Bestätigungen werden entfernt.`,
-      confirmLabel: 'Aufheben und entfernen',
-      danger: true,
-    };
-    await view.confirm(request, () => view.attempt(model.resetAction, () => model.resetSecurity()), 'Sperre aufgehoben, Geräte entfernt.');
-  }
-
   async function reactivate(member: Member) {
     const request = {
       title: 'Mitglied reaktivieren',
@@ -177,7 +167,7 @@
         <GuardianLinker {member} {model} />
       {/if}
 
-      {#if mayInviteLogin || (invited && member.active) || policy.canResetSecurity() || policy.canDeactivate(member) || policy.canReactivate(member) || policy.canErase(member)}
+      {#if mayInviteLogin || (invited && member.active) || policy.canDeactivate(member) || policy.canReactivate(member) || policy.canErase(member)}
         <h2>Zugang</h2>
         {#if mayInviteLogin}
           <p class="muted small">
@@ -193,9 +183,6 @@
             <Button busy={model.inviteAction.busy} onclick={() => resendInvite(true)}>Login einladen</Button>
           {:else if invited && member.active}
             <Button busy={model.inviteAction.busy} onclick={() => resendInvite(false)}>Einladung erneut senden</Button>
-          {/if}
-          {#if policy.canResetSecurity() && member.active}
-            <Button busy={model.resetAction.busy} onclick={() => resetSecurity(member)}>Sperre aufheben und Geräte entfernen</Button>
           {/if}
           {#if policy.canDeactivate(member)}
             <Button variant="danger" busy={model.deactivateAction.busy} onclick={() => deactivate(member)}>Deaktivieren</Button>

@@ -16,7 +16,7 @@ export class MeetingPolicy {
     return mayConvene(type, this.session.hasRole('ADMIN'), offices);
   }
 
-  /** Admin and board edit the meeting types (with step-up). */
+  /** Admin and board edit the meeting types. */
   canEditTypes(): boolean {
     return this.session.hasRole(...ADMIN_BOARD);
   }

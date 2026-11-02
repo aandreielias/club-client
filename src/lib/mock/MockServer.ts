@@ -12,8 +12,6 @@ export interface MockRequest {
   onProgress?: (loaded: number, total: number) => void;
   /** E-mail of the signed-in dev user, null when signed out. */
   email: string | null;
-  /** Epoch seconds of the token's last authenticator-app check (`DevAuthProvider`), like the JWT `amr`. */
-  totpAt?: number | null;
   method?: HttpMethod;
   path?: string;
 }
@@ -40,20 +38,13 @@ export class MockServer {
     return this;
   }
 
-  handle(
-    method: HttpMethod,
-    path: string,
-    body: unknown,
-    email: string | null,
-    onProgress?: MockRequest['onProgress'],
-    totpAt: number | null = null,
-  ): unknown {
+  handle(method: HttpMethod, path: string, body: unknown, email: string | null, onProgress?: MockRequest['onProgress']): unknown {
     const url = new URL(path, 'http://mock');
     for (const route of this.#routes) {
       if (route.method !== method) continue;
       const params = Router.match(route.pattern, url.pathname);
       if (!params) continue;
-      const request = { params, query: url.searchParams, body, email, onProgress, totpAt, method, path: url.pathname };
+      const request = { params, query: url.searchParams, body, email, onProgress, method, path: url.pathname };
       const result = route.handler(request);
       const done = () => this.#handled.forEach((listener) => listener({ ...request, pattern: route.pattern }));
       if (result instanceof Promise) return result.then((value) => (done(), value));

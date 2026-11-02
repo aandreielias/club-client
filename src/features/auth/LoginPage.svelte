@@ -14,10 +14,10 @@
   let password = $state('');
 
   // Mock mode only: seeded accounts to sign in with one click (loaded lazily, never in http builds).
-  let dev = $state.raw<{ accounts: DevAccount[]; pin: string } | null>(null);
+  let dev = $state.raw<{ accounts: DevAccount[] } | null>(null);
   if (settings.runtime.apiMode === 'mock') {
-    import('../../lib/mock/core').then(({ directory, MockDirectory }) => {
-      dev = { accounts: directory.accounts(), pin: MockDirectory.PIN };
+    import('../../lib/mock/core').then(({ directory }) => {
+      dev = { accounts: directory.accounts() };
     });
   }
 
@@ -61,7 +61,6 @@
           </li>
         {/each}
       </ul>
-      <p class="muted">Vereins-PIN für Admin, Vorstand und Trainer:innen: <span class="mono">{dev.pin}</span></p>
     </section>
   {/if}
 </Centered>

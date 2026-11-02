@@ -42,7 +42,7 @@ export const membersFeature: Feature = {
     return () => stops.forEach((stop) => stop());
   },
   home: [
-    { id: 'members', label: 'Mitglieder (braucht den Vereins-PIN)', component: MembersHome, roles: ADMIN_BOARD },
+    { id: 'members', label: 'Mitglieder', component: MembersHome, roles: ADMIN_BOARD },
     { id: 'board', label: 'Vorstand', component: BoardHome },
   ],
 };

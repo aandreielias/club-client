@@ -129,10 +129,9 @@ describe('tournament logic', () => {
 
 describe('mock tournaments', () => {
   it('runs a tournament from the draw to the final', async () => {
-    const { directory, MockDirectory } = await import('../../lib/mock/core');
+    const { directory } = await import('../../lib/mock/core');
     const { tournaments } = await import('./mock');
     const member = (id: string) => directory.members.data.find((m) => m.id === id)!;
-    directory.stepUp(member('trainer'), MockDirectory.PIN);
     const t = tournaments.create(member('trainer'), {
       name: 'Testcup',
       startsOn: '2026-12-05',
@@ -199,10 +198,9 @@ describe('mock tournaments', () => {
   });
 
   it('runs a simple tournament with outcomes only', async () => {
-    const { directory, MockDirectory } = await import('../../lib/mock/core');
+    const { directory } = await import('../../lib/mock/core');
     const { tournaments } = await import('./mock');
     const member = (id: string) => directory.members.data.find((m) => m.id === id)!;
-    directory.stepUp(member('trainer'), MockDirectory.PIN);
     const t = tournaments.create(member('trainer'), {
       name: 'Spielefest',
       startsOn: '2026-12-05',
@@ -361,7 +359,7 @@ describe('teamStats', () => {
 
 describe('mock seed tournaments', () => {
   it('has a finished tournament and one with the group phase done, each with its own guest', async () => {
-    const { directory, MockDirectory } = await import('../../lib/mock/core');
+    const { directory } = await import('../../lib/mock/core');
     const { tournaments } = await import('./mock');
     const member = (id: string) => directory.members.data.find((m) => m.id === id)!;
 
@@ -376,7 +374,6 @@ describe('mock seed tournaments', () => {
     const fruehling = tournaments.get(member('gast-fruehling'), 'tm-fruehling');
     expect(fruehling.status).toBe('GROUPS');
     expect(fruehling.matches.every((m) => m.stage === 'GROUP' && m.homeScore !== null)).toBe(true);
-    directory.stepUp(member('trainer'), MockDirectory.PIN);
     expect(tournaments.startKnockout(member('trainer'), 'tm-fruehling').status).toBe('KO');
   });
 });

@@ -3,7 +3,6 @@ import { setupSteps, type SetupFacts } from './SetupChecklist';
 
 const fresh: SetupFacts = {
   admins: 1,
-  authenticator: false,
   mailDomain: false,
   offices: 0,
   teams: 0,

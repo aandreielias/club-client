@@ -78,7 +78,7 @@ export class MailApi {
     return (await this.api.get<{ items: MailboxAdmin[] }>(MailApi.ADMIN)).items;
   }
 
-  /** Admin and board with step-up; without `id` a new mailbox. */
+  /** Admin and board; without `id` a new mailbox. */
   saveMailbox(id: string | null, input: MailboxInput): Promise<MailboxAdmin> {
     return id ? this.api.put<MailboxAdmin>(`${MailApi.ADMIN}/${encodeURIComponent(id)}`, input) : this.api.post<MailboxAdmin>(MailApi.ADMIN, input);
   }
@@ -93,7 +93,7 @@ export class MailApi {
     return this.api.get<MailSettings>('/api/v1/mail/admin/settings');
   }
 
-  /** Admin and board with step-up. */
+  /** Admin and board. */
   saveSettings(settings: MailSettings): Promise<MailSettings> {
     return this.api.put<MailSettings>('/api/v1/mail/admin/settings', settings);
   }

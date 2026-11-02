@@ -37,7 +37,7 @@ import type { TeamInput, Tournament, TournamentSummary } from '../../features/to
 import type { FeedEntry } from '../activity/ActivityApi';
 import type { CalendarItem } from '../calendar/CalendarSources';
 import type { FileRef, Links, Need } from '../links/model';
-import type { AuditEntry, Club, Device, Me, Member, MemberList, Roster, RosterEntry, SecurityStatus, StepUp } from '../types';
+import type { AuditEntry, Club, Me, Member, MemberList, Roster, RosterEntry } from '../types';
 
 type S = components['schemas'];
 type Satisfies<Server extends Client, Client> = [Server, Client];
@@ -116,8 +116,5 @@ export type Contract = [
   Satisfies<S['at.clubserver.teams.api.TeamsApi.RosterEntry'], RosterEntry>,
   Satisfies<S['at.clubserver.teams.api.TeamsApi.Roster'], Roster>,
   Satisfies<With<S['at.clubserver.gateway.rest.MembersController.Me'], 'missing', Me['missing']>, Me>, // the server lists field names as strings
-  Satisfies<S['at.clubserver.members.api.MembersApi.DeviceDto'], Device>,
-  Satisfies<S['at.clubserver.members.api.MembersApi.SecurityStatus'], SecurityStatus>,
   Satisfies<S['at.clubserver.gateway.audit.AuditLog.AuditEntry'], AuditEntry>,
-  Satisfies<S['at.clubserver.members.api.MembersApi.StepUp'], StepUp>,
 ];

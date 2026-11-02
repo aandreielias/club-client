@@ -5,7 +5,6 @@ import { calendar } from './mock';
 import type { NewAppointment } from './model';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
-const stepUp = (id: string) => directory.confirm(member(id));
 const range = (days: number) => [new Date(Date.now() - 8 * 86_400_000).toISOString(), new Date(Date.now() + days * 86_400_000).toISOString()];
 
 const draft = (teamId: string | null, extra: Partial<NewAppointment> = {}): NewAppointment => ({
@@ -41,16 +40,13 @@ describe('mock calendar', () => {
     );
   });
 
-  it('lets coaches plan their teams after a step-up, and only managers plan club-wide', () => {
-    expect(() => calendar.create(member('trainer'), draft('t-u16'))).toThrow(expect.objectContaining({ code: 'auth.step-up-required' }));
-    stepUp('trainer');
+  it('lets coaches plan their teams, and only managers plan club-wide', () => {
     expect(calendar.create(member('trainer'), draft('t-u16'))).toHaveLength(1);
     expect(() => calendar.create(member('trainer'), draft(null))).toThrow(expect.objectContaining({ code: 'access.denied' }));
     expect(() => calendar.create(member('spielerin'), draft('t-damen'))).toThrow(expect.objectContaining({ code: 'access.denied' }));
   });
 
   it('creates weekly series at the same club-local time across DST', () => {
-    stepUp('vorstand');
     const series = calendar.create(
       member('vorstand'),
       draft(null, {
@@ -67,7 +63,6 @@ describe('mock calendar', () => {
   });
 
   it('applies the answer rules', () => {
-    stepUp('admin');
     const [past] = calendar.create(
       member('admin'),
       draft('t-damen', {
@@ -88,7 +83,6 @@ describe('mock calendar', () => {
 
   it('a new time asks for a confirmation and tells the team; a cancellation can be taken back', async () => {
     const { notifications } = await import('../notifications/mock');
-    stepUp('admin');
     const soon = new Date(Date.now() + 3 * 86_400_000);
     const [training] = calendar.create(
       member('admin'),
@@ -111,7 +105,6 @@ describe('mock calendar', () => {
   });
 
   it('reminds open answers once, lists them on the start page and lets coaches mark presence', () => {
-    stepUp('admin');
     const soon = new Date(Date.now() + 2 * 86_400_000);
     const [match] = calendar.create(
       member('admin'),
@@ -134,7 +127,6 @@ describe('mock calendar', () => {
   });
 
   it('skips holidays in new series, extends a series in its rhythm and marks own answers', () => {
-    stepUp('admin');
     calendar.saveHoliday(member('admin'), null, { name: 'Ferien', from: '2027-02-08', to: '2027-02-14' });
     const created = calendar.create(
       member('admin'),
@@ -153,7 +145,6 @@ describe('mock calendar', () => {
   });
 
   it('car pools: one seat per member and appointment, full cars refuse', () => {
-    stepUp('admin');
     const [created] = calendar.create(member('admin'), draft(null, { type: 'MATCH', title: 'Auswärts' }));
     const ride = calendar.offerRide(member('admin'), created.id, { seats: 1, note: ' ab Halle ' });
     expect(ride.note).toBe('ab Halle');
@@ -175,7 +166,6 @@ describe('mock calendar', () => {
   });
 
   it('links places, keeps their name as text and checks cabins', () => {
-    stepUp('trainer');
     const [created] = calendar.create(member('trainer'), draft('t-u16', { locationId: 'l-sued', location: 'egal', cabinMen: ' Kabine 2 ' }));
     expect(created).toMatchObject({ location: 'Turnhalle Süd', locationId: 'l-sued', cabinMen: 'Kabine 2', cabinWomen: null });
     expect(() => calendar.create(member('trainer'), draft('t-u16', { type: 'MEETING', cabinMen: 'Kabine 1' }))).toThrow(
@@ -190,7 +180,6 @@ describe('mock calendar', () => {
 
   it('reminds holders of needed items once, guardians included', async () => {
     const { notifications } = await import('../notifications/mock');
-    stepUp('trainer');
     const soon = new Date(Date.now() + 3 * 3_600_000).toISOString();
     const [match] = calendar.create(
       member('trainer'),
@@ -220,7 +209,6 @@ describe('mock appointment types', () => {
   it('are added by the board, offer cabins only where set, and are archived once used', async () => {
     const { appointmentTypes } = await import('./mock');
     const board = directory.members.data.find((m) => m.id === 'vorstand')!;
-    directory.confirm(board);
     expect(() => appointmentTypes.save(board, null, { label: 'Kurs', hue: 'pink', sort: 1 })).toThrow();
     const kurs = appointmentTypes.save(board, null, { label: 'Kurs', hue: 'green', rides: false, cabins: false, sort: 9 });
     const start = new Date(Date.now() + 3 * 86_400_000).toISOString();

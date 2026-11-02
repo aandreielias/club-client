@@ -9,7 +9,7 @@
 
   /**
    * Possible assignees in the standard people list: the team's roster, or every member for club
-   * tasks (admin/board only; the server may ask for the PIN first).
+   * tasks (admin/board only).
    */
   let { form, error }: { form: TaskForm; error: string | null } = $props();
 

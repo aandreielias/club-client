@@ -48,7 +48,7 @@
   const list = new FolderItemListModel(tree, contents, folderId, fileTypes, () => session.format, directory, store);
   void list.load();
   directory.loadRosters();
-  // Managers: every team's roster, so tagged people (photo filter, "Von") have names without asking for the PIN.
+  // Managers: every team's roster, so tagged people (photo filter, "Von") have names.
   if (permissions.isManager) background(directory.loadTeams().then(() => directory.loadRosters(directory.teams.map((t) => t.id))));
 
   useBus(bus, FILES_CHANGED, ({ data }) => {

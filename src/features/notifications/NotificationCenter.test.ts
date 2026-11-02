@@ -38,9 +38,9 @@ describe('NotificationCenter', () => {
     bus.publish(NOTIFICATION_CREATED, {
       type: 'notifications.notification-created',
       occurredAt: '',
-      data: { notificationId: '2', kind: 'SECURITY', title: 'PIN geändert' },
+      data: { notificationId: '2', kind: 'MEETING', title: 'Einladung' },
     });
-    expect(toasts.items.map((t) => t.text)).toEqual(['PIN geändert']);
+    expect(toasts.items.map((t) => t.text)).toEqual(['Einladung']);
     expect(api.list).toHaveBeenCalledTimes(2);
     stop();
     expect(bus.subscribers(NOTIFICATION_CREATED)).toBe(0);

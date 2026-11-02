@@ -16,7 +16,6 @@ const KINDS: readonly NotificationKind[] = [
   'TASK_ASSIGNED',
   'TASK_DUE',
   'APPOINTMENT_CANCELLED',
-  'SECURITY',
   'CHANGE_DECIDED',
   'MESSAGE',
   'ITEM_REMINDER',
@@ -30,15 +29,6 @@ const KINDS: readonly NotificationKind[] = [
 ];
 const MAX_LISTED = 100;
 const limits = settings.notifications.message;
-
-const SECURITY_TITLES: Record<string, string> = {
-  CLUB_PIN_CHANGED: 'Der Vereins-PIN wurde geändert',
-  PIN_LOCKED: 'Deine PIN-Eingabe wurde nach 5 Fehlversuchen gesperrt',
-  RESET_BY_ADMIN: 'Deine Sicherheitseinstellungen wurden von einem Admin zurückgesetzt',
-  PIN_CHANGE_DUE: 'Bitte den Vereins-PIN ändern',
-  DEVICE_ADDED: 'Neues Gerät für Face ID / Fingerabdruck hinzugefügt',
-  DEVICE_REMOVED: 'Gerät für Face ID / Fingerabdruck entfernt',
-};
 
 export class MockNotifications {
   /** memberId → inbox, newest first */
@@ -75,7 +65,7 @@ export class MockNotifications {
     this.inbox.save();
   }
 
-  /** server: NotificationHandlers.effective — security e-mails always on, e-mails about new mail off by default */
+  /** server: NotificationHandlers.effective — meeting notices always on, e-mails about new mail off by default */
   effective(memberId: string): Preference[] {
     const stored = this.preferences.data[memberId] ?? [];
     return KINDS.map((kind) => {
@@ -330,19 +320,6 @@ export class MockNotifications {
           '/account',
         );
         break;
-      case 'members.security-changed':
-        this.notify(
-          [data.memberId],
-          'SECURITY',
-          SECURITY_TITLES[data.change] ?? 'Sicherheitsänderung',
-          data.change === 'CLUB_PIN_CHANGED'
-            ? 'Frag beim Vorstand nach dem neuen PIN. Wusstest du nichts davon? Melde dich beim Vorstand.'
-            : data.change === 'PIN_CHANGE_DUE'
-              ? 'Ein Mitglied, das den Vereins-PIN kannte, hat seine Rolle nicht mehr. Ändere den PIN unter Einstellungen → Sicherheit.'
-              : `Warst du das nicht? Melde dich sofort beim Vorstand von ${this.people.club.name}.`,
-          '/me/security',
-        );
-        break;
     }
   }
 
@@ -396,16 +373,6 @@ export class MockNotifications {
         entry('TASK_ASSIGNED', 'Neue Aufgabe: Fahrgemeinschaft Auswärtsspiel', 'Fällig in einer Woche.', '/tasks/t-2', 120, true),
       ],
       spieler: [entry('TASK_ASSIGNED', 'Neue Aufgabe: Bälle aufpumpen', 'Fällig gestern.', '/tasks/t-3', 48, false)],
-      trainer: [
-        entry(
-          'SECURITY',
-          'Der Vereins-PIN wurde geändert',
-          'Frag beim Vorstand nach dem neuen PIN. Wusstest du nichts davon? Melde dich beim Vorstand.',
-          '/me/security',
-          200,
-          true,
-        ),
-      ],
     };
   }
 }

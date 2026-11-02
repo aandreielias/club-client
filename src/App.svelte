@@ -39,7 +39,6 @@
   import CommandPalette from './ui/CommandPalette.svelte';
   import SequenceHint from './ui/SequenceHint.svelte';
   import Empty from './ui/Empty.svelte';
-  import StepUpDialog from './ui/StepUpDialog.svelte';
   import Sidebar from './ui/Sidebar.svelte';
   import ContextMenuHost from './ui/ContextMenuHost.svelte';
   import Toasts from './ui/Toasts.svelte';
@@ -180,7 +179,6 @@
   <CommandPalette />
   <SequenceHint />
 {/if}
-<StepUpDialog />
 <ConfirmDialog />
 <Toasts />
 <TooltipHost />

@@ -294,7 +294,6 @@ mockServer
       data: { memberId: req.params.id, changeRequestIds: changeRequests.deleteOf(req.params.id) },
     });
   })
-  .on('POST', '/api/v1/members/:id/security/reset', (req) => directory.resetSecurity(directory.actor(req), req.params.id))
   .on('PUT', '/api/v1/members/:id/membership', (req) => directory.setMembership(directory.actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/board/offices', (req) => {
     directory.actor(req);

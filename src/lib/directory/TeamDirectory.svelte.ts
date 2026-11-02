@@ -6,7 +6,7 @@ import type { Member, MemberList, Roster, RosterEntry, Team, TeamRole } from '..
 /**
  * Shared lookup of teams, rosters and member names. Feature DTOs carry only ids, so pages resolve
  * names here. Sources: GET /teams (everyone), rosters (team members and admin/board) and the
- * member list (admin/board with step-up, loaded only on explicit request).
+ * member list (admin/board, loaded only on explicit request).
  */
 export class TeamDirectory {
   /** All teams of the club. */
@@ -72,7 +72,7 @@ export class TeamDirectory {
     await Promise.all([...ids].map((id) => this.roster(id)));
   }
 
-  /** Every member (admin/board only; the server asks for a step-up). */
+  /** Every member (admin/board only). */
   allMembers(): Promise<readonly Member[]> {
     const generation = this.#generation;
     this.#membersLoad ??= this.api

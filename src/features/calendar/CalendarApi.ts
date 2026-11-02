@@ -35,7 +35,7 @@ export class CalendarApi {
     return (await this.api.get<{ items: AppointmentTypeInfo[] }>('/api/v1/calendar/types')).items;
   }
 
-  /** Admin/board with step-up; `key` null creates a type. */
+  /** Admin/board; `key` null creates a type. */
   saveType(key: string | null, type: AppointmentTypeInput): Promise<AppointmentTypeInfo> {
     return key
       ? this.api.put<AppointmentTypeInfo>(`/api/v1/calendar/types/${encodeURIComponent(key)}`, type)
@@ -104,7 +104,7 @@ export class CalendarApi {
     return (await this.api.get<{ items: Holiday[] }>('/api/v1/calendar/holidays')).items;
   }
 
-  /** Admin/board with step-up; new weekly series skip these days. */
+  /** Admin/board; new weekly series skip these days. */
   saveHoliday(id: string | null, holiday: Omit<Holiday, 'id'>): Promise<Holiday> {
     return id
       ? this.api.put<Holiday>(`/api/v1/calendar/holidays/${encodeURIComponent(id)}`, holiday)

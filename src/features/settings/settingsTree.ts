@@ -52,7 +52,7 @@ export const SETTINGS_TREE: readonly SettingsGroup[] = [
         ],
       },
       { label: 'Bedienung', tabs: [{ id: 'shortcuts', label: 'Tastenkürzel', icon: 'keyboard', keywords: 'tasten befehle kürzel' }] },
-      { label: 'Konto', tabs: [{ id: 'security', label: 'Sicherheit', icon: 'security', keywords: 'pin passwort face id gerät authenticator mfa' }] },
+      { label: 'Konto', tabs: [{ id: 'security', label: 'Sicherheit', icon: 'security', keywords: 'passwort kennwort' }] },
     ],
   },
   {

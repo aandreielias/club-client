@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { Member } from '../types';
 import '../../features/calendar/mock';
 import '../../features/tasks/mock';
 import '../../features/notifications/mock';
 import '../../features/members/mock';
 import '../../features/teams/mock';
-import { directory } from './core';
+import './core';
 import { mockServer } from './MockServer';
 
-const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
 const as = (id: string) => `${id}@example.at`;
 
 describe('mock access requests and audit log', () => {
@@ -23,7 +21,6 @@ describe('mock access requests and audit log', () => {
   });
 
   it('logs privileged writes and member reads for admins only', () => {
-    directory.confirm(member('admin'));
     mockServer.handle('PUT', '/api/v1/members/spieler/roles', { roles: ['PLAYER', 'VOLUNTEER'] }, as('admin'));
     mockServer.handle('GET', '/api/v1/members/spieler', undefined, as('vorstand'));
     mockServer.handle('GET', '/api/v1/teams', undefined, as('spieler'));
@@ -45,7 +42,6 @@ describe('mock minors rules', () => {
 
 describe('mock audit filters', () => {
   it('filter by kind, area and person', () => {
-    directory.confirm(member('admin'));
     mockServer.handle('PUT', '/api/v1/members/spieler/roles', { roles: ['PLAYER'] }, as('admin'));
     mockServer.handle('GET', '/api/v1/members/spieler', undefined, as('vorstand'));
     const list = (q: string) =>

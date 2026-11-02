@@ -5,7 +5,6 @@ import type { Member } from '../../lib/types';
 import { files, MockFiles } from './mock';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
-const stepUp = (id: string) => directory.confirm(member(id));
 const visible = (id: string) =>
   files
     .listFolders(member(id))
@@ -60,13 +59,10 @@ describe('mock files', () => {
     const own = await files.upload(uploadRequest('spielerin', 'f-damen', PDF, 'Mein.pdf'));
     expect(() => files.deleteFile(member('neu'), own.id)).toThrow(expect.objectContaining({ code: 'access.denied' }));
     files.deleteFile(member('spielerin'), own.id);
-    expect(() => files.deleteFile(member('trainer'), 'file-4')).toThrow(expect.objectContaining({ code: 'auth.step-up-required' }));
-    stepUp('admin');
     expect(() => files.deleteFolder(member('admin'), 'f-docs')).toThrow(expect.objectContaining({ code: 'folder.not-empty' }));
   });
 
   it('limits folder depth and inherits scope', () => {
-    stepUp('admin');
     let parent = 'f-minutes';
     for (let depth = 3; depth <= 5; depth++)
       parent = files.createFolder(member('admin'), { parentId: parent, name: `L${depth}`, kind: 'DOCUMENTS' }).id;

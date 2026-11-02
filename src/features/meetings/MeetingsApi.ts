@@ -22,7 +22,7 @@ import type {
   ResolutionAction,
 } from './model';
 
-/** Typed access to the meetings endpoints. Every write needs a step-up and answers with the meeting. */
+/** Typed access to the meetings endpoints. Every write answers with the meeting. */
 export class MeetingsApi {
   static readonly BASE = '/api/v1/meetings';
   static readonly RESOLUTIONS = '/api/v1/resolutions';
@@ -33,7 +33,7 @@ export class MeetingsApi {
     return this.api.get<ResolutionRules>(`${MeetingsApi.BASE}/resolution-rules`);
   }
 
-  /** Admin/board with step-up; every decision once. */
+  /** Admin/board; every decision once. */
   saveResolutionRules(rules: ResolutionRules): Promise<ResolutionRules> {
     return this.api.put<ResolutionRules>(`${MeetingsApi.BASE}/resolution-rules`, rules);
   }
@@ -42,7 +42,7 @@ export class MeetingsApi {
     return (await this.api.get<{ items: MeetingType[] }>(`${MeetingsApi.BASE}/types`)).items;
   }
 
-  /** Admin/board with step-up; `key` null creates a type. */
+  /** Admin/board; `key` null creates a type. */
   saveType(key: string | null, type: MeetingTypeInput): Promise<MeetingType> {
     return key
       ? this.api.put<MeetingType>(`${MeetingsApi.BASE}/types/${encodeURIComponent(key)}`, type)

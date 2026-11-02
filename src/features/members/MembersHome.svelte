@@ -5,7 +5,7 @@
   import MemberTable from './MemberTable.svelte';
   import { membersApi } from './services';
 
-  /** Start page section (admin, board): the member list; the server asks for the PIN first. */
+  /** Start page section (admin, board): the member list. */
   const list = new MemberListModel(membersApi, null);
   void list.load();
 </script>

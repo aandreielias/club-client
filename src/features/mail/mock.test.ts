@@ -91,10 +91,9 @@ describe('mock mail links and mailbox admin', () => {
     );
   });
 
-  it('lets admin and board assign mailboxes with step-up', () => {
+  it('lets admin and board assign mailboxes', () => {
     const admin = member('admin');
     expect(() => mail.all(member('spieler'))).toThrow(expect.objectContaining({ code: 'access.denied' }));
-    directory.confirm(admin);
     const box = mail.save(admin, null, { address: 'Trainer@mein-verein.at', name: 'Trainer', role: 'COACH' });
     expect(box.address).toBe('trainer@mein-verein.at');
     expect(shared('trainer')?.id).toBe(box.id);

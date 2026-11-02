@@ -28,7 +28,6 @@ describe('mock teams', async () => {
   const member = (id: string) => directory.members.data.find((m) => m.id === id)!;
 
   it('numbers players, starts a new season with the roster and lets guardians read it', () => {
-    directory.confirm(member('admin'));
     const roster = teams.setPlayerInfo(member('admin'), 't-u16', 'spieler', { jersey: 7, position: 'Zuspiel', captain: true });
     expect(roster.entries.find((e) => e.memberId === 'spieler')).toMatchObject({ jersey: 7, captain: true });
     expect(directory.roster(member('eltern'), 't-u16').entries.length).toBeGreaterThan(0);
@@ -44,7 +43,6 @@ describe('mock teams', async () => {
   });
 
   it('keeps match results and counts the season', () => {
-    directory.confirm(member('admin'));
     const start = new Date(Date.now() - 2 * 86_400_000);
     const [match] = calendar.create(member('admin'), {
       teamId: 't-u16',

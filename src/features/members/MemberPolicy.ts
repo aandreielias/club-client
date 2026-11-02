@@ -24,7 +24,7 @@ export class MemberPolicy {
     return this.isManager;
   }
 
-  /** server: ChangeRequestHandlers.decide (with step-up) */
+  /** server: ChangeRequestHandlers.decide */
   canDecideChanges(): boolean {
     return this.isManager;
   }
@@ -81,16 +81,12 @@ export class MemberPolicy {
     return this.isManager && member.active;
   }
 
-  /** server: MembershipHandlers.assign / end (with step-up) */
+  /** server: MembershipHandlers.assign / end */
   canManageOffices(): boolean {
     return this.isManager;
   }
 
   canLinkGuardian(member: Member): boolean {
     return this.isManager && member.active;
-  }
-
-  canResetSecurity(): boolean {
-    return this.isAdmin;
   }
 }

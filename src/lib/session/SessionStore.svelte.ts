@@ -1,7 +1,7 @@
 import type { ApiClient } from '../http/ApiClient';
 import { Formatter } from '../time/Formatter';
 import { ZonedClock } from '../time/ZonedClock';
-import { PRIVILEGED, type Club, type ClubEdit, type Me, type Member, type Role, type SecurityStatus, type Team } from '../types';
+import { PRIVILEGED, type Club, type ClubEdit, type Me, type Member, type Role, type Team } from '../types';
 
 export type ProfilePatch = Partial<Pick<Member, 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'photoConsent'>>;
 
@@ -81,22 +81,13 @@ export class SessionStore {
     await this.loadMe();
   }
 
-  /** Admin/board with step-up; time zone and locale stay as loaded (server: club.yml only). */
+  /** Admin/board; time zone and locale stay as loaded (server: club.yml only). */
   async updateClub(edit: ClubEdit): Promise<void> {
     this.club = await this.api.put<Club>('/api/v1/club', edit);
-  }
-
-  /** Admin/board; once a club PIN exists the server asks for a step-up first. */
-  setClubPin(pin: string): Promise<void> {
-    return this.api.put('/api/v1/club/pin', { pin });
   }
 
   /** Everything the club keeps about the member (or a ward), as the server's JSON export. */
   exportData(memberId?: string): Promise<unknown> {
     return this.api.get('/api/v1/me/export', memberId ? { memberId } : undefined);
-  }
-
-  security(): Promise<SecurityStatus> {
-    return this.api.get<SecurityStatus>('/api/v1/me/security');
   }
 }

@@ -6,7 +6,6 @@ export type NotificationKind =
   | 'TASK_ASSIGNED'
   | 'TASK_DUE'
   | 'APPOINTMENT_CANCELLED'
-  | 'SECURITY'
   | 'CHANGE_DECIDED'
   | 'MESSAGE'
   | 'ITEM_REMINDER'
@@ -97,8 +96,7 @@ export const NOTIFICATION_KINDS: readonly { value: NotificationKind; label: stri
   { value: 'MESSAGE', label: 'Nachrichten vom Verein', hint: 'Nachrichten von Vorstand und Trainer:innen an dich oder dein Team.' },
   { value: 'MAIL', label: 'Neue E-Mails', hint: 'Wenn in deinem Vereins-Postfach oder einem geteilten Postfach eine E-Mail ankommt.' },
   { value: 'MEETING', label: 'Sitzungen', hint: 'Einladungen, Umlaufbeschlüsse und Erinnerungen an Fristen. Werden immer gesendet.' },
-  { value: 'SECURITY', label: 'Sicherheit', hint: 'Vereins-PIN, Sperren und neue Geräte. Werden immer gesendet.' },
 ];
 
 /** Important kinds always go out by push and e-mail (server: NotificationsApi.IMPORTANT). */
-export const isImportant = (kind: NotificationKind): boolean => kind === 'SECURITY' || kind === 'MEETING';
+export const isImportant = (kind: NotificationKind): boolean => kind === 'MEETING';

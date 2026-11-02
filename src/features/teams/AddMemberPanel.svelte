@@ -11,7 +11,7 @@
   import { memberPolicy, membersApi } from '../members/services';
   import type { RosterModel } from './RosterModel.svelte';
 
-  /** Admin/board: pick an active member who is not in the team yet. Loading the list may ask for the PIN. */
+  /** Admin/board: pick an active member who is not in the team yet. */
   let { model, onclose }: { model: RosterModel; onclose: () => void } = $props();
 
   const members = new Resource(() => directory.allMembers());

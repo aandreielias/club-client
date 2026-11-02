@@ -12,16 +12,13 @@ import { inventory } from './mock';
 import { mockServer } from '../../lib/mock/MockServer';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
-const stepUp = (id: string) => directory.confirm(member(id));
 const code = (c: string) => expect.objectContaining({ code: c });
 
 describe('mock inventory', () => {
-  it('lets only privileged members with a step-up change items', () => {
+  it('lets only privileged members change items', () => {
     expect(inventory.list().length).toBeGreaterThan(0);
     const body = { name: 'Netzantennen', category: 'Ausrüstung', quantity: 4, locationId: 'l-nord', description: null };
     expect(() => inventory.create(member('spielerin'), body)).toThrow(code('access.denied'));
-    expect(() => inventory.create(member('trainer'), body)).toThrow(code('auth.step-up-required'));
-    stepUp('trainer');
     const item = inventory.create(member('trainer'), body);
     expect(item.stock).toEqual([{ kind: 'LOCATION', id: 'l-nord', name: 'Turnhalle Nord', quantity: 4 }]);
     expect(inventory.update(member('trainer'), item.id, { category: '' })).toMatchObject({ quantity: 4, category: null });
@@ -72,7 +69,6 @@ describe('mock links', () => {
   });
 
   it('checks rights and refuses adding unknown or deleted entries anew', () => {
-    stepUp('trainer');
     const body = { needs: [{ itemId: 'i-pump', quantity: 1 }], fileIds: ['file-4'] };
     expect(() => tasks.setLinks(member('spieler'), 't-3', body)).toThrow(code('access.denied'));
     expect(() => tasks.setLinks(member('trainer'), 't-3', { ...body, needs: [{ itemId: 'i-old-cart', quantity: 1 }] })).toThrow(
@@ -84,7 +80,6 @@ describe('mock links', () => {
     expect(saved.needs).toMatchObject([{ itemId: 'i-pump', quantity: 1, deleted: false }]);
 
     // Deleting the file and the item keeps both, marked; saving again keeps them.
-    stepUp('admin');
     files.deleteFile(member('admin'), 'file-4');
     inventory.delete(member('admin'), 'i-pump');
     const after = tasks.getLinks(member('trainer'), 't-3');
@@ -94,8 +89,6 @@ describe('mock links', () => {
   });
 
   it('keeps attachments the editor cannot see', () => {
-    stepUp('admin');
-    stepUp('trainer');
     tasks.setLinks(member('admin'), 't-6', { needs: [], fileIds: ['file-8'] });
     expect(tasks.setLinks(member('trainer'), 't-6', { needs: [], fileIds: [] }).files).toEqual([]);
     expect(tasks.getLinks(member('admin'), 't-6').files.map((f) => f.id)).toEqual(['file-8']);
@@ -107,7 +100,6 @@ describe('mock gaps', () => {
     const forBoard = [...calendar.itemUses(member('vorstand'), 'i-balls'), ...tasks.itemUses(member('vorstand'), 'i-balls')];
     expect(forBoard.map((u) => u.kind)).toEqual(['APPOINTMENT']);
     expect(calendar.itemUses(member('spieler'), 'i-balls')).toEqual([]); // U16 player cannot see the Damen match
-    stepUp('trainer');
     tasks.setLinks(member('trainer'), 't-3', { needs: [{ itemId: 'i-training-balls', quantity: 30 }], fileIds: [] });
     expect(tasks.itemUses(member('spieler'), 'i-training-balls')).toMatchObject([{ kind: 'TASK', id: 't-3', quantity: 30 }]);
   });
@@ -124,7 +116,6 @@ describe('mock gaps', () => {
     const to = new Date(Date.parse(t1.dueAt!) + 1000).toISOString();
     expect(tasks.list(member('trainer'), false, null, true, from, to).map((t) => t.id)).toEqual(['t-1']);
     expect(() => tasks.list(member('trainer'), false, null, true, to, from)).toThrow(code('task.range-invalid'));
-    stepUp('trainer');
     expect(() => tasks.update(member('trainer'), 't-1', { clearDue: true, dueAt: to })).toThrow(code('task.due-conflict'));
     expect(tasks.update(member('trainer'), 't-1', { clearDue: true }).dueAt).toBeNull();
   });

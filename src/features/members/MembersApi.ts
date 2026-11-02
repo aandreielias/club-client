@@ -164,7 +164,7 @@ export interface ChangeRequest {
 
 export type ProfilePatch = Partial<Pick<Member, 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'photoConsent'>>;
 
-/** Typed access to the member administration endpoints. Every write needs a step-up. */
+/** Typed access to the member administration endpoints. */
 /** A guardian or ward on a member's profile; `canOpen`: the viewer may open that profile too (server: MembersApi.Relative). */
 export interface Relative {
   memberId: string;
@@ -218,7 +218,7 @@ export class MembersApi {
     return (await this.api.get<{ items: MembershipKind[] }>('/api/v1/membership-kinds')).items;
   }
 
-  /** Admin/board with step-up; `key` null creates a kind. */
+  /** Admin/board; `key` null creates a kind. */
   saveMembershipKind(key: string | null, kind: MembershipKindInput): Promise<MembershipKind> {
     return key
       ? this.api.put<MembershipKind>(`/api/v1/membership-kinds/${encodeURIComponent(key)}`, kind)
@@ -234,7 +234,7 @@ export class MembersApi {
     return this.api.get<BoardSettings>('/api/v1/board/settings');
   }
 
-  /** Admin/board with step-up; running offices keep their terms. */
+  /** Admin/board; running offices keep their terms. */
   saveBoardSettings(settings: BoardSettings): Promise<BoardSettings> {
     return this.api.put<BoardSettings>('/api/v1/board/settings', settings);
   }
@@ -323,11 +323,6 @@ export class MembersApi {
   /** Approving applies the change; either way the request's task is finished and the member is told. */
   decideChange(id: string, approve: boolean): Promise<ChangeRequest> {
     return this.api.post<ChangeRequest>(`${MembersApi.BASE}/change-requests/${encodeURIComponent(id)}/${approve ? 'approve' : 'reject'}`);
-  }
-
-  /** Unlocks the club PIN for the member and removes their device keys and step-ups. */
-  resetSecurity(id: string): Promise<void> {
-    return this.api.post(`${this.path(id)}/security/reset`);
   }
 
   private path(id: string): string {

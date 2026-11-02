@@ -1,5 +1,5 @@
 import { GoTrueClient, type AuthError } from '@supabase/auth-js';
-import type { AuthInitResult, AuthProvider, AuthSession, TotpEnrollment } from './AuthProvider';
+import type { AuthInitResult, AuthProvider, AuthSession } from './AuthProvider';
 
 /**
  * Login through Supabase Auth. Invite and recovery links come back with `type=invite|recovery` in the URL
@@ -58,28 +58,6 @@ export class SupabaseAuthProvider implements AuthProvider {
     return data.session?.access_token ?? null;
   }
 
-  async totpFactor(): Promise<string | null> {
-    const { data, error } = await this.#client.mfa.listFactors();
-    check(error);
-    return data?.totp[0]?.id ?? null;
-  }
-
-  async enrollTotp(): Promise<TotpEnrollment> {
-    const factors = await this.#client.mfa.listFactors();
-    check(factors.error);
-    for (const factor of factors.data?.all ?? []) {
-      if (factor.factor_type === 'totp' && factor.status === 'unverified') check((await this.#client.mfa.unenroll({ factorId: factor.id })).error);
-    }
-    const { data, error } = await this.#client.mfa.enroll({ factorType: 'totp', friendlyName: 'Authenticator-App' });
-    check(error);
-    if (!data) throw new Error('Die Authenticator-App konnte nicht eingerichtet werden.');
-    return { factorId: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret };
-  }
-
-  async verifyTotp(factorId: string, code: string): Promise<void> {
-    check((await this.#client.mfa.challengeAndVerify({ factorId, code })).error);
-  }
-
   async #session(): Promise<AuthSession | null> {
     const { data, error } = await this.#client.getSession();
     check(error);
@@ -92,7 +70,6 @@ function check(error: AuthError | null): void {
   if (!error) return;
   const text: Record<string, string> = {
     invalid_credentials: 'E-Mail oder Passwort ist falsch.',
-    mfa_verification_failed: 'Der Code stimmt nicht. Nimm den aktuellen Code aus der App.',
     over_request_rate_limit: 'Zu viele Versuche. Bitte warte kurz.',
     over_email_send_rate_limit: 'Zu viele E-Mails. Bitte warte kurz.',
     weak_password: 'Das Passwort ist zu schwach.',
