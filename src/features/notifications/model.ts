@@ -1,7 +1,18 @@
 // Mirrors of the club-server notifications DTOs.
 
 export type NotificationKind =
-  'TASK_ASSIGNED' | 'TASK_DUE' | 'APPOINTMENT_CANCELLED' | 'SECURITY' | 'CHANGE_DECIDED' | 'MESSAGE' | 'ITEM_REMINDER' | 'MEETING' | 'MAIL';
+  | 'TASK_ASSIGNED'
+  | 'TASK_DUE'
+  | 'APPOINTMENT_CANCELLED'
+  | 'SECURITY'
+  | 'CHANGE_DECIDED'
+  | 'MESSAGE'
+  | 'ITEM_REMINDER'
+  | 'MEETING'
+  | 'MAIL'
+  | 'APPOINTMENT_CHANGED'
+  | 'ATTENDANCE'
+  | 'RIDE';
 
 import type { LinkedRef, RefKind } from '../../lib/records/refs';
 
@@ -64,6 +75,13 @@ export const NOTIFICATION_KINDS: readonly { value: NotificationKind; label: stri
   { value: 'TASK_ASSIGNED', label: 'Neue Aufgaben', hint: 'Wenn dir eine Aufgabe zugewiesen wird.' },
   { value: 'TASK_DUE', label: 'Fällige Aufgaben', hint: 'Etwa einen Tag vor der Fälligkeit.' },
   { value: 'APPOINTMENT_CANCELLED', label: 'Abgesagte Termine', hint: 'Wenn ein Termin für dich ausfällt.' },
+  { value: 'APPOINTMENT_CHANGED', label: 'Geänderte Termine', hint: 'Neue Zeit, neuer Ort oder neue Kabine eines kommenden Termins.' },
+  {
+    value: 'ATTENDANCE',
+    label: 'Zu- und Absagen',
+    hint: 'Erinnerung, wenn du noch nicht geantwortet hast; für Trainer:innen: Abwesenheit trotz Zusage.',
+  },
+  { value: 'RIDE', label: 'Fahrgemeinschaften', hint: 'Wer in dein Auto steigt oder aussteigt, und wenn deine Mitfahrt ausfällt.' },
   { value: 'ITEM_REMINDER', label: 'Gegenstände mitbringen', hint: 'Etwa einen Tag vor einem Termin, für den du etwas aus dem Inventar hast.' },
   { value: 'CHANGE_DECIDED', label: 'Kontoänderungen', hint: 'Wenn der Vorstand über deine Änderungsanfrage entschieden hat.' },
   { value: 'MESSAGE', label: 'Nachrichten vom Verein', hint: 'Nachrichten von Vorstand und Trainer:innen an dich oder dein Team.' },

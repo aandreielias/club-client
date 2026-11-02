@@ -22,6 +22,9 @@ const KINDS: readonly NotificationKind[] = [
   'ITEM_REMINDER',
   'MEETING',
   'MAIL',
+  'APPOINTMENT_CHANGED',
+  'ATTENDANCE',
+  'RIDE',
 ];
 const MAX_LISTED = 100;
 const limits = settings.notifications.message;
@@ -176,16 +179,62 @@ export class MockNotifications {
         );
         break;
       case 'calendar.appointments-changed': {
-        if (data.change !== 'CANCELLED') return;
-        const recipients = this.people.audienceIds(event.audience ?? {}).filter((id) => id !== data.actorId);
-        const more = data.appointmentIds.length > 1 ? ` Auch die ${data.appointmentIds.length - 1} folgenden Termine fallen aus.` : '';
-        this.notify(
-          recipients,
-          'APPOINTMENT_CANCELLED',
-          `Abgesagt: ${data.title}`,
-          `Der Termin am ${this.#dateTime.format(new Date(data.firstStartsAt))} findet nicht statt.${more}`,
-          `/appointments/${data.appointmentIds[0]}`,
-        );
+        // server: NotificationHandlers.onAppointmentsChanged — team and guardians (not the whole board), club-wide everyone
+        const changed = data.change === 'UPDATED' && (data.moved || data.placeChanged);
+        if (data.silent || (data.change !== 'CANCELLED' && data.change !== 'RESTORED' && !changed)) return;
+        const audience = data.teamId ? { members: (event.audience?.members ?? []) as string[] } : { everyone: true };
+        const recipients = this.people.audienceIds(audience).filter((id) => id !== data.actorId);
+        const at = (iso: string) => this.#dateTime.format(new Date(iso));
+        const link = `/appointments/${data.appointmentIds[0]}`;
+        const others = data.appointmentIds.length - 1;
+        if (data.change === 'CANCELLED') {
+          const more = others ? ` Auch die ${others} folgenden Termine fallen aus.` : '';
+          const reason = data.reason ? ` Grund: ${data.reason}` : '';
+          this.notify(
+            recipients,
+            'APPOINTMENT_CANCELLED',
+            `Abgesagt: ${data.title}`,
+            `Der Termin am ${at(data.firstStartsAt)} findet nicht statt.${more}${reason}`,
+            link,
+          );
+        } else if (data.change === 'RESTORED') {
+          this.notify(
+            recipients,
+            'APPOINTMENT_CANCELLED',
+            `Findet doch statt: ${data.title}`,
+            `Der Termin am ${at(data.firstStartsAt)} findet wie geplant statt. Bitte die Zusage prüfen.`,
+            link,
+          );
+        } else {
+          const body =
+            data.moved && data.previousStartsAt
+              ? `Neue Zeit: ${at(data.firstStartsAt)} statt ${at(data.previousStartsAt)}.${others ? ` Auch die ${others} folgenden Termine sind verschoben.` : ''} Bitte die Zusage bestätigen.`
+              : `Ort oder Kabine für ${at(data.firstStartsAt)} haben sich geändert.`;
+          this.notify(recipients, 'APPOINTMENT_CHANGED', `Geändert: ${data.title}`, body, link);
+        }
+        break;
+      }
+      case 'attendance.notice': {
+        // server: NotificationHandlers.onAttendanceNotice
+        const when = this.#dateTime.format(new Date(data.startsAt));
+        const link = `/appointments/${data.appointmentId}`;
+        const texts: Record<string, [NotificationKind, string, string]> = {
+          OPEN_REMINDER: ['ATTENDANCE', `Noch keine Antwort: ${data.title}`, `Am ${when}. Bitte zu- oder absagen.`],
+          ABSENT_AFTER_YES: [
+            'ATTENDANCE',
+            `Abwesend trotz Zusage: ${data.name}`,
+            `${data.name} hat für „${data.title}“ am ${when} zugesagt und ist jetzt abwesend eingetragen.`,
+          ],
+          RIDE_JOINED: ['RIDE', `Neu in deinem Auto: ${data.name}`, `Fahrgemeinschaft zu „${data.title}“ am ${when}.`],
+          RIDE_LEFT: ['RIDE', `Nicht mehr in deinem Auto: ${data.name}`, `Fahrgemeinschaft zu „${data.title}“ am ${when}.`],
+          RIDE_CANCELLED: [
+            'RIDE',
+            `Fahrt abgesagt von ${data.name}`,
+            `Die Fahrgemeinschaft zu „${data.title}“ am ${when} fällt aus. Bitte eine andere Mitfahrt suchen.`,
+          ],
+        };
+        const [kind, title, body] = texts[data.kind as string];
+        this.notify(data.recipients, kind, title, body, link);
         break;
       }
       case 'calendar.items-to-bring': {

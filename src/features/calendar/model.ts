@@ -18,17 +18,19 @@ export interface AppointmentTypeInfo {
   archived: boolean;
   /** Appointments of this type exist: archive instead of deleting. */
   inUse: boolean;
+  /** Members without an answer are reminded this many hours before the start; null: never. */
+  remindHours: number | null;
 }
 
 export type AppointmentTypeInput = Omit<AppointmentTypeInfo, 'key' | 'inUse'>;
 
 /** server: V55__appointment_types.sql — shown until the club's types are loaded. */
 export const SEEDED_APPOINTMENT_TYPES: readonly AppointmentTypeInfo[] = [
-  { key: 'TRAINING', label: 'Training', hue: 'blue', rides: false, cabins: true, sort: 1, archived: false, inUse: false },
-  { key: 'MATCH', label: 'Spiel', hue: 'red', rides: true, cabins: true, sort: 2, archived: false, inUse: false },
-  { key: 'TOURNAMENT', label: 'Turnier', hue: 'purple', rides: true, cabins: true, sort: 3, archived: false, inUse: false },
-  { key: 'MEETING', label: 'Besprechung', hue: 'brown', rides: false, cabins: false, sort: 4, archived: false, inUse: false },
-  { key: 'EVENT', label: 'Veranstaltung', hue: 'yellow', rides: true, cabins: true, sort: 5, archived: false, inUse: false },
+  { key: 'TRAINING', label: 'Training', hue: 'blue', rides: false, cabins: true, sort: 1, archived: false, inUse: false, remindHours: null },
+  { key: 'MATCH', label: 'Spiel', hue: 'red', rides: true, cabins: true, sort: 2, archived: false, inUse: false, remindHours: 48 },
+  { key: 'TOURNAMENT', label: 'Turnier', hue: 'purple', rides: true, cabins: true, sort: 3, archived: false, inUse: false, remindHours: 48 },
+  { key: 'MEETING', label: 'Besprechung', hue: 'brown', rides: false, cabins: false, sort: 4, archived: false, inUse: false, remindHours: null },
+  { key: 'EVENT', label: 'Veranstaltung', hue: 'yellow', rides: true, cabins: true, sort: 5, archived: false, inUse: false, remindHours: null },
 ];
 
 export const HUES: readonly Hue[] = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'red'];
@@ -56,6 +58,8 @@ export interface Appointment {
   cancelled: boolean;
   /** Car pools offered (set from the type when created, switched per appointment; the club switch comes on top). */
   rides: boolean;
+  /** Why it was cancelled (only on a single appointment's read). */
+  cancelReason?: string | null;
 }
 
 export interface AppointmentList {
@@ -83,7 +87,7 @@ export interface NewAppointment {
 /** Changes one occurrence; omitted fields stay unchanged, '' clears a text; clearLocationId unlinks the place. */
 export type AppointmentPatch = Partial<
   Pick<Appointment, 'type' | 'title' | 'description' | 'location' | 'locationId' | 'cabinMen' | 'cabinWomen' | 'startsAt' | 'endsAt' | 'rides'>
-> & { clearLocationId?: boolean };
+> & { clearLocationId?: boolean; /** The later occurrences of the series change alike (times shift by as much). */ includeFollowing?: boolean };
 
 export interface AttendanceEntry {
   memberId: string;
@@ -93,8 +97,41 @@ export interface AttendanceEntry {
   /** Only visible to coaches of the team, admin and board. */
   reason: string | null;
   updatedAt: string | null;
-  /** No answer, but an absence covers the day: counts as NO. */
+  /** An absence covers the day (no answer, or entered after a YES/MAYBE): counts as NO. */
   absent: boolean;
+  /** Answered YES/MAYBE before the time changed; waits for a confirmation. */
+  unconfirmed: boolean;
+  /** Marked by the coach once it started; null: not marked (only for coaches, admin, board). */
+  present: boolean | null;
+}
+
+/** server: AttendanceApi.OpenAnswer — still to answer, for oneself or a minor. */
+export interface OpenAnswer {
+  appointmentId: string;
+  teamId: string | null;
+  title: string;
+  startsAt: string;
+  memberId: string;
+  name: string;
+}
+
+/** server: AttendanceApi.MemberStats — over a date range: held appointments, answers, presence marked by the coach. */
+export interface MemberStats {
+  memberId: string;
+  name: string;
+  appointments: number;
+  yes: number;
+  no: number;
+  present: number;
+  marked: number;
+}
+
+export interface TeamStats {
+  teamId: string;
+  from: string;
+  to: string;
+  appointments: number;
+  items: MemberStats[];
 }
 
 export interface Attendance {

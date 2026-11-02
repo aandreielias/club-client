@@ -98,6 +98,12 @@
     <textarea bind:value={form.description} rows="4" maxlength={limits.descriptionMaxLength}></textarea>
   </Field>
 
+  {#if form.original?.seriesId}
+    <label class="check">
+      <input type="checkbox" bind:checked={form.includeFollowing} />
+      Auch alle folgenden Termine der Serie so ändern (Zeiten verschieben sich gleich)
+    </label>
+  {/if}
   {#if !form.isEdit}
     <label class="check">
       <input type="checkbox" bind:checked={form.repeat} />

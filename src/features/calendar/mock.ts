@@ -19,6 +19,9 @@ import {
   type AppointmentType,
   type Attendance,
   type AttendanceEntry,
+  type MemberStats,
+  type OpenAnswer,
+  type TeamStats,
   type NewAppointment,
   type ResponseStatus,
 } from './model';
@@ -39,7 +42,12 @@ interface StoredResponse {
   status: ResponseStatus;
   reason: string | null;
   updatedAt: string;
+  /** server: needs_confirmation — the time changed after a YES/MAYBE. */
+  unconfirmed?: boolean;
 }
+
+/** server: attendance_absence.created_at — an absence entered after a YES counts as NO. */
+type StoredAbsence = Absence & { createdAt?: string };
 
 const fail = MockServer.fail;
 const limits = settings.calendar;
@@ -56,7 +64,11 @@ export class MockCalendar {
   /** memberId → feed token */
   readonly feeds = new MockTable<Record<string, string>>('ical', () => ({}));
   /** server: attendance_absence */
-  readonly absences = new MockTable<Absence[]>('absences', () => []);
+  readonly absences = new MockTable<StoredAbsence[]>('absences', () => []);
+  /** server: attendance_presence — appointmentId → memberId → present */
+  readonly presence = new MockTable<Record<string, Record<string, boolean>>>('attendance-presence', () => ({}));
+  /** server: attendance_reminder — appointments whose open answers were reminded */
+  readonly openReminded = new MockTable<string[]>('attendance-reminded', () => []);
   readonly rides: MockTable<StoredRide[]>;
 
   constructor(private readonly people: MockDirectory) {
@@ -158,32 +170,236 @@ export class MockCalendar {
     return created;
   }
 
+  /** server: CalendarHandlers.update — with includeFollowing the later occurrences change alike (times shift by as much). */
   update(member: Member, id: string, patch: AppointmentPatch): Appointment {
     const current = this.visible(member, id);
     this.requireMayEdit(member, current.teamId);
-    const { clearLocationId, ...rest } = patch;
+    const before = { ...current };
+    const { clearLocationId, includeFollowing, ...rest } = patch;
     const defined = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== null && v !== undefined));
-    const merged = { ...current, ...defined };
-    const next = MockCalendar.validated(clearLocationId ? { ...merged, locationId: null } : this.placed(merged, patch.locationId ?? null));
+    const apply = (a: Appointment, startsAt: string, endsAt: string) => {
+      const merged = { ...a, ...defined, startsAt, endsAt };
+      return MockCalendar.validated(clearLocationId ? { ...merged, locationId: null } : this.placed(merged, patch.locationId ?? null));
+    };
+    const next = apply(current, patch.startsAt ?? current.startsAt, patch.endsAt ?? current.endsAt);
+    const startShift = Date.parse(next.startsAt) - Date.parse(before.startsAt);
+    const endShift = Date.parse(next.endsAt) - Date.parse(before.endsAt);
+    const later =
+      includeFollowing && current.seriesId
+        ? this.appointments.data.filter((a) => a.seriesId === current.seriesId && a.id !== current.id && a.startsAt > before.startsAt && !a.cancelled)
+        : [];
     Object.assign(current, next);
+    for (const a of later) {
+      Object.assign(
+        a,
+        apply(a, new Date(Date.parse(a.startsAt) + startShift).toISOString(), new Date(Date.parse(a.endsAt) + endShift).toISOString()),
+      );
+    }
     this.appointments.save();
-    this.changed(member, [current], 'UPDATED');
+    const all = [current, ...later];
+    const upcoming = Date.parse(before.endsAt) > Date.now() && !before.cancelled;
+    const moved = upcoming && (startShift !== 0 || endShift !== 0);
+    const placeChanged =
+      upcoming && (before.location !== current.location || before.cabinMen !== current.cabinMen || before.cabinWomen !== current.cabinWomen);
+    if (moved) {
+      // server: AttendanceHandlers — YES and MAYBE wait for a confirmation
+      for (const a of all) for (const r of Object.values(this.responses.data[a.id] ?? {})) if (r.status !== 'NO') r.unconfirmed = true;
+      this.responses.save();
+    }
+    this.changed(member, all, 'UPDATED', { moved, placeChanged, previousStartsAt: before.startsAt });
     MockActivity.record('APPOINTMENT', current.id, member, 'UPDATED', { title: current.title, teamIds: current.teamId ? [current.teamId] : [] });
     return current;
   }
 
-  cancel(member: Member, id: string, includeFollowing: boolean): Appointment[] {
+  cancel(member: Member, id: string, includeFollowing: boolean, rawReason: string | null = null): Appointment[] {
     const current = this.visible(member, id);
     this.requireMayEdit(member, current.teamId);
     const targets =
       includeFollowing && current.seriesId
         ? this.appointments.data.filter((a) => a.seriesId === current.seriesId && a.startsAt >= current.startsAt && !a.cancelled)
         : [current];
-    targets.forEach((a) => (a.cancelled = true));
+    return this.cancelAll(member, targets, MockCalendar.reason(rawReason));
+  }
+
+  private cancelAll(member: Member, targets: Appointment[], reason: string | null): Appointment[] {
+    targets.forEach((a) => Object.assign(a, { cancelled: true, cancelReason: reason }));
     this.appointments.save();
-    this.changed(member, targets, 'CANCELLED');
+    this.changed(member, targets, 'CANCELLED', { reason });
     targets.forEach((a) => MockActivity.record('APPOINTMENT', a.id, member, 'CANCELLED', { title: a.title, teamIds: a.teamId ? [a.teamId] : [] }));
     return targets;
+  }
+
+  private static reason(raw: string | null | undefined): string | null {
+    const reason = raw?.trim() || null;
+    if ((reason?.length ?? 0) > 300) fail(400, 'appointment.reason-too-long');
+    return reason;
+  }
+
+  /** server: CalendarHandlers.cancelRange — a team's (or the club-wide) appointments on these days. */
+  cancelRange(member: Member, body: { teamId?: string | null; from?: string; to?: string; reason?: string | null }): Appointment[] {
+    const teamId = body.teamId ?? null;
+    if (!body.from || !body.to || body.to < body.from) fail(400, 'calendar.range-invalid');
+    this.requireMayEdit(member, teamId);
+    const clock = this.people.clock;
+    const from = clock.toInstant(`${body.from}T00:00`);
+    const to = clock.toInstant(`${ZonedClock.addDays(body.to!, 1)}T00:00`);
+    const targets = this.appointments.data.filter((a) => a.teamId === teamId && !a.cancelled && a.startsAt >= from && a.startsAt < to);
+    return this.cancelAll(member, targets, MockCalendar.reason(body.reason));
+  }
+
+  /** server: CalendarHandlers.restore */
+  restore(member: Member, id: string): Appointment {
+    const current = this.visible(member, id);
+    this.requireMayEdit(member, current.teamId);
+    if (!current.cancelled) return current;
+    Object.assign(current, { cancelled: false, cancelReason: null });
+    this.appointments.save();
+    this.changed(member, [current], 'RESTORED');
+    return current;
+  }
+
+  /** server: CalendarHandlers.delete — only while nobody answered. */
+  delete(member: Member, id: string): void {
+    const current = this.visible(member, id);
+    this.requireMayEdit(member, current.teamId);
+    if (Object.keys(this.responses.data[id] ?? {}).length) fail(409, 'appointment.has-answers');
+    this.appointments.data.splice(this.appointments.data.indexOf(current), 1);
+    this.appointments.save();
+    this.changed(member, [current], 'CANCELLED', { silent: true });
+  }
+
+  /** server: AttendanceHandlers.requireRunsTeam */
+  private requireRunsTeam(member: Member, teamId: string | null): void {
+    if (this.people.isManager(member)) return;
+    if (!teamId || this.people.teamRoles(member.id)[teamId] !== 'COACH') fail(403, 'access.denied');
+  }
+
+  private coachesOf(teamId: string): string[] {
+    return this.people.teamMembers(teamId).filter((id) => this.people.teamRoles(id)[teamId] === 'COACH');
+  }
+
+  private absentOn(memberId: string, startsAt: string): StoredAbsence | undefined {
+    const day = this.people.clock.localDate(startsAt);
+    return this.absences.data.find((a) => a.memberId === memberId && a.from <= day && day <= a.to);
+  }
+
+  /** server: no answer, or a YES/MAYBE given before the absence was entered. */
+  private static overrules(absence: StoredAbsence, answer: StoredResponse | undefined): boolean {
+    return !answer || (answer.status !== 'NO' && !!absence.createdAt && absence.createdAt > answer.updatedAt);
+  }
+
+  private notice(kind: string, recipients: string[], a: Appointment, name: string | null = null): void {
+    if (!recipients.length) return;
+    mockServer.events.publish({
+      type: 'attendance.notice',
+      data: { kind, recipients, appointmentId: a.id, title: a.title, startsAt: a.startsAt, name },
+    });
+  }
+
+  /** server: AttendanceHandlers.remind — players without an answer and not absent, plus their guardians; once per appointment. */
+  remindOpen(member: Member, id: string): number {
+    const appointment = this.open(member, id);
+    this.requireRunsTeam(member, appointment.teamId);
+    if (!appointment.teamId) fail(400, 'attendance.not-a-team-appointment');
+    return this.remind(appointment);
+  }
+
+  private remind(appointment: Appointment): number {
+    if (this.openReminded.data.includes(appointment.id)) return 0;
+    this.openReminded.data.push(appointment.id);
+    this.openReminded.save();
+    const teamId = appointment.teamId!;
+    const answers = this.responses.data[appointment.id] ?? {};
+    const open = this.people
+      .teamMembers(teamId)
+      .filter((id) => this.people.teamRoles(id)[teamId] !== 'COACH' && !answers[id] && !this.absentOn(id, appointment.startsAt));
+    this.notice('OPEN_REMINDER', [...open, ...this.people.guardiansOf(open)], appointment);
+    return open.length;
+  }
+
+  /** server: AttendanceModule.remindOpenAnswers — the reminder hours of the type before the start. */
+  remindDue(): void {
+    const now = Date.now();
+    for (const a of this.appointments.data) {
+      const hours = types.data.find((t) => t.key === a.type)?.remindHours;
+      const start = Date.parse(a.startsAt);
+      if (!hours || a.cancelled || !a.teamId || start <= now || start - hours * 3_600_000 > now) continue;
+      this.remind(a);
+    }
+  }
+
+  /** server: AttendanceHandlers.openAnswers — next two weeks, oneself and one's minors. */
+  openAnswers(member: Member): { items: OpenAnswer[] } {
+    const people = [member.id, ...this.people.wardsOf(member.id)];
+    const now = Date.now();
+    const items: OpenAnswer[] = [];
+    for (const a of this.appointments.data) {
+      const start = Date.parse(a.startsAt);
+      if (a.cancelled || !a.teamId || start <= now || start > now + 14 * DAY_MS || !this.canSee(member, a)) continue;
+      for (const id of people) {
+        if (!(a.teamId in this.people.teamRoles(id)) || this.responses.data[a.id]?.[id] || this.absentOn(id, a.startsAt)) continue;
+        items.push({
+          appointmentId: a.id,
+          teamId: a.teamId,
+          title: a.title,
+          startsAt: a.startsAt,
+          memberId: id,
+          name: this.people.name(id) ?? 'Mitglied',
+        });
+      }
+    }
+    return { items: items.sort((x, y) => x.startsAt.localeCompare(y.startsAt) || x.name.localeCompare(y.name)) };
+  }
+
+  /** server: AttendanceHandlers.setPresence — once it started, by who runs the team. */
+  setPresence(member: Member, id: string, body: { memberId?: string; present?: boolean | null }): Attendance {
+    const appointment = this.visible(member, id);
+    this.requireRunsTeam(member, appointment.teamId);
+    if (appointment.cancelled || Date.parse(appointment.startsAt) > Date.now()) fail(409, 'attendance.presence-not-yet');
+    if (!body.memberId) fail(400, 'request.invalid');
+    if (appointment.teamId && !this.people.teamMembers(appointment.teamId).includes(body.memberId!)) fail(403, 'attendance.not-in-team');
+    const marks = (this.presence.data[id] ??= {});
+    if (body.present == null) delete marks[body.memberId!];
+    else marks[body.memberId!] = body.present;
+    this.presence.save();
+    return this.overview(member, id);
+  }
+
+  /** server: AttendanceHandlers.teamStats */
+  teamStats(member: Member, teamId: string, from: string | null, to: string | null): TeamStats {
+    this.requireRunsTeam(member, teamId);
+    if (!from || !to || to < from) fail(400, 'calendar.range-invalid');
+    const clock = this.people.clock;
+    const start = clock.toInstant(`${from}T00:00`);
+    const end = clock.toInstant(`${ZonedClock.addDays(to!, 1)}T00:00`);
+    const now = new Date().toISOString();
+    const held = this.appointments.data.filter(
+      (a) => a.teamId === teamId && !a.cancelled && a.startsAt >= start && a.startsAt < end && a.startsAt < now,
+    );
+    const players = this.people.teamMembers(teamId).filter((id) => this.people.teamRoles(id)[teamId] !== 'COACH');
+    const items: MemberStats[] = players
+      .flatMap((id) => {
+        const name = this.people.name(id);
+        if (!name) return [];
+        let yes = 0;
+        let no = 0;
+        let present = 0;
+        let marked = 0;
+        for (const a of held) {
+          const answer = this.responses.data[a.id]?.[id];
+          const away = this.absentOn(id, a.startsAt);
+          if ((away && MockCalendar.overrules(away, answer)) || answer?.status === 'NO') no++;
+          else if (answer?.status === 'YES') yes++;
+          const mark = this.presence.data[a.id]?.[id];
+          if (mark !== undefined) {
+            marked++;
+            if (mark) present++;
+          }
+        }
+        return [{ memberId: id, name, appointments: held.length, yes, no, present, marked }];
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return { teamId, from: from!, to: to!, appointments: held.length, items };
   }
 
   /** server: AttendanceHandlers.respond */
@@ -200,6 +416,7 @@ export class MockCalendar {
       status: body.status as ResponseStatus,
       reason: body.reason?.trim() || null,
       updatedAt: new Date().toISOString(),
+      unconfirmed: false,
     };
     (this.responses.data[id] ??= {})[target] = response;
     this.responses.save();
@@ -208,7 +425,7 @@ export class MockCalendar {
       data: { appointmentId: id, memberId: target, status: response.status },
       audience: this.people.teamAudience(appointment.teamId),
     });
-    return { appointmentId: id, memberId: target, ...response };
+    return { appointmentId: id, memberId: target, status: response.status, reason: response.reason, updatedAt: response.updatedAt };
   }
 
   /** server: AttendanceHandlers.overview */
@@ -226,7 +443,9 @@ export class MockCalendar {
         const name = this.people.name(memberId);
         if (!name) return [];
         const answer = answers[memberId];
-        const away = answer ? undefined : this.absences.data.find((a) => a.memberId === memberId && a.from <= day && day <= a.to);
+        const found = this.absences.data.find((a) => a.memberId === memberId && a.from <= day && day <= a.to);
+        const away = found && MockCalendar.overrules(found, answer) ? found : undefined;
+        const present = showReasons ? (this.presence.data[id]?.[memberId] ?? null) : null;
         if (away) {
           return [
             {
@@ -236,6 +455,8 @@ export class MockCalendar {
               reason: showReasons ? (away.reason ? `Abwesend: ${away.reason}` : 'Abwesend') : null,
               updatedAt: null,
               absent: true,
+              unconfirmed: false,
+              present,
             },
           ];
         }
@@ -247,6 +468,8 @@ export class MockCalendar {
             reason: showReasons ? (answer?.reason ?? null) : null,
             updatedAt: answer?.updatedAt ?? null,
             absent: false,
+            unconfirmed: !!answer?.unconfirmed,
+            present,
           },
         ];
       })
@@ -263,16 +486,35 @@ export class MockCalendar {
     if (!body.from || !body.to || !date.test(body.from) || !date.test(body.to) || body.to < body.from) fail(400, 'absence.range-invalid');
     if ((Date.parse(body.to!) - Date.parse(body.from!)) / 86_400_000 >= 366) fail(400, 'absence.too-long');
     if ((body.reason?.length ?? 0) > limits.reasonMaxLength) fail(400, 'absence.reason-too-long');
-    const absence: Absence = { id: crypto.randomUUID(), memberId: target, from: body.from!, to: body.to!, reason: body.reason?.trim() || null };
+    const createdAt = new Date().toISOString();
+    const absence: StoredAbsence = {
+      id: crypto.randomUUID(),
+      memberId: target,
+      from: body.from!,
+      to: body.to!,
+      reason: body.reason?.trim() || null,
+      createdAt,
+    };
     this.absences.data.push(absence);
     this.absences.save();
-    return absence;
+    // server: AttendanceHandlers.addAbsence — a YES in the absence tells the team's coaches
+    const name = this.people.name(target) ?? 'Mitglied';
+    for (const a of this.appointments.data) {
+      const day = this.people.clock.localDate(a.startsAt);
+      if (a.cancelled || !a.teamId || a.startsAt < createdAt || day < absence.from || day > absence.to) continue;
+      if (this.responses.data[a.id]?.[target]?.status === 'YES') this.notice('ABSENT_AFTER_YES', this.coachesOf(a.teamId), a, name);
+    }
+    const { createdAt: _createdAt, ...dto } = absence;
+    return dto;
   }
 
   listAbsences(member: Member): Absence[] {
     const mine = new Set([member.id, ...this.people.wardsOf(member.id)]);
     const today = this.people.clock.today();
-    return this.absences.data.filter((a) => mine.has(a.memberId) && a.to >= today).sort((a, b) => a.from.localeCompare(b.from));
+    return this.absences.data
+      .filter((a) => mine.has(a.memberId) && a.to >= today)
+      .sort((a, b) => a.from.localeCompare(b.from))
+      .map(({ createdAt: _createdAt, ...a }) => a);
   }
 
   /** server: AttendanceHandlers.calendarMove — the member or a guardian moves the absence. */
@@ -321,7 +563,9 @@ export class MockCalendar {
     const ride = this.ride(member, rideId);
     if (ride.driverId !== member.id && !this.people.isManager(member)) fail(403, 'ride.not-driver');
     this.rides.data.splice(this.rides.data.indexOf(ride), 1);
-    this.ridesChanged(this.visible(member, ride.appointmentId));
+    const appointment = this.visible(member, ride.appointmentId);
+    this.ridesChanged(appointment);
+    this.notice('RIDE_CANCELLED', [...ride.passengers, ...this.people.guardiansOf(ride.passengers)], appointment, this.people.name(ride.driverId));
   }
 
   joinRide(member: Member, rideId: string, body: { memberId?: string | null }): Ride {
@@ -334,9 +578,11 @@ export class MockCalendar {
     if (target === ride.driverId) fail(400, 'ride.driver-is-passenger');
     if (all.some((r) => r.driverId === target)) fail(409, 'ride.is-driver');
     if (!ride.passengers.includes(target) && ride.passengers.length >= ride.seats) fail(409, 'ride.full');
+    const joined = !ride.passengers.includes(target);
     all.forEach((r) => (r.passengers = r.passengers.filter((p) => p !== target)));
     ride.passengers.push(target);
     this.ridesChanged(appointment);
+    if (joined) this.notice('RIDE_JOINED', [ride.driverId], appointment, this.people.name(target));
     return this.rideDto(ride);
   }
 
@@ -345,8 +591,11 @@ export class MockCalendar {
     const allowed =
       memberId === member.id || ride.driverId === member.id || this.people.isManager(member) || this.people.wardsOf(member.id).includes(memberId);
     if (!allowed) fail(403, 'ride.not-passenger');
+    const left = ride.passengers.includes(memberId);
     ride.passengers = ride.passengers.filter((p) => p !== memberId);
-    this.ridesChanged(this.visible(member, ride.appointmentId));
+    const appointment = this.visible(member, ride.appointmentId);
+    this.ridesChanged(appointment);
+    if (left && ride.driverId !== member.id) this.notice('RIDE_LEFT', [ride.driverId], appointment, this.people.name(memberId));
     return this.rideDto(ride);
   }
 
@@ -396,7 +645,12 @@ export class MockCalendar {
   }
 
   /** server: CalendarApi.AppointmentsChanged, pushed to everyone who sees the appointments */
-  private changed(actor: Member, appointments: readonly Appointment[], change: 'CREATED' | 'UPDATED' | 'CANCELLED'): void {
+  private changed(
+    actor: Member,
+    appointments: readonly Appointment[],
+    change: 'CREATED' | 'UPDATED' | 'CANCELLED' | 'RESTORED',
+    extra: { moved?: boolean; placeChanged?: boolean; reason?: string | null; previousStartsAt?: string; silent?: boolean } = {},
+  ): void {
     const [first] = appointments;
     if (!first) return;
     mockServer.events.publish({
@@ -408,6 +662,7 @@ export class MockCalendar {
         actorId: actor.id,
         title: first.title,
         firstStartsAt: first.startsAt,
+        ...extra,
       },
       audience: this.people.teamAudience(first.teamId),
     });
@@ -724,7 +979,11 @@ export const appointmentTypes = {
       sort: body.sort,
       archived: !!body.archived,
       inUse: false,
+      remindHours: body.remindHours == null ? null : body.remindHours,
     };
+    if (type.remindHours != null && (!Number.isInteger(type.remindHours) || type.remindHours < 1 || type.remindHours > 336)) {
+      fail(400, 'appointment-type.remind-invalid');
+    }
     const index = types.data.findIndex((t) => t.key === type.key);
     if (index >= 0) types.data[index] = type;
     else types.data.push(type);
@@ -746,7 +1005,11 @@ export const appointmentTypes = {
 
 // server: CalendarModule.remindItemHolders runs every 15 minutes; the browser mock checks on start and then periodically.
 if (typeof window !== 'undefined') {
-  const remind = () => calendar.remindItemHolders(settings.inventory.reminderBeforeMs);
+  // server: AttendanceModule.remindOpenAnswers (hourly) runs alongside
+  const remind = () => {
+    calendar.remindItemHolders(settings.inventory.reminderBeforeMs);
+    calendar.remindDue();
+  };
   setTimeout(remind, 0);
   setInterval(remind, settings.inventory.reminderCheckMs);
 }
@@ -767,9 +1030,16 @@ mockServer
   .on('POST', '/api/v1/appointments', (req) => ({ items: calendar.create(actor(req), req.body ?? {}) }))
   .on('GET', '/api/v1/appointments/:id', (req) => calendar.visible(actor(req), req.params.id))
   .on('PATCH', '/api/v1/appointments/:id', (req) => calendar.update(actor(req), req.params.id, req.body ?? {}))
+  .on('POST', '/api/v1/appointments/cancel-range', (req) => ({ items: calendar.cancelRange(actor(req), req.body ?? {}) }))
   .on('POST', '/api/v1/appointments/:id/cancel', (req) => ({
-    items: calendar.cancel(actor(req), req.params.id, req.query.get('includeFollowing') === 'true'),
+    items: calendar.cancel(actor(req), req.params.id, req.query.get('includeFollowing') === 'true', req.body?.reason ?? null),
   }))
+  .on('POST', '/api/v1/appointments/:id/restore', (req) => ({ items: [calendar.restore(actor(req), req.params.id)] }))
+  .on('DELETE', '/api/v1/appointments/:id', (req) => calendar.delete(actor(req), req.params.id))
+  .on('POST', '/api/v1/appointments/:id/remind-open', (req) => ({ count: calendar.remindOpen(actor(req), req.params.id) }))
+  .on('PUT', '/api/v1/appointments/:id/presence', (req) => calendar.setPresence(actor(req), req.params.id, req.body ?? {}))
+  .on('GET', '/api/v1/me/open-answers', (req) => calendar.openAnswers(actor(req)))
+  .on('GET', '/api/v1/teams/:id/attendance', (req) => calendar.teamStats(actor(req), req.params.id, req.query.get('from'), req.query.get('to')))
   .on('GET', '/api/v1/appointments/:id/links', (req) => calendar.getLinks(actor(req), req.params.id))
   .on('PUT', '/api/v1/appointments/:id/links', (req) => calendar.setLinks(actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/appointments/:id/attendance', (req) => calendar.overview(actor(req), req.params.id))

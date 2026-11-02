@@ -52,9 +52,25 @@
   </div>
   <label class="check"><input type="checkbox" bind:checked={form.rides} /> Fahrgemeinschaften anbieten</label>
   <label class="check"><input type="checkbox" bind:checked={form.cabins} /> Kabinen für Damen und Herren angeben</label>
+  <Field label="An Antwort erinnern" hint="Stunden vor Beginn; wer noch nicht zu- oder abgesagt hat, bekommt eine Erinnerung. Leer: nie.">
+    <input
+      type="number"
+      min="1"
+      max="336"
+      class="short"
+      placeholder="nie"
+      bind:value={() => form.remindHours ?? '', (v) => (form.remindHours = v === '' || v == null ? null : Math.round(Number(v)))}
+    />
+  </Field>
   <ErrorNote error={action.error} />
   <div class="row">
     <Button type="submit" variant="primary" busy={action.busy}>{submitLabel}</Button>
     <Button variant="ghost" onclick={oncancel}>Abbrechen</Button>
   </div>
 </form>
+
+<style>
+  .short {
+    width: 6rem;
+  }
+</style>

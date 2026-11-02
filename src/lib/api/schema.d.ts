@@ -565,6 +565,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/appointments/{id}/presence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["presence_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/appointments/{id}/links": {
         parameters: {
             query?: never;
@@ -1637,6 +1653,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/appointments/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["restore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appointments/{id}/remind-open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["remindOpen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/appointments/{id}/cancel": {
         parameters: {
             query?: never;
@@ -1647,6 +1695,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["cancel_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appointments/cancel-range": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelRange"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1839,7 +1903,7 @@ export interface paths {
         get: operations["get_8"];
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["delete_9"];
         options?: never;
         head?: never;
         patch: operations["update_10"];
@@ -1869,6 +1933,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["roster"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teams/{id}/attendance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["teamStats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2045,6 +2125,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["security"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/open-answers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["openAnswers"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2399,7 +2495,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["delete_9"];
+        delete: operations["delete_10"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3059,7 +3155,7 @@ export interface components {
         };
         "at.clubserver.notifications.api.NotificationsApi.Preference": {
             /** @enum {string} */
-            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "SECURITY" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING" | "MAIL";
+            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "SECURITY" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE";
             push: boolean;
             email: boolean;
         };
@@ -3223,6 +3319,8 @@ export interface components {
             /** Format: int32 */
             sort: number;
             archived: boolean;
+            /** Format: int32 */
+            remindHours: number;
         };
         "at.clubserver.calendar.api.CalendarApi.AppointmentTypeDto": {
             key: string;
@@ -3234,6 +3332,8 @@ export interface components {
             sort: number;
             archived: boolean;
             inUse: boolean;
+            /** Format: int32 */
+            remindHours: number;
         };
         "at.clubserver.gateway.rest.CalendarItemsController.MoveBody": {
             /** Format: date-time */
@@ -3293,6 +3393,37 @@ export interface components {
             /** Format: int32 */
             termYears: number;
             board: boolean;
+        };
+        "at.clubserver.gateway.rest.CalendarController.PresenceBody": {
+            /** Format: uuid */
+            memberId: string;
+            present: boolean;
+        };
+        "at.clubserver.attendance.api.AttendanceApi.Attendance": {
+            /** Format: uuid */
+            appointmentId: string;
+            /** Format: int32 */
+            yes: number;
+            /** Format: int32 */
+            no: number;
+            /** Format: int32 */
+            maybe: number;
+            /** Format: int32 */
+            open: number;
+            entries: components["schemas"]["at.clubserver.attendance.api.AttendanceApi.Entry"][];
+        };
+        "at.clubserver.attendance.api.AttendanceApi.Entry": {
+            /** Format: uuid */
+            memberId: string;
+            name: string;
+            /** @enum {string} */
+            status: "YES" | "NO" | "MAYBE";
+            reason: string;
+            /** Format: date-time */
+            updatedAt: string;
+            absent: boolean;
+            unconfirmed: boolean;
+            present: boolean;
         };
         "at.clubserver.gateway.rest.CalendarController.ResponseBody": {
             /** Format: uuid */
@@ -3723,6 +3854,7 @@ export interface components {
             endsAt: string;
             cancelled: boolean;
             rides: boolean;
+            cancelReason: string;
         };
         "at.clubserver.calendar.api.CalendarApi.AppointmentList": {
             items: components["schemas"]["at.clubserver.calendar.api.CalendarApi.AppointmentDto"][];
@@ -3731,6 +3863,22 @@ export interface components {
             /** Format: int32 */
             seats: number;
             note: string;
+        };
+        "at.clubserver.gateway.rest.CalendarController.Reminded": {
+            /** Format: int32 */
+            count: number;
+        };
+        "at.clubserver.gateway.rest.CalendarController.CancelBody": {
+            reason: string;
+        };
+        "at.clubserver.gateway.rest.CalendarController.CancelRangeBody": {
+            /** Format: uuid */
+            teamId: string;
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            reason: string;
         };
         "at.clubserver.gateway.rest.TournamentsController.TournamentPatch": {
             name: string;
@@ -3861,6 +4009,7 @@ export interface components {
             /** Format: date-time */
             endsAt: string;
             rides: boolean;
+            includeFollowing: boolean;
         };
         "at.clubserver.tournaments.api.TournamentsApi.TournamentList": {
             items: components["schemas"]["at.clubserver.tournaments.api.TournamentsApi.TournamentSummary"][];
@@ -3880,6 +4029,32 @@ export interface components {
         };
         "at.clubserver.teams.api.TeamsApi.TeamList": {
             items: components["schemas"]["at.clubserver.teams.api.TeamsApi.TeamDto"][];
+        };
+        "at.clubserver.attendance.api.AttendanceApi.MemberStats": {
+            /** Format: uuid */
+            memberId: string;
+            name: string;
+            /** Format: int32 */
+            appointments: number;
+            /** Format: int32 */
+            yes: number;
+            /** Format: int32 */
+            no: number;
+            /** Format: int32 */
+            present: number;
+            /** Format: int32 */
+            marked: number;
+        };
+        "at.clubserver.attendance.api.AttendanceApi.TeamStats": {
+            /** Format: uuid */
+            teamId: string;
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** Format: int32 */
+            appointments: number;
+            items: components["schemas"]["at.clubserver.attendance.api.AttendanceApi.MemberStats"][];
         };
         "at.clubserver.tasks.api.TasksApi.TaskList": {
             items: components["schemas"]["at.clubserver.tasks.api.TasksApi.TaskDto"][];
@@ -4026,11 +4201,26 @@ export interface components {
             devices: components["schemas"]["at.clubserver.members.api.MembersApi.DeviceDto"][];
             mfaRequired: boolean;
         };
+        "at.clubserver.attendance.api.AttendanceApi.OpenAnswer": {
+            /** Format: uuid */
+            appointmentId: string;
+            /** Format: uuid */
+            teamId: string;
+            title: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: uuid */
+            memberId: string;
+            name: string;
+        };
+        "at.clubserver.attendance.api.AttendanceApi.OpenAnswers": {
+            items: components["schemas"]["at.clubserver.attendance.api.AttendanceApi.OpenAnswer"][];
+        };
         "at.clubserver.notifications.api.NotificationsApi.NotificationDto": {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "SECURITY" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING" | "MAIL";
+            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "SECURITY" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE";
             title: string;
             body: string;
             link: string;
@@ -4222,30 +4412,6 @@ export interface components {
         };
         "at.clubserver.attendance.api.AttendanceApi.RideList": {
             items: components["schemas"]["at.clubserver.attendance.api.AttendanceApi.RideDto"][];
-        };
-        "at.clubserver.attendance.api.AttendanceApi.Attendance": {
-            /** Format: uuid */
-            appointmentId: string;
-            /** Format: int32 */
-            yes: number;
-            /** Format: int32 */
-            no: number;
-            /** Format: int32 */
-            maybe: number;
-            /** Format: int32 */
-            open: number;
-            entries: components["schemas"]["at.clubserver.attendance.api.AttendanceApi.Entry"][];
-        };
-        "at.clubserver.attendance.api.AttendanceApi.Entry": {
-            /** Format: uuid */
-            memberId: string;
-            name: string;
-            /** @enum {string} */
-            status: "YES" | "NO" | "MAYBE";
-            reason: string;
-            /** Format: date-time */
-            updatedAt: string;
-            absent: boolean;
         };
         "at.clubserver.activity.api.ActivityApi.FeedEntry": {
             /** @enum {string} */
@@ -5396,6 +5562,32 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.BoardSettings"];
+                };
+            };
+        };
+    };
+    presence_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.CalendarController.PresenceBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.attendance.api.AttendanceApi.Attendance"];
                 };
             };
         };
@@ -7539,6 +7731,50 @@ export interface operations {
             };
         };
     };
+    restore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.calendar.api.CalendarApi.AppointmentList"];
+                };
+            };
+        };
+    };
+    remindOpen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.gateway.rest.CalendarController.Reminded"];
+                };
+            };
+        };
+    };
     cancel_1: {
         parameters: {
             query?: {
@@ -7550,7 +7786,35 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.CalendarController.CancelBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.calendar.api.CalendarApi.AppointmentList"];
+                };
+            };
+        };
+    };
+    cancelRange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.CalendarController.CancelRangeBody"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -8270,6 +8534,26 @@ export interface operations {
             };
         };
     };
+    delete_9: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     update_10: {
         parameters: {
             query?: never;
@@ -8336,6 +8620,31 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.teams.api.TeamsApi.Roster"];
+                };
+            };
+        };
+    };
+    teamStats: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.attendance.api.AttendanceApi.TeamStats"];
                 };
             };
         };
@@ -8571,6 +8880,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.SecurityStatus"];
+                };
+            };
+        };
+    };
+    openAnswers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.attendance.api.AttendanceApi.OpenAnswers"];
                 };
             };
         };
@@ -9040,7 +9369,7 @@ export interface operations {
             };
         };
     };
-    delete_9: {
+    delete_10: {
         parameters: {
             query?: never;
             header?: never;

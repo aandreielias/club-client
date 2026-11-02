@@ -1,4 +1,5 @@
 import CalendarHome from './CalendarHome.svelte';
+import OpenAnswersHome from './OpenAnswersHome.svelte';
 import { ADMIN_BOARD, PRIVILEGED } from '../../lib/types';
 import type { Feature } from '../Feature';
 import { appointmentTypes } from './services';
@@ -38,6 +39,9 @@ export const calendarFeature: Feature = {
     }),
   },
   messages: CALENDAR_MESSAGES,
-  home: { id: 'calendar', label: 'Termine', component: CalendarHome },
+  home: [
+    { id: 'open-answers', label: 'Offene Zusagen', component: OpenAnswersHome, defaultShown: true },
+    { id: 'calendar', label: 'Termine', component: CalendarHome },
+  ],
   links: [{ server: '/appointments/:id', to: ({ id }) => ({ window: { kind: 'appointment', id } }) }],
 };

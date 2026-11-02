@@ -13,6 +13,7 @@
   import Tag from '../../ui/Tag.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AddMemberPanel from './AddMemberPanel.svelte';
+  import TeamAttendanceSection from '../calendar/TeamAttendanceSection.svelte';
   import TeamDialog from './TeamDialog.svelte';
   import { Action } from '../../lib/state/Action.svelte';
   import { MEMBERSHIP_CHANGED } from './events';
@@ -168,6 +169,7 @@
       </DataTable>
     {/snippet}
   </AsyncView>
+  <TeamAttendanceSection teamId={model.teamId} />
 </Detail>
 {#if editing && model.roster.value}<TeamDialog team={model.roster.value.team} onsaved={renamed} onclose={() => (editing = false)} />{/if}
 

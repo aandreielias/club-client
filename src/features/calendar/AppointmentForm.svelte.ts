@@ -45,6 +45,8 @@ export class AppointmentForm extends FormState<FormErrors> {
   intervalWeeks = $state(1);
   /** Car pools for this appointment; null follows the type until switched. */
   rides = $state<boolean | null>(null);
+  /** Editing one occurrence of a series: the later ones change alike. */
+  includeFollowing = $state(false);
 
   private constructor(
     private readonly clock: ZonedClock,
@@ -139,6 +141,7 @@ export class AppointmentForm extends FormState<FormErrors> {
     if (next.startsAt !== original.startsAt) patch.startsAt = next.startsAt;
     if (next.endsAt !== original.endsAt) patch.endsAt = next.endsAt;
     if (next.rides !== original.rides) patch.rides = next.rides;
+    if (this.includeFollowing && original.seriesId && Object.keys(patch).length) patch.includeFollowing = true;
     return patch;
   }
 

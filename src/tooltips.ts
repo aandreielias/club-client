@@ -13,6 +13,11 @@ export interface ButtonTooltip {
 export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   Abbrechen: { text: 'Schließen, ohne zu speichern', command: 'view.back' },
   'Login einladen': { text: 'Dem Mitglied einen eigenen Login geben: es bekommt eine Einladungs-E-Mail' },
+  'Absage zurücknehmen': { text: 'Der Termin findet doch statt; das Team wird benachrichtigt' },
+  'Offene erinnern': { text: 'Wer noch nicht geantwortet hat, bekommt eine Erinnerung (einmal pro Termin)' },
+  'Antwort bestätigen': { text: 'Die Zeit hat sich geändert: die Antwort für die neue Zeit bestätigen' },
+  'Zeitraum absagen': { text: 'Alle Termine des Teams an mehreren Tagen absagen, etwa in den Ferien' },
+  'Termine absagen': { text: 'Die Termine im gewählten Zeitraum absagen und das Team benachrichtigen' },
   'Einladung erneut senden': { text: 'Die Einladungs-E-Mail noch einmal schicken; das Mitglied hat sich noch nie angemeldet' },
   'Verein anlegen': { text: 'Namen speichern und die App öffnen; alles Weitere zeigt die Karte „Einrichtung“' },
   'Frist verlängern': { text: 'Dem Umlaufbeschluss mehr Zeit geben' },

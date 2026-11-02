@@ -1,6 +1,6 @@
 <script lang="ts">
   import { background } from '../../lib/state/background';
-  import { backStack, bus, commands, directory, linksApi, permissions, session } from '../../lib/container';
+  import { backStack, bus, commands, directory, linksApi, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { LinksModel } from '../../lib/links/LinksModel.svelte';
@@ -59,7 +59,8 @@
   void detail.load();
   void links.load();
   directory.loadRosters();
-  if (permissions.isManager) background(directory.loadTeams());
+  // Every viewer sees which team it is for (guardians too).
+  background(directory.loadTeams());
 
   view.title(() => detail.appointment.value?.title);
 
@@ -72,9 +73,26 @@
     if (data.appointmentId === detail.id && !detail.respondAction.busy) void detail.attendance.load();
   });
 
-  const canAnswer = () => !edit.editing && !!detail.appointment.value && !!detail.attendance.value && policy.canRespond(detail.appointment.value);
+  const respondents = $derived(detail.appointment.value ? policy.respondents(detail.appointment.value, detail.attendance.value ?? null) : []);
+  const canAnswer = () => !edit.editing && !!detail.attendance.value && respondents.length > 0;
+  /** Keyboard answers go to the first person (oneself, else the first minor). */
   async function answer(status: 'YES' | 'MAYBE' | 'NO') {
-    if (await detail.respond(status, detail.ownEntry?.reason ?? '')) view.notify('Antwort gespeichert.');
+    const target = respondents[0].id;
+    if (await detail.respond(status, detail.entryOf(target)?.reason ?? '', target)) view.notify('Antwort gespeichert.');
+  }
+
+  async function restore() {
+    if (await view.attempt(detail.restoreAction, () => detail.restore())) view.notify('Absage zurückgenommen.');
+  }
+
+  async function remove(appointment: Appointment) {
+    const request = {
+      title: 'Termin löschen',
+      message: `„${appointment.title}“ wird endgültig gelöscht. Das geht nur, solange niemand geantwortet hat; sonst bitte absagen.`,
+      confirmLabel: 'Löschen',
+      danger: true,
+    };
+    if (await view.confirm(request, () => view.attempt(detail.deleteAction, () => detail.delete()), 'Termin gelöscht.')) handle?.close();
   }
   useCommands(commands, {
     'appointment.edit': {
@@ -114,6 +132,9 @@
         {#if !edit.form && policy.canEdit(appointment)}
           <Button icon="edit" onclick={() => edit.edit(AppointmentForm.edit(session.clock, appointment, appointmentTypes))}>Bearbeiten</Button>
           <Button variant="danger" onclick={() => (cancelOpen = true)}>Absagen</Button>
+          <Button variant="ghost" icon="delete" busy={detail.deleteAction.busy} onclick={() => remove(appointment)}>Löschen</Button>
+        {:else if !edit.form && policy.canRestore(appointment)}
+          <Button busy={detail.restoreAction.busy} onclick={restore}>Absage zurücknehmen</Button>
         {/if}
       {/snippet}
       {#snippet meta()}
@@ -129,6 +150,9 @@
           <AppointmentEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={submit} />
         </div>
       {:else}
+        {#if appointment.cancelled}
+          <p class="cancelled">Abgesagt{appointment.cancelReason ? `: ${appointment.cancelReason}` : '.'}</p>
+        {/if}
         <!-- Facts left, the small map right (below on phones) when the place has a map pin. -->
         <div class="top" class:with-map={place?.lat != null}>
           <dl class="props">
@@ -163,11 +187,15 @@
 
         <LinksSection model={links} editable={policy.canEdit(appointment)} />
 
-        <h2>Meine Antwort</h2>
+        <h2>{respondents.length > 1 || respondents[0]?.name !== 'Ich' ? 'Antwort' : 'Meine Antwort'}</h2>
         {#if policy.canRespond(appointment)}
           <AsyncView resource={detail.attendance}>
             {#snippet children()}
-              <ResponseForm {detail} />
+              {#if respondents.length}
+                {#key respondents.map((r) => r.id).join()}<ResponseForm {detail} {respondents} />{/key}
+              {:else}
+                <p class="muted">{closedReason(appointment)}</p>
+              {/if}
             {/snippet}
           </AsyncView>
         {:else}
@@ -177,7 +205,7 @@
         <h2>Teilnahme</h2>
         <AsyncView resource={detail.attendance}>
           {#snippet children(attendance)}
-            <AttendancePanel {attendance} {detail} />
+            <AttendancePanel {attendance} {detail} {appointment} />
           {/snippet}
         </AsyncView>
 
@@ -210,6 +238,11 @@
   }
   :global(:root[data-layout='compact']) .top.with-map {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .cancelled {
+    margin: 0;
+    color: var(--color-danger);
+    font-weight: var(--font-weight-bold);
   }
   .place {
     display: flex;

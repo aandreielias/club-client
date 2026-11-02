@@ -12,7 +12,9 @@ import type {
   FeedLink,
   NewAppointment,
   NewAbsence,
+  OpenAnswer,
   ResponseStatus,
+  TeamStats,
   Ride,
   RideList,
 } from './model';
@@ -59,9 +61,43 @@ export class CalendarApi {
     return this.api.patch<Appointment>(this.path(id), patch);
   }
 
-  /** Cancels the occurrence, or it and all later ones of its series. Returns the cancelled ones. */
-  async cancel(id: string, includeFollowing: boolean): Promise<Appointment[]> {
-    return (await this.api.post<AppointmentList>(`${this.path(id)}/cancel`, undefined, { includeFollowing })).items;
+  /** Cancels the occurrence, or it and all later ones of its series; the reason goes with the notification. */
+  async cancel(id: string, includeFollowing: boolean, reason: string | null = null): Promise<Appointment[]> {
+    return (await this.api.post<AppointmentList>(`${this.path(id)}/cancel`, { reason }, { includeFollowing })).items;
+  }
+
+  /** A cancellation taken back. */
+  async restore(id: string): Promise<Appointment> {
+    return (await this.api.post<AppointmentList>(`${this.path(id)}/restore`)).items[0];
+  }
+
+  /** Only while nobody answered (`appointment.has-answers`). */
+  delete(id: string): Promise<void> {
+    return this.api.delete(this.path(id));
+  }
+
+  /** Every appointment of the team (null: club-wide ones) on the days from–to. */
+  async cancelRange(teamId: string | null, from: string, to: string, reason: string | null): Promise<Appointment[]> {
+    return (await this.api.post<AppointmentList>(`${CalendarApi.APPOINTMENTS}/cancel-range`, { teamId, from, to, reason })).items;
+  }
+
+  /** Reminds who has not answered; answers how many (0 once reminded already). */
+  async remindOpen(id: string): Promise<number> {
+    return (await this.api.post<{ count: number }>(`${this.path(id)}/remind-open`)).count;
+  }
+
+  /** Who came; null removes the mark. */
+  setPresence(id: string, memberId: string, present: boolean | null): Promise<Attendance> {
+    return this.api.put<Attendance>(`${this.path(id)}/presence`, { memberId, present });
+  }
+
+  /** Answers still to give in the next two weeks, for oneself and one's minors. */
+  async openAnswers(): Promise<OpenAnswer[]> {
+    return (await this.api.get<{ items: OpenAnswer[] }>('/api/v1/me/open-answers')).items;
+  }
+
+  teamStats(teamId: string, from: string, to: string): Promise<TeamStats> {
+    return this.api.get<TeamStats>(`/api/v1/teams/${encodeURIComponent(teamId)}/attendance`, { from, to });
   }
 
   attendance(id: string): Promise<Attendance> {

@@ -54,8 +54,15 @@
         <Button
           icon="edit"
           onclick={() =>
-            edit.edit({ label: type.label, hue: type.hue, rides: type.rides, cabins: type.cabins, sort: type.sort, archived: type.archived })}
-          >Bearbeiten</Button
+            edit.edit({
+              label: type.label,
+              hue: type.hue,
+              rides: type.rides,
+              cabins: type.cabins,
+              sort: type.sort,
+              archived: type.archived,
+              remindHours: type.remindHours ?? null,
+            })}>Bearbeiten</Button
         >
         {#if type.archived}
           <Button tooltip="Wieder für neue Termine anbieten" onclick={() => setArchived(false)}>Wiederherstellen</Button>

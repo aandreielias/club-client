@@ -86,6 +86,53 @@ describe('mock calendar', () => {
     expect(calendar.overview(member('neu'), open.id).entries.find((e) => e.memberId === 'spielerin')?.reason).toBeNull();
   });
 
+  it('a new time asks for a confirmation and tells the team; a cancellation can be taken back', async () => {
+    const { notifications } = await import('../notifications/mock');
+    stepUp('admin');
+    const soon = new Date(Date.now() + 3 * 86_400_000);
+    const [training] = calendar.create(
+      member('admin'),
+      draft('t-u16', { startsAt: soon.toISOString(), endsAt: new Date(soon.getTime() + 3_600_000).toISOString() }),
+    );
+    calendar.respond(member('spieler'), training.id, { status: 'YES' });
+    calendar.update(member('admin'), training.id, {
+      startsAt: new Date(soon.getTime() + 3_600_000).toISOString(),
+      endsAt: new Date(soon.getTime() + 7_200_000).toISOString(),
+    });
+    expect(calendar.overview(member('trainer'), training.id).entries.find((e) => e.memberId === 'spieler')?.unconfirmed).toBe(true);
+    expect(notifications.list('spieler', false).items[0]).toMatchObject({ kind: 'APPOINTMENT_CHANGED' });
+    calendar.respond(member('spieler'), training.id, { status: 'YES' });
+    expect(calendar.overview(member('trainer'), training.id).entries.find((e) => e.memberId === 'spieler')?.unconfirmed).toBe(false);
+
+    calendar.cancel(member('admin'), training.id, false, 'Halle gesperrt');
+    expect(calendar.visible(member('spieler'), training.id)).toMatchObject({ cancelled: true, cancelReason: 'Halle gesperrt' });
+    expect(calendar.restore(member('admin'), training.id)).toMatchObject({ cancelled: false, cancelReason: null });
+    expect(() => calendar.delete(member('admin'), training.id)).toThrow(expect.objectContaining({ code: 'appointment.has-answers' }));
+  });
+
+  it('reminds open answers once, lists them on the start page and lets coaches mark presence', () => {
+    stepUp('admin');
+    const soon = new Date(Date.now() + 2 * 86_400_000);
+    const [match] = calendar.create(
+      member('admin'),
+      draft('t-u16', { type: 'MATCH', startsAt: soon.toISOString(), endsAt: new Date(soon.getTime() + 3_600_000).toISOString() }),
+    );
+    expect(calendar.openAnswers(member('spieler')).items.some((o) => o.appointmentId === match.id)).toBe(true);
+    expect(calendar.remindOpen(member('trainer'), match.id)).toBeGreaterThan(0);
+    expect(calendar.remindOpen(member('trainer'), match.id)).toBe(0);
+    expect(() => calendar.remindOpen(member('spieler'), match.id)).toThrow(expect.objectContaining({ status: 403 }));
+
+    const [past] = calendar.create(
+      member('admin'),
+      draft('t-u16', { startsAt: new Date(Date.now() - 7_200_000).toISOString(), endsAt: new Date(Date.now() - 3_600_000).toISOString() }),
+    );
+    const marked = calendar.setPresence(member('trainer'), past.id, { memberId: 'spieler', present: true });
+    expect(marked.entries.find((e) => e.memberId === 'spieler')?.present).toBe(true);
+    const today = directory.clock.today();
+    const stats = calendar.teamStats(member('trainer'), 't-u16', '2020-01-01', today);
+    expect(stats.items.find((m) => m.memberId === 'spieler')).toMatchObject({ present: 1, marked: 1 });
+  });
+
   it('car pools: one seat per member and appointment, full cars refuse', () => {
     stepUp('admin');
     const [created] = calendar.create(member('admin'), draft(null, { type: 'MATCH', title: 'Auswärts' }));

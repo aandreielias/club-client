@@ -2,6 +2,7 @@
   import Button from '../../ui/Button.svelte';
   import Dialog from '../../ui/Dialog.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
+  import Field from '../../ui/Field.svelte';
   import type { AppointmentDetailModel } from './AppointmentDetailModel.svelte';
   import type { Appointment } from './model';
 
@@ -13,9 +14,10 @@
   }: { open: boolean; detail: AppointmentDetailModel; appointment: Appointment; oncancelled: () => void } = $props();
 
   let includeFollowing = $state(false);
+  let reason = $state('');
 
   async function confirm() {
-    if (await detail.cancel(includeFollowing)) {
+    if (await detail.cancel(includeFollowing, reason)) {
       open = false;
       oncancelled();
     }
@@ -24,7 +26,10 @@
 
 <Dialog {open} title="Termin absagen" onclose={() => (open = false)}>
   <div class="stack">
-    <p>„{appointment.title}“ wird abgesagt. Alle, die den Termin sehen, werden benachrichtigt.</p>
+    <p>„{appointment.title}“ wird abgesagt. Das Team und die Erziehungsberechtigten werden benachrichtigt.</p>
+    <Field label="Grund (optional)" hint="Steht in der Benachrichtigung.">
+      <input bind:value={reason} maxlength="300" />
+    </Field>
     {#if appointment.seriesId}
       <label class="check">
         <input type="checkbox" bind:checked={includeFollowing} />

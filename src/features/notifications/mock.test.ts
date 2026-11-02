@@ -84,12 +84,13 @@ describe('mock notifications', () => {
     expect(prefs.find((p) => p.kind === 'SECURITY')).toEqual({ kind: 'SECURITY', push: true, email: true }); // important: always sent
   });
 
-  it('tells everyone affected when an admin cancels a team appointment, admin and board included, but not the admin', () => {
+  it('tells the team and its guardians when an admin cancels a team appointment, not the whole board, nor the admin', () => {
     directory.confirm(member('admin'));
     const target = upcoming('t-u16');
     calendar.cancel(member('admin'), target.id, false);
     const title = `Abgesagt: ${target.title}`;
-    for (const id of [...directory.teamMembers('t-u16'), 'eltern', 'vorstand']) expect(cancelledTitles(id), id).toContain(title);
+    for (const id of [...directory.teamMembers('t-u16'), 'eltern'].filter((id) => id !== 'admin')) expect(cancelledTitles(id), id).toContain(title);
+    if (!directory.teamMembers('t-u16').includes('vorstand')) expect(cancelledTitles('vorstand')).not.toContain(title);
     expect(cancelledTitles('admin')).not.toContain(title);
     expect(cancelledTitles('spielerin')).not.toContain(title);
   });

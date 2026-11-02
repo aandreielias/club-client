@@ -17,6 +17,13 @@ export class AttendanceListModel extends ListModel<AttendanceEntry> {
         columns: [
           { key: 'name', label: 'Name', value: (e) => e.name },
           { key: 'status', label: 'Antwort', value: (e) => RANK[e.status ?? 'OPEN'], format: (e) => responseLabel(e.status), width: '8rem' },
+          {
+            key: 'present',
+            label: 'Da',
+            value: (e) => (e.present == null ? 2 : e.present ? 0 : 1),
+            format: (e) => (e.present == null ? '' : e.present ? 'Da' : 'Nicht da'),
+            width: '9rem',
+          },
           { key: 'reason', label: 'Begründung', value: (e) => e.reason, sortable: false, hideOnCompact: true },
           {
             key: 'updatedAt',
