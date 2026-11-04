@@ -124,6 +124,32 @@ describe('mock resolutions', () => {
     expect(meetings.closeResolution(member('vorstand'), draft.id)).toMatchObject({ result: 'FAILED', yes: 1, no: 1 });
   });
 
+  it('pick Vorsitz and Schriftführung among those present; they approve the protocol', () => {
+    const mv = meetings.create(member('vorstand'), { kind: 'SIMPLE_BOARD', title: 'VS', startsAt: inDays(15), endsAt: inDays(15.1) });
+    expect(() => meetings.setRoles(member('vorstand'), mv.id, { chairId: 'vorstand' })).toThrow(
+      expect.objectContaining({ code: 'meeting.roles-fixed' }),
+    );
+    meetings.invite(member('vorstand'), mv.id);
+    for (const id of ['vorstand', 'kassier', 'schrift']) meetings.setPresence(member('vorstand'), mv.id, id, true);
+    expect(() => meetings.setRoles(member('vorstand'), mv.id, { chairId: 'beisitz' })).toThrow(
+      expect.objectContaining({ code: 'meeting.role-not-present' }),
+    );
+    expect(() => meetings.setRoles(member('vorstand'), mv.id, { chairId: 'kassier', secretaryId: 'kassier' })).toThrow(
+      expect.objectContaining({ code: 'meeting.roles-same' }),
+    );
+    const picked = meetings.setRoles(member('vorstand'), mv.id, { chairId: 'kassier', secretaryId: 'schrift' });
+    expect(picked).toMatchObject({ chair: { memberId: 'kassier' }, secretary: { memberId: 'schrift' } });
+    // leaving the presence gives up the role
+    expect(meetings.setPresence(member('vorstand'), mv.id, 'schrift', false).secretary).toBeNull();
+    meetings.setPresence(member('vorstand'), mv.id, 'schrift', true);
+    meetings.setRoles(member('vorstand'), mv.id, { chairId: 'kassier', secretaryId: 'schrift' });
+    meetings.open(member('vorstand'), mv.id);
+    meetings.close(member('vorstand'), mv.id, 'Alles erledigt.');
+    meetings.finalizeProtocol(member('vorstand'), mv.id);
+    expect(() => meetings.approveProtocol(member('vorstand'), mv.id)).toThrow(expect.objectContaining({ code: 'meeting.approve-not-allowed' }));
+    expect(meetings.approveProtocol(member('kassier'), mv.id).approvals[0]).toMatchObject({ memberId: 'kassier', office: 'CHAIR' });
+  });
+
   it('vote by show of hands: counts at most those present, "Einstimmig" closes at once', () => {
     const mv = meetings.create(member('vorstand'), { kind: 'SIMPLE_BOARD', title: 'VS', startsAt: inDays(15), endsAt: inDays(15.1) });
     meetings.invite(member('vorstand'), mv.id);

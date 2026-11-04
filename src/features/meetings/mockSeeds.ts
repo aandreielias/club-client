@@ -180,7 +180,17 @@ for (const t of SEEDED_TYPES) t.steps = defaultSteps(true);
 
 export type StoredMeeting = Omit<
   Meeting,
-  'online' | 'latestInvite' | 'electorate' | 'present' | 'quorate' | 'canManage' | 'protocolFinalAt' | 'agendaItems' | 'approvals'
+  | 'online'
+  | 'latestInvite'
+  | 'electorate'
+  | 'present'
+  | 'quorate'
+  | 'canManage'
+  | 'protocolFinalAt'
+  | 'agendaItems'
+  | 'approvals'
+  | 'chair'
+  | 'secretary'
 > & {
   /** Voters marked Anwesend (older stored data carries a mode string: still truthy). */
   presence: Record<string, true>;
@@ -189,6 +199,9 @@ export type StoredMeeting = Omit<
   protocolFinalAt?: string | null;
   agendaItems?: AgendaItem[];
   approvals?: Approval[];
+  /** server: meetings_meeting.chair_id / secretary_id */
+  chairId?: string | null;
+  secretaryId?: string | null;
 };
 /** Counters hold what was voted, `ballots` only who voted (server: meetings_resolution, meetings_ballot). */
 export type StoredResolution = Pick<

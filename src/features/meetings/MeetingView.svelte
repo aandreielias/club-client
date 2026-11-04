@@ -12,6 +12,8 @@
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
+  import Field from '../../ui/Field.svelte';
+  import Select from '../../ui/Select.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { MEETING_CHANGED } from './events';
   import { MeetingModel } from './MeetingModel.svelte';
@@ -72,6 +74,21 @@
   });
 
   const isPresent = (m: Meeting, memberId: string): boolean => m.present.some((p) => p.memberId === memberId);
+  /** Vorsitz and Schriftführer:in are picked among those present, from the invitation until the protocol is final. */
+  const rolesOpen = (m: Meeting) => m.canManage && (m.status === 'INVITED' || m.status === 'OPEN' || (m.status === 'CLOSED' && !m.protocolFinalAt));
+  const presentOptions = (m: Meeting) => [{ value: '', label: 'Noch niemand' }, ...m.present.map((p) => ({ value: p.memberId, label: p.name }))];
+  /** server: approveProtocol — the picked Vorsitz and Schriftführer:in; without a pick whoever runs the meeting may try (office holders). */
+  const mayApprove = (m: Meeting) =>
+    !m.approvals.some((a) => a.memberId === me) &&
+    (m.chair?.memberId === me || m.secretary?.memberId === me || (m.canManage && (!m.chair || !m.secretary)));
+
+  async function setRoles(m: Meeting, chairId: string | null, secretaryId: string | null) {
+    if (chairId && chairId === secretaryId) {
+      view.notify('Vorsitz und Schriftführung sind zwei verschiedene Personen.');
+      return;
+    }
+    await model.setRoles(chairId, secretaryId);
+  }
   const presentVoters = (m: Meeting) => m.present.filter((p) => m.electorate.some((e) => e.memberId === p.memberId)).length;
   const late = (m: Meeting) => m.latestInvite < new Date().toISOString();
 
@@ -249,6 +266,27 @@
               : '…'}</span
           >
         </p>
+        {#if rolesOpen(m)}
+          <div class="grid-2">
+            <Field label="Vorsitz" hint="Leitet die Sitzung, genehmigt das Protokoll.">
+              <Select
+                options={presentOptions(m)}
+                bind:value={() => m.chair?.memberId ?? '', (v) => void setRoles(m, v || null, m.secretary?.memberId ?? null)}
+                aria-label="Vorsitz"
+              />
+            </Field>
+            <Field label="Schriftführung" hint="Schreibt das Protokoll, genehmigt es.">
+              <Select
+                options={presentOptions(m)}
+                bind:value={() => m.secretary?.memberId ?? '', (v) => void setRoles(m, m.chair?.memberId ?? null, v || null)}
+                aria-label="Schriftführung"
+              />
+            </Field>
+          </div>
+          {#if !m.present.length}<p class="muted small">Zuerst die Anwesenden eintragen, dann Vorsitz und Schriftführung wählen.</p>{/if}
+        {:else if m.chair || m.secretary}
+          <p class="small">Vorsitz: {m.chair?.name ?? '–'} · Schriftführung: {m.secretary?.name ?? '–'}</p>
+        {/if}
         <div class="row">
           {#if m.electorate.length > 8}
             <input type="search" bind:value={presenceFilter} placeholder="Name suchen" aria-label="Stimmberechtigte durchsuchen" class="filter" />
@@ -309,7 +347,7 @@
             {#each m.approvals as a (a.memberId)}
               <Tag tone="green">Genehmigt: {a.name}</Tag>
             {/each}
-            {#if m.canManage && !m.approvals.some((a) => a.memberId === me)}
+            {#if mayApprove(m)}
               <Button
                 size="sm"
                 busy={model.action.busy}

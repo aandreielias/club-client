@@ -98,6 +98,11 @@ export class MeetingsApi {
     return this.api.put<Meeting>(`${this.path(id)}/presence/me`);
   }
 
+  /** Vorsitz and Schriftführer:in among those present; null: nobody. */
+  setRoles(id: string, chairId: string | null, secretaryId: string | null): Promise<Meeting> {
+    return this.api.put<Meeting>(`${this.path(id)}/roles`, { chairId, secretaryId });
+  }
+
   approveProtocol(id: string): Promise<Meeting> {
     return this.api.post<Meeting>(`${this.path(id)}/protocol/approve`);
   }

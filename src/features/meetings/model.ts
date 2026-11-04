@@ -178,6 +178,9 @@ export interface Meeting {
   agendaItems: AgendaItem[];
   /** Chair and secretary who approved the final protocol. */
   approvals: Approval[];
+  /** Vorsitz and Schriftführer:in of this meeting, picked among those present; null until picked. */
+  chair: Person | null;
+  secretary: Person | null;
   latestInvite: string;
   /** Who votes and counts for the quorum. */
   electorate: Person[];

@@ -496,16 +496,44 @@ export class MockMeetings {
 
   /** server: MeetingHandlers.approveProtocol — chair and secretary, once each, after it is final. */
   approveProtocol(viewer: Member, id: string): Meeting {
-    this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const meeting = this.visible(viewer, id);
     if (!this.protocolFinalAt(meeting)) fail(409, 'meeting.protocol-not-final');
+    // server: the meeting's Vorsitz and Schriftführer:in; without a pick the office holders
     const offices = this.offices(viewer);
-    const office = offices.includes('CHAIR') ? 'CHAIR' : offices.includes('SECRETARY') ? 'SECRETARY' : fail(403, 'meeting.approve-not-allowed');
+    const office =
+      viewer.id === meeting.chairId
+        ? 'CHAIR'
+        : viewer.id === meeting.secretaryId
+          ? 'SECRETARY'
+          : !meeting.chairId && offices.includes('CHAIR')
+            ? 'CHAIR'
+            : !meeting.secretaryId && offices.includes('SECRETARY')
+              ? 'SECRETARY'
+              : fail(403, 'meeting.approve-not-allowed');
     meeting.approvals ??= [];
     if (meeting.approvals.some((a) => a.memberId === viewer.id)) fail(409, 'meeting.protocol-approved');
     meeting.approvals.push({ memberId: viewer.id, name: this.name(viewer.id), office, at: new Date().toISOString() });
     this.changed(meeting, 'UPDATED');
     return this.dto(viewer, meeting);
+  }
+
+  /** server: MeetingHandlers.setRoles — Vorsitz and Schriftführer:in among the voters present, two different people. */
+  setRoles(viewer: Member, id: string, body: Record<string, any>): Meeting {
+    const meeting = this.managed(viewer, id);
+    if (meeting.status === 'DRAFT' || meeting.status === 'CANCELLED' || this.protocolFinalAt(meeting)) fail(409, 'meeting.roles-fixed');
+    const chair = (body.chairId as string | null) ?? null;
+    const secretary = (body.secretaryId as string | null) ?? null;
+    if ((chair && !meeting.presence[chair]) || (secretary && !meeting.presence[secretary])) fail(400, 'meeting.role-not-present');
+    if (chair && chair === secretary) fail(400, 'meeting.roles-same');
+    Object.assign(meeting, { chairId: chair, secretaryId: secretary });
+    this.changed(meeting, 'UPDATED');
+    return this.dto(viewer, meeting);
+  }
+
+  /** Whoever leaves the presence gives up the role. */
+  private dropRolesOfAbsent(meeting: StoredMeeting): void {
+    if (meeting.chairId && !meeting.presence[meeting.chairId]) meeting.chairId = null;
+    if (meeting.secretaryId && !meeting.presence[meeting.secretaryId]) meeting.secretaryId = null;
   }
 
   /** server: MeetingHandlers.generateProtocol — the protocol as a document in the meeting's folder, linked first. */
@@ -531,6 +559,8 @@ export class MockMeetings {
         Titel: meeting.title.toLowerCase() === type.label.toLowerCase() ? null : meeting.title,
         Wann: `${fmt(meeting.startsAt, { dateStyle: 'full', timeStyle: 'short' })} bis ${fmt(meeting.endsAt, { timeStyle: 'short' })} Uhr`,
         Ort: meeting.location,
+        Vorsitz: meeting.chairId ? this.name(meeting.chairId) : null,
+        Schriftführer: meeting.secretaryId ? this.name(meeting.secretaryId) : null,
         Anwesend:
           Object.keys(meeting.presence)
             .map((m) => this.name(m))
@@ -578,6 +608,7 @@ export class MockMeetings {
     if (!this.meetingVoters(meeting).includes(memberId)) fail(400, 'meeting.not-voter');
     if (present === true) meeting.presence[memberId] = true;
     else delete meeting.presence[memberId];
+    this.dropRolesOfAbsent(meeting);
     this.changed(meeting, 'PRESENCE');
     return this.dto(viewer, meeting);
   }
@@ -1163,7 +1194,7 @@ export class MockMeetings {
   }
 
   private dto(viewer: Member, m: StoredMeeting): Meeting {
-    const { presence, frozenElectorate: _frozen, protocolFinalAt: _final, createdBy: _by, agendaItems, approvals, ...rest } = m;
+    const { presence, frozenElectorate: _frozen, protocolFinalAt: _final, createdBy: _by, agendaItems, approvals, chairId, secretaryId, ...rest } = m;
     const voters = this.meetingVoters(m);
     const name = (id: string) => {
       const p = this.people.members.data.find((x) => x.id === id);
@@ -1186,6 +1217,8 @@ export class MockMeetings {
         .map((id) => ({ memberId: id, name: name(id) }))
         .sort(byName),
       quorate: this.quorate(m, voters),
+      chair: chairId ? { memberId: chairId, name: name(chairId) } : null,
+      secretary: secretaryId ? { memberId: secretaryId, name: name(secretaryId) } : null,
       canManage: this.mayConvene(viewer, m.kind) || this.offices(viewer).includes('SECRETARY'),
     };
   }
@@ -1247,6 +1280,7 @@ mockServer
   .on('PUT', '/api/v1/meetings/:id/agenda', (req) => meetings.setAgenda(actor(req), req.params.id, req.body?.items))
   .on('PUT', '/api/v1/meetings/:id/presence/me', (req) => meetings.checkIn(actor(req), req.params.id))
   .on('PUT', '/api/v1/meetings/:id/presence', (req) => meetings.setPresenceMany(actor(req), req.params.id, req.body?.memberIds, req.body?.present))
+  .on('PUT', '/api/v1/meetings/:id/roles', (req) => meetings.setRoles(actor(req), req.params.id, req.body ?? {}))
   .on('POST', '/api/v1/meetings/:id/protocol/approve', (req) => meetings.approveProtocol(actor(req), req.params.id))
   .on('POST', '/api/v1/meetings/:id/protocol-document', (req) => meetings.generateProtocol(actor(req), req.params.id))
   .on('PATCH', '/api/v1/resolutions/:id', (req) => meetings.updateResolution(actor(req), req.params.id, req.body ?? {}))

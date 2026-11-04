@@ -60,6 +60,8 @@ export async function protocolTemplate(Zip: typeof JSZip): Promise<Blob> {
       p('Subtitle', '{{Titel}}'),
       p(null, 'Wann: {{Wann}}'),
       p(null, 'Wo: {{Ort}}'),
+      p(null, 'Vorsitz: {{Vorsitz}}'),
+      p(null, 'Schriftführung: {{Schriftführer}}'),
       p(null, 'Anwesend: {{Anwesend}}'),
       p(null, 'Beschlussfähig: {{Beschlussfähig}}'),
       p(null, 'Tagesordnung: {{Agenda}}'),

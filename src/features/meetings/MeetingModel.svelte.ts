@@ -51,6 +51,10 @@ export class MeetingModel {
     return this.write(() => this.api.checkIn(this.id));
   }
 
+  setRoles(chairId: string | null, secretaryId: string | null): Promise<boolean> {
+    return this.write(() => this.api.setRoles(this.id, chairId, secretaryId));
+  }
+
   approveProtocol(): Promise<boolean> {
     return this.write(() => this.api.approveProtocol(this.id));
   }
