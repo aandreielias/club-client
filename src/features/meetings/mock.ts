@@ -730,7 +730,6 @@ export class MockMeetings {
 
   /** server: ResolutionHandlers.create — with a meeting it is the last agenda item. */
   createResolution(viewer: Member, meetingId: string | null, body: Record<string, any>): Resolution {
-    this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const meeting = meetingId ? this.managed(viewer, meetingId) : null;
     if (!meeting && !this.runsCircular(viewer)) fail(403, 'access.denied');
     if (meeting?.status === 'CLOSED' || meeting?.status === 'CANCELLED') fail(409, 'meeting.closed');
@@ -987,12 +986,13 @@ export class MockMeetings {
 
   private managesResolution(viewer: Member, r: StoredResolution): boolean {
     if (!r.meetingId) return this.runsCircular(viewer);
-    const kind = this.meetings.data.find((m) => m.id === r.meetingId)!.kind;
-    return this.mayConvene(viewer, kind) || this.offices(viewer).includes('SECRETARY');
+    return this.runs(
+      viewer,
+      this.meetings.data.find((m) => m.id === r.meetingId)!,
+    );
   }
 
   private managedResolution(viewer: Member, id: string): StoredResolution {
-    this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const r = this.resolution(viewer, id);
     if (!this.managesResolution(viewer, r)) fail(403, 'access.denied');
     return r;
@@ -1180,10 +1180,14 @@ export class MockMeetings {
     return meeting && this.maySee(viewer, meeting) ? meeting : fail(404, 'meeting.not-found');
   }
 
+  /** server: MeetingAccess.mayManage — conveners (admins always), the secretary's office, and the meeting's picked Vorsitz. */
+  private runs(viewer: Member, m: StoredMeeting): boolean {
+    return this.mayConvene(viewer, m.kind) || this.offices(viewer).includes('SECRETARY') || m.chairId === viewer.id;
+  }
+
   private managed(viewer: Member, id: string): StoredMeeting {
-    this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const meeting = this.visible(viewer, id);
-    if (!this.mayConvene(viewer, meeting.kind) && !this.offices(viewer).includes('SECRETARY')) fail(403, 'access.denied');
+    if (!this.runs(viewer, meeting)) fail(403, 'access.denied');
     return meeting;
   }
 
@@ -1219,7 +1223,7 @@ export class MockMeetings {
       quorate: this.quorate(m, voters),
       chair: chairId ? { memberId: chairId, name: name(chairId) } : null,
       secretary: secretaryId ? { memberId: secretaryId, name: name(secretaryId) } : null,
-      canManage: this.mayConvene(viewer, m.kind) || this.offices(viewer).includes('SECRETARY'),
+      canManage: this.runs(viewer, m),
     };
   }
 

@@ -150,6 +150,20 @@ describe('mock resolutions', () => {
     expect(meetings.approveProtocol(member('kassier'), mv.id).approvals[0]).toMatchObject({ memberId: 'kassier', office: 'CHAIR' });
   });
 
+  it('let the picked Vorsitz run the meeting, also without a board office', () => {
+    const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(20), endsAt: inDays(20.1) });
+    meetings.invite(member('vorstand'), mv.id);
+    for (const id of ['vorstand', 'kassier', 'schrift', 'beisitz', 'beisitz2', 'trainer']) meetings.setPresence(member('vorstand'), mv.id, id, true);
+    expect(meetings.get(member('trainer'), mv.id).canManage).toBe(false);
+    expect(() => meetings.open(member('trainer'), mv.id)).toThrow(expect.objectContaining({ code: 'access.denied' }));
+    meetings.setRoles(member('vorstand'), mv.id, { chairId: 'trainer' });
+    expect(meetings.get(member('trainer'), mv.id).canManage).toBe(true);
+    meetings.open(member('trainer'), mv.id);
+    const r = meetings.createResolution(member('trainer'), mv.id, { title: 'Spontan' });
+    meetings.openResolution(member('trainer'), r.id, 'HAND');
+    expect(meetings.analogVotes(member('trainer'), r.id, { yes: 6, no: 0, abstain: 0 }, true).result).toBe('PASSED');
+  });
+
   it('vote by show of hands: counts at most those present, "Einstimmig" closes at once', () => {
     const mv = meetings.create(member('vorstand'), { kind: 'SIMPLE_BOARD', title: 'VS', startsAt: inDays(15), endsAt: inDays(15.1) });
     meetings.invite(member('vorstand'), mv.id);
