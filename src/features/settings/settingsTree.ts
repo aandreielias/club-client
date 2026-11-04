@@ -81,7 +81,7 @@ export const SETTINGS_TREE: readonly SettingsGroup[] = [
         label: 'Sitzungen',
         tabs: [
           { id: 'meeting-types', label: 'Sitzungsarten', icon: 'meetings', keywords: 'sitzung einladung frist beschlussfähig online ablauf' },
-          { id: 'resolution-rules', label: 'Beschlüsse', icon: 'resolutions', keywords: 'beschlussarten mehrheit folgeaufgaben umlaufbeschluss' },
+          { id: 'resolution-rules', label: 'Beschlüsse', icon: 'resolutions', keywords: 'mehrheit umlaufbeschluss' },
         ],
       },
       {

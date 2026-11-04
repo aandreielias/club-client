@@ -286,7 +286,7 @@ export const settings = {
   },
 
   auth: {
-    /** Supabase password policy (docs/SETUP.md 3.3). */
+    /** Supabase password policy (../docs/SETUP.md 3.3). */
     passwordMinLength: 12,
   },
 
