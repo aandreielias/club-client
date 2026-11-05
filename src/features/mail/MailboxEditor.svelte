@@ -1,10 +1,9 @@
 <script lang="ts">
+  import EditorForm from '../../ui/EditorForm.svelte';
   import { directory } from '../../lib/container';
   import type { Action } from '../../lib/state/Action.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import { ROLE_LABELS, type Role } from '../../lib/types';
-  import { autofocus } from '../../ui/autofocus';
-  import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
@@ -47,15 +46,9 @@
       .map((m) => ({ value: m.id, label: `${m.firstName} ${m.lastName}` }))
       .sort((a, b) => a.label.localeCompare(b.label, 'de')),
   );
-
-  function submit(event: SubmitEvent) {
-    event.preventDefault();
-    form.submitted = true;
-    if (form.valid) onsubmit();
-  }
 </script>
 
-<form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
+<EditorForm {action} {submitLabel} {oncancel} {onsubmit} validate={form}>
   <ChoiceGroup name="mailbox-owner" label="Wer liest es" options={owners} bind:value={form.owner} />
   <Field label={form.owner === 'member' ? 'Mitglied' : 'Rolle'} error={form.error('owner')}>
     {#if form.owner === 'member'}
@@ -83,9 +76,4 @@
   <Field label="Name" hint="Erscheint als Absender, etwa „Vorstand“ oder der Name des Mitglieds." error={form.error('name')}>
     <input bind:value={form.name} maxlength="100" required />
   </Field>
-  <ErrorNote error={action.error} />
-  <div class="row">
-    <Button type="submit" variant="primary" busy={action.busy}>{submitLabel}</Button>
-    <Button variant="ghost" onclick={oncancel}>Abbrechen</Button>
-  </div>
-</form>
+</EditorForm>

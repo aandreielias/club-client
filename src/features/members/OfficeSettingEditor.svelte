@@ -1,9 +1,7 @@
 <script lang="ts">
+  import EditorForm from '../../ui/EditorForm.svelte';
   import type { Action } from '../../lib/state/Action.svelte';
-  import { autofocus } from '../../ui/autofocus';
-  import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import OptionList from '../../ui/OptionList.svelte';
   import { OFFICE_LIMITS, type OfficeSettingForm } from './OfficeSettingForm.svelte';
@@ -34,15 +32,9 @@
   const others = $derived(
     (boardSettings.value?.offices ?? []).filter((o) => o.enabled && o.office !== form.office).map((o) => ({ value: o.office, label: o.label })),
   );
-
-  function submit(event: SubmitEvent) {
-    event.preventDefault();
-    form.submitted = true;
-    if (form.valid) onsubmit();
-  }
 </script>
 
-<form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
+<EditorForm {action} {submitLabel} {oncancel} {onsubmit} validate={form}>
   <Field label="Bezeichnung" hint="So heißt die Funktion überall in der App und in Einladungen." error={form.error('label')}>
     <input bind:value={form.label} maxlength={OFFICE_LIMITS.label} required />
   </Field>
@@ -102,12 +94,7 @@
       </Field>
     {/if}
   {/if}
-  <ErrorNote error={action.error} />
-  <div class="row">
-    <Button type="submit" variant="primary" busy={action.busy}>{submitLabel}</Button>
-    <Button variant="ghost" onclick={oncancel}>Abbrechen</Button>
-  </div>
-</form>
+</EditorForm>
 
 <style>
   p {

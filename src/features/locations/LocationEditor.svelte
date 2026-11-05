@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { autofocus } from '../../ui/autofocus';
+  import EditorForm from '../../ui/EditorForm.svelte';
   import { settings } from '../../settings';
   import { Action } from '../../lib/state/Action.svelte';
   import Button from '../../ui/Button.svelte';
@@ -31,15 +31,9 @@
       } else searchNote = 'Keine Übereinstimmung. Adresse prüfen oder Koordinaten von Hand eintragen.';
     });
   }
-
-  function submit(event: SubmitEvent) {
-    event.preventDefault();
-    form.submitted = true;
-    if (form.valid) onsubmit();
-  }
 </script>
 
-<form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
+<EditorForm {action} {submitLabel} {oncancel} {onsubmit} validate={form}>
   <Field label="Name" hint="z. B. Turnhalle Nord" error={form.error('name')}>
     <input bind:value={form.name} maxlength={limits.nameMaxLength} required />
   </Field>
@@ -72,13 +66,7 @@
   <Field label="Hinweis (optional)" hint="z. B. Eingang, Parken, Schlüssel" error={form.error('note')}>
     <textarea bind:value={form.note} rows="3" maxlength={limits.noteMaxLength}></textarea>
   </Field>
-
-  <ErrorNote error={action.error} />
-  <div class="row">
-    <Button type="submit" variant="primary" busy={action.busy}>{submitLabel}</Button>
-    <Button variant="ghost" onclick={oncancel}>Abbrechen</Button>
-  </div>
-</form>
+</EditorForm>
 
 <style>
   .town {

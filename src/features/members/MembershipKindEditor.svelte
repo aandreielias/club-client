@@ -1,8 +1,6 @@
 <script lang="ts">
+  import EditorForm from '../../ui/EditorForm.svelte';
   import type { Action } from '../../lib/state/Action.svelte';
-  import { autofocus } from '../../ui/autofocus';
-  import Button from '../../ui/Button.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import type { MembershipKindInput } from './MembersApi';
 
@@ -20,22 +18,12 @@
     oncancel: () => void;
     onsubmit: () => void;
   } = $props();
-
-  function submit(event: SubmitEvent) {
-    event.preventDefault();
-    onsubmit();
-  }
 </script>
 
-<form class="stack" onsubmit={submit} {@attach autofocus}>
+<EditorForm {action} {submitLabel} {oncancel} {onsubmit}>
   <Field label="Bezeichnung">
     <input bind:value={form.label} maxlength="40" required />
   </Field>
   <label class="check"><input type="checkbox" bind:checked={form.votes} /> Stimmrecht in der Mitgliederversammlung</label>
   <label class="check"><input type="checkbox" bind:checked={form.eligible} /> Kann in eine Funktion gewählt werden</label>
-  <ErrorNote error={action.error} />
-  <div class="row">
-    <Button type="submit" variant="primary" busy={action.busy}>{submitLabel}</Button>
-    <Button variant="ghost" onclick={oncancel}>Abbrechen</Button>
-  </div>
-</form>
+</EditorForm>

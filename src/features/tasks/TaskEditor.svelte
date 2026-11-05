@@ -1,10 +1,8 @@
 <script lang="ts">
+  import EditorForm from '../../ui/EditorForm.svelte';
   import { REPEAT_OPTIONS } from './model';
-  import { autofocus } from '../../ui/autofocus';
   import { settings } from '../../settings';
   import type { Action } from '../../lib/state/Action.svelte';
-  import Button from '../../ui/Button.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import Select from '../../ui/Select.svelte';
@@ -26,15 +24,9 @@
     ...(policy.canCreateClubWide() || form.teamId === CLUB_WIDE ? [{ value: CLUB_WIDE, label: 'Ganzer Verein' }] : []),
     ...policy.plannableTeams().map((t) => ({ value: t.id, label: t.name })),
   ]);
-
-  function submit(event: SubmitEvent) {
-    event.preventDefault();
-    form.submitted = true;
-    if (form.valid) onsubmit();
-  }
 </script>
 
-<form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
+<EditorForm {action} {submitLabel} {oncancel} {onsubmit} validate={form}>
   <Field label="Titel" error={form.error('title')}>
     <input bind:value={form.title} maxlength={limits.titleMaxLength} required />
   </Field>
@@ -58,10 +50,4 @@
   <AssigneePicker {form} error={form.error('assignees')} />
 
   <ChecklistEditor {form} error={form.error('checklist')} />
-
-  <ErrorNote error={action.error} />
-  <div class="row">
-    <Button type="submit" variant="primary" busy={action.busy}>{submitLabel}</Button>
-    <Button variant="ghost" onclick={oncancel}>Abbrechen</Button>
-  </div>
-</form>
+</EditorForm>
