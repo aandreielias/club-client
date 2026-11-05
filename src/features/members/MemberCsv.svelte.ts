@@ -1,3 +1,4 @@
+import { csvText } from '../../lib/files/csv';
 import { ROLE_LABELS, type Member, type Role } from '../../lib/types';
 import { HONORARY, SEEDED_MEMBERSHIP_KINDS } from './MembersApi';
 
@@ -61,36 +62,26 @@ export interface ParsedImport {
 
 const yesNo = (value: boolean): string => (value ? 'ja' : 'nein');
 
-function cell(value: string): string {
-  // Leading = + - @ would run as a formula in Excel (CSV injection).
-  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
-  return /[";\n\r]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
-}
-
 /** Semicolon CSV with BOM, as German Excel opens and saves it. */
 export function membersToCsv(members: readonly Member[], labels: MembershipLabels = SEEDED_LABELS): string {
-  const lines = members.map((m) =>
-    [
-      m.firstName,
-      m.middleName ?? '',
-      m.lastName,
-      m.email ?? '',
-      m.birthDate ?? '',
-      m.phone ?? '',
-      yesNo(m.photoConsent),
-      m.roles.map((r) => ROLE_LABELS[r]).join(', '),
-      // an honorary member's former kind (one kind per member) goes into the column, so an import restores both
-      (m.membershipTypes.some((t) => t !== HONORARY) ? m.membershipTypes.filter((t) => t !== HONORARY) : m.previousType ? [m.previousType] : [])
-        .map((t) => labels[t] ?? t)
-        .join(', '),
-      yesNo(m.membershipTypes.includes(HONORARY)),
-      m.memberSince ?? '',
-      m.active ? 'Aktiv' : 'Inaktiv',
-    ]
-      .map(cell)
-      .join(';'),
-  );
-  return `\uFEFF${[HEADER.join(';'), ...lines].join('\r\n')}\r\n`;
+  const lines = members.map((m) => [
+    m.firstName,
+    m.middleName ?? '',
+    m.lastName,
+    m.email ?? '',
+    m.birthDate ?? '',
+    m.phone ?? '',
+    yesNo(m.photoConsent),
+    m.roles.map((r) => ROLE_LABELS[r]).join(', '),
+    // an honorary member's former kind (one kind per member) goes into the column, so an import restores both
+    (m.membershipTypes.some((t) => t !== HONORARY) ? m.membershipTypes.filter((t) => t !== HONORARY) : m.previousType ? [m.previousType] : [])
+      .map((t) => labels[t] ?? t)
+      .join(', '),
+    yesNo(m.membershipTypes.includes(HONORARY)),
+    m.memberSince ?? '',
+    m.active ? 'Aktiv' : 'Inaktiv',
+  ]);
+  return csvText([HEADER, ...lines]);
 }
 
 /** RFC 4180 records with the given separator; quoted cells may hold separators, quotes and line breaks. */

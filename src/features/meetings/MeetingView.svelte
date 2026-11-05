@@ -3,6 +3,7 @@
   import MeetingDraftEditor from './MeetingDraftEditor.svelte';
   import AgendaEditor from './AgendaEditor.svelte';
   import { BrowserFile } from '../../lib/files/BrowserFile';
+  import { csvText } from '../../lib/files/csv';
   import { Resource } from '../../lib/state/Resource.svelte';
   import { bus, commands, session } from '../../lib/container';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
@@ -58,8 +59,7 @@
   /** The attendance list (who was invited, Anwesend or Fehlt) as a CSV file. */
   function attendanceCsv(m: Meeting) {
     const rows = [['Name', 'Anwesenheit'], ...m.electorate.map((p) => [p.name, isPresent(m, p.memberId) ? 'Anwesend' : 'Fehlt'])];
-    const csv = rows.map((r) => r.map((c) => `"${c.replaceAll('"', '""')}"`).join(';')).join('\r\n');
-    BrowserFile.save(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }), `anwesenheit-${m.title}.csv`);
+    BrowserFile.save(new Blob([csvText(rows)], { type: 'text/csv;charset=utf-8' }), `anwesenheit-${m.title}.csv`);
   }
 
   let protocol = $state('');
