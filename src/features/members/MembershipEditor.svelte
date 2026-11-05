@@ -3,7 +3,7 @@
   import { TOAST } from '../../channels';
   import type { Member, MembershipType } from '../../lib/types';
   import Button from '../../ui/Button.svelte';
-  import ChipToggle from '../../ui/ChipToggle.svelte';
+  import OptionList from '../../ui/OptionList.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
@@ -38,7 +38,7 @@
 
 <div class="stack">
   {#if multiple}
-    <ChipToggle label="Arten der Mitgliedschaft" options={membershipKinds.options(member.membershipTypes)} bind:value={types} />
+    <OptionList label="Arten der Mitgliedschaft" options={membershipKinds.options(member.membershipTypes)} bind:value={types} />
   {:else}
     <ChoiceGroup
       name="membership-{member.id}"

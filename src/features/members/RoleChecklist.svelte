@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ROLE_LABELS, type Role } from '../../lib/types';
-  import CheckList from '../../ui/CheckList.svelte';
+  import Field from '../../ui/Field.svelte';
+  import OptionList from '../../ui/OptionList.svelte';
 
   /** Checkbox group of club roles; roles outside `allowed` are shown but locked. */
   let { value = $bindable(), allowed, legend }: { value: Role[]; allowed: readonly Role[]; legend: string } = $props();
@@ -10,4 +11,6 @@
   );
 </script>
 
-<CheckList bind:value {options} {legend} />
+<Field label={legend}>
+  <OptionList label={legend} {options} bind:value />
+</Field>

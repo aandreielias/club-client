@@ -761,6 +761,12 @@ export class MockDirectory {
       data: { teamId, memberId },
       audience: { members: [...this.teamMembers(teamId), memberId], roles: ADMIN_BOARD },
     });
+    // server: MemberHandlers.onTeamMembershipChanged — a team's coach or assistant coach gets the COACH role
+    const member = this.members.data.find((m) => m.id === memberId);
+    if (member?.active && coaches(this.teamRoles(memberId)[teamId]) && !member.roles.includes('COACH')) {
+      member.roles = [...member.roles, 'COACH'];
+      this.saveMembers();
+    }
   }
 
   private static name(value: unknown, code: string): string {
