@@ -37,8 +37,7 @@
 
   /** In use, it is archived instead of deleted: members keep it, nobody else gets it. */
   async function setArchived(archived: boolean) {
-    const { key: _key, inUse: _inUse, fixed: _fixed, ...input } = kind!;
-    if (await edit.save.run(() => stored.saved(() => membersApi.saveMembershipKind(id, { ...input, archived }))))
+    if (await edit.save.run(() => stored.saved(() => membershipKinds.ops(id).archive(archived))))
       view.notify(archived ? 'Mitgliedsart archiviert.' : 'Mitgliedsart wiederhergestellt.');
   }
 

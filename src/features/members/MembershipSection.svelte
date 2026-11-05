@@ -1,7 +1,6 @@
 <script lang="ts">
   import { bus } from '../../lib/container';
   import { removeRecord, restoreRecord } from '../../lib/detail/removeRecord';
-  import { saveOrder } from '../../lib/detail/saveOrder';
   import { Action } from '../../lib/state/Action.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
   import Field from '../../ui/Field.svelte';
@@ -54,25 +53,6 @@
         .join(' · '),
     })),
   );
-
-  /** The order in member profiles and pickers. */
-  async function reorder(keys: string[]) {
-    await load.run(async () => {
-      await saveOrder(keys, membershipKinds.items, ({ key: k, inUse: _inUse, fixed: _fixed, ...input }, sort) =>
-        membersApi.saveMembershipKind(k, { ...input, sort }),
-      );
-      await membershipKinds.load();
-    });
-  }
-
-  function ops(key: string) {
-    const { key: _key, inUse: _inUse, fixed: _fixed, ...input } = membershipKinds.get(key)!;
-    return {
-      delete: () => membersApi.deleteMembershipKind(key),
-      archive: (archived: boolean) => membersApi.saveMembershipKind(key, { ...input, archived }),
-      reload: () => membershipKinds.load(),
-    };
-  }
 </script>
 
 <div class="stack section">
@@ -83,9 +63,9 @@
       {rows}
       kind="membership-kind"
       newLabel="Neue Mitgliedsart"
-      onremove={(row) => removeRecord(bus, row, 'Mitgliedsart', ops(row.key))}
-      onrestore={(row) => restoreRecord(bus, 'Mitgliedsart', ops(row.key))}
-      onreorder={reorder}
+      onremove={(row) => removeRecord(bus, row, 'Mitgliedsart', membershipKinds.ops(row.key))}
+      onrestore={(row) => restoreRecord(bus, 'Mitgliedsart', membershipKinds.ops(row.key))}
+      onreorder={(keys) => load.run(() => membershipKinds.reorder(keys))}
       fixed={(row) => row.key === HONORARY}
       loading={load.busy && !membershipKinds.items.length}
       error={load.error}

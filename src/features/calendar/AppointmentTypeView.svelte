@@ -34,8 +34,7 @@
 
   /** In use, it is archived instead of deleted: kept on old appointments, not offered for new ones. */
   async function setArchived(archived: boolean) {
-    const { key: _key, inUse: _inUse, ...input } = type!;
-    if (await edit.save.run(() => stored.saved(() => calendarApi.saveType(id, { ...input, archived }))))
+    if (await edit.save.run(() => stored.saved(() => appointmentTypes.ops(id).archive(archived))))
       view.notify(archived ? 'Terminart archiviert.' : 'Terminart wiederhergestellt.');
   }
 

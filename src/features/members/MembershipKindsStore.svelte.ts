@@ -1,8 +1,8 @@
 import type { EventBus } from '../../lib/bus';
 import { liveEvent } from '../../lib/live/LiveUpdates.svelte';
-import { LiveStore } from '../../lib/state/LiveStore.svelte';
+import { CatalogStore } from '../../lib/state/CatalogStore.svelte';
 import type { Member, MembershipType } from '../../lib/types';
-import { SEEDED_MEMBERSHIP_KINDS, type MembersApi, type MembershipKind } from './MembersApi';
+import { SEEDED_MEMBERSHIP_KINDS, type MembersApi, type MembershipKind, type MembershipKindInput } from './MembersApi';
 
 export const MEMBERSHIP_KINDS_CHANGED = liveEvent<Record<string, never>>('members.membership-kinds-changed');
 
@@ -10,28 +10,12 @@ export const MEMBERSHIP_KINDS_CHANGED = liveEvent<Record<string, never>>('member
 export type MembershipChoice = MembershipType | 'NONE';
 
 /** The club's membership kinds (server: members_membership_kind); the seeded ones until loaded. */
-export class MembershipKindsStore extends LiveStore<readonly MembershipKind[]> {
+export class MembershipKindsStore extends CatalogStore<MembershipType, MembershipKind, MembershipKindInput> {
   constructor(api: MembersApi, bus: EventBus) {
-    super(() => api.membershipKinds(), bus, MEMBERSHIP_KINDS_CHANGED, SEEDED_MEMBERSHIP_KINDS);
-  }
-
-  get items(): readonly MembershipKind[] {
-    return this.value;
-  }
-
-  get(key: MembershipType): MembershipKind | undefined {
-    return this.value.find((k) => k.key === key);
-  }
-
-  /** Archived ones keep their name on what used them, marked; new records cannot choose them. */
-  label(key: MembershipType): string {
-    const found = this.get(key);
-    return found ? (found.archived ? `${found.label} (archiviert)` : found.label) : key;
-  }
-
-  /** The kinds a member may be given; those `current` holds stay offered even when archived. */
-  options(current: readonly MembershipType[] = []): { value: MembershipType; label: string }[] {
-    return this.value.filter((k) => !k.archived || current.includes(k.key)).map((k) => ({ value: k.key, label: k.label }));
+    super(() => api.membershipKinds(), bus, MEMBERSHIP_KINDS_CHANGED, SEEDED_MEMBERSHIP_KINDS, {
+      save: (key, input) => api.saveMembershipKind(key, input),
+      delete: (key) => api.deleteMembershipKind(key),
+    });
   }
 
   /**

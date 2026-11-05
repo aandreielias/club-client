@@ -1,30 +1,19 @@
 import type { EventBus } from '../../lib/bus';
 import { liveEvent } from '../../lib/live/LiveUpdates.svelte';
-import { LiveStore } from '../../lib/state/LiveStore.svelte';
+import { CatalogStore } from '../../lib/state/CatalogStore.svelte';
 import type { Hue } from '../../lib/types';
 import type { CalendarApi } from './CalendarApi';
-import { SEEDED_APPOINTMENT_TYPES, type AppointmentType, type AppointmentTypeInfo } from './model';
+import { SEEDED_APPOINTMENT_TYPES, type AppointmentType, type AppointmentTypeInfo, type AppointmentTypeInput } from './model';
 
 export const APPOINTMENT_TYPES_CHANGED = liveEvent<Record<string, never>>('calendar.appointment-types-changed');
 
 /** The club's appointment types (server: calendar_type); the seeded ones until loaded. */
-export class AppointmentTypesStore extends LiveStore<readonly AppointmentTypeInfo[]> {
+export class AppointmentTypesStore extends CatalogStore<AppointmentType, AppointmentTypeInfo, AppointmentTypeInput> {
   constructor(api: CalendarApi, bus: EventBus) {
-    super(() => api.types(), bus, APPOINTMENT_TYPES_CHANGED, SEEDED_APPOINTMENT_TYPES);
-  }
-
-  get items(): readonly AppointmentTypeInfo[] {
-    return this.value;
-  }
-
-  get(key: AppointmentType): AppointmentTypeInfo | undefined {
-    return this.value.find((t) => t.key === key);
-  }
-
-  /** Archived ones keep their name on what used them, marked; new records cannot choose them. */
-  label(key: AppointmentType): string {
-    const found = this.get(key);
-    return found ? (found.archived ? `${found.label} (archiviert)` : found.label) : key;
+    super(() => api.types(), bus, APPOINTMENT_TYPES_CHANGED, SEEDED_APPOINTMENT_TYPES, {
+      save: (key, input) => api.saveType(key, input),
+      delete: (key) => api.deleteType(key),
+    });
   }
 
   hue(key: AppointmentType): Hue {
@@ -37,10 +26,5 @@ export class AppointmentTypesStore extends LiveStore<readonly AppointmentTypeInf
 
   rides(key: AppointmentType): boolean {
     return this.get(key)?.rides ?? false;
-  }
-
-  /** For pickers of new or edited appointments; `current` stays offered even when archived. */
-  options(current?: AppointmentType): { value: AppointmentType; label: string }[] {
-    return this.value.filter((t) => !t.archived || t.key === current).map((t) => ({ value: t.key, label: t.label }));
   }
 }

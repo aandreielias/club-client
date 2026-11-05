@@ -44,8 +44,7 @@
 
   /** In use, it is archived instead of deleted: kept on old meetings, not offered for new ones. */
   async function setArchived(archived: boolean) {
-    const { key: _key, inUse: _inUse, ...input } = type!;
-    if (await edit.save.run(() => stored.saved(() => meetingsApi.saveType(id, { ...input, archived }))))
+    if (await edit.save.run(() => stored.saved(() => meetingTypes.ops(id).archive(archived))))
       view.notify(archived ? 'Sitzungsart archiviert.' : 'Sitzungsart wiederhergestellt.');
   }
 
