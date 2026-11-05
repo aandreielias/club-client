@@ -1,5 +1,5 @@
 import TasksHome from './TasksHome.svelte';
-import { PRIVILEGED } from '../../lib/types';
+import { permissions } from '../../lib/container';
 import type { Feature } from '../Feature';
 import { TASK_MESSAGES } from './messages';
 import { dueReminders } from './services';
@@ -16,7 +16,8 @@ export const tasksFeature: Feature = {
   ],
   windows: {
     task: { component: TaskView, page: (id) => `/tasks/${encodeURIComponent(id)}` },
-    'task-new': { component: TaskCreateView, roles: PRIVILEGED },
+    // Admin/board, and coaches of a team (by team role, server: requireMayManage).
+    'task-new': { component: TaskCreateView, canOpen: () => permissions.canManageAnything() },
   },
   calendar: {
     TASK: (item) => ({ hue: item.inactive ? 'green' : 'orange', label: 'Fällig' }),

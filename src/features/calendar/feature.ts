@@ -1,6 +1,7 @@
 import CalendarHome from './CalendarHome.svelte';
 import OpenAnswersHome from './OpenAnswersHome.svelte';
-import { ADMIN_BOARD, PRIVILEGED } from '../../lib/types';
+import { permissions } from '../../lib/container';
+import { ADMIN_BOARD } from '../../lib/types';
 import type { Feature } from '../Feature';
 import { appointmentTypes } from './services';
 import AppointmentCreateView from './AppointmentCreateView.svelte';
@@ -25,7 +26,8 @@ export const calendarFeature: Feature = {
   ],
   windows: {
     appointment: { component: AppointmentView, page: (id) => `/calendar/${encodeURIComponent(id)}` },
-    'appointment-new': { component: AppointmentCreateView, roles: PRIVILEGED },
+    // Admin/board, and coaches of a team (by team role, server: requireMayEdit).
+    'appointment-new': { component: AppointmentCreateView, canOpen: () => permissions.canManageAnything() },
     'appointment-type': { component: AppointmentTypeView, page: (key) => `/appointment-types/${encodeURIComponent(key)}`, roles: ADMIN_BOARD },
     'appointment-type-new': { component: AppointmentTypeCreateView, roles: ADMIN_BOARD },
   },

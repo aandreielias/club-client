@@ -77,7 +77,8 @@ export function items(viewer: Member, from: string, to: string): CalendarItem[] 
 
   // Absences: own and minors', a coach's team members', everyone's for admin and board.
   const own = new Set([viewer.id, ...directory.wardsOf(viewer.id)]);
-  const seen = new Set([...own, ...coached.flatMap((t) => directory.teamMembers(t))]);
+  const coachedMembers = new Set(coached.flatMap((t) => directory.teamMembers(t)));
+  const seen = new Set([...own, ...coachedMembers]);
   for (const a of calendar.absences.data.filter((x) => (board || seen.has(x.memberId)) && x.to >= fromDay && x.from <= toDay)) {
     const mine = own.has(a.memberId);
     out.push({
@@ -87,7 +88,7 @@ export function items(viewer: Member, from: string, to: string): CalendarItem[] 
       title: `Abwesend: ${name(a.memberId)}`,
       ...allDay(clock, a.from, a.to),
       category: 'ABSENCE',
-      detail: board || viewer.roles.includes('COACH') || mine ? a.reason : null,
+      detail: board || mine || coachedMembers.has(a.memberId) ? a.reason : null,
       movable: mine,
       resizable: mine,
     });
