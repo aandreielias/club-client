@@ -23,8 +23,8 @@
   const accents = Object.entries(preferences.appearance.accents) as [Preferences['accent'], { label: string; color: string }][];
 </script>
 
-<div class="stack section">
-  <Field label="Farbschema">
+<div class="stack">
+  <Field label="Farbschema" group>
     <ChoiceGroup
       name="scheme"
       label="Farbschema"
@@ -47,7 +47,7 @@
   </fieldset>
 
   <div class="grid-2">
-    <Field label="Schriftgröße">
+    <Field label="Schriftgröße" group>
       <ChoiceGroup
         name="font-size"
         label="Schriftgröße"
@@ -55,7 +55,7 @@
         bind:value={() => preferences.values.fontSize, (v) => v && preferences.set('fontSize', v)}
       />
     </Field>
-    <Field label="Dichte">
+    <Field label="Dichte" group>
       <ChoiceGroup
         name="density"
         label="Dichte"
@@ -65,7 +65,7 @@
     </Field>
   </div>
 
-  <Field label="Fenster öffnen">
+  <Field label="Fenster öffnen" group>
     <ChoiceGroup name="dock" label="Fenster öffnen" options={DOCKS} bind:value={() => windows.dock, (v) => v && windows.setDock(v)} />
   </Field>
 

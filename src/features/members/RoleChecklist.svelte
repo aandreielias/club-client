@@ -11,6 +11,6 @@
   );
 </script>
 
-<Field label={legend}>
+<Field group label={legend}>
   <OptionList label={legend} {options} bind:value />
 </Field>

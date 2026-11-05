@@ -2,7 +2,7 @@
   import type { NavItem } from '../features/FeatureRegistry';
   import type { LiveStatus } from '../lib/live/LiveUpdates.svelte';
   import { SHORTCUTS, type CommandId } from '../shortcuts';
-  import { tick } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { MediaQuery } from 'svelte/reactivity';
   import { bus, commands, keyboard, keymap, motion, pageNavigator, preferences, session } from '../lib/container';
   import { searchSettings, visibleSettings } from '../features/settings/settingsTree';
@@ -89,14 +89,31 @@
   // The active highlight glides between entries (CSS transition on its position).
   let list: HTMLElement | undefined = $state();
   let indicator = $state<{ y: number; height: number } | null>(null);
+  /** Off while the highlight appears, so it shows up at its row instead of gliding in from the top. */
+  let glide = $state(false);
+  function measure() {
+    const active = list?.querySelector<HTMLElement>(':scope > li > a.active');
+    // Measured on the <li>: a group row is positioned (for its flyout), so the link's offsetTop would be 0.
+    const row = active?.parentElement;
+    const next = active && row ? { y: row.offsetTop, height: active.offsetHeight } : null;
+    if (next && !untrack(() => indicator)) {
+      glide = false;
+      requestAnimationFrame(() => (glide = true));
+    }
+    indicator = next;
+  }
   $effect(() => {
     void current;
     void items.length;
     void settingsFound;
-    const active = list?.querySelector<HTMLElement>(':scope > li > a.active');
-    // Measured on the <li>: a group row is positioned (for its flyout), so the link's offsetTop would be 0.
-    const row = active?.parentElement;
-    indicator = active && row ? { y: row.offsetTop, height: active.offsetHeight } : null;
+    measure();
+  });
+  // Rows move without a route change too (fonts loading, badges, search results): measure again.
+  $effect(() => {
+    if (!list) return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(list);
+    return () => observer.disconnect();
   });
 </script>
 
@@ -170,9 +187,15 @@
       <input type="search" bind:value={settingsQuery} placeholder="Einstellungen durchsuchen" aria-label="Einstellungen durchsuchen" />
     </div>
     <ul bind:this={list} aria-label="Einstellungen">
-      {#if indicator}
-        <li class="indicator" aria-hidden="true" style:transform="translateY({indicator.y}px)" style:height="{indicator.height}px"></li>
-      {/if}
+      <!-- Always the first row, so showing it never changes which row comes first (and the layout). -->
+      <li
+        class="indicator"
+        aria-hidden="true"
+        style:visibility={indicator ? null : 'hidden'}
+        style:transition={glide ? null : 'none'}
+        style:transform="translateY({indicator?.y ?? 0}px)"
+        style:height="{indicator?.height ?? 0}px"
+      ></li>
       {#each settingsTree.groups as group (group.id)}
         {#if group.subgroups.some((sub) => sub.tabs.some((t) => shown(t.id)))}
           <li class="section-title" aria-hidden="true"><Icon name={group.icon} small /><span class="label">{group.label}</span></li>
@@ -201,9 +224,15 @@
     >
     <div class="search"><GlobalSearch /></div>
     <ul bind:this={list}>
-      {#if indicator}
-        <li class="indicator" aria-hidden="true" style:transform="translateY({indicator.y}px)" style:height="{indicator.height}px"></li>
-      {/if}
+      <!-- Always the first row, so showing it never changes which row comes first (and the layout). -->
+      <li
+        class="indicator"
+        aria-hidden="true"
+        style:visibility={indicator ? null : 'hidden'}
+        style:transition={glide ? null : 'none'}
+        style:transform="translateY({indicator?.y ?? 0}px)"
+        style:height="{indicator?.height ?? 0}px"
+      ></li>
       {#each items.filter((i) => !i.footer) as item (item.key)}
         {#if item.children}
           <li
@@ -345,7 +374,7 @@
     font-size: var(--font-size-small);
     font-weight: var(--font-weight-medium);
   }
-  .section-title:first-of-type {
+  .indicator + .section-title {
     padding-top: 0;
   }
   .none {

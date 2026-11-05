@@ -43,7 +43,7 @@
   }
 </script>
 
-<div class="stack section readable">
+<div class="stack readable">
   <SettingsForm
     title="Verein"
     intro="Gilt für alle Mitglieder: Name in Seitenleiste, E-Mails, Kalender-Abo und Einladungen. Leere Felder nehmen den Standard des Servers."

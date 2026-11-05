@@ -54,7 +54,7 @@
   );
 </script>
 
-<div class="stack section">
+<div class="stack">
   <section class="stack">
     <h2>Mitgliedsarten</h2>
     <p class="muted small">Wer in der Mitgliederversammlung abstimmt und in eine Funktion gewählt werden kann.</p>

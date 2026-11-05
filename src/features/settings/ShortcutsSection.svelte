@@ -24,7 +24,7 @@
   }
 </script>
 
-<div class="stack section">
+<div class="stack">
   <p class="muted">
     <Kbd keys="Mod+K" /> öffnet die Befehlspalette mit allen Befehlen. Folgen wie <Kbd keys="g k" /> bedeuten: erst G, dann K drücken. Änderungen gelten
     nur in diesem Browser.

@@ -4,15 +4,30 @@
   /**
    * Label + control (children) + hint or error. The label wraps only the caption and the control,
    * so the control's accessible name is the caption alone (hints stay out of it).
+   * `group` is for a control that names itself (a fieldset such as ChoiceGroup): the caption is shown
+   * but no <label> wraps it, since a label must not hold a fieldset.
    */
-  let { label, hint, error, children }: { label: string; hint?: string; error?: string | null; children: Snippet } = $props();
+  let {
+    label,
+    hint,
+    error,
+    group = false,
+    children,
+  }: { label: string; hint?: string; error?: string | null; group?: boolean; children: Snippet } = $props();
 </script>
 
 <div class="field">
-  <label>
-    <span class="label">{label}</span>
-    {@render children()}
-  </label>
+  {#if group}
+    <div class="control">
+      <span class="label" aria-hidden="true">{label}</span>
+      {@render children()}
+    </div>
+  {:else}
+    <label>
+      <span class="label">{label}</span>
+      {@render children()}
+    </label>
+  {/if}
   {#if error}
     <span class="message error" role="alert">{error}</span>
   {:else if hint}
@@ -22,6 +37,7 @@
 
 <style>
   .field,
+  .control,
   label {
     display: grid;
     align-content: start;

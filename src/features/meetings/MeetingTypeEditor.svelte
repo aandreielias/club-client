@@ -124,7 +124,7 @@
         <input bind:value={form.invitationLabel} maxlength="120" required />
       </Field>
     </div>
-    <Field label="Eingeladen und stimmberechtigt">
+    <Field label="Eingeladen und stimmberechtigt" group>
       <ChoiceGroup
         name="type-electorate"
         label="Eingeladen und stimmberechtigt"

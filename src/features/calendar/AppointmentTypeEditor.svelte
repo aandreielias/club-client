@@ -39,7 +39,7 @@
     <Field label="Bezeichnung">
       <input bind:value={form.label} maxlength="40" required />
     </Field>
-    <Field label="Farbe" hint="So steht die Terminart im Kalender.">
+    <Field group label="Farbe" hint="So steht die Terminart im Kalender.">
       <ColorSwatches label="Farbe" options={HUE_OPTIONS} bind:value={form.hue} />
     </Field>
   </div>

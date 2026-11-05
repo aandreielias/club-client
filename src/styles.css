@@ -276,6 +276,10 @@ label.check {
   align-items: center;
   gap: var(--space-sm);
 }
+/* A row with its first part on the left and its last on the right. */
+.between {
+  justify-content: space-between;
+}
 .narrow {
   max-width: var(--layout-field-width);
 }

@@ -27,8 +27,8 @@
   }
 </script>
 
-<div class="stack section">
-  <Field label="Kalender öffnet mit">
+<div class="stack">
+  <Field label="Kalender öffnet mit" group>
     <ChoiceGroup
       name="calendar-view-pref"
       label="Kalender öffnet mit"

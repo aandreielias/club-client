@@ -34,7 +34,7 @@
   }
 </script>
 
-<div class="stack section">
+<div class="stack">
   <h3>Passwort</h3>
   <form class="stack readable" onsubmit={changePassword} novalidate>
     <!-- Lets password managers pair the fields with the account. -->

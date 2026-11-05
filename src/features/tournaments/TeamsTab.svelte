@@ -208,9 +208,6 @@
     min-height: var(--control-height);
     border-bottom: 1px solid var(--color-border);
   }
-  .between {
-    justify-content: space-between;
-  }
   .heading {
     display: flex;
     align-items: center;

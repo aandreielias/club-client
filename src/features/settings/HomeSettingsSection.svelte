@@ -20,7 +20,7 @@
   const customised = $derived(preferences.values.homeOrder.length > 0 || Object.keys(preferences.values.homeShown).length > 0);
 </script>
 
-<div class="stack section">
+<div class="stack">
   <p class="muted">
     Abschnitte der Startseite ein- und ausschalten und an die gewünschte Stelle ziehen. Was du nicht sehen darfst, fehlt in der Liste.
   </p>

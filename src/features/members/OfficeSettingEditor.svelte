@@ -53,7 +53,7 @@
     </Field>
   {/if}
   {#if !form.seeded}
-    <Field label="Vorstand" hint="Wer eine Funktion im Vorstand innehat, bekommt die Vorstandsrolle und zählt zur Größe des Vorstands.">
+    <Field group label="Vorstand" hint="Wer eine Funktion im Vorstand innehat, bekommt die Vorstandsrolle und zählt zur Größe des Vorstands.">
       <ChoiceGroup
         name="office-board"
         label="Vorstand"
@@ -61,7 +61,7 @@
         bind:value={() => (form.board ? 'on' : 'off'), (v) => (form.board = v === 'on')}
       />
     </Field>
-    <Field label="In Sitzungen" hint="Wer diese Funktion innehat, übernimmt diese Aufgaben in Sitzungen.">
+    <Field group label="In Sitzungen" hint="Wer diese Funktion innehat, übernimmt diese Aufgaben in Sitzungen.">
       <ChoiceGroup name="office-duty" label="In Sitzungen" options={DUTIES} bind:value={form.duty} />
     </Field>
   {/if}
@@ -85,7 +85,7 @@
       <input type="number" min="1" max={OFFICE_LIMITS.termYears} bind:value={form.termYears} class="short" />
     </Field>
     {#if !form.isNew}
-      <Field label="Zugleich mit" hint="Funktionen, die eine Person zusätzlich innehaben darf. Gilt in beide Richtungen.">
+      <Field group label="Zugleich mit" hint="Funktionen, die eine Person zusätzlich innehaben darf. Gilt in beide Richtungen.">
         {#if others.length}
           <OptionList label="Zugleich mit" options={others} bind:value={form.partners} />
         {:else}

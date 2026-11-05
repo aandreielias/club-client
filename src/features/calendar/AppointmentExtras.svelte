@@ -67,7 +67,7 @@
       {#if isMatch}
         <div class="grid-2">
           <Field label="Gegner"><input bind:value={opponent} maxlength="80" /></Field>
-          <Field label="Spielort"><ChoiceGroup name="home" label="Spielort" options={PLACES} bind:value={home} /></Field>
+          <Field label="Spielort" group><ChoiceGroup name="home" label="Spielort" options={PLACES} bind:value={home} /></Field>
         </div>
         <Field label="Sätze" hint="Unsere Punkte zuerst, etwa 25:20." error={invalidSet ? 'Sätze im Format 25:20 angeben.' : undefined}>
           <div class="sets">

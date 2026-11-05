@@ -7,7 +7,7 @@
   const entries = $derived(navCatalog.ordered(preferences.values.navOrder, (...roles) => session.hasRole(...roles)));
 </script>
 
-<div class="stack section">
+<div class="stack">
   <p class="muted">
     Einträge an die gewünschte Stelle ziehen. Mit der Tastatur: Eintrag auswählen, Leertaste, Pfeiltasten, Leertaste. Gruppen wie „Verein“ ziehen sich
     als Ganzes mit. Einstellungen und Abmelden bleiben unten.

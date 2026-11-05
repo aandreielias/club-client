@@ -299,7 +299,7 @@
   .hands label {
     display: grid;
     gap: var(--space-xxs);
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-small);
   }
   .hands input {
     width: 5rem;

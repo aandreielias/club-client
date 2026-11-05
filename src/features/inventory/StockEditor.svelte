@@ -94,10 +94,6 @@
     gap: var(--space-sm);
     align-items: center;
   }
-  .between {
-    justify-content: space-between;
-    align-items: center;
-  }
   .total {
     font-variant-numeric: tabular-nums;
   }

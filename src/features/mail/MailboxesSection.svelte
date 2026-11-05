@@ -51,7 +51,7 @@
   }
 </script>
 
-<div class="stack section">
+<div class="stack">
   {#if !settingsLoad.busy && !settingsLoad.error && !draft.value.keepsMail}
     <p class="banner" role="status">
       Noch kein Mail-Anbieter angebunden: E-Mails an Vereinsadressen gehen verloren, gesendete werden nicht zugestellt. Postfächer und Adressen lassen

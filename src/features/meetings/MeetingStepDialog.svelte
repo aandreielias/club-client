@@ -94,7 +94,7 @@
         <p><strong>{SYSTEM_STEP_LABELS[draft.system]}</strong></p>
         <p class="muted small">Den Text schreibt der Server; Zeitpunkt und Empfänger lassen sich ändern.</p>
       {:else}
-        <Field label="Art">
+        <Field label="Art" group>
           <ChoiceGroup name="step-action" label="Art" options={STEP_ACTIONS} bind:value={() => draft!.action, (v) => v && (draft!.action = v)} />
         </Field>
       {/if}
@@ -151,8 +151,5 @@
   }
   .placeholders {
     gap: var(--space-xs);
-  }
-  .between {
-    justify-content: space-between;
   }
 </style>

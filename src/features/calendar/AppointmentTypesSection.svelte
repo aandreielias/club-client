@@ -23,7 +23,7 @@
   );
 </script>
 
-<div class="stack section">
+<div class="stack">
   <p class="muted">
     Welche Arten von Terminen es gibt, in welcher Farbe sie im Kalender stehen und ob Fahrgemeinschaften und Kabinen angeboten werden.
   </p>

@@ -25,7 +25,7 @@
   }
 </script>
 
-<div class="stack section">
+<div class="stack">
   <SettingsForm
     title="Umlaufbeschlüsse des Vorstands"
     intro="Abstimmungen ohne Sitzung, schriftlich in der App. Jeder angenommene Beschluss bekommt eine Aufgabe „umsetzen“."

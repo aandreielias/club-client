@@ -135,10 +135,6 @@
     text-align: center;
     font-variant-numeric: tabular-nums;
   }
-  .between {
-    justify-content: space-between;
-    align-items: center;
-  }
   .won {
     font-variant-numeric: tabular-nums;
   }

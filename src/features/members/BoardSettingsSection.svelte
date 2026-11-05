@@ -62,7 +62,7 @@
   );
 </script>
 
-<div class="stack section">
+<div class="stack">
   <SettingsForm title="Vorstand" intro="Regeln für den ganzen Vorstand; Hinweise erscheinen auf der Vorstandsseite." {draft} onsave={saveRules}>
     <div class="grid-2">
       <Field label="Mindestens Personen im Vorstand">
