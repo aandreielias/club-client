@@ -1,7 +1,7 @@
 import type { ApiClient } from '../http/ApiClient';
 import { Formatter } from '../time/Formatter';
 import { ZonedClock } from '../time/ZonedClock';
-import { PRIVILEGED, type Club, type ClubEdit, type Me, type Member, type Role, type Team } from '../types';
+import { type Club, type ClubEdit, type Me, type Member, type Role, type Team } from '../types';
 
 export type ProfilePatch = Partial<Pick<Member, 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'photoConsent'>>;
 
@@ -62,10 +62,6 @@ export class SessionStore {
 
   hasRole(...roles: readonly Role[]): boolean {
     return this.me?.member.roles.some((r) => roles.includes(r)) ?? false;
-  }
-
-  get isPrivileged(): boolean {
-    return this.hasRole(...PRIVILEGED);
   }
 
   isInTeam(teamId: string): boolean {

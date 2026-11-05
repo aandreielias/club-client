@@ -25,10 +25,7 @@
     max,
     required = false,
     disabled = false,
-    inline = false,
     autofocus = false,
-    id,
-    onchange,
     'aria-label': ariaLabel,
   }: {
     value: LocalDate | '';
@@ -36,12 +33,7 @@
     max?: LocalDate;
     required?: boolean;
     disabled?: boolean;
-    /** As wide as the date, not the whole row. */
-    inline?: boolean;
     autofocus?: boolean;
-    id?: string;
-    /** Called after the user picked or typed another valid date. */
-    onchange?: (value: LocalDate | '') => void;
     'aria-label'?: string;
   } = $props();
 
@@ -88,7 +80,6 @@
     const next = DateText.parse(text) ?? '';
     if (next === value) return;
     value = next;
-    if (next) onchange?.(next);
   }
 
   function blurred() {
@@ -121,7 +112,6 @@
     text = DateText.format(day);
     hide();
     if (!changed) return;
-    onchange?.(day);
     // Like a native input: lets surrounding forms notice the edit (unsaved-changes check).
     input?.dispatchEvent(new Event('change', { bubbles: true }));
   }
@@ -130,7 +120,6 @@
     value = '';
     text = '';
     hide();
-    onchange?.('');
     input?.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
@@ -189,7 +178,7 @@
   }
 </script>
 
-<span class="date" class:inline bind:this={wrapper}>
+<span class="date" bind:this={wrapper}>
   <!-- svelte-ignore a11y_autofocus -->
   <input
     bind:this={input}
@@ -199,7 +188,6 @@
     autocomplete="off"
     placeholder="TT.MM.JJJJ"
     maxlength="10"
-    {id}
     {required}
     {disabled}
     {autofocus}
@@ -310,10 +298,6 @@
     position: relative;
     display: block;
     min-width: 0;
-  }
-  .date.inline {
-    display: inline-block;
-    width: 10.5rem;
   }
   .date input {
     padding-right: calc(var(--control-padding-x) + 24px);

@@ -6,8 +6,6 @@ import type { ErrorMessages } from './ErrorMessages';
 export const APP_ERROR = defineEvent<unknown>('app/error');
 
 /** Turns reported errors into readable error toasts. */
-export class ErrorReporter {
-  constructor(bus: EventBus, errors: ErrorMessages) {
-    bus.subscribe(APP_ERROR, (error) => bus.publish(TOAST, { text: errors.text(error), tone: 'error' }));
-  }
+export function reportErrors(bus: EventBus, errors: ErrorMessages): void {
+  bus.subscribe(APP_ERROR, (error) => bus.publish(TOAST, { text: errors.text(error), tone: 'error' }));
 }

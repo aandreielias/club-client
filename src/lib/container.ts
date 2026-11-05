@@ -6,7 +6,7 @@ import { AuditApi } from './audit/AuditApi';
 import { ActivityApi } from './activity/ActivityApi';
 import { settings } from '../settings';
 import { EventBus } from './bus';
-import { ErrorReporter } from './errors/ErrorReporter';
+import { reportErrors } from './errors/ErrorReporter';
 import { AuthService } from './auth/AuthService.svelte';
 import { DevAuthProvider } from './auth/DevAuthProvider';
 import { SupabaseAuthProvider } from './auth/SupabaseAuthProvider';
@@ -166,7 +166,7 @@ export const contextMenu = new ContextMenuService();
 
 export const errors = new ErrorMessages(STATUS_MESSAGES, UNKNOWN_MESSAGE).register(CORE_MESSAGES).register(LINK_MESSAGES);
 
-new ErrorReporter(bus, errors);
+reportErrors(bus, errors);
 
 const openSocket: SocketFactory =
   runtime.apiMode === 'http' ? webSocketFactory(runtime.apiUrl, settings.live.path) : async () => (await import('./mock')).createMockSocket();
