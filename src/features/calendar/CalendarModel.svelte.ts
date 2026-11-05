@@ -64,6 +64,8 @@ export class CalendarModel {
   readonly inTeam: CalendarEntry[];
   readonly visible: CalendarEntry[];
   readonly byDay: Map<LocalDate, CalendarEntry[]>;
+  /** Visible entries running across several days (bars); worked out once, not per day cell. */
+  readonly #multiDay: Set<CalendarEntry>;
 
   constructor(
     private readonly sources: CalendarSources,
@@ -85,6 +87,7 @@ export class CalendarModel {
     );
     this.visible = $derived(this.inTeam.filter((e) => this.isShown(e.source)));
     this.byDay = $derived(this.bucket(this.visible));
+    this.#multiDay = $derived(new Set(this.visible.filter((e) => CalendarModel.multiDay(e, this.clock))));
   }
 
   get today(): LocalDate {
@@ -154,16 +157,12 @@ export class CalendarModel {
 
   /** Entries of one day that do not run across several days (those are bars, see `spans`). */
   singleOn(date: LocalDate): CalendarEntry[] {
-    return this.entriesOn(date).filter((e) => !CalendarModel.multiDay(e, this.clock));
+    return this.entriesOn(date).filter((e) => !this.#multiDay.has(e));
   }
 
   /** Entries running across several days within `days` (one week), as bars in lanes. */
   spans(days: readonly LocalDate[]): { spans: Span[]; lanes: number } {
-    return CalendarModel.layoutSpans(
-      this.visible.filter((e) => CalendarModel.multiDay(e, this.clock)),
-      days,
-      this.clock,
-    );
+    return CalendarModel.layoutSpans([...this.#multiDay], days, this.clock);
   }
 
   /** Timed single-day entries of one day placed on the week grid between `startHour` and `endHour`. */
@@ -263,10 +262,11 @@ export class CalendarModel {
   private bucket(entries: readonly CalendarEntry[]): Map<LocalDate, CalendarEntry[]> {
     const map = new Map<LocalDate, CalendarEntry[]>();
     for (const entry of entries) {
-      const first = this.clock.localDate(entry.start);
-      const last = entry.end ? this.clock.localDate(new Date(Date.parse(entry.end) - 1)) : first;
+      const [first, last] = CalendarModel.spanOf(entry, this.clock);
       for (let day = first; day <= last; day = ZonedClock.addDays(day, 1)) {
-        map.set(day, [...(map.get(day) ?? []), entry]);
+        const list = map.get(day);
+        if (list) list.push(entry);
+        else map.set(day, [entry]);
       }
     }
     return map;
