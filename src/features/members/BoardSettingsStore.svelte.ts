@@ -7,8 +7,17 @@ export const BOARD_SETTINGS_CHANGED = liveEvent<Record<string, never>>('members.
 
 /** The club's office names and rules (server: members_office_setting); null until loaded. */
 export class BoardSettingsStore extends LiveStore<BoardSettings | null> {
-  constructor(api: MembersApi, bus: EventBus) {
+  constructor(
+    private readonly api: MembersApi,
+    bus: EventBus,
+  ) {
     super(() => api.boardSettings(), bus, BOARD_SETTINGS_CHANGED, null);
+  }
+
+  /** Saves a change on the settings as the server has them now (the rest stays), and keeps the answer. */
+  async update(change: (current: BoardSettings) => BoardSettings): Promise<BoardSettings> {
+    this.value = await this.api.saveBoardSettings(change(await this.api.boardSettings()));
+    return this.value;
   }
 
   /** One office's setting (the settings window); none until loaded. */

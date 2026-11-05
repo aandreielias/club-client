@@ -51,11 +51,7 @@
 
   /** The rest of the board settings is sent as the server has it now. */
   async function submit() {
-    await edit.submit(
-      (form) =>
-        stored.saved(async () => (boardSettings.value = await membersApi.saveBoardSettings(form.toSettings(await membersApi.boardSettings())))),
-      'Funktion gespeichert.',
-    );
+    await edit.submit((form) => stored.saved(() => boardSettings.update((current) => form.toSettings(current))), 'Funktion gespeichert.');
   }
 </script>
 

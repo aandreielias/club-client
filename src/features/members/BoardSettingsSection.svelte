@@ -6,7 +6,7 @@
   import SettingsList from '../../ui/SettingsList.svelte';
   import type { BoardSettings } from './MembersApi';
   import { partnersOf } from './OfficeSettingForm.svelte';
-  import { boardSettings, membersApi } from './services';
+  import { boardSettings } from './services';
 
   /** Einstellungen › Funktionen (admin/board): the board-wide rules, then the offices; each opens in the window. */
   type BoardRules = Pick<BoardSettings, 'minBoardSize' | 'oddBoardSize' | 'cooptWeeks' | 'termWarningDays' | 'byElectionDays'>;
@@ -29,18 +29,14 @@
 
   /** The offices are sent as the server has them now. */
   async function saveRules(rules: BoardRules): Promise<BoardRules> {
-    const saved = await membersApi.saveBoardSettings({ ...(await membersApi.boardSettings()), ...rules });
-    boardSettings.value = saved;
-    return rulesOf(saved);
+    return rulesOf(await boardSettings.update((current) => ({ ...current, ...rules })));
   }
 
   /** The list's order is the club's order of its offices (board page, pickers). */
   async function reorder(keys: string[]) {
-    await load.run(async () => {
-      const current = await membersApi.boardSettings();
-      const offices = keys.map((k) => current.offices.find((o) => o.office === k)!).filter(Boolean);
-      boardSettings.value = await membersApi.saveBoardSettings({ ...current, offices });
-    });
+    await load.run(() =>
+      boardSettings.update((current) => ({ ...current, offices: keys.map((k) => current.offices.find((o) => o.office === k)!).filter(Boolean) })),
+    );
   }
 
   const rows = $derived(

@@ -9,7 +9,7 @@
   import { settings } from '../../settings';
   import { ageProblems, type MembershipRules } from './membershipRules';
   import { HONORARY } from './MembersApi';
-  import { boardSettings, membersApi, membershipKinds } from './services';
+  import { boardSettings, membershipKinds } from './services';
 
   /**
    * Einstellungen › Mitgliedschaft (admin/board): the club's kinds of membership, each opens in the window and the order is dragged;
@@ -24,7 +24,7 @@
   const rulesLoad = new Action();
   const loadRules = () =>
     void rulesLoad.run(async () => {
-      const { multipleKinds, guardianUntilAge, ownConsentAge } = await membersApi.boardSettings();
+      const { multipleKinds, guardianUntilAge, ownConsentAge } = (await boardSettings.load())!;
       draft.load({ multipleKinds, guardianUntilAge, ownConsentAge });
     });
   loadRules();
@@ -34,8 +34,7 @@
   async function saveRules(rules: MembershipRules): Promise<MembershipRules> {
     const problem = Object.values(ageProblems(rules, limits))[0];
     if (problem) throw new Error(problem);
-    const saved = await membersApi.saveBoardSettings({ ...(await membersApi.boardSettings()), ...rules });
-    boardSettings.value = saved;
+    const saved = await boardSettings.update((current) => ({ ...current, ...rules }));
     return { multipleKinds: saved.multipleKinds, guardianUntilAge: saved.guardianUntilAge, ownConsentAge: saved.ownConsentAge };
   }
 
