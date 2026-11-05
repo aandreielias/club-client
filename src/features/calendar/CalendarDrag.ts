@@ -36,7 +36,7 @@ export class CalendarDrag {
 
   /** Chip side: offer the entry for dragging. */
   start(entry: CalendarEntry, event: DragEvent): void {
-    if (!this.canMove(entry) || !event.dataTransfer) return;
+    if (!entry.movable || !event.dataTransfer) return;
     event.dataTransfer.setData(CalendarDrag.TYPE, entry.key);
     event.dataTransfer.effectAllowed = 'move';
     const spot = CalendarDrag.spotAt(event.clientX, event.clientY);
@@ -93,10 +93,6 @@ export class CalendarDrag {
     }
   }
 
-  canMove(entry: CalendarEntry): boolean {
-    return this.sources.canMove(entry);
-  }
-
   /** New start/end when dropped on `day` (the grabbed day lands there), keeping the time of day. */
   toDay(entry: CalendarEntry, day: LocalDate): { start: string; end: string | null } {
     const time = this.clock.toLocal(entry.start).slice(11);
@@ -107,10 +103,6 @@ export class CalendarDrag {
   toTime(entry: CalendarEntry, day: LocalDate, minutes: number): { start: string; end: string | null } {
     const snapped = Math.max(0, Math.round((minutes - this.#grabMinutes) / this.snapMinutes) * this.snapMinutes);
     return this.shifted(entry, this.clock.toInstant(ZonedClock.addMinutes(`${day}T00:00`, snapped)));
-  }
-
-  canResize(entry: CalendarEntry): boolean {
-    return this.sources.canResize(entry);
   }
 
   /**

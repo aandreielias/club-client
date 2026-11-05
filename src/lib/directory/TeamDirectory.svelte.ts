@@ -131,12 +131,18 @@ export class TeamDirectory {
     return this.#rosters[teamId]?.entries.find((e) => e.memberId === memberId)?.teamRole ?? null;
   }
 
+  /** member → names of the loaded teams whose roster contains them, sorted; worked out once per roster change. */
+  readonly #teamsByMember = $derived.by(() => {
+    const out = new Map<string, string[]>();
+    for (const r of Object.values(this.#rosters))
+      for (const e of r.entries) (out.get(e.memberId) ?? out.set(e.memberId, []).get(e.memberId)!).push(r.team.name);
+    for (const names of out.values()) names.sort((a, b) => a.localeCompare(b, 'de'));
+    return out;
+  });
+
   /** Names of the loaded teams whose roster contains the member, sorted. */
   teamsOf(memberId: string): string[] {
-    return Object.values(this.#rosters)
-      .filter((r) => r.entries.some((e) => e.memberId === memberId))
-      .map((r) => r.team.name)
-      .sort((a, b) => a.localeCompare(b, 'de'));
+    return this.#teamsByMember.get(memberId) ?? [];
   }
 
   /** Forgets the team list (e.g. after a team was created) so the next loadTeams reloads it. */

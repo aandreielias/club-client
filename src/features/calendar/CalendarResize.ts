@@ -27,7 +27,7 @@ export class CalendarResize {
   ) {}
 
   begin(event: PointerEvent, entry: CalendarEntry, edge: ResizeEdge, mode: ResizeMode): void {
-    if (!this.drag.canResize(entry) || event.button !== 0) return;
+    if (!entry.resizable || event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
     const handle = event.currentTarget as HTMLElement;

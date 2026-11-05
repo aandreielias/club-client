@@ -182,7 +182,9 @@ export class ListModel<T> {
     const column = this.column(this.sort.key);
     if (!column) return filtered;
     const factor = this.sort.dir === 'asc' ? 1 : -1;
-    return [...filtered].sort((a, b) => ListModel.compare(column.value(a), column.value(b), factor));
+    // Each sort value once, not once per comparison (values like a member's teams are not free).
+    const keyed = filtered.map((item) => ({ item, value: column.value(item) }));
+    return keyed.sort((a, b) => ListModel.compare(a.value, b.value, factor)).map((k) => k.item);
   }
 
   /** Nulls always last, numbers numerically, text by locale with numeric awareness. */

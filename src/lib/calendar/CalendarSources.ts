@@ -55,6 +55,8 @@ export type CalendarStyle = (item: CalendarItem) => Partial<Pick<CalendarEntry, 
 /** Kinds without a window: offices go to their page, absences open nothing (they say all there is). */
 const PAGES: Readonly<Record<string, string | null>> = { absence: null, office: '/board', holiday: null };
 
+type Answer = { appointmentId: string; memberId: string; status: 'YES' | 'NO' | 'MAYBE' };
+
 /**
  * The calendar's one source: everything with a date the member sees, collected by the server from every module
  * (GET /api/v1/calendar/items). Features only style their categories.
@@ -74,14 +76,6 @@ export class CalendarSources {
     return CATEGORIES;
   }
 
-  canMove(entry: CalendarEntry): boolean {
-    return entry.movable;
-  }
-
-  canResize(entry: CalendarEntry): boolean {
-    return entry.resizable;
-  }
-
   /** Saves the new time (moved or resized); the server checks rights and rules. */
   async move(entry: CalendarEntry, start: string, end: string | null): Promise<void> {
     if (!entry.movable && !entry.resizable) throw new Error('Dieser Eintrag lässt sich nicht verschieben.');
@@ -90,20 +84,33 @@ export class CalendarSources {
 
   /** Entries overlapping [from, to) of the enabled categories (all when `enabled` is omitted), sorted by start. */
   async load(from: string, to: string, enabled?: ReadonlySet<string>): Promise<CalendarEntry[]> {
-    const [items, answers] = await Promise.all([
-      this.api.get<{ items: CalendarItem[] }>('/api/v1/calendar/items', { from, to }).then((r) => r.items),
-      // Own and the minors' answers mark the appointments (own first); an older server just shows no marks.
-      this.api
-        .get<{ items: { appointmentId: string; memberId: string; status: 'YES' | 'NO' | 'MAYBE' }[] }>('/api/v1/me/answers', { from, to })
-        .then((r) => r.items)
-        .catch(() => []),
-    ]);
+    const [items, answers] = await this.fetch(from, to);
     const answerOf = new Map<string, 'YES' | 'NO' | 'MAYBE'>();
     for (const a of answers) if (!answerOf.has(a.appointmentId) || a.status === 'YES') answerOf.set(a.appointmentId, a.status);
     return items
       .filter((i) => !enabled || enabled.has(i.category))
       .map((i) => ({ ...this.entry(i), answer: i.kind === 'appointment' ? (answerOf.get(i.id) ?? null) : null }))
       .sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
+  }
+
+  readonly #loading = new Map<string, Promise<[CalendarItem[], Answer[]]>>();
+
+  /** Sections asking for the same days at the same time (start page) share one pair of requests. */
+  private fetch(from: string, to: string): Promise<[CalendarItem[], Answer[]]> {
+    const key = `${from}|${to}`;
+    let load = this.#loading.get(key);
+    if (!load) {
+      load = Promise.all([
+        this.api.get<{ items: CalendarItem[] }>('/api/v1/calendar/items', { from, to }).then((r) => r.items),
+        // Own and the minors' answers mark the appointments (own first); an older server just shows no marks.
+        this.api
+          .get<{ items: Answer[] }>('/api/v1/me/answers', { from, to })
+          .then((r) => r.items)
+          .catch(() => []),
+      ]).finally(() => this.#loading.delete(key));
+      this.#loading.set(key, load);
+    }
+    return load;
   }
 
   entry(item: CalendarItem): CalendarEntry {
