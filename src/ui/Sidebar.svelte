@@ -10,6 +10,7 @@
   import { settings } from '../settings';
   import { SPLIT_OPEN } from '../lib/split/SplitView.svelte';
   import { menu } from './contextMenu';
+  import type { IconName } from '../icons';
   import Icon from './Icon.svelte';
   import { KeySpec } from '../lib/keyboard/KeySpec';
   import GlobalSearch from './GlobalSearch.svelte';
@@ -99,6 +100,19 @@
   });
 </script>
 
+{#snippet link(path: string, label: string, icon: IconName | undefined, tip: string)}
+  <a
+    href="#{path}"
+    class:active={isActive(path)}
+    aria-current={isActive(path) ? 'page' : undefined}
+    {@attach tooltip(tip)}
+    onclick={(e) => go(e, path)}
+  >
+    {#if icon}<Icon name={icon} />{/if}
+    <span class="label">{label}</span>
+  </a>
+{/snippet}
+
 {#snippet tab(item: NavItem)}
   <a
     href="#{item.path}"
@@ -164,36 +178,14 @@
           <li class="section-title" aria-hidden="true"><Icon name={group.icon} small /><span class="label">{group.label}</span></li>
           {#each group.subgroups as sub (sub.label)}
             {#each sub.tabs.filter((t) => shown(t.id)) as tab (tab.id)}
-              <li>
-                <a
-                  href="#/settings/{tab.id}"
-                  class:active={isActive(`/settings/${tab.id}`)}
-                  aria-current={isActive(`/settings/${tab.id}`) ? 'page' : undefined}
-                  {@attach tooltip(`${group.label} › ${tab.label}`)}
-                  onclick={(e) => go(e, `/settings/${tab.id}`)}
-                >
-                  <Icon name={tab.icon} />
-                  <span class="label">{tab.label}</span>
-                </a>
-              </li>
+              <li>{@render link(`/settings/${tab.id}`, tab.label, tab.icon, `${group.label} › ${tab.label}`)}</li>
             {/each}
           {/each}
         {/if}
       {/each}
       {#each settingsTree.tabs.filter((t) => t.id === 'general' && shown(t.id)) as tab (tab.id)}
         <li class="section-title" aria-hidden="true"></li>
-        <li>
-          <a
-            href="#/settings/{tab.id}"
-            class:active={isActive(`/settings/${tab.id}`)}
-            aria-current={isActive(`/settings/${tab.id}`) ? 'page' : undefined}
-            {@attach tooltip(tab.label)}
-            onclick={(e) => go(e, `/settings/${tab.id}`)}
-          >
-            <Icon name={tab.icon} />
-            <span class="label">{tab.label}</span>
-          </a>
-        </li>
+        <li>{@render link(`/settings/${tab.id}`, tab.label, tab.icon, tab.label)}</li>
       {/each}
       {#if settingsFound && settingsFound.size === 0}
         <li class="none muted">Nichts gefunden.</li>
@@ -271,16 +263,7 @@
       <Kbd keys={keymap.keys('palette.open')} />
     </button>
     {#each items.filter((i) => i.footer && !(settingsTree && i.path === '/settings')) as item (item.path)}
-      <a
-        href="#{item.path}"
-        class:active={isActive(item.path)}
-        aria-current={isActive(item.path) ? 'page' : undefined}
-        {@attach tooltip(`Zu ${item.label}${navKeys(item.path)}`)}
-        onclick={(e) => go(e, item.path)}
-      >
-        {#if item.icon}<Icon name={item.icon} />{/if}
-        <span class="label">{item.label}</span>
-      </a>
+      {@render link(item.path, item.label, item.icon, `Zu ${item.label}${navKeys(item.path)}`)}
     {/each}
     <div class="user">
       <a
