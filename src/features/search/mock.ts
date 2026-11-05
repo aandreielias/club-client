@@ -2,6 +2,7 @@
 // endpoint, as the gateway asks every module over the bus, and filters by text.
 import { settings } from '../../settings';
 import { directory } from '../../lib/mock/core';
+import { mail } from '../mail/mock';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import type { HitKind, SearchHit } from './model';
 
@@ -63,7 +64,7 @@ mockServer.on('GET', '/api/v1/search', async (req) => {
     list(req, '/api/v1/meetings'),
     list(req, '/api/v1/folders'),
     list(req, `/api/v1/files?q=${encodeURIComponent(query)}&limit=${limit}`),
-    list(req, `/api/v1/mail/search?q=${encodeURIComponent(query)}&limit=${limit}`),
+    Promise.resolve(mail.search(directory.actor(req), query, limit)), // server: MailApi.SEARCH, no endpoint of its own
   ]);
   const past = (a: Record<string, any>) => Date.parse(a.endsAt) < now;
   // A weekly series only once, at its next date.

@@ -12,7 +12,7 @@ export class NotificationsApi {
   }
 
   markRead(id: string): Promise<void> {
-    return this.api.post(`${NotificationsApi.BASE}/notifications/${encodeURIComponent(id)}/read`);
+    return this.api.patch(`${NotificationsApi.BASE}/notifications/${encodeURIComponent(id)}`, { read: true });
   }
 
   markAllRead(): Promise<void> {

@@ -396,7 +396,10 @@ const me = (req: MockRequest) => directory.actor(req).id;
 mockServer
   .on('GET', '/api/v1/me/notifications', (req) => notifications.list(me(req), req.query.get('unreadOnly') === 'true'))
   .on('POST', '/api/v1/me/notifications/read-all', (req) => notifications.markAllRead(me(req)))
-  .on('POST', '/api/v1/me/notifications/:id/read', (req) => notifications.markRead(me(req), req.params.id))
+  .on('PATCH', '/api/v1/me/notifications/:id', (req) => {
+    if (req.body?.read !== true) MockServer.fail(400, 'request.invalid'); // server: ReadBody, only true
+    return notifications.markRead(me(req), req.params.id);
+  })
   .on('GET', '/api/v1/me/notification-preferences', (req) => ({ items: notifications.effective(me(req)) }))
   .on('POST', '/api/v1/notifications/messages', (req) => notifications.send(directory.actor(req), req.body ?? {}, false))
   .on('POST', '/api/v1/notifications/messages/preview', (req) => notifications.send(directory.actor(req), req.body ?? {}, true))

@@ -141,10 +141,6 @@ export class MeetingsApi {
     return this.api.put<Meeting>(`${this.path(id)}/links`, { refs: refs.map(({ kind, id: refId }) => ({ kind, id: refId })) });
   }
 
-  setPresence(id: string, memberId: string, present: boolean): Promise<Meeting> {
-    return this.api.put<Meeting>(`${this.path(id)}/presence/${encodeURIComponent(memberId)}`, { present });
-  }
-
   // --- resolutions ---
 
   async resolutions(meetingId: string): Promise<Resolution[]> {

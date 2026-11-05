@@ -80,7 +80,7 @@ export class MeetingModel {
   }
 
   setPresence(memberId: string, present: boolean): Promise<boolean> {
-    return this.write(() => this.api.setPresence(this.id, memberId, present));
+    return this.write(() => this.api.setPresenceMany(this.id, [memberId], present));
   }
 
   generateInvitation(): Promise<boolean> {

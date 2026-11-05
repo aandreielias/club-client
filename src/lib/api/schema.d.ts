@@ -277,22 +277,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/meetings/{id}/presence/{memberId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["presence"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/meetings/{id}/presence/me": {
         parameters: {
             query?: never;
@@ -589,7 +573,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["presence_1"];
+        put: operations["presence"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1269,22 +1253,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/me/notifications/{id}/read": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["markRead"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/me/notifications/read-all": {
         parameters: {
             query?: never;
@@ -1781,6 +1749,22 @@ export interface paths {
         patch: operations["update_6"];
         trace?: never;
     };
+    "/api/v1/me/notifications/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["markRead"];
+        trace?: never;
+    };
     "/api/v1/mail/mailboxes/{id}/messages/{mailId}": {
         parameters: {
             query?: never;
@@ -1852,7 +1836,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["file"];
+        get?: never;
         put?: never;
         post?: never;
         delete: operations["delete_8"];
@@ -1909,7 +1893,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/teams/{id}/matches": {
+    "/api/v1/teams/{teamId}/matches": {
         parameters: {
             query?: never;
             header?: never;
@@ -1925,7 +1909,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/teams/{id}/attendance": {
+    "/api/v1/teams/{teamId}/attendance": {
         parameters: {
             query?: never;
             header?: never;
@@ -2037,22 +2021,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/members/change-requests": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["changeRequests"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/members/change-requests/{id}": {
         parameters: {
             query?: never;
@@ -2141,22 +2109,6 @@ export interface paths {
             cookie?: never;
         };
         get: operations["myAnswers"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/mail/search": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["search_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2268,7 +2220,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["search_2"];
+        get: operations["search_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2316,7 +2268,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["file_1"];
+        get: operations["file"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2946,9 +2898,6 @@ export interface components {
         };
         "at.clubserver.gateway.rest.MeetingsController.PresenceManyBody": {
             memberIds: string[];
-            present: boolean;
-        };
-        "at.clubserver.gateway.rest.MeetingsController.PresenceBody": {
             present: boolean;
         };
         "at.clubserver.gateway.rest.MeetingsController.MeetingLinksBody": {
@@ -3858,6 +3807,9 @@ export interface components {
             videoUrl: string;
             protocol: string;
         };
+        "at.clubserver.gateway.rest.NotificationsController.ReadBody": {
+            read: boolean;
+        };
         "at.clubserver.gateway.rest.MailController.MailPatch": {
             read: boolean;
             /** @enum {string} */
@@ -4073,9 +4025,6 @@ export interface components {
         "at.clubserver.members.api.MembersApi.MemberIds": {
             ids: string[];
         };
-        "at.clubserver.members.api.MembersApi.ChangeRequestList": {
-            items: components["schemas"]["at.clubserver.members.api.MembersApi.ChangeRequestDto"][];
-        };
         "at.clubserver.meetings.api.MeetingsApi.MeetingList": {
             items: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.MeetingSummary"][];
         };
@@ -4154,6 +4103,9 @@ export interface components {
                 };
             };
         };
+        "at.clubserver.members.api.MembersApi.ChangeRequestList": {
+            items: components["schemas"]["at.clubserver.members.api.MembersApi.ChangeRequestDto"][];
+        };
         "at.clubserver.attendance.api.AttendanceApi.MyAnswer": {
             /** Format: uuid */
             appointmentId: string;
@@ -4167,18 +4119,6 @@ export interface components {
         };
         "at.clubserver.attendance.api.AttendanceApi.AbsenceList": {
             items: components["schemas"]["at.clubserver.attendance.api.AttendanceApi.AbsenceDto"][];
-        };
-        "at.clubserver.mail.api.MailApi.MailHit": {
-            /** Format: uuid */
-            mailboxId: string;
-            mailId: string;
-            subject: string;
-            fromName: string;
-            /** Format: date-time */
-            sentAt: string;
-        };
-        "at.clubserver.mail.api.MailApi.MailHits": {
-            items: components["schemas"]["at.clubserver.mail.api.MailApi.MailHit"][];
         };
         "at.clubserver.mail.api.MailApi.MailRefDto": {
             code: string;
@@ -4871,33 +4811,6 @@ export interface operations {
             };
         };
     };
-    presence: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                memberId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["at.clubserver.gateway.rest.MeetingsController.PresenceBody"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.MeetingDto"];
-                };
-            };
-        };
-    };
     checkIn: {
         parameters: {
             query?: never;
@@ -5530,7 +5443,7 @@ export interface operations {
             };
         };
     };
-    presence_1: {
+    presence: {
         parameters: {
             query?: never;
             header?: never;
@@ -6835,26 +6748,6 @@ export interface operations {
             };
         };
     };
-    markRead: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     markAllRead: {
         parameters: {
             query?: never;
@@ -8149,6 +8042,30 @@ export interface operations {
             };
         };
     };
+    markRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.NotificationsController.ReadBody"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     get_5: {
         parameters: {
             query?: never;
@@ -8400,28 +8317,6 @@ export interface operations {
             };
         };
     };
-    file: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.files.api.FilesApi.FileDto"];
-                };
-            };
-        };
-    };
     delete_8: {
         parameters: {
             query?: never;
@@ -8588,7 +8483,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                id: string;
+                teamId: string;
             };
             cookie?: never;
         };
@@ -8613,7 +8508,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                id: string;
+                teamId: string;
             };
             cookie?: never;
         };
@@ -8759,28 +8654,6 @@ export interface operations {
             };
         };
     };
-    changeRequests: {
-        parameters: {
-            query?: {
-                status?: "OPEN" | "APPROVED" | "REJECTED";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.ChangeRequestList"];
-                };
-            };
-        };
-    };
     changeRequest: {
         parameters: {
             query?: never;
@@ -8906,29 +8779,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.attendance.api.AttendanceApi.MyAnswers"];
-                };
-            };
-        };
-    };
-    search_1: {
-        parameters: {
-            query: {
-                q: string;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.mail.api.MailApi.MailHits"];
                 };
             };
         };
@@ -9059,7 +8909,7 @@ export interface operations {
             };
         };
     };
-    search_2: {
+    search_1: {
         parameters: {
             query?: {
                 q?: string;
@@ -9129,7 +8979,7 @@ export interface operations {
             };
         };
     };
-    file_1: {
+    file: {
         parameters: {
             query?: never;
             header?: never;

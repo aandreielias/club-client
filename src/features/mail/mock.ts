@@ -574,7 +574,6 @@ mockServer
   .on('GET', '/api/v1/mail/mailboxes', (req) => ({ items: mail.list(actor(req)) }))
   .on('GET', '/api/v1/mail/mailboxes/:id/messages', (req) => mail.folder(actor(req), req.params.id, req.query.get('folder'), req.query.get('after')))
   .on('PATCH', '/api/v1/mail/mailboxes/:id/messages/:mailId', (req) => mail.update(actor(req), req.params.id, req.params.mailId, req.body ?? {}))
-  .on('GET', '/api/v1/mail/search', (req) => ({ items: mail.search(actor(req), req.query.get('q') ?? '', Number(req.query.get('limit') ?? 10)) }))
   .on('GET', '/api/v1/mail/admin/settings', (req) => mail.mailSettings(actor(req)))
   .on('PUT', '/api/v1/mail/admin/settings', (req) => mail.saveMailSettings(actor(req), req.body ?? {}))
   .on('POST', '/api/v1/mail/mailboxes/:id/messages', (req) => mail.send(actor(req), req.params.id, req.body ?? {}))

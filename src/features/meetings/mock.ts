@@ -7,7 +7,7 @@ import { resolveRef } from '../../lib/mock/recordRefs';
 import { files } from '../files/mock';
 import { defaultTemplate, fill, PROTOCOL_TEMPLATE_NAME, protocolTemplate, TEMPLATE_NAME } from './invitationDocument';
 import type { LinkedRef, RefKind } from '../../lib/records/refs';
-import { ADMIN_BOARD, type Member } from '../../lib/types';
+import { ADMIN_BOARD, type Member, type Role } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
 import { officeUses } from '../members/mock';
 import { tasks } from '../tasks/mock';
@@ -1048,13 +1048,20 @@ export class MockMeetings {
     };
   }
 
+  /** server: MeetingAccess.audience — an invited general meeting reaches its electorate, everything else admin and board. */
+  private audience(m: StoredMeeting): { members?: string[]; roles: Role[] } {
+    return isAssembly(this.type(m.kind)) && m.status !== 'DRAFT'
+      ? { members: this.meetingVoters(m), roles: [...ADMIN_BOARD] }
+      : { roles: [...ADMIN_BOARD] };
+  }
+
   private resolutionChanged(r: StoredResolution, change: string): void {
     this.resolutions.save();
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId) : null;
     mockServer.events.publish({
       type: 'meetings.resolution-changed',
       data: { resolutionId: r.id, meetingId: r.meetingId, change },
-      audience: meeting && isAssembly(this.type(meeting.kind)) ? { everyone: true } : { roles: ADMIN_BOARD },
+      audience: meeting ? this.audience(meeting) : { roles: ADMIN_BOARD },
     });
   }
 
@@ -1264,7 +1271,7 @@ export class MockMeetings {
     mockServer.events.publish({
       type: 'meetings.meeting-changed',
       data: { meetingId: m.id, change },
-      audience: isAssembly(this.type(m.kind)) ? { everyone: true } : { roles: ADMIN_BOARD },
+      audience: this.audience(m),
     });
   }
 }
@@ -1324,7 +1331,4 @@ mockServer
   .on('POST', '/api/v1/meetings/:id/invitation-document', (req) => meetings.generateInvitation(actor(req), req.params.id))
   .on('PUT', '/api/v1/resolutions/:id/links', (req) => meetings.setResolutionLinks(actor(req), req.params.id, req.body?.refs))
   .on('PUT', '/api/v1/resolutions/:id/assignees', (req) => meetings.setResolutionAssignees(actor(req), req.params.id, req.body ?? {}))
-  .on('PUT', '/api/v1/meetings/:id/links', (req) => meetings.setLinks(actor(req), req.params.id, req.body?.refs))
-  .on('PUT', '/api/v1/meetings/:id/presence/:memberId', (req) =>
-    meetings.setPresence(actor(req), req.params.id, req.params.memberId, req.body?.present),
-  );
+  .on('PUT', '/api/v1/meetings/:id/links', (req) => meetings.setLinks(actor(req), req.params.id, req.body?.refs));
