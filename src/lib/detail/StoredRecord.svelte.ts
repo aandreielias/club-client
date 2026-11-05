@@ -1,3 +1,4 @@
+import { background } from '../state/background';
 import type { Action } from '../state/Action.svelte';
 import type { DetailController } from './DetailController.svelte';
 
@@ -23,7 +24,8 @@ export class StoredRecord<T> {
     busy: () => boolean,
   ) {
     this.record = $derived(store.get(key()));
-    void store.load().finally(() => (this.#loaded = true));
+    // A failed load is no proof the record is gone: the view then keeps showing what the store already holds.
+    background(store.load().then(() => (this.#loaded = true)));
     $effect(() => {
       if (this.#loaded && !this.record && !busy()) {
         if (!this.#removed) view.notify(gone);

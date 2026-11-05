@@ -138,7 +138,7 @@ export class MockMeetings {
       fail(400, 'resolution-rules.circular-invalid');
     Object.assign(this.circular.data, { minHours: c!.minHours, quorum: c!.quorum });
     this.circular.save();
-    mockServer.events.publish({ type: 'meetings.resolution-rules-changed', data: {} });
+    mockServer.events.publish({ type: 'meetings.resolution-rules-changed', data: {}, audience: { everyone: true } });
     return { circular: this.circular.data };
   }
 
@@ -1146,7 +1146,7 @@ export class MockMeetings {
 
   private typesChanged(): void {
     this.types.save();
-    mockServer.events.publish({ type: 'meetings.meeting-types-changed', data: {} });
+    mockServer.events.publish({ type: 'meetings.meeting-types-changed', data: {}, audience: { everyone: true } });
   }
 
   /** server: MeetingAccess.electorate — fixed when the meeting opened. */

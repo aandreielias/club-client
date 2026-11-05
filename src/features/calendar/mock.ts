@@ -1129,7 +1129,7 @@ export const appointmentTypes = {
     if (index >= 0) types.data[index] = type;
     else types.data.push(type);
     types.save();
-    mockServer.events.publish({ type: 'calendar.appointment-types-changed', data: {} });
+    mockServer.events.publish({ type: 'calendar.appointment-types-changed', data: {}, audience: { everyone: true } });
     return { ...type, inUse: calendar.appointments.data.some((a) => a.type === type.key) };
   },
 
@@ -1140,7 +1140,7 @@ export const appointmentTypes = {
     if (calendar.appointments.data.some((a) => a.type === key)) fail(409, 'appointment-type.in-use');
     types.data.splice(index, 1);
     types.save();
-    mockServer.events.publish({ type: 'calendar.appointment-types-changed', data: {} });
+    mockServer.events.publish({ type: 'calendar.appointment-types-changed', data: {}, audience: { everyone: true } });
   },
 };
 

@@ -24,8 +24,13 @@ export class LiveStore<T> {
     return this.bus.subscribe(this.changed, () => background(this.load())).unsubscribe;
   }
 
+  #sequence = 0;
+
+  /** Only the newest load sets the value: an older answer arriving late never overwrites a newer one. */
   async load(): Promise<T> {
-    this.value = await this.fetch();
+    const sequence = ++this.#sequence;
+    const value = await this.fetch();
+    if (sequence === this.#sequence) this.value = value;
     return this.value;
   }
 }

@@ -55,7 +55,7 @@ export class MockBoard {
     this.people.membershipKinds.data.splice(0, this.people.membershipKinds.data.length, ...next);
     this.people.membershipKinds.save();
     this.people.saveMembers();
-    mockServer.events.publish({ type: 'members.membership-kinds-changed', data: {} });
+    mockServer.events.publish({ type: 'members.membership-kinds-changed', data: {}, audience: { everyone: true } });
     return { ...kind, inUse: this.inUse(kind.key) };
   }
 
@@ -67,7 +67,7 @@ export class MockBoard {
     if (this.inUse(key)) fail(409, 'membership-kind.in-use');
     this.people.membershipKinds.data.splice(index, 1);
     this.people.membershipKinds.save();
-    mockServer.events.publish({ type: 'members.membership-kinds-changed', data: {} });
+    mockServer.events.publish({ type: 'members.membership-kinds-changed', data: {}, audience: { everyone: true } });
   }
 
   board(): { offices: (OfficeRow & { name: string })[]; warnings: string[] } {
@@ -125,7 +125,7 @@ export class MockBoard {
     if (this.people.boardSettings.data.offices.length >= 40) fail(409, 'board-settings.too-many-offices');
     this.people.boardSettings.data.offices.push(office);
     this.people.boardSettings.save();
-    mockServer.events.publish({ type: 'members.board-settings-changed', data: {} });
+    mockServer.events.publish({ type: 'members.board-settings-changed', data: {}, audience: { everyone: true } });
     return this.people.boardSettings.data;
   }
 
@@ -138,7 +138,7 @@ export class MockBoard {
     settings.offices = settings.offices.filter((o) => o.office !== office);
     settings.combinations = settings.combinations.filter((p) => p.a !== office && p.b !== office);
     this.people.boardSettings.save();
-    mockServer.events.publish({ type: 'members.board-settings-changed', data: {} });
+    mockServer.events.publish({ type: 'members.board-settings-changed', data: {}, audience: { everyone: true } });
     return settings;
   }
 
@@ -189,7 +189,7 @@ export class MockBoard {
     // an office moved on or off the board changes its holders' BOARD role
     for (const m of this.people.members.data) this.people.syncBoardRole(m);
     this.people.saveMembers();
-    mockServer.events.publish({ type: 'members.board-settings-changed', data: {} });
+    mockServer.events.publish({ type: 'members.board-settings-changed', data: {}, audience: { everyone: true } });
     return this.people.boardSettings.data;
   }
 

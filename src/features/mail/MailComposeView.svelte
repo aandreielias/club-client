@@ -76,7 +76,14 @@
   // svelte-ignore state_referenced_locally
   let lastSaved = '';
 
-  async function saveDraft(): Promise<void> {
+  /** Saves one after another: a second save waits for the first draft's id instead of creating another draft. */
+  let saving: Promise<void> = Promise.resolve();
+  function saveDraft(): Promise<void> {
+    saving = saving.then(writeDraft);
+    return saving;
+  }
+
+  async function writeDraft(): Promise<void> {
     const f = form;
     if (!f || sent) return;
     const snapshot = JSON.stringify([f.mailboxId, f.toDraft()]);
@@ -112,10 +119,12 @@
     if (snapshot === untrack(() => lastSaved)) return;
     saveState = 'pending';
     const timer = setTimeout(() => void saveDraft(), limits.draftDelayMs);
-    return () => {
-      clearTimeout(timer);
-      if (untrack(() => saveState) === 'pending') void saveDraft();
-    };
+    return () => clearTimeout(timer);
+  });
+
+  // Closing the window keeps changes typed since the last save.
+  $effect(() => () => {
+    if (untrack(() => saveState) === 'pending') void saveDraft();
   });
 
   function chooseSender(boxId: string) {
@@ -129,8 +138,9 @@
     form.submitted = true;
     if (!form.valid) return;
     const f = form;
-    if (f.draftId && draftBox && draftBox !== f.mailboxId) f.draftId = null; // the old one is left in its mailbox's drafts
     sent = true;
+    await saving; // a draft save still running sets the id the send removes
+    if (f.draftId && draftBox && draftBox !== f.mailboxId) f.draftId = null; // the old one is left in its mailbox's drafts
     if (await send.run(() => mailApi.send(f.mailboxId, f.toMail()))) {
       bus.publish(TOAST, { text: 'E-Mail gesendet.' });
       void center.mailboxes.load();
@@ -146,6 +156,7 @@
 
   async function discard() {
     sent = true;
+    await saving;
     const f = form;
     if (f?.draftId && draftBox) {
       await mailApi.delete(draftBox, f.draftId).catch(() => undefined);
