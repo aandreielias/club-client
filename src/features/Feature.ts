@@ -1,4 +1,5 @@
 import type { Component } from 'svelte';
+import DetailRoutePage, { type DetailRoute } from '../ui/DetailRoutePage.svelte';
 import type { MessageCatalog } from '../lib/errors/ErrorMessages';
 import type { CalendarStyle } from '../lib/calendar/CalendarSources';
 import type { CalendarCategory } from '../lib/calendar/categories';
@@ -32,6 +33,13 @@ export interface FeatureRoute {
   guest?: boolean;
   /** Count shown next to the sidebar label (e.g. unread items); read reactively. */
   badge?: () => number;
+  /** Set by {@link detailRoute}: the record view the page shows. */
+  detail?: DetailRoute;
+}
+
+/** Route of a window's full page ("Als Seite öffnen", shared links). */
+export function detailRoute(path: string, view: DetailRoute['view'], back: DetailRoute['back'], extra: Partial<FeatureRoute> = {}): FeatureRoute {
+  return { path, component: DetailRoutePage as unknown as PageComponent, detail: { view, back }, ...extra };
 }
 
 /** A self-contained slice of the website: its routes and error texts. */

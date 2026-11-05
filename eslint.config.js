@@ -8,7 +8,7 @@ import ts from 'typescript-eslint';
  * `events` (live events), `*Section.svelte` (sections shown in settings, the start page or another record) and, between mock
  * modules, `mock`. Everything else in a feature folder is private to it.
  */
-const FEATURE_PRIVATE = String.raw`^\.\./(?!lib/)[a-z]+/(?!(services|model|events|mock|mockSeeds|[A-Z]\w*Api|[A-Z]\w*Section\.svelte)$)[^/]+$`;
+const FEATURE_PRIVATE = String.raw`^\.\./(?!lib/|ui/)[a-z]+/(?!(services|model|events|mock|mockSeeds|[A-Z]\w*Api|[A-Z]\w*Section\.svelte)$)[^/]+$`;
 
 export default ts.config(
   // The Svelte parser does not read member expressions in directives (`transition:motion.fade`) yet.

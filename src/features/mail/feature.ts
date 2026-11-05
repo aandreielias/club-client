@@ -1,7 +1,6 @@
 import { ADMIN_BOARD } from '../../lib/types';
-import type { Feature } from '../Feature';
+import { detailRoute, type Feature } from '../Feature';
 import MailboxCreateView from './MailboxCreateView.svelte';
-import MailboxPage from './MailboxPage.svelte';
 import MailboxView from './MailboxView.svelte';
 import MailComposeView from './MailComposeView.svelte';
 import MailPage from './MailPage.svelte';
@@ -16,7 +15,7 @@ export const mailFeature: Feature = {
   routes: [
     // server: MailHandlers - the own mailbox and the shared ones of the member's roles.
     { path: '/mail', component: MailPage, nav: 'E-Mail', icon: 'mail', badge: () => mailCenter.unread },
-    { path: '/mailboxes/:id', component: MailboxPage, roles: ADMIN_BOARD },
+    detailRoute('/mailboxes/:id', MailboxView, { href: '/settings/mailboxes', label: 'Postfächer' }, { roles: ADMIN_BOARD }),
     // A record linked in a mail, opened from outside (`<website>/app/r/<code>`, see lib/router/DeepLink).
     { path: '/r/:code', component: RecordCodePage },
   ],

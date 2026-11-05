@@ -3,15 +3,13 @@ import MembersHome from './MembersHome.svelte';
 import BoardHome from './BoardHome.svelte';
 import { permissions } from '../../lib/container';
 import { ADMIN_BOARD } from '../../lib/types';
-import type { Feature } from '../Feature';
+import { detailRoute, type Feature } from '../Feature';
 import MemberInviteView from './MemberInviteView.svelte';
-import MemberPage from './MemberPage.svelte';
 import MemberView from './MemberView.svelte';
 import { MEMBER_MESSAGES } from './messages';
-import { boardSettings, membershipKinds } from './services';
+import { boardSettings, memberPolicy, membershipKinds } from './services';
 import MembersPage from './MembersPage.svelte';
 import MembershipKindCreateView from './MembershipKindCreateView.svelte';
-import MembershipKindPage from './MembershipKindPage.svelte';
 import OfficeSettingCreateView from './OfficeSettingCreateView.svelte';
 import OfficeSettingView from './OfficeSettingView.svelte';
 import MembershipKindView from './MembershipKindView.svelte';
@@ -22,10 +20,12 @@ export const membersFeature: Feature = {
     { path: '/members', component: MembersPage, nav: 'Mitglieder', icon: 'members', roles: ADMIN_BOARD },
     // Coaches open profiles of their team members (server: requireMaySee).
     // Guardians open their wards' profiles too (server: requireMaySee); the window checks per member.
-    { path: '/members/:id', component: MemberPage },
+    detailRoute('/members/:id', MemberView, () =>
+      memberPolicy.isManager ? { href: '/members', label: 'Mitglieder' } : { href: '/teams', label: 'Teams' },
+    ),
     // Who holds which function is known club-wide (server: LIST_OFFICES for every member).
     { path: '/board', component: BoardPage, nav: 'Vorstand', icon: 'club' },
-    { path: '/membership-kinds/:key', component: MembershipKindPage, roles: ADMIN_BOARD },
+    detailRoute('/membership-kinds/:key', MembershipKindView, { href: '/settings/membership', label: 'Mitgliedschaft' }, { roles: ADMIN_BOARD }),
   ],
   windows: {
     // server: requireMaySee - coaches only the members of their teams.

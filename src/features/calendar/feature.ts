@@ -2,13 +2,11 @@ import CalendarHome from './CalendarHome.svelte';
 import OpenAnswersHome from './OpenAnswersHome.svelte';
 import { permissions } from '../../lib/container';
 import { ADMIN_BOARD } from '../../lib/types';
-import type { Feature } from '../Feature';
+import { detailRoute, type Feature } from '../Feature';
 import { appointmentTypes } from './services';
 import AppointmentCreateView from './AppointmentCreateView.svelte';
-import AppointmentPage from './AppointmentPage.svelte';
 import AppointmentView from './AppointmentView.svelte';
 import AppointmentTypeCreateView from './AppointmentTypeCreateView.svelte';
-import AppointmentTypePage from './AppointmentTypePage.svelte';
 import AppointmentTypeView from './AppointmentTypeView.svelte';
 import CalendarPage from './CalendarPage.svelte';
 import EventsPage from './EventsPage.svelte';
@@ -21,8 +19,13 @@ export const calendarFeature: Feature = {
     { path: '/calendar', component: CalendarPage, nav: 'Kalender', icon: 'calendar' },
     { path: '/events', component: EventsPage, nav: 'Events', icon: 'events' },
     { path: '/calendar/absences', component: AbsencesPage },
-    { path: '/calendar/:id', component: AppointmentPage },
-    { path: '/appointment-types/:key', component: AppointmentTypePage, roles: ADMIN_BOARD },
+    detailRoute('/calendar/:id', AppointmentView, { href: '/calendar', label: 'Kalender' }),
+    detailRoute(
+      '/appointment-types/:key',
+      AppointmentTypeView,
+      { href: '/settings/appointment-types', label: 'Terminarten' },
+      { roles: ADMIN_BOARD },
+    ),
   ],
   windows: {
     appointment: { component: AppointmentView, page: (id) => `/calendar/${encodeURIComponent(id)}` },

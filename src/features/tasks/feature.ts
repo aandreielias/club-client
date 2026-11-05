@@ -1,18 +1,17 @@
 import TasksHome from './TasksHome.svelte';
 import { permissions } from '../../lib/container';
-import type { Feature } from '../Feature';
+import { detailRoute, type Feature } from '../Feature';
 import { TASK_MESSAGES } from './messages';
 import { dueReminders } from './services';
 import TaskCreateView from './TaskCreateView.svelte';
 import TaskListPage from './TaskListPage.svelte';
-import TaskPage from './TaskPage.svelte';
 import TaskView from './TaskView.svelte';
 
 export const tasksFeature: Feature = {
   id: 'tasks',
   routes: [
     { path: '/tasks', component: TaskListPage, nav: 'Aufgaben', icon: 'tasks' },
-    { path: '/tasks/:id', component: TaskPage },
+    detailRoute('/tasks/:id', TaskView, { href: '/tasks', label: 'Aufgaben' }),
   ],
   windows: {
     task: { component: TaskView, page: (id) => `/tasks/${encodeURIComponent(id)}` },

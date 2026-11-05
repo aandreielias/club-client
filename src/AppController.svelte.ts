@@ -56,6 +56,8 @@ export interface AppDependencies {
 export interface ResolvedPage {
   component: Component<PageProps>;
   params: RouteParams;
+  /** Extra props for the page (a detail route's view). */
+  props: Record<string, unknown>;
   /** Sidebar label of the route, if it has one (the split pane's header). */
   label: string | null;
 }
@@ -199,7 +201,13 @@ export class AppController {
   private resolve(path: string): ResolvedPage | null {
     for (const route of this.allowedRoutes) {
       const params = Router.match(route.path, path);
-      if (params) return { component: route.component as Component<PageProps>, params, label: route.nav ?? null };
+      if (params)
+        return {
+          component: route.component as Component<PageProps>,
+          params,
+          props: route.detail ? { detail: route.detail } : {},
+          label: route.nav ?? null,
+        };
     }
     return null;
   }

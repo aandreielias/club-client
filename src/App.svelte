@@ -149,7 +149,7 @@
             <PaneHost pane={splitPane} label={app.splitPage?.label}>
               {#if app.splitPage}
                 {#key splitPane.path}
-                  <app.splitPage.component params={app.splitPage.params} />
+                  <app.splitPage.component params={app.splitPage.params} {...app.splitPage.props} />
                 {/key}
               {:else}
                 <Empty text="Seite nicht gefunden." />
@@ -167,7 +167,7 @@
 {#snippet mainPage()}
   {#if app.page}
     {#key router.path}
-      <app.page.component params={app.page.params} />
+      <app.page.component params={app.page.params} {...app.page.props} />
     {/key}
   {:else}
     <Empty text="Seite nicht gefunden." />

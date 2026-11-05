@@ -1,17 +1,14 @@
 import { ADMIN_BOARD } from '../../lib/types';
-import type { Feature } from '../Feature';
+import { detailRoute, type Feature } from '../Feature';
 import { isAssembly } from './model';
 import { meetingTypes, resolutionRules } from './services';
 import MeetingCreateView from './MeetingCreateView.svelte';
-import MeetingPage from './MeetingPage.svelte';
 import MeetingsPage from './MeetingsPage.svelte';
 import MeetingsHome from './MeetingsHome.svelte';
 import MeetingTypeCreateView from './MeetingTypeCreateView.svelte';
-import MeetingTypePage from './MeetingTypePage.svelte';
 import MeetingTypeView from './MeetingTypeView.svelte';
 import MeetingView from './MeetingView.svelte';
 import CircularCreateView from './CircularCreateView.svelte';
-import ResolutionPage from './ResolutionPage.svelte';
 import ResolutionView from './ResolutionView.svelte';
 import { MEETING_MESSAGES } from './messages';
 
@@ -20,9 +17,9 @@ export const meetingsFeature: Feature = {
   routes: [
     // Voters (extraordinary and honorary members) see general meetings, the board its own meetings too (server: MeetingAccess.maySee).
     { path: '/meetings', component: MeetingsPage, nav: 'Sitzungen', icon: 'meetings' },
-    { path: '/meetings/:id', component: MeetingPage },
-    { path: '/resolutions/:id', component: ResolutionPage },
-    { path: '/meeting-types/:key', component: MeetingTypePage, roles: ADMIN_BOARD },
+    detailRoute('/meetings/:id', MeetingView, { href: '/meetings', label: 'Sitzungen' }),
+    detailRoute('/resolutions/:id', ResolutionView, { href: '/meetings', label: 'Sitzungen' }),
+    detailRoute('/meeting-types/:key', MeetingTypeView, { href: '/settings/meeting-types', label: 'Sitzungsarten' }, { roles: ADMIN_BOARD }),
   ],
   windows: {
     meeting: { component: MeetingView, page: (id) => `/meetings/${encodeURIComponent(id)}` },
