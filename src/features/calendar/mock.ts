@@ -682,7 +682,7 @@ export class MockCalendar {
 
   /** server: RideHandlers.requireRides — new rides and passengers only where the club and the appointment offer car pools. */
   private requireRides(appointment: Appointment): void {
-    if (!appointment.rides || !this.people.clubInfo().ridesEnabled) fail(409, 'ride.not-offered');
+    if (!appointment.rides) fail(409, 'ride.not-offered');
   }
 
   cancelRide(member: Member, rideId: string): void {

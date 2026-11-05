@@ -53,17 +53,12 @@ export interface Club {
   registerNumber: string | null;
   /** Month (1-12) in which a new season starts, e.g. for the default season of a new team. */
   seasonStartMonth: number;
-  /** Car pools in the whole club; per appointment they are switched in the calendar. */
-  ridesEnabled: boolean;
   /** The club saved its facts once; until then admins see the setup page. */
   configured: boolean;
 }
 
 /** What admins and the board edit (server: PUT /club); empty values fall back to club.yml. */
-export type ClubEdit = Pick<
-  Club,
-  'name' | 'shortName' | 'website' | 'contactEmail' | 'address' | 'registerNumber' | 'seasonStartMonth' | 'ridesEnabled'
->;
+export type ClubEdit = Pick<Club, 'name' | 'shortName' | 'website' | 'contactEmail' | 'address' | 'registerNumber' | 'seasonStartMonth'>;
 
 export interface Member {
   id: string;

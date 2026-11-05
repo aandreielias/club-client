@@ -3196,7 +3196,6 @@ export interface components {
             registerNumber: string;
             /** Format: int32 */
             seasonStartMonth: number;
-            ridesEnabled: boolean;
         };
         "at.clubserver.platform.club.ClubSettings.Club": {
             name: string;
@@ -3211,7 +3210,6 @@ export interface components {
             registerNumber: string;
             /** Format: int32 */
             seasonStartMonth: number;
-            ridesEnabled: boolean;
             configured: boolean;
         };
         "at.clubserver.gateway.rest.CalendarController.AppointmentTypeBody": {

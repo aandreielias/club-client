@@ -12,7 +12,7 @@ export class AppointmentPolicy extends PlanningPolicy {
 
   /** Car pools where the club and the appointment offer them, not for cancelled ones. */
   hasRides(appointment: Appointment): boolean {
-    return !appointment.cancelled && appointment.rides && this.session.club?.ridesEnabled !== false;
+    return !appointment.cancelled && appointment.rides;
   }
 
   isPast(appointment: Appointment, now: Date = new Date()): boolean {

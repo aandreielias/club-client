@@ -132,7 +132,6 @@ export class MockDirectory {
     address: null,
     registerNumber: null,
     seasonStartMonth: 7,
-    ridesEnabled: true,
     configured: false,
   };
 
@@ -439,7 +438,6 @@ export class MockDirectory {
       address: e.address || null,
       registerNumber: e.registerNumber || null,
       seasonStartMonth: e.seasonStartMonth ?? this.club.seasonStartMonth,
-      ridesEnabled: e.ridesEnabled ?? true,
       configured: Object.keys(e).length > 0,
     };
   }
@@ -466,7 +464,6 @@ export class MockDirectory {
       address: text('address', limits.addressMaxLength),
       registerNumber: text('registerNumber', 20, new RegExp(limits.registerNumberPattern)),
       seasonStartMonth: (month as number | null) ?? undefined,
-      ridesEnabled: body.ridesEnabled !== false,
     });
     this.clubEdits.save();
     const club = this.clubInfo();

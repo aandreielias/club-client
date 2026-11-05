@@ -1,20 +1,11 @@
 <script lang="ts">
-  import { bus, session } from '../../lib/container';
+  import { bus } from '../../lib/container';
   import { removeRecord, restoreRecord } from '../../lib/detail/removeRecord';
   import { Action } from '../../lib/state/Action.svelte';
-  import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
-  import SettingsForm from '../../ui/SettingsForm.svelte';
   import SettingsList from '../../ui/SettingsList.svelte';
   import { appointmentTypes } from './services';
 
   /** Einstellungen › Termine (admin/board): the club's kinds of appointments; each opens in the window, the order is dragged. */
-  // Car pools for the whole club; the types below and each appointment switch them further.
-  const rides = new SettingsDraft({ enabled: session.club!.ridesEnabled });
-  async function saveRides(value: { enabled: boolean }) {
-    await session.updateClub({ ridesEnabled: value.enabled });
-    return { enabled: session.club!.ridesEnabled };
-  }
-
   const load = new Action();
   const reload = () => void load.run(() => appointmentTypes.load());
   reload();
@@ -32,13 +23,6 @@
 </script>
 
 <div class="stack">
-  <SettingsForm title="Fahrgemeinschaften" draft={rides} onsave={saveRides}>
-    <label class="check">
-      <input type="checkbox" bind:checked={rides.value.enabled} /> Fahrgemeinschaften im Verein anbieten
-    </label>
-    <p class="muted small">Welche Terminarten sie anbieten, legst du unten fest; bei jedem Termin lassen sie sich zusätzlich ein- und ausschalten.</p>
-  </SettingsForm>
-  <h2>Terminarten</h2>
   <p class="muted small">
     Welche Arten von Terminen es gibt, in welcher Farbe sie im Kalender stehen und ob Fahrgemeinschaften und Kabinen angeboten werden.
   </p>
@@ -57,11 +41,7 @@
 </div>
 
 <style>
-  p,
-  h2 {
+  p {
     margin: 0;
-  }
-  h2 {
-    font-size: var(--font-size-base);
   }
 </style>

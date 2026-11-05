@@ -55,7 +55,6 @@
         website: club.website ?? '',
         contactEmail: club.contactEmail ?? '',
         seasonStartMonth: club.seasonStartMonth,
-        ridesEnabled: club.ridesEnabled,
       });
     });
   }

@@ -42,6 +42,8 @@
       {:else if column.key === 'date'}
         {@const at = r.closedAt ?? r.openedAt}
         {at ? session.format.date(session.clock.localDate(at)) : '–'}
+      {:else}
+        {list.display(r, column)}
       {/if}
     {/snippet}
   </DataTable>
