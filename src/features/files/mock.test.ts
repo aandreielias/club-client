@@ -73,6 +73,25 @@ describe('mock files', () => {
   });
 });
 
+describe('mock folder move', () => {
+  it('follows FolderHandlers.movableInto: not into itself, depth limit, the visibility of the new parent, back to the top', () => {
+    const admin = member('admin');
+    const box = files.createFolder(admin, { name: 'Umzug', kind: 'DOCUMENTS', scope: 'CLUB', teamIds: [] });
+    const inner = files.createFolder(admin, { parentId: box.id, name: 'Innen', kind: 'DOCUMENTS' });
+    expect(() => files.updateFolder(admin, box.id, { parentId: inner.id })).toThrow(expect.objectContaining({ code: 'folder.move-into-self' }));
+
+    const moved = files.updateFolder(admin, box.id, { parentId: 'f-damen' });
+    expect(moved).toMatchObject({ parentId: 'f-damen', scope: 'TEAM', teamIds: ['t-damen'] });
+    expect(files.folders.data.find((f) => f.id === inner.id)).toMatchObject({ scope: 'TEAM', teamIds: ['t-damen'] });
+
+    expect(files.updateFolder(admin, box.id, { moveToTop: true })).toMatchObject({ parentId: null });
+
+    let deepest = 'f-docs';
+    for (let level = 2; level <= 4; level++) deepest = files.createFolder(admin, { parentId: deepest, name: `T${level}`, kind: 'DOCUMENTS' }).id;
+    expect(() => files.updateFolder(admin, box.id, { parentId: deepest })).toThrow(expect.objectContaining({ code: 'folder.too-deep' }));
+  });
+});
+
 describe('mock sample documents', () => {
   it('builds a PDF whose xref offsets point at its objects', async () => {
     const text = await MockFiles.pdf('Satzung (2026).pdf').text();

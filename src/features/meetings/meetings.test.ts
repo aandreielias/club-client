@@ -99,6 +99,22 @@ describe('mock meetings', () => {
 });
 
 describe('mock resolutions', () => {
+  it('added to an invited meeting follow the agenda rules: change notice, 50 items at most', () => {
+    const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(15), endsAt: inDays(15.1) });
+    meetings.invite(member('vorstand'), mv.id);
+    const notices: Record<string, any>[] = [];
+    const stop = mockServer.events.subscribe((e) => e.type === 'meetings.meeting-notice' && notices.push(e.data as Record<string, any>));
+    meetings.createResolution(member('vorstand'), mv.id, { title: 'Neue Netze' });
+    stop();
+    expect(notices).toEqual([expect.objectContaining({ title: 'Geändert: MV', body: 'Geändert: Tagesordnung.' })]);
+
+    const stored = meetings.meetings.data.find((m) => m.id === mv.id)!;
+    stored.agendaItems = Array.from({ length: 50 }, (_, k) => ({ id: `i${k}`, title: `Punkt ${k}`, note: null, resolutionId: null }));
+    expect(() => meetings.createResolution(member('vorstand'), mv.id, { title: 'Zu viel' })).toThrow(
+      expect.objectContaining({ code: 'meeting.agenda-invalid' }),
+    );
+  });
+
   it('vote secretly in the app, only those present, secret until closed', () => {
     const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(15), endsAt: inDays(15.1) });
     meetings.invite(member('vorstand'), mv.id);

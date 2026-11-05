@@ -28,6 +28,7 @@
   import { FolderTree } from './FolderTree.svelte';
   import { colorHue, type Folder, type StoredFile } from './model';
   import MoveFilesDialog from './MoveFilesDialog.svelte';
+  import MoveFolderDialog from './MoveFolderDialog.svelte';
   import { fileDownloads, fileLinks, fileMover, filePolicy, filesApi, fileTypes, folderZip, photoTagDrops } from './services';
   import UploadPanel from './UploadPanel.svelte';
 
@@ -102,6 +103,7 @@
       return [
         { label: 'Öffnen', run: () => open(item) },
         ...(target.canManage ? [{ label: 'Bearbeiten', icon: 'edit' as const, run: () => (editingFolder = target) }] : []),
+        ...(target.canManage ? [{ label: 'Verschieben', icon: 'move' as const, run: () => (movingFolder = target) }] : []),
         { separator: true },
         { label: 'Als ZIP herunterladen', icon: 'download', run: () => void fileActions.zip(target) },
         { label: 'Link kopieren', icon: 'copy', run: () => void LinkClipboard.copy(bus, `/files/${target.id}`) },
@@ -136,6 +138,7 @@
     reload: () => void list.load(),
   });
   let moving = $state(false);
+  let movingFolder = $state<Folder | null>(null);
 
   const drag: RowDrag<FolderItem> = {
     type: FileMover.DRAG_TYPE,
@@ -326,6 +329,14 @@
   {/if}
 </Page>
 
+{#if movingFolder}
+  <MoveFolderDialog
+    folder={movingFolder}
+    {tree}
+    onclose={() => (movingFolder = null)}
+    onmoved={() => ((movingFolder = null), void tree.load(), void list.load())}
+  />
+{/if}
 {#if moving && folder}
   <MoveFilesDialog
     files={fileActions.selectedFiles}

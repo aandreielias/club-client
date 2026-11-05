@@ -152,11 +152,18 @@ export class MockFiles {
     if (typeof body.membersCanUpload === 'boolean') folder.membersCanUpload = body.membersCanUpload;
     const name = body.name === undefined ? folder.name : String(body.name).trim();
     if (!name || name.length > limits.folderNameMaxLength) fail(400, 'folder.name-invalid');
-    const scope: FolderScope = body.scope ?? folder.scope;
+    const parentId: string | null = body.moveToTop ? null : (body.parentId ?? folder.parentId);
+    const moved = parentId !== folder.parentId;
+    let scope: FolderScope = body.scope ?? folder.scope;
     const current = [...folder.teamIds].sort();
-    const teamIds: string[] = body.scope ? [...new Set<string>((body.teamIds ?? []).map(String))].sort() : current;
+    let teamIds: string[] = body.scope ? [...new Set<string>((body.teamIds ?? []).map(String))].sort() : current;
+    if (moved && parentId) {
+      // server: below another folder it takes that folder's visibility, like a new subfolder
+      const parent = this.movableInto(viewer, folder, parentId);
+      scope = parent.scope;
+      teamIds = [...parent.teamIds].sort();
+    } else if (parentId && (scope !== folder.scope || teamIds.join() !== current.join())) fail(400, 'folder.scope-inherited');
     const scopeChanged = scope !== folder.scope || teamIds.join() !== current.join();
-    if (scopeChanged && folder.parentId) fail(400, 'folder.scope-inherited');
     if ((scope === 'TEAM') !== teamIds.length > 0) fail(400, 'folder.team-scope-mismatch');
     let cover = body.clearCover ? null : (folder.coverFileId ?? null);
     if (body.coverFileId && !body.clearCover) {
@@ -165,7 +172,7 @@ export class MockFiles {
       cover = body.coverFileId;
     }
     const color = body.clearColor ? null : (body.color ?? folder.color ?? null);
-    const changed: StoredFolder = { ...folder, name, scope, teamIds, color, coverFileId: cover };
+    const changed: StoredFolder = { ...folder, parentId, name, scope, teamIds, color, coverFileId: cover };
     this.requireManage(viewer, changed);
     const before = { ...folder };
     Object.assign(folder, changed);
@@ -493,6 +500,23 @@ export class MockFiles {
     if (!tags.length) return;
     if (!image || tags.length > limits.maxTags) fail(400, 'file.tags-invalid');
     if (!tags.every((id) => this.people.hasPhotoConsent(id))) fail(400, 'file.tag-without-consent');
+  }
+
+  /** server: FolderHandlers.movableInto — visible, managed, not inside the folder, and the moved tree fits the depth limit. */
+  private movableInto(viewer: Viewer, folder: StoredFolder, parentId: string): StoredFolder {
+    const below = this.descendants(folder.id);
+    if (parentId === folder.id || below.some((f) => f.id === parentId)) fail(400, 'folder.move-into-self');
+    const parent = this.visibleFolder(viewer, parentId);
+    this.requireManage(viewer, parent);
+    // levels the moved tree needs: the folder itself plus its deepest chain of subfolders
+    let height = 1;
+    for (const f of below) {
+      let level = 1;
+      for (let p = f.parentId; p !== folder.id; p = this.folders.data.find((x) => x.id === p)!.parentId) level++;
+      height = Math.max(height, level + 1);
+    }
+    if (this.depth(parent) + height > limits.maxFolderDepth) fail(400, 'folder.too-deep');
+    return parent;
   }
 
   private depth(folder: StoredFolder): number {

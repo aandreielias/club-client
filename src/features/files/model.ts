@@ -52,6 +52,10 @@ export interface FolderPatch {
   coverFileId?: string;
   clearCover?: boolean;
   membersCanUpload?: boolean;
+  /** Move below this folder (takes its visibility). */
+  parentId?: string;
+  /** Move to the top level. */
+  moveToTop?: boolean;
 }
 
 /** Rename (the extension stays) and/or move to another folder. */

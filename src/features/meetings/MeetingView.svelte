@@ -2,6 +2,7 @@
   import MeetingDetailsEditor from './MeetingDetailsEditor.svelte';
   import MeetingDraftEditor from './MeetingDraftEditor.svelte';
   import AgendaEditor from './AgendaEditor.svelte';
+  import MotionAdd from './MotionAdd.svelte';
   import { BrowserFile } from '../../lib/files/BrowserFile';
   import { csvText } from '../../lib/files/csv';
   import { Resource } from '../../lib/state/Resource.svelte';
@@ -44,6 +45,7 @@
   let editingPlace = $state(false);
   let editingDraft = $state(false);
   let editingAgenda = $state(false);
+  let addingMotion = $state(false);
   let presenceFilter = $state('');
   // The meeting's Beschlüsse: shown under their agenda items, edited with the agenda.
   const resolutions = new Resource(() => meetingsApi.resolutions(id));
@@ -237,11 +239,24 @@
         <AgendaEditor meeting={m} {model} resolutions={resolutions.value ?? []} onclose={() => ((editingAgenda = false), void resolutions.load())} />
       {:else}
         <AgendaView meeting={m} {resolutions} />
-        {#if m.canManage && m.status !== 'CLOSED' && m.status !== 'CANCELLED'}
-          <div>
+        {#if addingMotion}
+          <MotionAdd
+            meetingId={m.id}
+            onclose={(added) => {
+              addingMotion = false;
+              if (added) void (model.load(), resolutions.load(), view.notify('Antrag hinzugefügt.'));
+            }}
+          />
+        {:else if m.canManage && m.status !== 'CLOSED' && m.status !== 'CANCELLED'}
+          <div class="row">
             <Button size="sm" icon="edit" onclick={() => (void resolutions.load(), (editingAgenda = true))}
               >Tagesordnung und Beschlüsse bearbeiten</Button
             >
+            {#if m.status === 'INVITED' || m.status === 'OPEN'}
+              <Button size="sm" icon="add" tooltip="Einen Beschluss ans Ende der Tagesordnung stellen" onclick={() => (addingMotion = true)}
+                >Antrag hinzufügen</Button
+              >
+            {/if}
           </div>
         {/if}
       {/if}

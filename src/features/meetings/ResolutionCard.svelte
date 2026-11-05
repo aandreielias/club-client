@@ -92,6 +92,8 @@
   /** Show of hands: counts and closing in one step. */
   const handResult = (yes: number, no: number, abstain: number) =>
     write(() => meetingsApi.handResult(r.id, yes, no, abstain), 'Ergebnis eingetragen.');
+  /** Show of hands: counts so far, still open (corrected until closing). */
+  const handCounts = () => write(() => meetingsApi.analogVotes(r.id, roomYes, roomNo, roomAbstain), 'Zwischenstand gespeichert.');
 
   async function recordWritten() {
     if (!writtenBy || !writtenChoice) return;
@@ -247,7 +249,14 @@
       <label>Enthaltung <input type="number" min="0" max={r.presentVoters} bind:value={roomAbstain} /></label>
       <Button type="submit" variant="primary" busy={action.busy} disabled={roomSum > r.presentVoters}>Ergebnis eintragen</Button>
       <Button busy={action.busy} onclick={() => handResult(r.presentVoters, 0, 0)}>Einstimmig</Button>
+      <Button
+        busy={action.busy}
+        disabled={roomSum > r.presentVoters}
+        tooltip="Die Zahlen speichern, ohne die Abstimmung zu schließen"
+        onclick={handCounts}>Zwischenstand speichern</Button
+      >
     </form>
+    {#if r.analogEntered}<p class="muted small">Ein Zwischenstand ist gespeichert; das Ergebnis zeigt sich nach dem Schließen.</p>{/if}
     {#if roomSum > r.presentVoters}<p class="error small" role="alert">Mehr Stimmen als Anwesende ({r.presentVoters}).</p>{/if}
   {/if}
 

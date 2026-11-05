@@ -742,6 +742,7 @@ export class MockMeetings {
     const meeting = meetingId ? this.managed(viewer, meetingId) : null;
     if (!meeting && !this.runsCircular(viewer)) fail(403, 'access.denied');
     if (meeting?.status === 'CLOSED' || meeting?.status === 'CANCELLED') fail(409, 'meeting.closed');
+    if (meeting && (meeting.agendaItems ?? []).length >= 50) fail(400, 'meeting.agenda-invalid'); // the agenda's own limit
     const majority = this.majorityFor(meeting ? this.type(meeting.kind) : null, body.majority ?? null);
     const title = text(body.title, 200, 'resolution.title-invalid') ?? fail(400, 'resolution.title-invalid');
     const deadline = meeting
@@ -754,6 +755,7 @@ export class MockMeetings {
     if (meeting) {
       this.setItems(meeting, [...(meeting.agendaItems ?? []), { id: crypto.randomUUID(), title, note: null, resolutionId: r.id }]);
       this.meetings.save();
+      this.noticeChange(meeting, ['Tagesordnung']); // like an agenda edit
     }
     this.resolutionChanged(r, 'CREATED');
     return this.resolutionDto(viewer, r);
@@ -1298,6 +1300,7 @@ mockServer
   .on('POST', '/api/v1/meetings/:id/protocol-document', (req) => meetings.generateProtocol(actor(req), req.params.id))
   .on('PATCH', '/api/v1/resolutions/:id', (req) => meetings.updateResolution(actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/meetings/:id/resolutions', (req) => meetings.listResolutions(actor(req), req.params.id))
+  .on('POST', '/api/v1/meetings/:id/resolutions', (req) => meetings.createResolution(actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/resolutions', (req) => meetings.listResolutions(actor(req), null))
   // server: open:true creates and opens in one go; a refused opening leaves no draft
   .on('POST', '/api/v1/resolutions', (req) => {
@@ -1316,6 +1319,7 @@ mockServer
   .on('PUT', '/api/v1/resolutions/:id/deadline', (req) => meetings.extendDeadline(actor(req), req.params.id, req.body?.deadline))
   .on('POST', '/api/v1/resolutions/:id/vote', (req) => meetings.vote(actor(req), req.params.id, req.body?.choice))
   .on('POST', '/api/v1/resolutions/:id/recorded-vote', (req) => meetings.recordVote(actor(req), req.params.id, req.body?.memberId, req.body?.choice))
+  .on('POST', '/api/v1/resolutions/:id/analog-votes', (req) => meetings.analogVotes(actor(req), req.params.id, req.body ?? {}))
   .on('POST', '/api/v1/resolutions/:id/hand-result', (req) => meetings.analogVotes(actor(req), req.params.id, req.body ?? {}, true))
   .on('POST', '/api/v1/meetings/:id/invitation-document', (req) => meetings.generateInvitation(actor(req), req.params.id))
   .on('PUT', '/api/v1/resolutions/:id/links', (req) => meetings.setResolutionLinks(actor(req), req.params.id, req.body?.refs))

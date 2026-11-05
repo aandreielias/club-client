@@ -11,6 +11,7 @@ import type {
   MeetingTypeInput,
   MeetingSummary,
   NewMeeting,
+  NewResolution,
   Resolution,
   ResolutionRules,
   VoteMode,
@@ -155,6 +156,11 @@ export class MeetingsApi {
     return (await this.api.get<{ items: Resolution[] }>(MeetingsApi.RESOLUTIONS)).items;
   }
 
+  /** A Beschluss added to the end of the meeting's agenda (same rules as an agenda edit). */
+  createResolution(meetingId: string, resolution: NewResolution): Promise<Resolution> {
+    return this.api.post<Resolution>(`${this.path(meetingId)}/resolutions`, resolution);
+  }
+
   resolution(id: string): Promise<Resolution> {
     return this.api.get<Resolution>(this.resolutionPath(id));
   }
@@ -205,6 +211,11 @@ export class MeetingsApi {
   /** Circular votes: a written vote of a board member. */
   recordVote(id: string, memberId: string, choice: Choice): Promise<Resolution> {
     return this.api.post<Resolution>(`${this.resolutionPath(id)}/recorded-vote`, { memberId, choice });
+  }
+
+  /** Show of hands: the counts so far, the vote stays open ("Zwischenstand speichern"). */
+  analogVotes(id: string, yes: number, no: number, abstain: number): Promise<Resolution> {
+    return this.api.post<Resolution>(`${this.resolutionPath(id)}/analog-votes`, { yes, no, abstain });
   }
 
   /** Show of hands: the counts and closing in one step ("Einstimmig", "Ergebnis eintragen"). */
