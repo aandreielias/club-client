@@ -54,7 +54,7 @@ export class MockNotifications {
 
   markRead(memberId: string, id: string): void {
     const notification = (this.inbox.data[memberId] ?? []).find((n) => n.id === id);
-    if (!notification) return fail(404, 'not-found');
+    if (!notification) return; // server: NotificationRepository.markRead marks nothing, no error
     notification.readAt ??= new Date().toISOString();
     this.inbox.save();
   }

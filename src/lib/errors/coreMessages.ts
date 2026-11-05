@@ -36,4 +36,7 @@ export const CORE_MESSAGES: MessageCatalog = {
   'member.phone-invalid': 'Die Telefonnummer ist ungültig.',
   'auth.required': 'Bitte neu anmelden.',
   'idempotency.key-reused': 'Die Anfrage wurde schon mit anderen Daten gesendet. Bitte neu laden.',
+  'idempotency.key-invalid': 'Die Anfrage hat eine ungültige Kennung. Bitte neu laden.',
+  'rate-limited': 'Zu viele Anfragen. Bitte kurz warten.',
+  internal: 'Fehler auf dem Server. Bitte später erneut versuchen.',
 };

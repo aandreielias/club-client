@@ -51,7 +51,7 @@ export class MockServer {
       done();
       return result;
     }
-    return MockServer.fail(404, 'not-found');
+    return MockServer.fail(404, 'request.invalid'); // server: unknown path → ProblemMapper's framework code
   }
 
   /** Called after every request that succeeded (server: interceptors such as AuditLog). */
