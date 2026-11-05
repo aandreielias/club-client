@@ -66,7 +66,6 @@ export class MockTeams {
       if (coaches(this.people.teamRoles(viewer.id)[teamId])) fail(403, 'access.denied');
       fail(404, 'team.not-found');
     }
-    this.people.requirePrivileged(viewer, ADMIN_BOARD);
     if (teamRole !== 'COACH' && teamRole !== 'ASSISTANT' && teamRole !== 'PLAYER') fail(400, 'request.invalid');
     if (!this.people.name(memberId)) fail(404, 'member.not-found');
     (this.people.memberships.data[memberId] ??= {})[teamId] = teamRole as TeamRole;
@@ -77,9 +76,8 @@ export class MockTeams {
 
   /** server: TeamHandlers.requireRunsTeam — admin/board, or a coach of the team. */
   private requireRunsTeam(viewer: Member, teamId: string): void {
-    if (this.people.isManager(viewer)) return this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    if (this.people.isManager(viewer)) return;
     if (!coaches(this.people.teamRoles(viewer.id)[teamId])) fail(404, 'team.not-found');
-    this.people.requirePrivileged(viewer, ['COACH']);
   }
 
   /** server: TeamHandlers.setPlayerInfo — one captain per team. */
@@ -137,11 +135,8 @@ export class MockTeams {
   /** Admin/board remove anyone; a coach of the team removes players only. */
   removeTeamMember(viewer: Member, teamId: string, memberId: string): Roster {
     if (!this.people.teams.data.some((t) => t.id === teamId)) fail(404, 'team.not-found');
-    if (this.people.isManager(viewer)) {
-      this.people.requirePrivileged(viewer, ADMIN_BOARD);
-    } else {
-      if (!coaches(this.people.teamRoles(viewer.id)[teamId])) fail(404, 'team.not-found');
-      this.people.requirePrivileged(viewer, ['COACH']);
+    if (!this.people.isManager(viewer)) {
+      this.requireRunsTeam(viewer, teamId);
       if ((this.people.teamRoles(memberId)[teamId] ?? 'PLAYER') !== 'PLAYER') fail(403, 'access.denied');
     }
     this.people.removeFromTeamUnchecked(teamId, memberId);

@@ -28,33 +28,7 @@ export class MockTournaments {
     'gast-fruehling': { tournamentId: 'tm-fruehling', teamId: 'tm-fruehling-t1' },
   };
 
-  constructor(private readonly people: MockDirectory) {
-    this.upgradeStored();
-    this.addMissingSeeds();
-  }
-
-  /** Browsers that stored mock data before a seed tournament existed get it too (their own data stays). */
-  private addMissingSeeds(): void {
-    const seed = MockTournaments.seed();
-    let changed = false;
-    for (const t of seed.tournaments) {
-      if (this.tournaments.data.some((x) => x.id === t.id)) continue;
-      this.tournaments.data.push(t);
-      this.teams.data[t.id] = seed.teams[t.id];
-      this.matches.data[t.id] = seed.matches[t.id];
-      changed = true;
-    }
-    for (const [memberId, guest] of Object.entries(MockTournaments.SEED_GUESTS)) {
-      if (this.guests.data[memberId] || !this.tournaments.data.some((t) => t.id === guest.tournamentId)) continue;
-      this.guests.data[memberId] = guest;
-      changed = true;
-    }
-    if (!changed) return;
-    this.tournaments.save();
-    this.teams.save();
-    this.matches.save();
-    this.guests.save();
-  }
+  constructor(private readonly people: MockDirectory) {}
 
   list(viewer: Member): { items: TournamentSummary[] } {
     const own = this.ownTournament(viewer);
@@ -331,38 +305,6 @@ export class MockTournaments {
   private static scores(sets: SetScore[]): Pick<TournamentMatch, 'sets' | 'homeScore' | 'awayScore'> {
     const { homeSets, awaySets } = tally(sets);
     return { sets, homeScore: homeSets, awayScore: awaySets };
-  }
-
-  /**
-   * Data a browser stored under older rules: tournaments get best of 3, and matches without valid sets get sets that
-   * give the same result by the rules (or lose a result no volleyball match can have).
-   */
-  private upgradeStored(): void {
-    let changed = false;
-    for (const t of this.tournaments.data.filter((x) => !x.setsToWin || !x.format)) {
-      Object.assign(t, { setsToWin: t.setsToWin ?? 2, format: 'VOLLEYBALL', teamSize: 6, pointsWin: undefined, pointsDraw: undefined });
-      changed = true;
-    }
-    for (const t of this.tournaments.data.filter((x) => x.format !== 'SIMPLE')) {
-      for (const m of (this.matches.data[t.id] ?? []).filter((x) => !Array.isArray(x.sets) || setsProblem(x.sets, t.setsToWin, t.format))) {
-        Object.assign(m, MockTournaments.scores(MockTournaments.setsFor(m.homeScore, m.awayScore, t.setsToWin)));
-        changed = true;
-      }
-    }
-    if (changed) {
-      this.tournaments.save();
-      this.matches.save();
-    }
-  }
-
-  /** Sets by the rules for a score in sets: the loser's first, so the winner takes the last; none for an impossible score. */
-  private static setsFor(home: number | null, away: number | null, setsToWin: number): SetScore[] {
-    if (home === null || away === null || Math.max(home, away) !== setsToWin || Math.min(home, away) >= setsToWin) return [];
-    return Array.from({ length: home + away }, (_, i) => {
-      const homeTakes = i < Math.min(home, away) ? home < away : home > away;
-      const [win, lose] = i === 2 * setsToWin - 2 ? [15, 10] : [25, 20];
-      return homeTakes ? { home: win, away: lose } : { home: lose, away: win };
-    });
   }
 
   /** server: TournamentHandlers.teamsFrom */

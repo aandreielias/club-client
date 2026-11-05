@@ -94,13 +94,6 @@ export class MockFiles {
       for (const file of this.files.data) file.taggedMemberIds = file.taggedMemberIds.filter((id) => id !== memberId);
       this.files.save();
     });
-    // Folders stored before several teams per folder existed carry a single `teamId` (server: migration V16).
-    for (const f of this.folders.data as (StoredFolder & { teamId?: string | null })[]) {
-      if (!Array.isArray(f.teamIds)) {
-        f.teamIds = f.teamId ? [f.teamId] : [];
-        delete f.teamId;
-      }
-    }
   }
 
   listFolders(member: Member): Folder[] {
@@ -488,15 +481,12 @@ export class MockFiles {
 
   /** server: FileHandlers.requireManage */
   private requireManage(viewer: Viewer, folder: StoredFolder): void {
-    if (viewer.board) this.people.requirePrivileged(viewer.member, ['ADMIN', 'BOARD']);
-    else if (viewer.canManage(folder)) this.people.requirePrivileged(viewer.member, ['COACH']);
-    else fail(403, 'access.denied');
+    if (!viewer.canManage(folder)) fail(403, 'access.denied');
   }
 
   /** Delete and tag: the uploader, or a folder manager. */
   private requireModify(viewer: Viewer, folder: StoredFolder, file: StoredFile): void {
-    if (viewer.canManage(folder)) this.requireManage(viewer, folder);
-    else if (file.uploadedBy !== viewer.member.id) fail(403, 'access.denied');
+    if (!viewer.canManage(folder) && file.uploadedBy !== viewer.member.id) fail(403, 'access.denied');
   }
 
   private requireTaggable(image: boolean, tags: readonly string[]): void {
@@ -515,11 +505,8 @@ export class MockFiles {
 
   private toDto(f: StoredFolder, viewer: Viewer): Folder {
     const manage = viewer.canManage(f);
-    // Folders stored before colours existed have neither field.
     return {
       ...f,
-      color: f.color ?? null,
-      coverFileId: f.coverFileId ?? null,
       canManage: manage,
       canUpload: manage || (f.membersCanUpload && viewer.canSee(f)),
     };

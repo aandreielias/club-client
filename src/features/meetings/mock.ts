@@ -5,8 +5,8 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import { resolveRef } from '../../lib/mock/recordRefs';
 import { files } from '../files/mock';
-import { defaultTemplate, fill, protocolTemplate, TEMPLATE_NAME } from './invitationDocument';
-import type { RefKind } from '../../lib/records/refs';
+import { defaultTemplate, fill, PROTOCOL_TEMPLATE_NAME, protocolTemplate, TEMPLATE_NAME } from './invitationDocument';
+import type { LinkedRef, RefKind } from '../../lib/records/refs';
 import { ADMIN_BOARD, type Member } from '../../lib/types';
 import type { OfficeKind } from '../members/MembersApi';
 import { officeUses } from '../members/mock';
@@ -108,10 +108,9 @@ export class MockMeetings {
   readonly meetings = new MockTable<StoredMeeting[]>('meetings', () => seedMeetings());
   readonly resolutions = new MockTable<StoredResolution[]>('resolutions', () => seedResolutions());
   /** meetingId → its folder and generated invitation (server: meetings_document). */
-  readonly documents = new MockTable<Record<string, { folderId: string; fileId: string }>>('meeting-documents', () => ({}));
+  readonly documents = new MockTable<Record<string, { folderId: string; fileId: string | null }>>('meeting-documents', () => ({}));
 
   constructor(private readonly people: MockDirectory) {
-    this.addMissingSeeds();
     // server: the hourly reminder run gives every draft and open circular vote its deadline task
     for (const m of this.meetings.data.filter((x) => x.status === 'DRAFT')) this.inviteTask(m);
     for (const r of this.resolutions.data.filter((x) => !x.meetingId && x.status === 'OPEN')) this.circularTask(r, 'vorstand');
@@ -147,18 +146,22 @@ export class MockMeetings {
     return p ? `${p.firstName} ${p.lastName}` : '–';
   }
 
-  setResolutionLinks(viewer: Member, id: string, refs: unknown): Resolution {
-    const r = this.managedResolution(viewer, id);
-    if (!Array.isArray(refs) || refs.length > 30) return fail(400, 'resolution.too-many-refs');
-    const kept = r.links ?? [];
-    r.links = (refs as { kind: RefKind; id: string }[]).map(
+  /** server: RecordRefs.resolve — new links as the viewer sees them, kept ones stay. */
+  private resolvedLinks(viewer: Member, kept: readonly LinkedRef[], refs: unknown[], code: 'meeting' | 'resolution'): LinkedRef[] {
+    return (refs as { kind: RefKind; id: string }[]).map(
       (ref) =>
         kept.find((k) => k.kind === ref.kind && k.id === ref.id) ??
-        resolveRef(viewer, ref, 'resolution', (other) => {
+        resolveRef(viewer, ref, code, (other) => {
           const m = this.meetings.data.find((x) => x.id === other);
           return m && this.maySee(viewer, m) ? m.title : null;
         }),
     );
+  }
+
+  setResolutionLinks(viewer: Member, id: string, refs: unknown): Resolution {
+    const r = this.managedResolution(viewer, id);
+    if (!Array.isArray(refs) || refs.length > 30) return fail(400, 'resolution.too-many-refs');
+    r.links = this.resolvedLinks(viewer, r.links ?? [], refs, 'resolution');
     this.resolutionChanged(r, 'UPDATED');
     return this.resolutionDto(viewer, r);
   }
@@ -288,17 +291,6 @@ export class MockMeetings {
     meeting.agenda = items.map((i, k) => `${k + 1}. ${i.title}`).join('\n') || null;
   }
 
-  /** Seeded meetings and votes added later reach browsers that already stored mock data. */
-  private addMissingSeeds(): void {
-    const meetings = seedMeetings().filter((m) => !this.meetings.data.some((x) => x.id === m.id));
-    const resolutions = seedResolutions().filter((r) => !this.resolutions.data.some((x) => x.id === r.id));
-    if (!meetings.length && !resolutions.length) return;
-    this.meetings.data.push(...meetings);
-    this.resolutions.data.push(...resolutions);
-    this.meetings.save();
-    this.resolutions.save();
-  }
-
   list(viewer: Member, from: string | null, to: string | null): { items: MeetingSummary[] } {
     return {
       items: this.meetings.data
@@ -389,17 +381,21 @@ export class MockMeetings {
         recipients: this.electorate(meeting.kind),
         kind: meeting.kind,
         title: meeting.title,
-        // server: MeetingHandlers.invitedItems — every item, Beschlüsse with their text
-        items: (meeting.agendaItems ?? []).map((i) => {
-          const r = i.resolutionId ? this.resolutions.data.find((x) => x.id === i.resolutionId) : undefined;
-          return { title: i.title, resolution: !!r, motion: r?.text ?? null };
-        }),
+        items: this.invitedItems(meeting),
         startsAt: meeting.startsAt,
         location: meeting.location,
         videoUrl: meeting.videoUrl,
       },
     });
     return this.dto(viewer, meeting);
+  }
+
+  /** server: MeetingHandlers.invitedItems — every item, Beschlüsse with their text. */
+  private invitedItems(meeting: StoredMeeting): { title: string; resolution: boolean; motion: string | null }[] {
+    return (meeting.agendaItems ?? []).map((i) => {
+      const r = i.resolutionId ? this.resolutions.data.find((x) => x.id === i.resolutionId) : undefined;
+      return { title: i.title, resolution: !!r, motion: r?.text ?? null };
+    });
   }
 
   open(viewer: Member, id: string): Meeting {
@@ -536,7 +532,7 @@ export class MockMeetings {
     if (meeting.secretaryId && !meeting.presence[meeting.secretaryId]) meeting.secretaryId = null;
   }
 
-  /** server: MeetingHandlers.generateProtocol — the protocol as a document in the meeting's folder, linked first. */
+  /** server: MeetingHandlers.generateProtocol — the club's protocol template filled, a new file in the meeting's folder each time. */
   async generateProtocol(viewer: Member, id: string): Promise<Meeting> {
     const meeting = this.managed(viewer, id);
     if (meeting.status !== 'CLOSED') fail(409, 'meeting.not-closed');
@@ -544,20 +540,21 @@ export class MockMeetings {
     const type = this.type(meeting.kind);
     const results = this.resolutions.data
       .filter((r) => r.meetingId === id)
-      .map(
-        (r) =>
-          `${r.title}: ${r.result === 'PASSED' ? 'angenommen' : r.result === 'FAILED' ? 'abgelehnt' : r.result ? 'nicht beschlussfähig' : 'nicht abgestimmt'}`,
-      );
-    const fmt = (iso: string, options: Intl.DateTimeFormatOptions) =>
-      new Intl.DateTimeFormat('de-AT', { timeZone: this.people.club.timeZone, ...options }).format(new Date(iso));
+      .map((r) => {
+        // App ballots plus a show of hands.
+        const [yes, no, abstain] = [r.yes + (r.analogYes ?? 0), r.no + (r.analogNo ?? 0), r.abstain + (r.analogAbstain ?? 0)];
+        const result =
+          r.result === 'PASSED' ? 'angenommen' : r.result === 'FAILED' ? 'abgelehnt' : r.result ? 'nicht beschlussfähig' : 'nicht abgestimmt';
+        return `${r.title}: ${result}${yes + no + abstain > 0 ? ` (Ja ${yes}, Nein ${no}, Enthaltung ${abstain})` : ''}`;
+      });
     const content = await fill(
       JSZip,
-      await protocolTemplate(JSZip),
+      await this.template(viewer, PROTOCOL_TEMPLATE_NAME, () => protocolTemplate(JSZip)),
       {
         Verein: this.people.clubInfo().name,
         Art: type.invitationLabel,
         Titel: meeting.title.toLowerCase() === type.label.toLowerCase() ? null : meeting.title,
-        Wann: `${fmt(meeting.startsAt, { dateStyle: 'full', timeStyle: 'short' })} bis ${fmt(meeting.endsAt, { timeStyle: 'short' })} Uhr`,
+        Wann: this.when(meeting),
         Ort: meeting.location,
         Vorsitz: meeting.chairId ? this.name(meeting.chairId) : null,
         Schriftführer: meeting.secretaryId ? this.name(meeting.secretaryId) : null,
@@ -574,28 +571,15 @@ export class MockMeetings {
         .map((l) => l.trim())
         .filter(Boolean),
     );
-    const assembly = isAssembly(type);
-    const name = assembly ? 'Mitgliederversammlungen' : 'Vorstandssitzungen';
-    const scope = assembly ? 'ASSEMBLY' : 'BOARD';
-    const parent =
-      files.listFolders(viewer).find((f) => !f.parentId && f.name === name && f.scope === scope) ??
-      files.createFolder(viewer, { name, kind: 'DOCUMENTS', scope, teamIds: [] });
-    const day = meeting.startsAt.slice(0, 10);
-    const folderId =
-      this.documents.data[id]?.folderId && files.listFolders(viewer).some((f) => f.id === this.documents.data[id].folderId)
-        ? this.documents.data[id].folderId
-        : files.createFolder(viewer, { parentId: parent.id, name: `${day} ${meeting.title}`.slice(0, 100), kind: 'DOCUMENTS' }).id;
-    const form = new FormData();
-    form.append('file', new File([content], `Protokoll ${day} ${meeting.title}.docx`));
-    const file = await files.upload({ params: { folderId }, query: new URLSearchParams(), body: form, email: viewer.email } as never);
-    meeting.links = [{ kind: 'FILE' as const, id: file.id, title: file.name, parentId: folderId }, ...(meeting.links ?? [])].slice(0, 30);
-    this.changed(meeting, 'UPDATED');
-    return this.dto(viewer, meeting);
+    const stored = this.documents.data[id];
+    const folderId = this.meetingFolder(viewer, meeting, stored?.folderId);
+    const file = await this.upload(viewer, folderId, new File([content], `Protokoll ${this.day(meeting)} ${meeting.title}.docx`));
+    // The meeting keeps its folder; the stored invitation stays its document.
+    return this.linkFirst(viewer, meeting, file.id, folderId, { folderId, fileId: stored?.fileId ?? null });
   }
 
-  /** Seeded closed meetings count as final (server: V83). */
   private protocolFinalAt(m: StoredMeeting): string | null {
-    return m.protocolFinalAt !== undefined ? m.protocolFinalAt : m.status === 'CLOSED' ? m.closedAt : null;
+    return m.protocolFinalAt ?? null;
   }
 
   /** server: MeetingHandlers.setPresence — Anwesend or not; fixed while a vote is open. */
@@ -617,87 +601,112 @@ export class MockMeetings {
   setLinks(viewer: Member, id: string, refs: unknown): Meeting {
     const meeting = this.managed(viewer, id);
     if (!Array.isArray(refs) || refs.length > 30) return fail(400, 'meeting.too-many-refs');
-    const kept = meeting.links ?? [];
-    meeting.links = (refs as { kind: RefKind; id: string }[]).map((ref) => {
-      if (ref.kind === 'MEETING' && ref.id === id) return fail(400, 'meeting.ref-unknown');
-      return (
-        kept.find((k) => k.kind === ref.kind && k.id === ref.id) ??
-        resolveRef(viewer, ref, 'meeting', (other) => {
-          const m = this.meetings.data.find((x) => x.id === other);
-          return m && this.maySee(viewer, m) ? m.title : null;
-        })
-      );
-    });
+    if ((refs as { kind: RefKind; id: string }[]).some((ref) => ref?.kind === 'MEETING' && ref.id === id)) fail(400, 'meeting.ref-unknown');
+    meeting.links = this.resolvedLinks(viewer, meeting.links ?? [], refs, 'meeting');
     this.changed(meeting, 'UPDATED');
     return this.dto(viewer, meeting);
   }
 
-  /** server: MeetingHandlers.generateInvitation + InvitationDocuments — the template in "Vorlagen" filled through the files mock. */
+  /** server: MeetingHandlers.generateInvitation + InvitationDocuments — again = a new version of the same file. */
   async generateInvitation(viewer: Member, id: string): Promise<Meeting> {
     const meeting = this.managed(viewer, id);
     const { default: JSZip } = await import('jszip');
-    const request = (params: Record<string, string>, form: FormData) => ({ params, query: new URLSearchParams(), body: form, email: viewer.email });
-    const top = (name: string, scope: 'ASSEMBLY' | 'BOARD') =>
-      files.listFolders(viewer).find((f) => !f.parentId && f.name === name && f.scope === scope) ??
-      files.createFolder(viewer, { name, kind: 'DOCUMENTS', scope, teamIds: [] });
-
-    const templates = top('Vorlagen', 'BOARD');
-    let template = files.listFiles(viewer, templates.id).find((f) => f.name.toLowerCase() === TEMPLATE_NAME.toLowerCase());
-    if (!template) {
-      const form = new FormData();
-      form.append('file', new File([await defaultTemplate(JSZip)], TEMPLATE_NAME));
-      template = await files.upload(request({ folderId: templates.id }, form));
-    }
-    // Mock blobs live only for the session; after a reload the built-in template stands in.
-    const templateBytes = files.blob(template.id) ?? (await defaultTemplate(JSZip));
     const type = this.type(meeting.kind);
-    const fmt = (iso: string, options: Intl.DateTimeFormatOptions) =>
-      new Intl.DateTimeFormat('de-AT', { timeZone: this.people.club.timeZone, ...options }).format(new Date(iso));
+    // server: MeetingHandlers.documentAgenda — every item, Beschlüsse with their motion
+    const agenda = this.invitedItems(meeting).flatMap((item, k) => [
+      `${k + 1}. ${item.resolution ? 'Beschluss: ' : ''}${item.title}`,
+      ...(item.motion?.trim() ? [`Antrag: ${item.motion.trim().replace(/\s+/g, ' ')}`] : []),
+    ]);
     const content = await fill(
       JSZip,
-      templateBytes,
+      await this.template(viewer, TEMPLATE_NAME, () => defaultTemplate(JSZip)),
       {
         Verein: this.people.clubInfo().name,
         Art: type.invitationLabel,
         Titel: meeting.title.toLowerCase() === type.label.toLowerCase() ? null : meeting.title,
-        Wann: `${fmt(meeting.startsAt, { dateStyle: 'full', timeStyle: 'short' })} bis ${fmt(meeting.endsAt, { timeStyle: 'short' })} Uhr`,
+        Wann: this.when(meeting),
         Ort: meeting.location,
-        Video: meeting.videoUrl,
+        Video: type.online ? (meeting.videoUrl ?? type.videoUrl ?? null) : null,
         Dringlichkeit: meeting.urgency,
         // A placeholder older templates still carry (server: AgendaDocument); empty, so its paragraph is dropped.
         Statuten: null,
-        Versandt: fmt(meeting.invitedAt ?? new Date().toISOString(), { dateStyle: 'long' }),
+        Versandt: this.format(meeting.invitedAt ?? new Date().toISOString(), { dateStyle: 'long' }),
       },
-      (meeting.agenda ?? '')
-        .split('\n')
-        .map((l) => l.trim())
-        .filter(Boolean)
-        .concat(meeting.agenda?.trim() ? [] : ['Keine Tagesordnung eingetragen.']),
+      agenda.length ? agenda : ['Keine Tagesordnung eingetragen.'],
     );
-
     const stored = this.documents.data[id];
-    const day = meeting.startsAt.slice(0, 10);
+    const folderId = this.meetingFolder(viewer, meeting, stored?.folderId);
     let fileId: string;
-    let folderId: string;
-    if (stored && files.files.data.some((f) => f.id === stored.fileId)) {
+    if (stored?.fileId && files.files.data.some((f) => f.id === stored.fileId)) {
       const form = new FormData();
       form.append('file', new File([content], 'einladung.docx'));
-      form.append('label', new Date().toLocaleString('de-AT').slice(0, 20));
-      form.append('date', new Date().toISOString().slice(0, 10));
-      await files.uploadVersion(request({ id: stored.fileId }, form));
-      ({ fileId, folderId } = stored);
+      form.append('label', this.format(new Date().toISOString(), { dateStyle: 'short', timeStyle: 'medium' }).replace(',', ''));
+      form.append('date', this.people.clock.today());
+      fileId = (await files.uploadVersion({ params: { id: stored.fileId }, query: new URLSearchParams(), body: form, email: viewer.email } as never))
+        .id;
     } else {
-      const assembly = isAssembly(type);
-      const parent = top(assembly ? 'Mitgliederversammlungen' : 'Vorstandssitzungen', assembly ? 'ASSEMBLY' : 'BOARD');
-      folderId =
-        stored && files.listFolders(viewer).some((f) => f.id === stored.folderId)
-          ? stored.folderId
-          : files.createFolder(viewer, { parentId: parent.id, name: `${day} ${meeting.title}`.slice(0, 100), kind: 'DOCUMENTS' }).id;
-      const form = new FormData();
-      form.append('file', new File([content], `Einladung ${day} ${meeting.title}.docx`));
-      fileId = (await files.upload(request({ folderId }, form))).id;
+      fileId = (await this.upload(viewer, folderId, new File([content], `Einladung ${this.day(meeting)} ${meeting.title}.docx`))).id;
     }
-    this.documents.data[id] = { folderId, fileId };
+    return this.linkFirst(viewer, meeting, fileId, folderId, { folderId, fileId });
+  }
+
+  // --- documents (server: InvitationDocuments) ---
+
+  private format(iso: string, options: Intl.DateTimeFormatOptions): string {
+    return new Intl.DateTimeFormat('de-AT', { timeZone: this.people.club.timeZone, ...options }).format(new Date(iso));
+  }
+
+  /** "Mittwoch, 5. November 2026, 18:00 bis 20:00 Uhr" */
+  private when(m: StoredMeeting): string {
+    const time = (iso: string) => this.format(iso, { timeStyle: 'short' });
+    return `${this.format(m.startsAt, { dateStyle: 'full' })}, ${time(m.startsAt)} bis ${time(m.endsAt)} Uhr`;
+  }
+
+  /** The meeting's day in the club's time zone. */
+  private day(m: StoredMeeting): string {
+    return this.people.clock.localDate(m.startsAt);
+  }
+
+  private upload(viewer: Member, folderId: string, file: File) {
+    const form = new FormData();
+    form.append('file', file);
+    return files.upload({ params: { folderId }, query: new URLSearchParams(), body: form, email: viewer.email } as never);
+  }
+
+  private topFolder(viewer: Member, name: string, scope: 'ASSEMBLY' | 'BOARD') {
+    return (
+      files.listFolders(viewer).find((f) => !f.parentId && f.name === name && f.scope === scope) ??
+      files.createFolder(viewer, { name, kind: 'DOCUMENTS', scope, teamIds: [] })
+    );
+  }
+
+  /** The club's template in "Vorlagen", put there with the built-in layout on first use. */
+  private async template(viewer: Member, name: string, builtIn: () => Promise<Blob>): Promise<Blob> {
+    const folder = this.topFolder(viewer, 'Vorlagen', 'BOARD');
+    const file =
+      files.listFiles(viewer, folder.id).find((f) => f.name.toLowerCase() === name.toLowerCase()) ??
+      (await this.upload(viewer, folder.id, new File([await builtIn()], name)));
+    // Mock blobs live only for the session; after a reload the built-in template stands in.
+    return files.blob(file.id) ?? builtIn();
+  }
+
+  /** The meeting's own folder below "Mitgliederversammlungen" or "Vorstandssitzungen", created on first use. */
+  private meetingFolder(viewer: Member, meeting: StoredMeeting, storedFolderId: string | undefined): string {
+    if (storedFolderId && files.listFolders(viewer).some((f) => f.id === storedFolderId)) return storedFolderId;
+    const assembly = isAssembly(this.type(meeting.kind));
+    const parent = this.topFolder(viewer, assembly ? 'Mitgliederversammlungen' : 'Vorstandssitzungen', assembly ? 'ASSEMBLY' : 'BOARD');
+    return files.createFolder(viewer, { parentId: parent.id, name: `${this.day(meeting)} ${meeting.title}`.slice(0, 100), kind: 'DOCUMENTS' }).id;
+  }
+
+  /** server: MeetingHandlers.linkFirst — remembers the meeting's document and puts the written file first in its links. */
+  private linkFirst(
+    viewer: Member,
+    meeting: StoredMeeting,
+    fileId: string,
+    folderId: string,
+    keep: { folderId: string; fileId: string | null },
+  ): Meeting {
+    this.documents.data[meeting.id] = keep;
     this.documents.save();
     const name = files.files.data.find((f) => f.id === fileId)!.name;
     meeting.links = [
@@ -1211,7 +1220,7 @@ export class MockMeetings {
       // server: MeetingType.shownVideo
       online: !!type.online,
       videoUrl: type.online ? (m.videoUrl ?? type.videoUrl ?? null) : null,
-      links: m.links ?? [], // mock data stored before links existed
+      links: m.links ?? [],
       protocolFinalAt: this.protocolFinalAt(m),
       agendaItems: agendaItems ?? [],
       approvals: approvals ?? [],

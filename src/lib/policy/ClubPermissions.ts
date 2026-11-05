@@ -35,11 +35,11 @@ export class ClubPermissions {
     return this.session.hasRole('COACH');
   }
 
-  /** Exact once the team's roster is loaded; until then a COACH in the team counts as its coach. */
+  /** By the team role (server: TeamRole.coaches); until the roster is loaded, a member with the COACH role in the team counts. */
   isCoachOf(teamId: string): boolean {
-    if (!this.isCoach || !this.session.isInTeam(teamId)) return false;
+    if (!this.session.isInTeam(teamId)) return false;
     const role = this.directory.teamRole(teamId, this.session.member.id);
-    return role === null || coaches(role);
+    return role === null ? this.isCoach : coaches(role);
   }
 
   canManage(teamId: string | null): boolean {

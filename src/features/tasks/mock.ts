@@ -460,7 +460,6 @@ export class MockTasks {
       return;
     }
     if (!viewer.coachTeamIds.has(teamId)) fail(403, 'access.denied');
-    this.people.requirePrivileged(viewer.member, ['COACH']);
   }
 
   /** server: TaskHandlers.requireValidAssignees */

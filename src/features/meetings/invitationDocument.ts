@@ -2,6 +2,7 @@
 import type JSZip from 'jszip';
 
 export const TEMPLATE_NAME = 'Einladung Sitzung.dotx';
+export const PROTOCOL_TEMPLATE_NAME = 'Protokoll Sitzung.dotx';
 const TEMPLATE_TYPE = 'wordprocessingml.template.main+xml';
 const DOCUMENT_TYPE = 'wordprocessingml.document.main+xml';
 const AGENDA = 'Tagesordnung';

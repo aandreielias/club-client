@@ -4,6 +4,7 @@ import { meetings } from '../../features/meetings/mock';
 import { tasks } from '../../features/tasks/mock';
 import { tournaments } from '../../features/tournaments/mock';
 import type { CalendarItem } from '../calendar/CalendarSources';
+import { settings } from '../../settings';
 import { ZonedClock } from '../time/ZonedClock';
 import { PRIVILEGED, type Member, coaches } from '../types';
 import { directory } from './core';
@@ -50,15 +51,8 @@ export function items(viewer: Member, from: string, to: string): CalendarItem[] 
       kind: 'holiday',
       id: h.id,
       title: h.name,
-      start: clock.toInstant(`${h.from}T00:00`),
-      end: clock.toInstant(`${ZonedClock.addDays(h.to, 1)}T00:00`),
-      allDay: true,
+      ...allDay(clock, h.from, h.to),
       category: 'HOLIDAY',
-      teamId: null,
-      inactive: false,
-      detail: null,
-      movable: false,
-      resizable: false,
     });
   }
 
@@ -102,7 +96,8 @@ export function items(viewer: Member, from: string, to: string): CalendarItem[] 
   for (const t of tasks.list(viewer, false, null, true, from, to)) {
     if (!t.dueAt) continue;
     const manages = !t.teamId ? board : coached.includes(t.teamId) || board;
-    const followUp = Object.entries(tasks.sources.data).some(([id, s]) => id === t.id && s.kind !== 'CHANGE_REQUEST');
+    const source = tasks.sources.data[t.id];
+    const followUp = !!source && source.kind !== 'CHANGE_REQUEST';
     out.push({
       ...base,
       kind: 'task',
@@ -137,9 +132,8 @@ export function items(viewer: Member, from: string, to: string): CalendarItem[] 
 
   // Meetings; their deadlines are tasks.
   for (const m of meetings.list(viewer, new Date(Date.parse(from) - DAY).toISOString(), to).items) {
-    const full = tryOr(() => meetings.get(viewer, m.id), null);
     if (m.startsAt < to && m.endsAt > from) {
-      const editable = m.status === 'DRAFT' && !!full?.canManage;
+      const editable = m.status === 'DRAFT' && !!tryOr(() => meetings.get(viewer, m.id), null)?.canManage;
       out.push({
         ...base,
         kind: 'meeting',
@@ -207,7 +201,7 @@ mockServer
   .on('GET', '/api/v1/calendar/items', (req) => {
     const from = req.query.get('from') ?? '';
     const to = req.query.get('to') ?? '';
-    if (!from || !to || to <= from || Date.parse(to) - Date.parse(from) > 366 * DAY) fail(400, 'calendar.range-invalid');
+    if (!from || !to || to <= from || Date.parse(to) - Date.parse(from) > settings.calendar.maxRangeDays * DAY) fail(400, 'calendar.range-invalid');
     return { items: items(directory.actor(req), from, to) };
   })
   .on('PUT', '/api/v1/calendar/items/:kind/:id', (req) => {

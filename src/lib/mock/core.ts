@@ -77,8 +77,6 @@ const seedOffice = (id: string, memberId: string, office: OfficeRow['office']): 
   coopted: false,
 });
 
-/** Bump when the seed changes in a way stored mock data should pick up (see MockDirectory.upgradeSeed). */
-const SEED_VERSION = 3;
 /** guardian → minors (server: members_guardian) */
 const SEED_WARDS: Readonly<Record<string, readonly string[]>> = { eltern: ['spieler'], helfer2: ['sara'] };
 
@@ -187,54 +185,7 @@ export class MockDirectory {
   readonly membershipKinds = new MockTable<MembershipKind[]>('membership-kinds', () => structuredClone([...SEEDED_MEMBERSHIP_KINDS]));
 
   constructor() {
-    this.migrateMemberships();
-    this.addMissingMembers();
-    this.upgradeSeed();
-    this.addPhase6Flags();
     this.saveMembers();
-  }
-
-  /** server: V86 — stored mock data from before members without login and the board flag of offices. */
-  private addPhase6Flags(): void {
-    for (const m of this.members.data) m.login ??= !!m.email;
-    let changed = false;
-    for (const o of this.boardSettings.data.offices) {
-      if (o.board === undefined) {
-        o.board = o.office !== 'AUDITOR';
-        changed = true;
-      }
-      if (o.duty === undefined) {
-        o.duty = o.office === 'CHAIR' ? 'CHAIR' : o.office === 'SECRETARY' ? 'SECRETARY' : 'NONE';
-        changed = true;
-      }
-    }
-    if (changed) this.boardSettings.save();
-  }
-
-  /** server: V67 — mock data stored before kinds were sets: honorary becomes a kind, the former kind is remembered. */
-  private migrateMemberships(): void {
-    if (!this.membershipKinds.data.some((k) => k.key === 'HONORARY')) {
-      this.membershipKinds.data.push(structuredClone(SEEDED_MEMBERSHIP_KINDS.find((k) => k.key === 'HONORARY')!));
-      this.membershipKinds.save();
-    }
-    const settings = this.boardSettings.data as BoardSettings & { honoraryVotes?: boolean };
-    if (settings.multipleKinds === undefined) {
-      settings.multipleKinds = false;
-      delete settings.honoraryVotes;
-      this.boardSettings.save();
-    }
-    // Stored before the minors' ages existed (server: V70).
-    if (settings.guardianUntilAge === undefined) {
-      Object.assign(settings, { guardianUntilAge: 18, ownConsentAge: 14 });
-      this.boardSettings.save();
-    }
-    for (const m of this.members.data as (Member & { membershipType?: MembershipType | null; honorary?: boolean })[]) {
-      if (m.membershipTypes) continue;
-      m.membershipTypes = m.honorary ? ['HONORARY'] : m.membershipType ? [m.membershipType] : [];
-      m.previousType = m.honorary ? (m.membershipType ?? null) : null;
-      delete m.membershipType;
-      delete m.honorary;
-    }
   }
 
   /** server: MembershipRules — votes / may be elected when any of the member's kinds does. */
@@ -262,45 +213,6 @@ export class MockDirectory {
   requireHoldersEligible(kinds: readonly MembershipKind[]): void {
     const holders = new Set(this.running().map((o) => o.memberId));
     if (this.members.data.some((m) => m.active && holders.has(m.id) && !this.rights(m, kinds).eligible)) fail(409, 'member.holds-office');
-  }
-
-  /** Version 1 = mock data stored before the seed was versioned; a fresh seed runs the (harmless) upgrade once too. */
-  readonly #seed = new MockTable<{ version: number }>('seed-version', () => ({ version: 1 }));
-
-  /**
-   * Browsers that stored mock data from an older seed get the membership of the seeded people, the seeded offices and
-   * team places, and the BOARD role that comes with an office; their own changes otherwise stay.
-   */
-  private upgradeSeed(): void {
-    if (this.#seed.data.version >= SEED_VERSION) return;
-    for (const seeded of MockDirectory.seedMembers()) {
-      const stored = this.members.data.find((m) => m.id === seeded.id);
-      if (stored && stored.roles.length)
-        Object.assign(stored, { membershipTypes: seeded.membershipTypes, previousType: null, memberSince: seeded.memberSince });
-    }
-    for (const office of MockDirectory.seedOffices()) {
-      const max = SEEDED_BOARD_SETTINGS.offices.find((o) => o.office === office.office)!.maxHolders;
-      const taken = max != null && this.running().filter((o) => o.office === office.office).length >= max;
-      if (!this.offices.data.some((o) => o.id === office.id) && !this.officesOf(office.memberId).includes(office.office) && !taken)
-        this.offices.data.push(office);
-    }
-    for (const [memberId, teams] of Object.entries(MockDirectory.seedMemberships())) this.memberships.data[memberId] ??= teams;
-    for (const [guardian, minors] of Object.entries(SEED_WARDS)) this.wards.data[guardian] ??= [...minors];
-    this.wards.save();
-    for (const member of this.members.data) this.syncBoardRole(member);
-    this.saveMembers();
-    this.offices.save();
-    this.memberships.save();
-    this.#seed.data.version = SEED_VERSION;
-    this.#seed.save();
-  }
-
-  /** Members added to the seed later reach browsers that already stored the mock data. */
-  private addMissingMembers(): void {
-    const missing = MockDirectory.seedMembers().filter((m) => !this.members.data.some((x) => x.id === m.id));
-    if (!missing.length) return;
-    this.members.data.push(...missing);
-    this.saveMembers();
   }
 
   /** memberId → teamId → role in that team */
@@ -420,7 +332,7 @@ export class MockDirectory {
 
   /** Server: actor.requirePrivileged(roles) = one of the roles (changing club data). */
   requirePrivileged(member: Member, roles: readonly Role[] = PRIVILEGED): void {
-    if (!this.hasRole(member, roles)) fail(403, 'access.denied');
+    this.requireRole(member, roles);
   }
 
   teamRoles(memberId: string): Record<string, TeamRole> {
@@ -724,7 +636,7 @@ export class MockDirectory {
       .map((o) => o.office);
   }
 
-  /** server: BoardSettings.isBoard — browsers with older mock data have no flag yet: all but the auditors. */
+  /** server: BoardSettings.isBoard — an office without a setting: all but the auditors. */
   isBoardOffice(office: string): boolean {
     return this.boardSettings.data.offices.find((o) => o.office === office)?.board ?? office !== 'AUDITOR';
   }
@@ -869,7 +781,6 @@ export class MockDirectory {
     const own = viewer.id === memberId || this.wardsOf(viewer.id).includes(memberId);
     if (!own) {
       if (!this.isManager(viewer)) return fail(404, 'member.not-found');
-      this.requirePrivileged(viewer, ADMIN_BOARD);
     }
     if (!target) return fail(404, 'member.not-found');
     // server: MemberHandlers.checkConsentAge - from the club's age the member decides about photos, below it a guardian

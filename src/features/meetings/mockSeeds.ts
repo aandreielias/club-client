@@ -192,7 +192,7 @@ export type StoredMeeting = Omit<
   | 'chair'
   | 'secretary'
 > & {
-  /** Voters marked Anwesend (older stored data carries a mode string: still truthy). */
+  /** Voters marked Anwesend. */
   presence: Record<string, true>;
   frozenElectorate?: string[];
   createdBy?: string;
@@ -282,6 +282,7 @@ export function seedMeetings(): StoredMeeting[] {
       invitedAt: at(-60, 9),
       openedAt: at(-40, 17),
       closedAt: at(-40, 19),
+      protocolFinalAt: at(-40, 19),
       protocol: '1. Jahresvoranschlag besprochen und angenommen.\n2. Hallenmiete: siehe Beschluss.',
       presence: { vorstand: true, kassier: true, schrift: true, beisitz: true, beisitz2: true },
     },
