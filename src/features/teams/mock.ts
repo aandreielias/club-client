@@ -36,13 +36,16 @@ export class MockTeams {
     const team = this.people.teams.data.find((t) => t.id === teamId) ?? fail(404, 'team.not-found');
     const name = typeof body.name === 'string' ? body.name.trim() : team.name;
     const season = typeof body.season === 'string' ? body.season : team.season;
-    if (typeof body.archived === 'boolean') team.archived = body.archived;
     if (!name || name.length > settings.teams.nameMaxLength) fail(400, 'team.name-invalid');
     if (!new RegExp(settings.teams.seasonPattern).test(season)) fail(400, 'team.season-invalid');
     if (this.people.teams.data.some((t) => t.id !== teamId && t.name.toLowerCase() === name.toLowerCase() && t.season === season))
       fail(409, 'team.exists');
+    const archivedBefore = !!team.archived;
     Object.assign(team, { name, season });
+    if (typeof body.archived === 'boolean') team.archived = body.archived;
     this.people.teams.save();
+    // server: archiving ends a season, so coaches without another active team lose an automatic COACH role
+    if (!!team.archived !== archivedBefore) for (const member of this.people.teamMembers(teamId)) this.people.membershipChanged(teamId, member);
     return team;
   }
 
@@ -52,10 +55,12 @@ export class MockTeams {
     const index = this.people.teams.data.findIndex((t) => t.id === teamId);
     if (index < 0) fail(404, 'team.not-found');
     if (inUse) fail(409, 'team.in-use');
+    const former = this.people.teamMembers(teamId);
     this.people.teams.data.splice(index, 1);
     for (const roles of Object.values(this.people.memberships.data)) delete roles[teamId];
     this.people.teams.save();
     this.people.memberships.save();
+    for (const member of former) this.people.membershipChanged(teamId, member);
   }
 
   /** Admin/board only; a coach of the team gets 403, everyone else 404. Also changes the role of existing members. */

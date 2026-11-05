@@ -532,6 +532,7 @@ export class MockDirectory {
     const target = this.members.data.find((m) => m.id === memberId) ?? fail(404, 'member.not-found');
     if (target.roles.includes('BOARD') !== roles.includes('BOARD')) fail(409, 'member.board-by-office');
     target.roles = roles;
+    if (!roles.includes('COACH')) this.dropAutoCoach(memberId); // server: saving roles without COACH clears the marker
     this.saveMembers();
     return this.visibleTo(viewer, target);
   }
@@ -761,12 +762,37 @@ export class MockDirectory {
       data: { teamId, memberId },
       audience: { members: [...this.teamMembers(teamId), memberId], roles: ADMIN_BOARD },
     });
-    // server: MemberHandlers.onTeamMembershipChanged — a team's coach or assistant coach gets the COACH role
+    this.syncCoachRole(memberId);
+  }
+
+  /** server: members_auto_coach — members whose COACH role came from coaching a team. */
+  readonly autoCoach = new MockTable<string[]>('auto-coach', () => []);
+
+  /**
+   * server: MemberHandlers.onTeamMembershipChanged — coaching an active team gives COACH; coaching none takes it again, unless an
+   * admin gave it.
+   */
+  private syncCoachRole(memberId: string): void {
     const member = this.members.data.find((m) => m.id === memberId);
-    if (member?.active && coaches(this.teamRoles(memberId)[teamId]) && !member.roles.includes('COACH')) {
+    if (!member) return;
+    const active = Object.entries(this.teamRoles(memberId)).some(
+      ([teamId, role]) => coaches(role) && !this.teams.data.find((t) => t.id === teamId)?.archived,
+    );
+    if (active && member.active && !member.roles.includes('COACH')) {
       member.roles = [...member.roles, 'COACH'];
-      this.saveMembers();
-    }
+      this.autoCoach.data.push(memberId);
+    } else if (!active && member.roles.includes('COACH') && this.autoCoach.data.includes(memberId)) {
+      member.roles = member.roles.filter((r) => r !== 'COACH');
+      this.dropAutoCoach(memberId);
+    } else return;
+    this.autoCoach.save();
+    this.saveMembers();
+  }
+
+  private dropAutoCoach(memberId: string): void {
+    const index = this.autoCoach.data.indexOf(memberId);
+    if (index >= 0) this.autoCoach.data.splice(index, 1);
+    this.autoCoach.save();
   }
 
   private static name(value: unknown, code: string): string {

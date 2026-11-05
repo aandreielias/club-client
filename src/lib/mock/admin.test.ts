@@ -108,6 +108,25 @@ describe('mock members admin', () => {
   });
 });
 
+describe('mock automatic coach role', () => {
+  it('comes with coaching an active team and goes with the last one, unless an admin gave it', () => {
+    const team = teams.createTeam(member('vorstand'), { name: 'Mixed', season: '2026/27' });
+    teams.setTeamMember(member('vorstand'), team.id, 'spielerin', 'ASSISTANT');
+    expect(member('spielerin').roles).toContain('COACH');
+    teams.updateTeam(member('vorstand'), team.id, { archived: true });
+    expect(member('spielerin').roles).not.toContain('COACH');
+    teams.updateTeam(member('vorstand'), team.id, { archived: false });
+    expect(member('spielerin').roles).toContain('COACH');
+    teams.removeTeamMember(member('vorstand'), team.id, 'spielerin');
+    expect(member('spielerin').roles).not.toContain('COACH');
+
+    // the seeded trainer holds COACH by hand: it stays
+    teams.setTeamMember(member('vorstand'), team.id, 'trainer', 'COACH');
+    teams.deleteTeam(member('vorstand'), team.id, false);
+    expect(member('trainer').roles).toContain('COACH');
+  });
+});
+
 describe('mock teams admin', () => {
   it('creates teams and manages rosters with the server rules', () => {
     expect(() => teams.createTeam(member('vorstand'), { name: 'Herren', season: '2026-27' })).toThrow(
