@@ -52,12 +52,6 @@
 </script>
 
 <div class="stack">
-  {#if !settingsLoad.busy && !settingsLoad.error && !draft.value.keepsMail}
-    <p class="banner" role="status">
-      Noch kein Mail-Anbieter angebunden: E-Mails an Vereinsadressen gehen verloren, gesendete werden nicht zugestellt. Postfächer und Adressen lassen
-      sich trotzdem schon anlegen.
-    </p>
-  {/if}
   <SettingsForm
     title="E-Mail des Vereins"
     intro="Alle Postfach-Adressen enden auf die Mail-Domain; neue Mitglieder bekommen vornamenachname@… von selbst."
@@ -88,6 +82,12 @@
       </div>
     {/if}
   </SettingsForm>
+  {#if !settingsLoad.busy && !settingsLoad.error && !draft.value.keepsMail}
+    <p class="banner" role="status">
+      Noch kein Mail-Anbieter angebunden: E-Mails an Vereinsadressen gehen verloren, gesendete werden nicht zugestellt. Postfächer und Adressen lassen
+      sich trotzdem schon anlegen.
+    </p>
+  {/if}
 
   <section class="stack">
     <h2>Postfächer</h2>

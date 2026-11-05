@@ -11,6 +11,8 @@ import AppointmentTypeView from './AppointmentTypeView.svelte';
 import CalendarPage from './CalendarPage.svelte';
 import EventsPage from './EventsPage.svelte';
 import AbsencesPage from './AbsencesPage.svelte';
+import HolidayCreateView from './HolidayCreateView.svelte';
+import HolidayView from './HolidayView.svelte';
 import { CALENDAR_MESSAGES } from './messages';
 
 export const calendarFeature: Feature = {
@@ -26,6 +28,7 @@ export const calendarFeature: Feature = {
       { href: '/settings/appointment-types', label: 'Terminarten' },
       { roles: ADMIN_BOARD },
     ),
+    detailRoute('/holidays/:id', HolidayView, { href: '/settings/holidays', label: 'Feiertage' }, { roles: ADMIN_BOARD }),
   ],
   windows: {
     appointment: { component: AppointmentView, page: (id) => `/calendar/${encodeURIComponent(id)}` },
@@ -33,6 +36,8 @@ export const calendarFeature: Feature = {
     'appointment-new': { component: AppointmentCreateView, canOpen: () => permissions.canManageAnything() },
     'appointment-type': { component: AppointmentTypeView, page: (key) => `/appointment-types/${encodeURIComponent(key)}`, roles: ADMIN_BOARD },
     'appointment-type-new': { component: AppointmentTypeCreateView, roles: ADMIN_BOARD },
+    holiday: { component: HolidayView, page: (id) => `/holidays/${encodeURIComponent(id)}`, roles: ADMIN_BOARD },
+    'holiday-new': { component: HolidayCreateView, roles: ADMIN_BOARD },
   },
   start: () => appointmentTypes.start(),
   calendar: {

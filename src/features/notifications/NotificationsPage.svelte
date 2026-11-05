@@ -29,7 +29,7 @@
 
 <Page title="Benachrichtigungen">
   {#snippet actions()}
-    <LinkButton href="#/notifications/settings" tooltip="Festlegen, worüber und wie du benachrichtigt wirst">Einstellungen</LinkButton>
+    <LinkButton href="#/settings/notifications" tooltip="Festlegen, worüber und wie du benachrichtigt wirst">Einstellungen</LinkButton>
     <Button busy={center.markAllAction.busy} disabled={center.unread === 0} onclick={() => center.markAllRead()}>Alle als gelesen markieren</Button>
     {#if permissions.isPrivileged}<Button variant="primary" icon="send" onclick={compose}>Nachricht senden</Button>{/if}
   {/snippet}

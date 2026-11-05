@@ -117,6 +117,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tasks/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["settings"];
+        put: operations["saveSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/rides/{id}/passengers": {
         parameters: {
             query?: never;
@@ -428,8 +444,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["settings"];
-        put: operations["saveSettings"];
+        get: operations["settings_1"];
+        put: operations["saveSettings_1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -478,6 +494,22 @@ export interface paths {
         };
         get?: never;
         put: operations["tag"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/files/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["settings_2"];
+        put: operations["saveSettings_2"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2680,6 +2712,14 @@ export interface components {
         "at.clubserver.gateway.rest.TasksController.CheckBody": {
             done: boolean;
         };
+        "at.clubserver.gateway.rest.TasksController.SettingsBody": {
+            /** Format: int32 */
+            remindHours: number;
+        };
+        "at.clubserver.tasks.api.TasksApi.TaskSettings": {
+            /** Format: int32 */
+            remindHours: number;
+        };
         "at.clubserver.gateway.rest.CalendarController.PassengerBody": {
             /** Format: uuid */
             memberId: string;
@@ -3137,6 +3177,14 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             version: string;
+        };
+        "at.clubserver.gateway.rest.FilesController.SettingsBody": {
+            /** Format: int32 */
+            quotaMb: number;
+        };
+        "at.clubserver.files.api.FilesApi.FileSettings": {
+            /** Format: int32 */
+            quotaMb: number;
         };
         "at.clubserver.gateway.rest.ClubController.ClubBody": {
             name: string;
@@ -4536,6 +4584,50 @@ export interface operations {
             };
         };
     };
+    settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.tasks.api.TasksApi.TaskSettings"];
+                };
+            };
+        };
+    };
+    saveSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.TasksController.SettingsBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.tasks.api.TasksApi.TaskSettings"];
+                };
+            };
+        };
+    };
     joinRide: {
         parameters: {
             query?: never;
@@ -5099,7 +5191,7 @@ export interface operations {
             };
         };
     };
-    settings: {
+    settings_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -5119,7 +5211,7 @@ export interface operations {
             };
         };
     };
-    saveSettings: {
+    saveSettings_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -5237,6 +5329,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.files.api.FilesApi.FileDto"];
+                };
+            };
+        };
+    };
+    settings_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.files.api.FilesApi.FileSettings"];
+                };
+            };
+        };
+    };
+    saveSettings_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FilesController.SettingsBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.files.api.FilesApi.FileSettings"];
                 };
             };
         };

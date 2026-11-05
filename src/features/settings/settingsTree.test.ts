@@ -5,7 +5,7 @@ describe('settings tree', () => {
   it('shows the club group only to admin and board, Allgemein always last', () => {
     const player = visibleSettings(() => false);
     expect(player.groups.map((g) => g.id)).toEqual(['personal']);
-    expect(player.tabs.map((t) => t.id)).toEqual(['appearance', 'home', 'sidebar', 'shortcuts', 'security', 'general']);
+    expect(player.tabs.map((t) => t.id)).toEqual(['appearance', 'home', 'sidebar', 'notifications', 'shortcuts', 'security', 'general']);
     const board = visibleSettings(() => true);
     expect(board.tabs.at(-1)?.id).toBe('general');
     expect(board.tabs.map((t) => t.id)).toContain('resolution-rules');
@@ -23,6 +23,8 @@ describe('settings search', () => {
     expect(searchSettings('verein sitzung', board).map((t) => t.id)).toEqual(['meeting-types']);
     expect(searchSettings('Mehrheit', board).map((t) => t.id)).toContain('resolution-rules');
     expect(searchSettings('domain', () => false)).toEqual([]);
-    expect(searchSettings('', () => false).length).toBe(6);
+    expect(searchSettings('', () => false).length).toBe(7);
+    expect(searchSettings('fahrgemeinschaften', board).map((t) => t.id)).toEqual(['appointment-types']);
+    expect(searchSettings('ferien', board).map((t) => t.id)).toEqual(['holidays']);
   });
 });

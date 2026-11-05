@@ -35,8 +35,11 @@
 </script>
 
 <div class="stack">
-  <h3>Passwort</h3>
-  <form class="stack readable" onsubmit={changePassword} novalidate>
+  <form class="panel stack" onsubmit={changePassword} novalidate aria-label="Passwort">
+    <header>
+      <h2>Passwort</h2>
+      <p class="muted small">Gilt für die Anmeldung in App und Website.</p>
+    </header>
     <!-- Lets password managers pair the fields with the account. -->
     <input class="visually-hidden" type="email" autocomplete="username" value={auth.session?.email ?? ''} readonly tabindex="-1" aria-hidden="true" />
     <Field label="Aktuelles Passwort">
@@ -51,12 +54,6 @@
       </Field>
     </div>
     <ErrorNote error={passwordAction.error} />
-    <div><Button type="submit" busy={passwordAction.busy}>Passwort ändern</Button></div>
+    <div><Button type="submit" variant="primary" busy={passwordAction.busy}>Passwort ändern</Button></div>
   </form>
 </div>
-
-<style>
-  h3 {
-    margin: var(--space-sm) 0 0;
-  }
-</style>

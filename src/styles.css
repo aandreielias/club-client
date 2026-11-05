@@ -276,6 +276,24 @@ label.check {
   align-items: center;
   gap: var(--space-sm);
 }
+/* A framed block of settings (SettingsForm, the password form). */
+.panel {
+  position: relative;
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.panel > header {
+  display: grid;
+  gap: var(--space-xxs);
+}
+.panel > header h2,
+.panel > header p {
+  margin: 0;
+}
+.panel > header h2 {
+  font-size: var(--font-size-base);
+}
 /* A row with its first part on the left and its last on the right. */
 .between {
   justify-content: space-between;

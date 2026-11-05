@@ -111,3 +111,8 @@ export const statusHue = (status: TaskStatus): Hue => STATUS_HUES[status];
 
 /** Sort order of statuses (open first). */
 export const statusRank = (status: TaskStatus): number => TASK_STATUSES.findIndex((s) => s.value === status);
+
+/** server: TasksApi.TaskSettings — hours before the due time when assignees get the reminder. */
+export interface TaskSettings {
+  remindHours: number;
+}

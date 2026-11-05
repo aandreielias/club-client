@@ -10,6 +10,7 @@ import MeetingTypeView from './MeetingTypeView.svelte';
 import MeetingView from './MeetingView.svelte';
 import CircularCreateView from './CircularCreateView.svelte';
 import ResolutionView from './ResolutionView.svelte';
+import ResolutionsPage from './ResolutionsPage.svelte';
 import { MEETING_MESSAGES } from './messages';
 
 export const meetingsFeature: Feature = {
@@ -18,7 +19,8 @@ export const meetingsFeature: Feature = {
     // Voters (extraordinary and honorary members) see general meetings, the board its own meetings too (server: MeetingAccess.maySee).
     { path: '/meetings', component: MeetingsPage, nav: 'Sitzungen', icon: 'meetings' },
     detailRoute('/meetings/:id', MeetingView, { href: '/meetings', label: 'Sitzungen' }),
-    detailRoute('/resolutions/:id', ResolutionView, { href: '/meetings', label: 'Sitzungen' }),
+    { path: '/resolutions', component: ResolutionsPage, nav: 'Beschlüsse', icon: 'resolutions' },
+    detailRoute('/resolutions/:id', ResolutionView, { href: '/resolutions', label: 'Beschlüsse' }),
     detailRoute('/meeting-types/:key', MeetingTypeView, { href: '/settings/meeting-types', label: 'Sitzungsarten' }, { roles: ADMIN_BOARD }),
   ],
   windows: {

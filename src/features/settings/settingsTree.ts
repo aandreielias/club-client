@@ -14,6 +14,10 @@ export type SectionId =
   | 'offices'
   | 'resolution-rules'
   | 'appointment-types'
+  | 'holidays'
+  | 'notifications'
+  | 'files'
+  | 'tasks'
   | 'mailboxes'
   | 'audit';
 
@@ -51,7 +55,13 @@ export const SETTINGS_TREE: readonly SettingsGroup[] = [
           { id: 'sidebar', label: 'Seitenleiste', icon: 'sidebar', keywords: 'navigation reihenfolge menü' },
         ],
       },
-      { label: 'Bedienung', tabs: [{ id: 'shortcuts', label: 'Tastenkürzel', icon: 'keyboard', keywords: 'tasten befehle kürzel' }] },
+      {
+        label: 'Bedienung',
+        tabs: [
+          { id: 'notifications', label: 'Benachrichtigungen', icon: 'notifications', keywords: 'push e-mail mitteilung hinweis' },
+          { id: 'shortcuts', label: 'Tastenkürzel', icon: 'keyboard', keywords: 'tasten befehle kürzel' },
+        ],
+      },
       { label: 'Konto', tabs: [{ id: 'security', label: 'Sicherheit', icon: 'security', keywords: 'passwort kennwort' }] },
     ],
   },
@@ -63,7 +73,7 @@ export const SETTINGS_TREE: readonly SettingsGroup[] = [
     subgroups: [
       {
         label: 'Stammdaten',
-        tabs: [{ id: 'club', label: 'Verein', icon: 'club', keywords: 'name adresse website kontakt zvr saison fahrgemeinschaften' }],
+        tabs: [{ id: 'club', label: 'Verein', icon: 'club', keywords: 'name adresse website kontakt zvr saison' }],
       },
       {
         label: 'Mitglieder',
@@ -88,6 +98,14 @@ export const SETTINGS_TREE: readonly SettingsGroup[] = [
         label: 'Kalender',
         tabs: [
           { id: 'appointment-types', label: 'Termine', icon: 'calendar', keywords: 'terminarten farbe kabinen fahrgemeinschaften training spiel' },
+          { id: 'holidays', label: 'Feiertage', icon: 'holidays', keywords: 'ferien frei urlaub schulferien serie' },
+        ],
+      },
+      {
+        label: 'Aufgaben und Dateien',
+        tabs: [
+          { id: 'tasks', label: 'Aufgaben', icon: 'tasks', keywords: 'erinnerung fällig frist vorlauf' },
+          { id: 'files', label: 'Dateien', icon: 'files', keywords: 'speicherplatz upload kontingent quota gb' },
         ],
       },
       { label: 'E-Mail', tabs: [{ id: 'mailboxes', label: 'Postfächer', icon: 'mail', keywords: 'mail e-mail domain adresse limit signatur' }] },

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { session } from '../../lib/container';
   import EditorForm from '../../ui/EditorForm.svelte';
   import type { Action } from '../../lib/state/Action.svelte';
   import type { Hue } from '../../lib/types';
@@ -32,6 +33,8 @@
     red: 'Rot',
   };
   const HUE_OPTIONS = HUES.map((h) => ({ value: h, label: HUE_LABELS[h] }));
+  /** Off club-wide, the type's own switch has no effect; it stays as saved for when the club turns car pools on again. */
+  const clubRides = $derived(session.club?.ridesEnabled !== false);
 </script>
 
 <EditorForm {action} {submitLabel} {oncancel} {onsubmit}>
@@ -43,7 +46,13 @@
       <ColorSwatches label="Farbe" options={HUE_OPTIONS} bind:value={form.hue} />
     </Field>
   </div>
-  <label class="check"><input type="checkbox" bind:checked={form.rides} /> Fahrgemeinschaften anbieten</label>
+  {#if clubRides}
+    <label class="check"><input type="checkbox" bind:checked={form.rides} /> Fahrgemeinschaften anbieten</label>
+  {:else}
+    <Field group label="Fahrgemeinschaften" hint="Im Verein ausgeschaltet (Einstellungen › Termine, oben).">
+      <label class="check"><input type="checkbox" checked={form.rides} disabled /> Fahrgemeinschaften anbieten</label>
+    </Field>
+  {/if}
   <label class="check"><input type="checkbox" bind:checked={form.cabins} /> Kabinen für Damen und Herren angeben</label>
   <Field label="An Antwort erinnern" hint="Stunden vor Beginn; wer noch nicht zu- oder abgesagt hat, bekommt eine Erinnerung. Leer: nie.">
     <input

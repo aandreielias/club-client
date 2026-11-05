@@ -33,5 +33,6 @@ export const FILE_MESSAGES: MessageCatalog = {
   'folder.cover-invalid': 'Das Titelbild muss ein Foto aus diesem Ordner sein.',
   'folder.scope-inherited': 'Unterordner übernehmen die Sichtbarkeit ihres obersten Ordners.',
   'folder.move-into-self': 'Ein Ordner kann nicht in sich selbst verschoben werden.',
-  'file.quota-exceeded': 'Dein Speicherplatz für Uploads (2 GB) ist voll.',
+  'file.quota-exceeded': 'Dein Speicherplatz für Uploads ist voll. Lösche alte Dateien oder frag den Vorstand.',
+  'file-settings.invalid': 'Der Speicherplatz muss zwischen 0,1 und 100 GB liegen.',
 };

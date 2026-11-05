@@ -133,3 +133,8 @@ export const FOLDER_COLORS: readonly { value: FolderColor; label: string; hue: H
 ];
 
 export const colorHue = (color: FolderColor | null): Hue | null => FOLDER_COLORS.find((c) => c.value === color)?.hue ?? null;
+
+/** server: FilesApi.FileSettings — what one member who manages no folder may upload in total. */
+export interface FileSettings {
+  quotaMb: number;
+}

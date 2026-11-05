@@ -3,7 +3,7 @@
 // Not checked: whether a field may be null (the server's records write every field; nullability is not in the document).
 import type { components } from './schema';
 import type { Absence, AbsenceList, Appointment, AppointmentList, Attendance, Ride, RideList } from '../../features/calendar/model';
-import type { DownloadLink, FileList, FilePatch, FolderList, FolderPatch } from '../../features/files/model';
+import type { DownloadLink, FileList, FilePatch, FileSettings, FolderList, FolderPatch } from '../../features/files/model';
 import type { Item, ItemList, ItemUse, OwnItem, StockInput } from '../../features/inventory/model';
 import type { GeocodeResult, Location } from '../../features/locations/model';
 import type { AddressEntry, Mail, Mailbox, MailboxAdmin, MailPage, MailRef, MailSettings, MailSummary } from '../../features/mail/model';
@@ -22,7 +22,7 @@ import type {
 } from '../../features/members/MembersApi';
 import type { Notification, NotificationList, Preference, Preferences } from '../../features/notifications/model';
 import type { SearchHit, SearchResult } from '../../features/search/model';
-import type { Task, TaskList } from '../../features/tasks/model';
+import type { Task, TaskList, TaskSettings } from '../../features/tasks/model';
 import type { TeamInput, Tournament, TournamentSummary } from '../../features/tournaments/model';
 import type { FeedEntry } from '../activity/ActivityApi';
 import type { CalendarItem } from '../calendar/CalendarSources';
@@ -47,6 +47,7 @@ export type Contract = [
   Satisfies<S['at.clubserver.gateway.rest.FilesController.FilePatch'], FilePatch>,
   Satisfies<S['at.clubserver.files.api.FilesApi.FileList'], FileList>,
   Satisfies<S['at.clubserver.files.api.FilesApi.DownloadLink'], DownloadLink>,
+  Satisfies<S['at.clubserver.files.api.FilesApi.FileSettings'], FileSettings>,
   Satisfies<S['at.clubserver.inventory.api.InventoryApi.ItemDto'], Item>,
   Satisfies<S['at.clubserver.inventory.api.InventoryApi.ItemList'], ItemList>,
   Satisfies<S['at.clubserver.inventory.api.InventoryApi.ItemUse'], ItemUse>,
@@ -84,6 +85,7 @@ export type Contract = [
   Satisfies<S['at.clubserver.gateway.rest.SearchController.SearchHit'], SearchHit>,
   Satisfies<S['at.clubserver.gateway.rest.SearchController.SearchResult'], SearchResult>,
   Satisfies<S['at.clubserver.tasks.api.TasksApi.TaskDto'], Task>,
+  Satisfies<S['at.clubserver.tasks.api.TasksApi.TaskSettings'], TaskSettings>,
   Satisfies<S['at.clubserver.tasks.api.TasksApi.TaskList'], TaskList>,
   Satisfies<S['at.clubserver.tournaments.api.TournamentsApi.TournamentDto'], Tournament>,
   Satisfies<S['at.clubserver.tournaments.api.TournamentsApi.TournamentSummary'], TournamentSummary>,

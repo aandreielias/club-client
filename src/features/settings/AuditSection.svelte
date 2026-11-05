@@ -11,7 +11,7 @@
 </script>
 
 <div class="stack">
-  <p class="muted">
+  <p class="muted small">
     Änderungen mit erweiterten Rechten, Einblicke von Admin und Vorstand in Mitgliederdaten und Datenexporte. Einträge lassen sich nicht ändern und
     werden nach zwei Jahren gelöscht. Art, Bereich und Person filtern das ganze Protokoll, die Suche die geladenen Einträge.
   </p>

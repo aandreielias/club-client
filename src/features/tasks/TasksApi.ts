@@ -1,11 +1,20 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
-import type { NewTask, Task, TaskList, TaskPatch, TaskQuery, TaskStatus } from './model';
+import type { NewTask, Task, TaskList, TaskPatch, TaskQuery, TaskSettings, TaskStatus } from './model';
 
 /** Typed access to the tasks endpoints of club-server. Every write answers with the updated task. */
 export class TasksApi {
   static readonly BASE = '/api/v1/tasks';
 
   constructor(private readonly api: ApiClient) {}
+
+  /** Admin and board: how long before the due time the reminder goes out. */
+  settings(): Promise<TaskSettings> {
+    return this.api.get<TaskSettings>(`${TasksApi.BASE}/settings`);
+  }
+
+  saveSettings(settings: TaskSettings): Promise<TaskSettings> {
+    return this.api.put<TaskSettings>(`${TasksApi.BASE}/settings`, settings);
+  }
 
   /** Visible tasks ordered by due date (undated last), without comments. */
   list(query: TaskQuery): Promise<TaskList> {

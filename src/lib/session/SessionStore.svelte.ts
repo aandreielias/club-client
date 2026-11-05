@@ -77,8 +77,20 @@ export class SessionStore {
     await this.loadMe();
   }
 
-  /** Admin/board; time zone and locale stay as loaded (server: club.yml only). */
-  async updateClub(edit: ClubEdit): Promise<void> {
+  /** Admin/board; fields left out keep their current value. Time zone and locale stay as loaded (server: club.yml only). */
+  async updateClub(patch: Partial<ClubEdit>): Promise<void> {
+    const c = this.club!;
+    const edit: ClubEdit = {
+      name: c.name,
+      shortName: c.shortName,
+      website: c.website,
+      contactEmail: c.contactEmail,
+      address: c.address,
+      registerNumber: c.registerNumber,
+      seasonStartMonth: c.seasonStartMonth,
+      ridesEnabled: c.ridesEnabled,
+      ...patch,
+    };
     this.club = await this.api.put<Club>('/api/v1/club', edit);
   }
 

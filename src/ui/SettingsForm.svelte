@@ -42,8 +42,8 @@
   }
 </script>
 
-<form class="card stack" onsubmit={submit} novalidate aria-label={title}>
-  <header class="stack">
+<form class="panel stack" onsubmit={submit} novalidate aria-label={title}>
+  <header>
     <h2>{title}</h2>
     {#if intro}<p class="muted small">{intro}</p>{/if}
   </header>
@@ -61,22 +61,6 @@
 </form>
 
 <style>
-  .card {
-    position: relative;
-    padding: var(--space-md);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-  }
-  header {
-    gap: var(--space-xxs);
-  }
-  h2,
-  p {
-    margin: 0;
-  }
-  h2 {
-    font-size: var(--font-size-base);
-  }
   .bar {
     position: sticky;
     bottom: var(--space-sm);

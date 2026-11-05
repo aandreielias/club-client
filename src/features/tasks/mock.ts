@@ -7,7 +7,7 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import type { Member } from '../../lib/types';
 import { ZonedClock } from '../../lib/time/ZonedClock';
-import type { NewTask, Task, TaskComment, TaskPatch, TaskSource, TaskStatus } from './model';
+import type { NewTask, Task, TaskComment, TaskPatch, TaskSettings, TaskSource, TaskStatus } from './model';
 import type { MockEvent } from '../../lib/mock/MockEventBus';
 import { ADMIN_BOARD, coaches } from '../../lib/types';
 import { CHANGE_FIELD_LABELS, type ChangeField } from '../members/MembersApi';
@@ -57,11 +57,28 @@ export class MockTasks {
 
   /** taskId → source (server: tasks_source) */
   readonly sources = new MockTable<Record<string, TaskSource>>('task-sources', () => ({}));
+  /** server: tasks_setting */
+  readonly settings = new MockTable<TaskSettings>('task-settings', () => ({ remindHours: 24 }));
 
   constructor(private readonly people: MockDirectory) {
     this.tasks = new MockTable('tasks', () => this.seedTasks());
     this.comments = new MockTable('task-comments', () => this.seedComments());
     mockServer.events.subscribe((event) => this.onEvent(event));
+  }
+
+  taskSettings(member: Member): TaskSettings {
+    this.people.requireRole(member, ADMIN_BOARD);
+    return { ...this.settings.data };
+  }
+
+  /** server: TaskHandlers.saveSettings */
+  saveTaskSettings(member: Member, body: Record<string, unknown>): TaskSettings {
+    this.people.requirePrivileged(member, ADMIN_BOARD);
+    const remindHours = Number(body.remindHours);
+    if (!Number.isInteger(remindHours) || remindHours < 1 || remindHours > 336) fail(400, 'task-settings.invalid');
+    this.settings.data.remindHours = remindHours;
+    this.settings.save();
+    return { ...this.settings.data };
   }
 
   /** server: TaskHandlers.onChangeRequested / onChangeDecided */
@@ -630,6 +647,8 @@ const actor = (req: MockRequest) => directory.actor(req);
 const flag = (req: MockRequest, name: string) => req.query.get(name) === 'true';
 
 mockServer
+  .on('GET', '/api/v1/tasks/settings', (req) => tasks.taskSettings(actor(req)))
+  .on('PUT', '/api/v1/tasks/settings', (req) => tasks.saveTaskSettings(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/tasks/:id/activity', (req) => activity.list(actor(req), 'TASK', tasks.get(actor(req), req.params.id).id))
   .on('GET', '/api/v1/tasks', (req) => {
     const found = tasks.list(

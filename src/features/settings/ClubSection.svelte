@@ -16,7 +16,6 @@
     website: string;
     contactEmail: string;
     seasonStartMonth: string;
-    ridesEnabled: boolean;
   }
 
   const limits = settings.club;
@@ -28,7 +27,6 @@
     website: club.website ?? '',
     contactEmail: club.contactEmail ?? '',
     seasonStartMonth: String(club.seasonStartMonth),
-    ridesEnabled: club.ridesEnabled,
   });
   const draft = new SettingsDraft<ClubForm>(formOf(session.club!));
 
@@ -43,7 +41,7 @@
   }
 </script>
 
-<div class="stack readable">
+<div class="stack">
   <SettingsForm
     title="Verein"
     intro="Gilt für alle Mitglieder: Name in Seitenleiste, E-Mails, Kalender-Abo und Einladungen. Leere Felder nehmen den Standard des Servers."
@@ -77,8 +75,5 @@
         <input type="email" bind:value={draft.value.contactEmail} maxlength={limits.linkMaxLength} />
       </Field>
     </div>
-    <label class="check"
-      ><input type="checkbox" bind:checked={draft.value.ridesEnabled} /> Fahrgemeinschaften im Verein anbieten (pro Termin ein- und ausschaltbar)</label
-    >
   </SettingsForm>
 </div>

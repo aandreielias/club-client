@@ -31,7 +31,6 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   Wiederherstellen: { text: 'Wieder unter den aktuellen Einträgen zeigen' },
   Archivieren: { text: 'Aus den Auswahllisten nehmen; der Verlauf bleibt erhalten' },
   'Serie verlängern': { text: 'Die wöchentliche Serie im selben Rhythmus weiterführen; Ferien werden ausgelassen' },
-  'Ferien eintragen': { text: 'Tage eintragen, an denen der Verein nicht trainiert; neue Serien lassen sie aus' },
   Zuweisen: { text: 'Die ausgewählten Aufgaben einer Person zuweisen' },
   'Rolle setzen': { text: 'Den ausgewählten Mitgliedern diese Rolle im Team geben' },
   'Einladung erneut senden': { text: 'Die Einladungs-E-Mail noch einmal schicken; das Mitglied hat sich noch nie angemeldet' },

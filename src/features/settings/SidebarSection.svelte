@@ -8,7 +8,7 @@
 </script>
 
 <div class="stack">
-  <p class="muted">
+  <p class="muted small">
     Einträge an die gewünschte Stelle ziehen. Mit der Tastatur: Eintrag auswählen, Leertaste, Pfeiltasten, Leertaste. Gruppen wie „Verein“ ziehen sich
     als Ganzes mit. Einstellungen und Abmelden bleiben unten.
   </p>

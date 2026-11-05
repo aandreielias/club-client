@@ -96,7 +96,7 @@
       loading={load.busy && !rows.length}
       error={load.error}
       onretry={reload}
-      emptyText="Die Funktionen werden geladen."
+      emptyText="Keine Funktionen."
     />
   </section>
 </div>

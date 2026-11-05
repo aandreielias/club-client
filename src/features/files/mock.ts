@@ -8,8 +8,8 @@ import { linkRefs, type FileLink } from '../../lib/mock/MockLinks';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import type { FileRef } from '../../lib/links/model';
-import { coaches, type Member } from '../../lib/types';
-import type { DownloadLink, FileVersion, Folder, FolderKind, FolderScope, StoredFile } from './model';
+import { ADMIN_BOARD, coaches, type Member } from '../../lib/types';
+import type { DownloadLink, FileSettings, FileVersion, Folder, FolderKind, FolderScope, StoredFile } from './model';
 
 type StoredFolder = Omit<Folder, 'canUpload' | 'canManage'>;
 
@@ -79,6 +79,8 @@ export class MockFiles {
   readonly files: MockTable<StoredFile[]>;
   /** fileId → versions, newest first (server: files_version); bytes in #blobs under the version id. */
   readonly versions: MockTable<Record<string, StoredVersion[]>>;
+  /** server: files_setting */
+  readonly settings = new MockTable<FileSettings>('file-settings', () => ({ quotaMb: 2048 }));
   /** fileId → content; lost on reload, links then fall back to a placeholder. */
   readonly #blobs = new Map<string, Blob>();
   readonly #urls = new Map<string, string>();
@@ -275,12 +277,38 @@ export class MockFiles {
       }));
   }
 
+  fileSettings(member: Member): FileSettings {
+    directory.requireRole(member, ADMIN_BOARD);
+    return { ...this.settings.data };
+  }
+
+  /** server: FileHandlers.saveSettings */
+  saveFileSettings(member: Member, body: Record<string, unknown>): FileSettings {
+    directory.requirePrivileged(member, ADMIN_BOARD);
+    const quotaMb = Number(body.quotaMb);
+    if (!Number.isInteger(quotaMb) || quotaMb < 100 || quotaMb > 102_400) fail(400, 'file-settings.invalid');
+    this.settings.data.quotaMb = quotaMb;
+    this.settings.save();
+    return { ...this.settings.data };
+  }
+
+  /** server: FileHandlers.requireQuota — what a member uploaded (files and versions) plus the new bytes. */
+  private requireQuota(member: Member, adding: number): void {
+    const own = this.files.data.filter((f) => f.uploadedBy === member.id).reduce((sum, f) => sum + f.sizeBytes, 0);
+    const versions = Object.values(this.versions.data)
+      .flat()
+      .filter((v) => v.uploadedBy === member.id)
+      .reduce((sum, v) => sum + v.sizeBytes, 0);
+    if (own + versions + adding > this.settings.data.quotaMb * 1024 * 1024) fail(409, 'file.quota-exceeded');
+  }
+
   async upload(req: MockRequest): Promise<StoredFile> {
     const viewer = this.viewer(directory.actor(req));
     const folder = this.visibleFolder(viewer, req.params.folderId);
+    const file = req.body instanceof FormData ? req.body.get('file') : null;
     if (viewer.canManage(folder)) this.requireManage(viewer, folder);
     else if (!folder.membersCanUpload) fail(403, 'access.denied');
-    const file = req.body instanceof FormData ? req.body.get('file') : null;
+    else if (file instanceof Blob) this.requireQuota(viewer.member, file.size);
     if (!(file instanceof Blob)) return fail(400, 'request.invalid');
     if (file.size > limits.maxUploadBytes) fail(413, 'request.too-large');
     await MockFiles.simulateTransfer(file.size, req.onProgress);
@@ -323,6 +351,8 @@ export class MockFiles {
     const file = this.visibleFile(viewer, req.params.id);
     const folder = this.folders.data.find((f) => f.id === file.folderId)!;
     this.requireModify(viewer, folder, file);
+    const incoming = req.body instanceof FormData ? req.body.get('file') : null;
+    if (!viewer.canManage(folder) && incoming instanceof Blob) this.requireQuota(viewer.member, incoming.size);
     if (folder.kind !== 'DOCUMENTS' || file.contentType.startsWith('image/')) fail(400, 'file.versions-documents-only');
     const body = req.body instanceof FormData ? req.body : null;
     const upload = body?.get('file');
@@ -826,6 +856,8 @@ linkRefs.files = (member, links) => files.refs(member, links);
 const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer
+  .on('GET', '/api/v1/files/settings', (req) => files.fileSettings(actor(req)))
+  .on('PUT', '/api/v1/files/settings', (req) => files.saveFileSettings(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/files/:id/activity', (req) => {
     const [ref] = files.refs(actor(req), [{ fileId: req.params.id, folderId: null, name: null }]);
     return ref && !ref.deleted ? activity.list(actor(req), 'FILE', ref.id) : MockServer.fail(404, 'file.not-found');

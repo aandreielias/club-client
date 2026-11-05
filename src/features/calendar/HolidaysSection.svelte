@@ -1,99 +1,43 @@
 <script lang="ts">
-  import { bus, session } from '../../lib/container';
-  import { CONFIRM, TOAST } from '../../channels';
+  import { session } from '../../lib/container';
   import { Action } from '../../lib/state/Action.svelte';
-  import { Resource } from '../../lib/state/Resource.svelte';
-  import AsyncView from '../../ui/AsyncView.svelte';
-  import Button from '../../ui/Button.svelte';
-  import DateInput from '../../ui/DateInput.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
-  import Field from '../../ui/Field.svelte';
-  import type { Holiday } from './model';
-  import { calendarApi } from './services';
+  import SettingsList from '../../ui/SettingsList.svelte';
+  import { holidays } from './services';
 
-  /** Einstellungen › Termine: the club's holidays; new weekly series skip them and the calendar shows them. */
-  const holidays = new Resource(() => calendarApi.holidays());
-  void holidays.load();
-  const save = new Action();
-  const today = session.clock.today();
-  let name = $state('');
-  let from = $state(today);
-  let to = $state(today);
+  /** Einstellungen › Feiertage (admin/board): days without training; new weekly series skip them, the calendar shows them to all. */
+  const load = new Action();
+  const reload = () => void load.run(() => holidays.load());
+  reload();
 
-  async function add(event: SubmitEvent) {
-    event.preventDefault();
-    if (!name.trim() || to < from) return;
-    if (await save.run(() => calendarApi.saveHoliday(null, { name: name.trim(), from, to }))) {
-      name = '';
-      void holidays.load();
-      bus.publish(TOAST, { text: 'Ferien eingetragen.' });
-    }
-  }
-
-  async function remove(h: Holiday) {
-    const ok = await bus.request(CONFIRM, {
-      title: 'Ferien löschen',
-      message: `„${h.name}“ löschen? Bestehende Termine bleiben.`,
-      confirmLabel: 'Löschen',
-      danger: true,
-    });
-    if (ok && (await save.run(() => calendarApi.deleteHoliday(h.id)))) void holidays.load();
-  }
+  const rows = $derived(
+    holidays.items.map((h) => ({
+      key: h.id,
+      label: h.name,
+      detail: h.from === h.to ? session.format.date(h.from) : `${session.format.date(h.from)} – ${session.format.date(h.to)}`,
+      archived: false,
+      inUse: false,
+    })),
+  );
 </script>
 
-<section class="stack">
-  <h2>Ferien und freie Tage</h2>
+<div class="stack">
   <p class="muted small">
-    Neue wöchentliche Serien lassen diese Tage aus; der Kalender zeigt sie allen. Bestehende Termine sagst du mit „Zeitraum absagen“ ab.
+    Ferien und freie Tage. Neue wöchentliche Serien lassen diese Tage aus; der Kalender zeigt sie allen. Bestehende Termine sagst du im Kalender mit
+    „Zeitraum absagen“ ab.
   </p>
-  <AsyncView resource={holidays}>
-    {#snippet children(items)}
-      {#if items.length}
-        <ul class="holidays">
-          {#each items as h (h.id)}
-            <li>
-              <span><strong>{h.name}</strong> <span class="muted">{session.format.date(h.from)} – {session.format.date(h.to)}</span></span>
-              <Button size="sm" variant="ghost" icon="delete" tooltip="„{h.name}“ löschen" onclick={() => remove(h)}>Löschen</Button>
-            </li>
-          {/each}
-        </ul>
-      {:else}
-        <p class="muted">Noch keine Ferien eingetragen.</p>
-      {/if}
-    {/snippet}
-  </AsyncView>
-  <form class="row add" onsubmit={add}>
-    <Field label="Name"><input bind:value={name} maxlength="80" placeholder="Herbstferien" required /></Field>
-    <Field label="Von"><DateInput bind:value={from} /></Field>
-    <Field label="Bis"><DateInput bind:value={to} min={from} /></Field>
-    <Button type="submit" busy={save.busy} disabled={!name.trim() || to < from}>Ferien eintragen</Button>
-  </form>
-  <ErrorNote error={save.error} />
-</section>
+  <SettingsList
+    {rows}
+    kind="holiday"
+    newLabel="Neue Ferien"
+    loading={load.busy && !holidays.items.length}
+    error={load.error}
+    onretry={reload}
+    emptyText="Noch keine Ferien eingetragen."
+  />
+</div>
 
 <style>
-  p,
-  h2 {
+  p {
     margin: 0;
-  }
-  h2 {
-    font-size: var(--font-size-base);
-  }
-  .holidays {
-    display: grid;
-    gap: var(--space-xs);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .holidays li {
-    display: flex;
-    gap: var(--space-sm);
-    align-items: center;
-    justify-content: space-between;
-  }
-  .add {
-    align-items: end;
-    flex-wrap: wrap;
   }
 </style>

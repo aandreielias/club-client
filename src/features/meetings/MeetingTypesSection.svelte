@@ -23,7 +23,7 @@
 </script>
 
 <div class="stack">
-  <p class="muted">
+  <p class="muted small">
     Welche Sitzungen der Verein abhält und nach welchen Regeln: wer eingeladen wird, die Einladungsfrist, wer einberuft, wann die Sitzung
     beschlussfähig ist und was sie beschließen darf.
   </p>

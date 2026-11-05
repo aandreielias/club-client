@@ -1,12 +1,21 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
 import type { ProgressListener } from '../../lib/http/Transport';
-import type { DownloadLink, FileList, FilePatch, FileVersion, Folder, FolderList, FolderPatch, NewFolder, StoredFile } from './model';
+import type { DownloadLink, FileList, FilePatch, FileSettings, FileVersion, Folder, FolderList, FolderPatch, NewFolder, StoredFile } from './model';
 
 /** Typed access to the files endpoints of club-server. */
 export class FilesApi {
   static readonly BASE = '/api/v1';
 
   constructor(private readonly api: ApiClient) {}
+
+  /** Admin and board: the upload quota per member. */
+  settings(): Promise<FileSettings> {
+    return this.api.get<FileSettings>(`${FilesApi.BASE}/files/settings`);
+  }
+
+  saveSettings(settings: FileSettings): Promise<FileSettings> {
+    return this.api.put<FileSettings>(`${FilesApi.BASE}/files/settings`, settings);
+  }
 
   /** Every folder the member may see (flat; build the tree from parentId). */
   async folders(): Promise<Folder[]> {

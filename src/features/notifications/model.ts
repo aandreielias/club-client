@@ -81,7 +81,7 @@ export const NOTIFICATION_KINDS: readonly { value: NotificationKind; label: stri
     label: 'Kommentare und erledigte Aufgaben',
     hint: 'Neue Kommentare zu deinen Aufgaben; wenn eine Aufgabe, die du angelegt hast, erledigt ist.',
   },
-  { value: 'TASK_DUE', label: 'Fällige Aufgaben', hint: 'Etwa einen Tag vor der Fälligkeit.' },
+  { value: 'TASK_DUE', label: 'Fällige Aufgaben', hint: 'Vor der Fälligkeit; wie lange vorher, legt der Verein fest.' },
   { value: 'APPOINTMENT_CANCELLED', label: 'Abgesagte Termine', hint: 'Wenn ein Termin für dich ausfällt.' },
   { value: 'APPOINTMENT_CHANGED', label: 'Geänderte Termine', hint: 'Neue Zeit, neuer Ort oder neue Kabine eines kommenden Termins.' },
   {

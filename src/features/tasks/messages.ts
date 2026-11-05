@@ -5,6 +5,7 @@ const limits = settings.tasks;
 
 export const TASK_MESSAGES: MessageCatalog = {
   'task.not-found': 'Aufgabe nicht gefunden.',
+  'task-settings.invalid': 'Die Erinnerung liegt 1 bis 336 Stunden vor der Fälligkeit.',
   'task.title-invalid': `Titel mit 1 bis ${limits.titleMaxLength} Zeichen angeben.`,
   'task.description-too-long': `Die Beschreibung hat höchstens ${limits.descriptionMaxLength} Zeichen.`,
   'task.assignees-invalid': `1 bis ${limits.maxAssignees} Personen zuweisen.`,

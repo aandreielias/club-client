@@ -9,6 +9,7 @@ import Bell from '@lucide/svelte/icons/bell';
 import BookUser from '@lucide/svelte/icons/book-user';
 import Calendar from '@lucide/svelte/icons/calendar';
 import CalendarDays from '@lucide/svelte/icons/calendar-days';
+import CalendarOff from '@lucide/svelte/icons/calendar-off';
 import Check from '@lucide/svelte/icons/check';
 import Gavel from '@lucide/svelte/icons/gavel';
 import History from '@lucide/svelte/icons/history';
@@ -74,6 +75,7 @@ import X from '@lucide/svelte/icons/x';
 export const ICONS = {
   home: House,
   calendar: Calendar,
+  holidays: CalendarOff,
   events: CalendarDays,
   eventGroup: Ticket,
   club: Landmark,

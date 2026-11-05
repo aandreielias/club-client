@@ -148,11 +148,6 @@ export class MeetingsApi {
     return (await this.api.get<{ items: Resolution[] }>(`${this.path(meetingId)}/resolutions`)).items;
   }
 
-  /** Circular votes of the board, newest first. */
-  async circular(): Promise<Resolution[]> {
-    return (await this.api.get<{ items: Resolution[] }>(MeetingsApi.RESOLUTIONS)).items;
-  }
-
   /** A Beschluss added to the end of the meeting's agenda (same rules as an agenda edit). */
   createResolution(meetingId: string, resolution: NewResolution): Promise<Resolution> {
     return this.api.post<Resolution>(`${this.path(meetingId)}/resolutions`, resolution);

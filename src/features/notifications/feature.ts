@@ -3,7 +3,6 @@ import { PRIVILEGED } from '../../lib/types';
 import MessageComposeView from './MessageComposeView.svelte';
 import MessageView from './MessageView.svelte';
 import { NOTIFICATION_MESSAGES } from './messages';
-import NotificationSettingsPage from './NotificationSettingsPage.svelte';
 import NotificationsPage from './NotificationsPage.svelte';
 import NotificationsHome from './NotificationsHome.svelte';
 import { notificationCenter } from './services';
@@ -19,7 +18,6 @@ export const notificationsFeature: Feature = {
       badge: () => notificationCenter.unread,
       guest: true,
     },
-    { path: '/notifications/settings', component: NotificationSettingsPage, guest: true },
   ],
   windows: {
     message: { component: MessageView },
