@@ -11,7 +11,6 @@ import type {
   MeetingTypeInput,
   MeetingSummary,
   NewMeeting,
-  NewResolution,
   Resolution,
   ResolutionRules,
   VoteMode,
@@ -160,10 +159,6 @@ export class MeetingsApi {
     return this.api.get<Resolution>(this.resolutionPath(id));
   }
 
-  createResolution(meetingId: string, resolution: NewResolution): Promise<Resolution> {
-    return this.api.post<Resolution>(`${this.path(meetingId)}/resolutions`, resolution);
-  }
-
   /** Created and opened at once; whoever is named (empty: the board) gets the task "umsetzen" once it passes. */
   createCircular(
     title: string,
@@ -210,11 +205,6 @@ export class MeetingsApi {
   /** Circular votes: a written vote of a board member. */
   recordVote(id: string, memberId: string, choice: Choice): Promise<Resolution> {
     return this.api.post<Resolution>(`${this.resolutionPath(id)}/recorded-vote`, { memberId, choice });
-  }
-
-  /** Meetings: the room's sums for members without the app, once. */
-  analogVotes(id: string, yes: number, no: number, abstain: number): Promise<Resolution> {
-    return this.api.post<Resolution>(`${this.resolutionPath(id)}/analog-votes`, { yes, no, abstain });
   }
 
   /** Show of hands: the counts and closing in one step ("Einstimmig", "Ergebnis eintragen"). */

@@ -5,6 +5,10 @@ import { BUTTON_TOOLTIPS } from './tooltips';
 const PROP_LABELS: Record<string, string[]> = { '{submitLabel}': ['Anlegen', 'Speichern'] };
 
 const sources = import.meta.glob('./**/*.svelte', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const scripts = import.meta.glob(['./**/*.ts', '!./**/*.test.ts', '!./tooltips.ts'], { query: '?raw', import: 'default', eager: true }) as Record<
+  string,
+  string
+>;
 
 describe('button tooltips', () => {
   it('cover every static Button label or come with their own tooltip', () => {
@@ -22,6 +26,11 @@ describe('button tooltips', () => {
       }
     }
     expect(missing).toEqual([]);
+  });
+
+  it('has no entry that no label uses', () => {
+    const all = [...Object.values(sources), ...Object.values(scripts)].join('\n');
+    expect(Object.keys(BUTTON_TOOLTIPS).filter((label) => !all.includes(label))).toEqual([]);
   });
 
   it('are attached to every plain button element', () => {

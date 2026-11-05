@@ -311,8 +311,6 @@ export const settings = {
     ages: { guardianMin: 14, guardianMax: 21, consentMin: 10 },
     nameMaxLength: 100,
     earliestBirthDate: '1900-01-01',
-    /** Show the search field from this many members on. */
-    searchFrom: 8,
     /** server: ChangeRequest.NOTE_MAX */
     changeNoteMaxLength: 500,
   },
@@ -346,9 +344,9 @@ export const settings = {
     descriptionMaxLength: 2000,
     locationMaxLength: 200,
     reasonMaxLength: 300,
-    /** Car pools (where the appointment type offers them): server limits seats and note. */
     /** Changing cabins for men and women, free text (where the appointment type offers them). */
     cabinMaxLength: 60,
+    /** Car pools (where the appointment type offers them): server limits seats and note. */
     rideMaxSeats: 8,
     /** Car seen from above next to each ride (CarSeats); height follows the number of seats. */
     rideGraphic: { width: 84 },
@@ -418,7 +416,6 @@ export const settings = {
   /** Split view: share of the width the main page keeps, arrow-key step, page opened first. */
   split: { minRatio: 0.3, maxRatio: 0.7, step: 0.05, defaultPath: '/calendar' },
 
-  /** server: locations module (Location) */
   /** Club mailboxes (server: OutgoingMail limits). */
   mail: {
     maxRecipients: 50,
@@ -430,7 +427,6 @@ export const settings = {
     /** Records linked in the text and attached, together (server: MailRefs.MAX). */
     maxRefs: 20,
     /** Hits per kind in the "Verknüpfen" search. */
-    searchPerKind: 5,
     /** A draft is saved this long after the last change while writing. */
     draftDelayMs: 1500,
   },
@@ -455,14 +451,14 @@ export const settings = {
     /** Show a toast when a new notification arrives live. */
     toastOnArrival: true,
     /** server: MessageHandlers / MessagesController */
-    message: { titleMaxLength: 150, bodyMaxLength: 1000, maxRefs: 10, maxTargets: 200, previewDebounceMs: 250, searchPerKind: 5 },
+    message: { titleMaxLength: 150, bodyMaxLength: 1000, maxRefs: 10, maxTargets: 200, previewDebounceMs: 250 },
   },
 
   files: {
-    /** server: FileVersion.MAX_LABEL */
     /** Comparing versions: lines read per version, unchanged lines kept around each change. */
     compareMaxLines: 2000,
     compareContextLines: 2,
+    /** server: FileVersion.MAX_LABEL */
     versionLabelMaxLength: 20,
     /** ZIP downloads are packed in the browser; larger folders must be downloaded in parts. */
     zipMaxBytes: 500 * 1024 * 1024,
@@ -520,6 +516,8 @@ export const settings = {
     maxQueryLength: 100,
     /** Hits per kind (appointments, tasks, ...); the server allows up to 25. */
     perKind: 8,
+    /** Hits per kind when picking records to link (messages, mails). */
+    pickerPerKind: 5,
     /** Typing pause before the results update. */
     debounceMs: 250,
   },

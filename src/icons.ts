@@ -55,7 +55,6 @@ import Heading2 from '@lucide/svelte/icons/heading-2';
 import List from '@lucide/svelte/icons/list';
 import ListOrdered from '@lucide/svelte/icons/list-ordered';
 import TextQuote from '@lucide/svelte/icons/text-quote';
-import Unlink from '@lucide/svelte/icons/unlink';
 import RemoveFormatting from '@lucide/svelte/icons/remove-formatting';
 import Undo2 from '@lucide/svelte/icons/undo-2';
 import Redo2 from '@lucide/svelte/icons/redo-2';
@@ -108,7 +107,6 @@ export const ICONS = {
   bulletList: List,
   orderedList: ListOrdered,
   quote: TextQuote,
-  unlink: Unlink,
   clearFormat: RemoveFormatting,
   undo: Undo2,
   redo: Redo2,

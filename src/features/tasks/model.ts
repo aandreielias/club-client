@@ -84,9 +84,6 @@ export interface TaskQuery {
   mine: boolean;
   teamId: string | null;
   includeDone: boolean;
-  /** Due range [dueFrom, dueTo) as instants; with a range, undated tasks are left out. */
-  dueFrom?: string;
-  dueTo?: string;
 }
 
 export const TASK_STATUSES: readonly { value: TaskStatus; label: string }[] = (Object.keys(TASK_STATUS_LABELS) as TaskStatus[]).map((value) => ({

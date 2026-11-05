@@ -116,7 +116,7 @@
       <textarea bind:value={form.body} rows="5" maxlength={limits.bodyMaxLength}></textarea>
     </Field>
 
-    <RefPicker form={form.links} perKind={settings.notifications.message.searchPerKind} />
+    <RefPicker form={form.links} />
 
     <ErrorNote error={send.error} />
     <div class="row">

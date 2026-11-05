@@ -6,16 +6,17 @@
   import { kindLabel, type HitKind } from '../features/search/model';
   import type { RefList } from '../lib/records/RefList.svelte';
   import { REF_ICONS, type RefKind } from '../lib/records/refs';
+  import { settings } from '../settings';
 
   /** Linking records (message, meeting): search like the global search, picked records as removable chips. */
-  let { form, label = 'Verknüpfen (optional)', perKind = 5 }: { form: RefList; label?: string; perKind?: number } = $props();
+  let { form, label = 'Verknüpfen (optional)' }: { form: RefList; label?: string } = $props();
 
   const LINKABLE: readonly HitKind[] = ['APPOINTMENT', 'TASK', 'ITEM', 'FILE', 'MEMBER', 'TEAM', 'LOCATION', 'TOURNAMENT', 'MEETING'];
   let found = new Map<string, { kind: RefKind; id: string; title: string }>();
 
   async function search(query: string) {
-    if (query.trim().length < 2) return [];
-    const hits = (await searchApi.search(query, perKind)).filter((h) => LINKABLE.includes(h.kind));
+    if (query.trim().length < settings.search.minQueryLength) return [];
+    const hits = (await searchApi.search(query, settings.search.pickerPerKind)).filter((h) => LINKABLE.includes(h.kind));
     found = new Map(hits.map((h) => [`${h.kind}:${h.id}`, { kind: h.kind as RefKind, id: h.id, title: h.title }]));
     return hits
       .filter((h) => !form.hasRef(h.kind as RefKind, h.id))
@@ -34,7 +35,7 @@
       }}
       placeholder="Termin, Aufgabe, Person, Team, Ort, Turnier, Sitzung, Inventar oder Datei suchen"
       aria-label="Datensatz zum Verknüpfen suchen"
-      debounceMs={200}
+      debounceMs={settings.search.debounceMs}
     />
   {/if}
   {#if form.refs.length}

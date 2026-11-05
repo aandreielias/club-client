@@ -610,10 +610,6 @@ export class MockDirectory {
     this.saveMembers();
     if (body.guardianId != null) this.linkGuardian(viewer, member.id, body.guardianId);
     mockServer.events.publish({ type: 'members.member-invited', data: { memberId: member.id }, audience: { roles: ADMIN_BOARD } });
-    mockServer.events.publish({
-      type: 'platform.record-event',
-      data: { record: 'MEMBER', event: 'INVITED', attrs: { kind: member.membershipTypes.join(',') }, date: null },
-    });
     return member;
   }
 
@@ -707,8 +703,6 @@ export class MockDirectory {
         : (target.membershipTypes[0] ?? null);
     Object.assign(target, { membershipTypes, previousType, memberSince });
     this.saveMembers();
-    const honorary = membershipTypes.includes('HONORARY');
-    mockServer.events.publish({ type: 'members.membership-changed', data: { memberId, membershipTypes, honorary } });
     return this.visibleTo(viewer, target);
   }
 

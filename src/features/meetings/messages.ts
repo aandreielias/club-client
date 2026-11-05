@@ -82,7 +82,6 @@ export const MEETING_MESSAGES: MessageCatalog = {
   'resolution.not-voter': 'Du bist hier nicht stimmberechtigt.',
   'resolution.not-present': 'Abstimmen kann nur, wer als anwesend eingetragen ist.',
   'resolution.already-voted': 'Diese Stimme ist schon abgegeben.',
-  'resolution.analog-already-entered': 'Die Stimmen im Raum wurden schon erfasst.',
   'resolution.analog-exceeds-present': 'Mehr Stimmen, als Stimmberechtigte anwesend sind.',
   'resolution.analog-invalid': 'Nur Zahlen ab 0.',
   'resolution.not-circular': 'In Sitzungen werden die Stimmen im Raum als Summe erfasst.',

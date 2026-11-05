@@ -215,7 +215,7 @@
         {#if f.error('body')}<span class="error" role="alert">{f.error('body')}</span>{/if}
       </div>
 
-      <RefPicker form={f.links} label="Anhängen (optional)" perKind={limits.searchPerKind} />
+      <RefPicker form={f.links} label="Anhängen (optional)" />
 
       <ErrorNote error={send.error} />
       <div class="row footer">

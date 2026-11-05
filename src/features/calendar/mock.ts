@@ -169,18 +169,6 @@ export class MockCalendar {
     this.appointments.data.push(...created);
     this.appointments.save();
     this.changed(member, created, 'CREATED');
-    // server: CalendarApi.APPOINTMENT_CREATED (internal)
-    for (const a of created) {
-      mockServer.events.publish({
-        type: 'platform.record-event',
-        data: {
-          record: 'APPOINTMENT',
-          event: 'CREATED',
-          attrs: { type: a.type, ...(a.teamId ? { team: a.teamId } : {}) },
-          date: a.startsAt.slice(0, 10),
-        },
-      });
-    }
     created.forEach((a) => MockActivity.record('APPOINTMENT', a.id, member, 'CREATED', { title: a.title, teamIds: a.teamId ? [a.teamId] : [] }));
     return created;
   }
