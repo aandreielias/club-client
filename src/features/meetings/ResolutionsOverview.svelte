@@ -36,9 +36,10 @@
     <Select options={RESULTS} bind:value={result} aria-label="Ergebnis" />
   </div>
   <AsyncView resource={list}>
-    {#snippet children(items)}
+    {#snippet children(page)}
+      {#if page.truncated}<p class="muted small">Es gibt mehr Beschlüsse, als hier stehen. Bitte ein Jahr wählen.</p>{/if}
       <ul class="list">
-        {#each shown(items) as r (r.id)}
+        {#each shown(page.items) as r (r.id)}
           <li>
             <RecordLink kind="resolution" id={r.id}>{r.title}</RecordLink>
             {#if r.result}<Tag tone={RESULT_TONES[r.result]}>{RESULT_LABELS[r.result]}</Tag>{:else if r.status === 'OPEN'}<Tag tone="green">Offen</Tag

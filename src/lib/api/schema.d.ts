@@ -3872,6 +3872,7 @@ export interface components {
         };
         "at.clubserver.tournaments.api.TournamentsApi.TournamentList": {
             items: components["schemas"]["at.clubserver.tournaments.api.TournamentsApi.TournamentSummary"][];
+            truncated: boolean;
         };
         "at.clubserver.tournaments.api.TournamentsApi.TournamentSummary": {
             /** Format: uuid */
@@ -3939,6 +3940,7 @@ export interface components {
         };
         "at.clubserver.tasks.api.TasksApi.TaskList": {
             items: components["schemas"]["at.clubserver.tasks.api.TasksApi.TaskDto"][];
+            truncated: boolean;
         };
         "at.clubserver.activity.api.ActivityApi.ActivityList": {
             items: components["schemas"]["at.clubserver.activity.api.ActivityApi.EntryDto"][];
@@ -3989,6 +3991,7 @@ export interface components {
         };
         "at.clubserver.meetings.api.MeetingsApi.ResolutionSummaryList": {
             items: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.ResolutionSummary"][];
+            truncated: boolean;
         };
         "at.clubserver.members.api.MembersApi.MembershipKindList": {
             items: components["schemas"]["at.clubserver.members.api.MembersApi.MembershipKindDto"][];
@@ -4136,7 +4139,7 @@ export interface components {
         };
         "at.clubserver.mail.api.MailApi.MailList": {
             items: components["schemas"]["at.clubserver.mail.api.MailApi.MailSummaryDto"][];
-            next: string;
+            nextBefore: string;
         };
         "at.clubserver.mail.api.MailApi.MailSummaryDto": {
             id: string;
@@ -4266,6 +4269,8 @@ export interface components {
         };
         "at.clubserver.gateway.audit.AuditLog.AuditPage": {
             items: components["schemas"]["at.clubserver.gateway.audit.AuditLog.AuditEntry"][];
+            /** Format: int64 */
+            nextBefore: number;
         };
         "at.clubserver.attendance.api.AttendanceApi.RideList": {
             items: components["schemas"]["at.clubserver.attendance.api.AttendanceApi.RideDto"][];
@@ -4289,7 +4294,7 @@ export interface components {
         "at.clubserver.activity.api.ActivityApi.FeedList": {
             items: components["schemas"]["at.clubserver.activity.api.ActivityApi.FeedEntry"][];
             /** Format: date-time */
-            next: string;
+            nextBefore: string;
         };
     };
     responses: never;
@@ -6896,7 +6901,7 @@ export interface operations {
         parameters: {
             query?: {
                 folder?: "INBOX" | "DRAFTS" | "SENT" | "TRASH";
-                after?: string;
+                before?: string;
             };
             header?: never;
             path: {
@@ -9028,6 +9033,7 @@ export interface operations {
         parameters: {
             query?: {
                 before?: number;
+                limit?: number;
                 kind?: "READ" | "WRITE" | "EXPORT";
                 area?: string;
                 actorId?: string;

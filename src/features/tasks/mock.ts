@@ -631,16 +631,17 @@ const flag = (req: MockRequest, name: string) => req.query.get(name) === 'true';
 
 mockServer
   .on('GET', '/api/v1/tasks/:id/activity', (req) => activity.list(actor(req), 'TASK', tasks.get(actor(req), req.params.id).id))
-  .on('GET', '/api/v1/tasks', (req) => ({
-    items: tasks.list(
+  .on('GET', '/api/v1/tasks', (req) => {
+    const found = tasks.list(
       actor(req),
       flag(req, 'mine'),
       req.query.get('teamId'),
       flag(req, 'includeDone'),
       req.query.get('dueFrom'),
       req.query.get('dueTo'),
-    ),
-  }))
+    );
+    return { items: found.slice(0, 1000), truncated: found.length > 1000 }; // server: TaskRepository.MAX_LIST
+  })
   .on('POST', '/api/v1/tasks', (req) => tasks.create(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/tasks/:id', (req) => tasks.get(actor(req), req.params.id))
   .on('PATCH', '/api/v1/tasks/:id', (req) => tasks.update(actor(req), req.params.id, req.body ?? {}))

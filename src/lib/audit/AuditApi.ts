@@ -16,11 +16,10 @@ export interface AuditQuery {
 
 /** The Protokoll (admin only). */
 export class AuditApi {
-  static readonly PAGE = 100;
-
   constructor(private readonly api: ApiClient) {}
 
-  list(query: AuditQuery): Promise<{ items: AuditEntry[] }> {
+  /** Newest first; `nextBefore` pages on (null at the end). */
+  list(query: AuditQuery): Promise<{ items: AuditEntry[]; nextBefore: number | null }> {
     return this.api.get('/api/v1/audit', {
       kind: query.kind ?? null,
       area: query.area ?? null,

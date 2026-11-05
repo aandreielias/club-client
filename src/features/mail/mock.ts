@@ -173,8 +173,8 @@ export class MockMail {
     return { ...draft };
   }
 
-  /** server: MailHandlers.list - a page of 50, newest first; `after`: the previous page's cursor */
-  folder(member: Member, mailboxId: string, folder: string | null, after: string | null = null): MailPage {
+  /** server: MailHandlers.list - a page of 50, newest first; `before`: the previous page's nextBefore */
+  folder(member: Member, mailboxId: string, folder: string | null, before: string | null = null): MailPage {
     const box = this.mailbox(member, mailboxId);
     const wanted = (folder ?? 'INBOX') as MailFolder;
     if (!['INBOX', 'DRAFTS', 'SENT', 'TRASH'].includes(wanted)) fail(400, 'request.invalid');
@@ -182,7 +182,7 @@ export class MockMail {
     const sorted = this.box(box.address)
       .filter((m) => m.folder === wanted)
       .sort((a, b) => key(b).localeCompare(key(a)));
-    const rest = after ? sorted.filter((m) => key(m) < after) : sorted;
+    const rest = before ? sorted.filter((m) => key(m) < before) : sorted;
     const page = rest.slice(0, PAGE);
     return {
       items: page.map((m) => ({
@@ -194,7 +194,7 @@ export class MockMail {
         sentAt: m.sentAt,
         read: this.isRead(member, box, m),
       })),
-      next: rest.length > PAGE ? key(page[page.length - 1]) : null,
+      nextBefore: rest.length > PAGE ? key(page[page.length - 1]) : null,
     };
   }
 
@@ -572,7 +572,7 @@ const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer
   .on('GET', '/api/v1/mail/mailboxes', (req) => ({ items: mail.list(actor(req)) }))
-  .on('GET', '/api/v1/mail/mailboxes/:id/messages', (req) => mail.folder(actor(req), req.params.id, req.query.get('folder'), req.query.get('after')))
+  .on('GET', '/api/v1/mail/mailboxes/:id/messages', (req) => mail.folder(actor(req), req.params.id, req.query.get('folder'), req.query.get('before')))
   .on('PATCH', '/api/v1/mail/mailboxes/:id/messages/:mailId', (req) => mail.update(actor(req), req.params.id, req.params.mailId, req.body ?? {}))
   .on('GET', '/api/v1/mail/admin/settings', (req) => mail.mailSettings(actor(req)))
   .on('PUT', '/api/v1/mail/admin/settings', (req) => mail.saveMailSettings(actor(req), req.body ?? {}))

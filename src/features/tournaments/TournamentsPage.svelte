@@ -19,8 +19,8 @@
   const list = new Resource(() => tournamentsApi.list());
   void list.load().then(() => {
     // A guest has exactly one tournament: show it right away.
-    if (!policy.canManage() && session.member.roles.includes('GUEST') && list.value?.length === 1)
-      pane.navigate(`/tournaments/${list.value[0].id}`, true);
+    if (!policy.canManage() && session.member.roles.includes('GUEST') && list.value?.items.length === 1)
+      pane.navigate(`/tournaments/${list.value.items[0].id}`, true);
   });
   useBus(bus, TOURNAMENT_CHANGED, () => void list.load());
   const create = () => bus.publish(WINDOW_OPEN, { kind: 'tournament-new', id: '-' });
@@ -42,8 +42,9 @@
   {/snippet}
 
   <AsyncView resource={list}>
-    {#snippet children(all)}
-      {@const items = all.filter((t) => !pendingDeletes.isHidden(t.id))}
+    {#snippet children(page)}
+      {@const items = page.items.filter((t) => !pendingDeletes.isHidden(t.id))}
+      {#if page.truncated}<p class="muted small">Ältere Turniere sind hier nicht aufgelistet.</p>{/if}
       {#if items.length}
         <RecordCards cards={items.map(card)} />
       {:else}

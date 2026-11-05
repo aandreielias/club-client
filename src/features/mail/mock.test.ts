@@ -150,8 +150,8 @@ describe('mock mail: read state, paging, limits, lifecycle', () => {
     for (let i = 0; i < 55; i++) mail.send(member('eltern'), box, { to: ['x@example.com'], subject: `Nr ${i}` });
     const page = mail.folder(member('eltern'), box, 'SENT');
     expect(page.items).toHaveLength(50);
-    expect(page.next).not.toBeNull();
-    expect(mail.folder(member('eltern'), box, 'SENT', page.next).items.length).toBeGreaterThanOrEqual(5);
+    expect(page.nextBefore).not.toBeNull();
+    expect(mail.folder(member('eltern'), box, 'SENT', page.nextBefore).items.length).toBeGreaterThanOrEqual(5);
   });
 
   it('stops at the daily limit', () => {

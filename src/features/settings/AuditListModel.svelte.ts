@@ -79,7 +79,7 @@ export class AuditListModel extends ListModel<AuditEntry> {
           this.#query = { kind: (server.kind || null) as AuditKind | null, area: server.area || null, actorId: server.actor || null };
           this.#page++;
           const page = await api.list(this.#query);
-          this.hasMore = page.items.length === AuditApi.PAGE;
+          this.hasMore = page.nextBefore !== null;
           return page.items;
         },
         defaultSort: { key: 'at', dir: 'desc' },
@@ -133,7 +133,7 @@ export class AuditListModel extends ListModel<AuditEntry> {
       const started = this.#page;
       const page = await this.api.list({ ...this.#query, before: last.id });
       if (started !== this.#page) return;
-      this.hasMore = page.items.length === AuditApi.PAGE;
+      this.hasMore = page.nextBefore !== null;
       this.set([...(this.data.value ?? []), ...page.items]);
     });
   }

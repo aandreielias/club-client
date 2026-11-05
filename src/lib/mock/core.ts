@@ -938,13 +938,13 @@ mockServer
     const actorId = req.query.get('actorId');
     if (area && !/^[a-z-]{1,40}$/.test(area)) fail(400, 'audit.area-invalid');
     const kindOf = (e: AuditEntry) => (e.route === '/api/v1/me/export' ? 'EXPORT' : e.method === 'GET' ? 'READ' : 'WRITE');
-    return {
-      items: auditLog.data
-        .filter((e) => e.id < before && (!kind || kindOf(e) === kind) && (!actorId || e.actorId === actorId))
-        .filter((e) => !area || e.route === `/api/v1/${area}` || e.route.startsWith(`/api/v1/${area}/`))
-        .slice(0, 100)
-        .map((e) => ({ ...e, actorName: directory.displayName(e.actorId) })),
-    };
+    const limit = Math.min(Math.max(Number(req.query.get('limit') ?? 100), 1), 100);
+    const items = auditLog.data
+      .filter((e) => e.id < before && (!kind || kindOf(e) === kind) && (!actorId || e.actorId === actorId))
+      .filter((e) => !area || e.route === `/api/v1/${area}` || e.route.startsWith(`/api/v1/${area}/`))
+      .slice(0, limit)
+      .map((e) => ({ ...e, actorName: directory.displayName(e.actorId) }));
+    return { items, nextBefore: items.length < limit ? null : items.at(-1)!.id };
   })
   // server: PersonalDataController - the member's own data or a ward's; others 404
   .on('GET', '/api/v1/me/export', (req) => {

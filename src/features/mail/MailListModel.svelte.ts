@@ -25,7 +25,7 @@ export class MailListModel extends ListModel<MailSummary> {
         load: async () => {
           if (!this.mailboxId) return ((this.next = null), []);
           const page = await api.list(this.mailboxId, this.folder);
-          this.next = page.next;
+          this.next = page.nextBefore;
           return page.items;
         },
         defaultSort: { key: 'sentAt', dir: 'desc' },
@@ -44,7 +44,7 @@ export class MailListModel extends ListModel<MailSummary> {
   async loadMore(): Promise<void> {
     if (!this.next || !this.mailboxId) return;
     const page = await this.api.list(this.mailboxId, this.folder, this.next);
-    this.next = page.next;
+    this.next = page.nextBefore;
     this.set([...(this.data.value ?? []), ...page.items]);
   }
 }

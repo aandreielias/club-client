@@ -47,6 +47,8 @@ export interface TaskSource {
 
 export interface TaskList {
   items: Task[];
+  /** More tasks exist than the list holds (server: 1000). */
+  truncated: boolean;
 }
 
 export interface NewTask {

@@ -30,12 +30,15 @@ export class MockTournaments {
 
   constructor(private readonly people: MockDirectory) {}
 
-  list(viewer: Member): { items: TournamentSummary[] } {
+  /** server: TournamentHandlers.list — the newest 200, `truncated` when there are more. */
+  list(viewer: Member): { items: TournamentSummary[]; truncated: boolean } {
     const own = this.ownTournament(viewer);
+    const newest = [...this.tournaments.data].sort((a, b) => b.startsOn.localeCompare(a.startsOn));
     return {
-      items: this.tournaments.data
+      truncated: own === null && newest.length > 200,
+      items: newest
+        .slice(0, 200)
         .filter((t) => own === null || t.id === own)
-        .sort((a, b) => b.startsOn.localeCompare(a.startsOn))
         .map((t) => ({
           id: t.id,
           name: t.name,

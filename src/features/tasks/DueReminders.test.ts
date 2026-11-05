@@ -15,7 +15,7 @@ function setup(tasks: Task[]) {
   bus.subscribe(TOAST, (t) => toasts.push(t));
   const saved = new Map<string, unknown>();
   const store = { get: (k: string) => saved.get(k) ?? null, set: (k: string, v: unknown) => saved.set(k, v) } as unknown as LocalStore;
-  const api = { list: vi.fn(async () => tasks) } as unknown as TasksApi;
+  const api = { list: vi.fn(async () => ({ items: tasks, truncated: false })) } as unknown as TasksApi;
   const format = () => ({ dateTime: (s: string) => s }) as unknown as Formatter;
   return { reminders: new DueReminders(api, store, bus, format, { dueSoonHours: 24, checkEveryMs: 60_000, maxToasts: 2 }), toasts };
 }

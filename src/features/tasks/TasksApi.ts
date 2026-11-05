@@ -8,8 +8,8 @@ export class TasksApi {
   constructor(private readonly api: ApiClient) {}
 
   /** Visible tasks ordered by due date (undated last), without comments. */
-  async list(query: TaskQuery): Promise<Task[]> {
-    return (await this.api.get<TaskList>(TasksApi.BASE, { ...query })).items;
+  list(query: TaskQuery): Promise<TaskList> {
+    return this.api.get<TaskList>(TasksApi.BASE, { ...query });
   }
 
   get(id: string): Promise<Task> {

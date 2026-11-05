@@ -26,8 +26,8 @@ export class MailApi {
   }
 
   /** A page of the folder, newest first; `after`: the previous page's `next`. */
-  list(mailboxId: string, folder: MailFolder, after: string | null = null): Promise<MailPage> {
-    const cursor = after ? `&after=${encodeURIComponent(after)}` : '';
+  list(mailboxId: string, folder: MailFolder, before: string | null = null): Promise<MailPage> {
+    const cursor = before ? `&before=${encodeURIComponent(before)}` : '';
     return this.api.get<MailPage>(`${this.messages(mailboxId)}?folder=${folder}${cursor}`);
   }
 

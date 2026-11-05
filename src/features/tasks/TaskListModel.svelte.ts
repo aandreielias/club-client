@@ -9,11 +9,19 @@ const DAY_MS = 86_400_000;
 
 /** The task list: server filters (mine, team, done) plus client filters for status and due date. */
 export class TaskListModel extends ListModel<Task> {
+  /** `truncated`: the server cut the list (more tasks than it answers at once). */
+  readonly cut: { truncated: boolean };
+
   constructor(api: TasksApi, policy: TaskPolicy, directory: TeamDirectory, store: LocalStore | null) {
+    const cut = $state({ truncated: false });
     super(
       {
         id: 'tasks',
-        load: (server) => api.list({ mine: server.mine === '1', teamId: server.team || null, includeDone: server.done === '1' }),
+        load: async (server) => {
+          const page = await api.list({ mine: server.mine === '1', teamId: server.team || null, includeDone: server.done === '1' });
+          cut.truncated = page.truncated;
+          return page.items;
+        },
         defaultSort: { key: 'due', dir: 'asc' },
         searchText: (t) => `${t.title} ${t.description ?? ''}`,
         columns: [
@@ -71,6 +79,7 @@ export class TaskListModel extends ListModel<Task> {
       },
       store,
     );
+    this.cut = cut;
   }
 
   static dueMatches(task: Task, filter: string, now: Date): boolean {

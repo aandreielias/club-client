@@ -856,7 +856,7 @@ export class MockMeetings {
   }
 
   /** server: ResolutionHandlers.all — every resolution the viewer sees, newest first. */
-  allResolutions(viewer: Member, year: string | null): { items: ResolutionSummary[] } {
+  allResolutions(viewer: Member, year: string | null): { items: ResolutionSummary[]; truncated: boolean } {
     const board = this.people.hasRole(viewer, ADMIN_BOARD);
     const items = this.resolutions.data
       .filter((r) => !year || (r.closedAt && r.closedAt.startsWith(year)))
@@ -878,7 +878,7 @@ export class MockMeetings {
       })
       .filter((x): x is ResolutionSummary => !!x)
       .sort((a, b) => (b.closedAt ?? b.openedAt ?? '').localeCompare(a.closedAt ?? a.openedAt ?? ''));
-    return { items };
+    return { items: items.slice(0, 500), truncated: items.length > 500 }; // server: ResolutionHandlers.MAX_ALL
   }
 
   vote(viewer: Member, id: string, choice: Choice): Resolution {

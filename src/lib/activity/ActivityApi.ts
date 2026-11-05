@@ -23,7 +23,7 @@ export interface FeedEntry extends ActivityEntry {
 export interface ActivityFeed {
   items: FeedEntry[];
   /** Pass as `before` for older entries; null at the end. */
-  next: string | null;
+  nextBefore: string | null;
 }
 
 /** Who changed a record when; admin, board and coaches only. */

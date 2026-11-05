@@ -43,7 +43,7 @@ export class DueReminders {
   async check(now: Date = new Date()): Promise<void> {
     let tasks: Task[];
     try {
-      tasks = await this.api.list({ mine: true, teamId: null, includeDone: false });
+      tasks = (await this.api.list({ mine: true, teamId: null, includeDone: false })).items;
     } catch {
       return; // reminders are a convenience; the task list shows errors itself
     }

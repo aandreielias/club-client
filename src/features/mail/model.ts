@@ -108,7 +108,8 @@ export interface MailRef {
 /** A page of a folder, newest first; `next`: cursor of the following page, null on the last one. */
 export interface MailPage {
   items: MailSummary[];
-  next: string | null;
+  /** Pass as `before` for older mails; null on the last page. */
+  nextBefore: string | null;
 }
 
 /** The club's mail domain (every mailbox address ends with it; null until set) and recipients per member and day. */

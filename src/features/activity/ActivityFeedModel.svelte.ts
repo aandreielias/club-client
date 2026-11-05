@@ -35,7 +35,7 @@ export class ActivityFeedModel extends ListModel<FeedEntry> {
           this.#kind = (server.kind || null) as ActivityKind | null;
           this.#page++;
           const page = await api.feed(this.#kind, null, pageSize);
-          this.#next = page.next;
+          this.#next = page.nextBefore;
           return page.items;
         },
         defaultSort: { key: 'at', dir: 'desc' },
@@ -72,7 +72,7 @@ export class ActivityFeedModel extends ListModel<FeedEntry> {
       const started = this.#page;
       const page = await this.api.feed(this.#kind, this.#next, this.pageSize);
       if (started !== this.#page) return;
-      this.#next = page.next;
+      this.#next = page.nextBefore;
       this.set([...(this.data.value ?? []), ...page.items]);
     });
   }

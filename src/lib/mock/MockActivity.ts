@@ -72,7 +72,7 @@ export class MockActivity {
     const roles = this.people.teamRoles(member.id);
     const coached = Object.keys(roles).filter((t) => coaches(roles[t]));
     const all = this.people.isManager(member);
-    if (!all && !coached.length) return { items: [], next: null };
+    if (!all && !coached.length) return { items: [], nextBefore: null };
     const max = Math.min(Math.max(limit || 50, 1), MockActivity.FEED_LIMIT);
     const items = this.newestFirst()
       .filter((e) => (!kind || e.kind === kind) && (!before || e.at < before) && (all || e.teamIds.some((t) => coached.includes(t))))
@@ -88,7 +88,7 @@ export class MockActivity {
         detail: e.detail ?? null,
         at: e.at,
       }));
-    return { items, next: items.length < max ? null : items.at(-1)!.at };
+    return { items, nextBefore: items.length < max ? null : items.at(-1)!.at };
   }
 
   private newestFirst(): StoredEntry[] {

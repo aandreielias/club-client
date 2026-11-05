@@ -7,8 +7,9 @@ export class TournamentsApi {
 
   constructor(private readonly api: ApiClient) {}
 
-  async list(): Promise<TournamentSummary[]> {
-    return (await this.api.get<{ items: TournamentSummary[] }>(TournamentsApi.BASE)).items;
+  /** Newest first; `truncated`: older ones exist beyond those listed (server: 200). */
+  list(): Promise<{ items: TournamentSummary[]; truncated: boolean }> {
+    return this.api.get(TournamentsApi.BASE);
   }
 
   get(id: string): Promise<Tournament> {

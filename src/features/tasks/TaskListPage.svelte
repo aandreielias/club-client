@@ -162,6 +162,7 @@
     {/if}
   {/snippet}
 
+  {#if list.cut.truncated}<p class="muted small">Es gibt mehr Aufgaben, als die Liste zeigt. Bitte Filter eingrenzen.</p>{/if}
   <TaskTable
     {list}
     menu={taskMenu}

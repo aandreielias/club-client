@@ -117,8 +117,9 @@ export class MeetingsApi {
   }
 
   /** Every resolution the member sees, newest first; `year`: closed in that year. */
-  async allResolutions(year: number | null = null): Promise<ResolutionSummary[]> {
-    return (await this.api.get<{ items: ResolutionSummary[] }>(`${MeetingsApi.RESOLUTIONS}/all${year ? `?year=${year}` : ''}`)).items;
+  /** `truncated`: more than the server lists at once (500): pick a year. */
+  allResolutions(year: number | null = null): Promise<{ items: ResolutionSummary[]; truncated: boolean }> {
+    return this.api.get(`${MeetingsApi.RESOLUTIONS}/all${year ? `?year=${year}` : ''}`);
   }
 
   /** After the meeting: the protocol no longer changes. */
