@@ -59,9 +59,18 @@ describe('isSafeSvg (server: SvgCheck)', () => {
 
 describe('mock brand e-mail', () => {
   it('previews a checked draft for admin/board, escaped like the server', () => {
-    expect(() => directory.sampleMail(member('spieler'), { ...SDG_BRAND })).toThrow();
-    expect(() => directory.sampleMail(member('vorstand'), { ...SDG_BRAND, primary: 'red' })).toThrow();
-    const { subject, html } = directory.sampleMail(member('vorstand'), { ...SDG_BRAND, mailGreeting: 'Servus {vorname}!', mailFooter: 'A <b>\nB' });
+    const sample = (brand: object, subject: string | null = null, text: string | null = null) => ({ brand, subject, text });
+    expect(() => directory.sampleMail(member('spieler'), sample({ ...SDG_BRAND }))).toThrow();
+    expect(() => directory.sampleMail(member('vorstand'), sample({ ...SDG_BRAND, primary: 'red' }))).toThrow();
+    expect(() => directory.sampleMail(member('vorstand'), sample({ ...SDG_BRAND }, 'a\nb'))).toThrow();
+    expect(() => directory.sampleMail(member('vorstand'), sample({ ...SDG_BRAND }, null, 'x'.repeat(2001)))).toThrow();
+    const own = directory.sampleMail(member('vorstand'), sample({ ...SDG_BRAND }, 'Probe', 'Zeile <i>'));
+    expect(own.subject).toMatch(/^\[.+\] Probe$/);
+    expect(own.html).toContain('Zeile &lt;i&gt;');
+    const { subject, html } = directory.sampleMail(
+      member('vorstand'),
+      sample({ ...SDG_BRAND, mailGreeting: 'Servus {vorname}!', mailFooter: 'A <b>\nB' }),
+    );
     expect(subject).toMatch(/^\[.+\] Neue Aufgabe/);
     expect(html).toContain(`Servus ${member('vorstand').firstName}!`);
     expect(html).toContain('A &lt;b&gt;<br>B');

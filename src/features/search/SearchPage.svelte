@@ -2,6 +2,7 @@
   import { usePane } from '../../lib/split/usePane';
   import { settings } from '../../settings';
   import { bus, router, session, store, windows } from '../../lib/container';
+  import { guestOnly } from '../../lib/types';
   import { WINDOW_OPEN } from '../../channels';
   import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
   import { windowMenu } from '../../lib/window/windowMenu';
@@ -19,7 +20,7 @@
   const query = $derived(pane.query.get('q')?.trim() ?? '');
   // Settings sections are found too (only those the member may open), leading to their page.
   const settingHits = (q: string): SearchHit[] =>
-    searchSettings(q, (roles) => session.hasRole(...roles)).map((tab) => ({
+    searchSettings(q, (roles) => session.hasRole(...roles), guestOnly(session.member.roles)).map((tab) => ({
       kind: 'SETTING',
       id: tab.id,
       title: tab.label,

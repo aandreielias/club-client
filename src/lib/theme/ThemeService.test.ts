@@ -14,6 +14,13 @@ describe('ThemeService', () => {
     expect(css).toContain(`--color-text-muted: ${settings.theme.colors.light.textMuted};`);
   });
 
+  it('gives a container the tokens and one palette (brand preview)', () => {
+    const dark = ThemeService.vars(settings.theme, true);
+    expect(dark).toContain(`--radius-md: ${settings.theme.radius.md};`);
+    expect(dark).toContain(`--color-background: ${settings.theme.colors.dark.background};`);
+    expect(dark).not.toContain(`--color-background: ${settings.theme.colors.light.background};`);
+  });
+
   it('uses only the light palette for scheme "light"', () => {
     expect(css).not.toContain('prefers-color-scheme');
     expect(css.indexOf(`--color-background: ${settings.theme.colors.light.background};`)).toBeLessThan(css.indexOf('data-theme'));

@@ -485,10 +485,14 @@ export class MockDirectory {
   /** server: NotificationHandlers sample mail - admin/board, a brand draft checked like a save. The mock sends nothing. */
   sampleMail(member: Member, body: Record<string, unknown>) {
     this.requirePrivileged(member, ADMIN_BOARD);
-    const brand = MockBrand.checked(body);
+    const brand = MockBrand.checked((body.brand ?? {}) as Record<string, unknown>);
+    const text = (key: string) => (typeof body[key] === 'string' ? (body[key] as string).trim() : '');
+    const title = text('subject') || MockBrand.SAMPLE_TITLE;
+    const sample = text('text') || MockBrand.SAMPLE_BODY;
+    if (title.length > 200 || /[\r\n]/.test(title) || sample.length > 2000) fail(400, 'brand.invalid');
     const club = this.clubInfo();
     const link = club.website ? `${club.website.replace(/\/+$/, '')}/app/tasks` : null;
-    return mailHtml(brand, club, member.firstName, club.assets.logo, link);
+    return mailHtml(brand, club, member.firstName, this.brand.mailLogo(), link, title, sample);
   }
 
   /** server: ClubSettings.changed — also after a logo setting file changed. */

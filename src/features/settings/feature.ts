@@ -1,4 +1,6 @@
+import { ADMIN_BOARD } from '../../lib/types';
 import type { Feature } from '../Feature';
+import BrandView from './BrandView.svelte';
 import SettingsPage from './SettingsPage.svelte';
 import SettingsView from './SettingsView.svelte';
 
@@ -9,5 +11,8 @@ export const settingsFeature: Feature = {
     { path: '/settings', component: SettingsPage, nav: 'Einstellungen', icon: 'settings', navFooter: true, guest: true },
     { path: '/settings/:section', component: SettingsPage, guest: true },
   ],
-  windows: { settings: { component: SettingsView, page: (section) => `/settings/${encodeURIComponent(section)}` } },
+  windows: {
+    settings: { component: SettingsView, page: (section) => `/settings/${encodeURIComponent(section)}` },
+    brand: { component: BrandView, roles: ADMIN_BOARD },
+  },
 };

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { session } from '../../lib/container';
+  import { guestOnly } from '../../lib/types';
   import { usePane } from '../../lib/split/usePane';
   import Page from '../../ui/Page.svelte';
   import type { PageProps } from '../Feature';
@@ -9,7 +10,7 @@
   /** Einstellungen as a page ('/settings/<section>'): the sidebar shows the settings tree, the page only the section. */
   let { params }: PageProps = $props();
 
-  const { tabs } = visibleSettings((roles) => session.hasRole(...roles));
+  const { tabs } = visibleSettings((roles) => session.hasRole(...roles), guestOnly(session.member.roles));
   const tab = $derived(tabs.find((t) => t.id === params.section) ?? tabs[0]);
   const Section = $derived(SETTINGS_SECTIONS[tab.id as SectionId]);
   // '/settings' alone shows the first tab under its own path, so the sidebar marks it.

@@ -48,8 +48,10 @@ export const SDG_BRAND: Brand = {
 const FONTS: readonly BrandFont[] = ['INTER', 'ANTON', 'OSWALD', 'ROBOTO', 'SOURCE_SERIF', 'SYSTEM'];
 
 /** The setting files the files mock registers (server: FilesApi.SETTING_FILE_KEYS over the bus), so lib needs no feature import. */
+type LogoSlot = 'LOGO' | 'LOGO_SECONDARY' | 'FAVICON' | 'MAIL_LOGO';
 export const brandFiles = {
-  url: (_slot: 'LOGO' | 'LOGO_SECONDARY' | 'FAVICON'): string | null => null,
+  url: (_slot: LogoSlot): string | null => null,
+  contentType: (_slot: LogoSlot): string | null => null,
 };
 
 /** server: SvgCheck - a plain drawing: no DTD, scripts, handlers, embedded documents, animation or outside references. */
@@ -64,6 +66,10 @@ export function isSafeSvg(text: string): boolean {
 }
 
 export class MockBrand {
+  /** server: texts.properties email.sample.* */
+  static readonly SAMPLE_TITLE = 'Neue Aufgabe: Kuchen für das Turnier';
+  static readonly SAMPLE_BODY = 'So sehen E-Mails des Vereins aus. Fällig: Samstag, 18:00.';
+
   /** server: platform_brand; null = club.yml defaults. */
   readonly saved = new MockTable<{ brand: Brand | null }>('brand', () => ({ brand: SDG_BRAND }));
 
@@ -73,7 +79,18 @@ export class MockBrand {
 
   /** server: BrandSettings.assets — the logo slots of the setting files. */
   assets(): BrandAssets {
-    return { logo: brandFiles.url('LOGO'), logoSecondary: brandFiles.url('LOGO_SECONDARY'), favicon: brandFiles.url('FAVICON') };
+    return {
+      logo: brandFiles.url('LOGO'),
+      logoSecondary: brandFiles.url('LOGO_SECONDARY'),
+      favicon: brandFiles.url('FAVICON'),
+      mailLogo: brandFiles.url('MAIL_LOGO'),
+    };
+  }
+
+  /** server: BrandSettings.mailLogo — the e-mail logo, else the logo unless it is an SVG (mail programs don't show SVG). */
+  mailLogo(): string | null {
+    if (brandFiles.url('MAIL_LOGO') || !brandFiles.url('LOGO')) return brandFiles.url('MAIL_LOGO');
+    return brandFiles.contentType('LOGO') === 'image/svg+xml' ? null : brandFiles.url('LOGO');
   }
 
   save(body: Record<string, unknown>): void {
@@ -131,8 +148,15 @@ export class MockBrand {
 const esc = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 /** server: notifications.domain.MailLayout (HTML part; the mock sends no mail). */
-export function mailHtml(brand: Brand, club: { name: string; shortName: string }, firstName: string, logoUrl: string | null, link: string | null) {
-  const title = 'Neue Aufgabe: Kuchen für das Turnier';
+export function mailHtml(
+  brand: Brand,
+  club: { name: string; shortName: string },
+  firstName: string,
+  logoUrl: string | null,
+  link: string | null,
+  title: string,
+  body: string,
+) {
   const greeting = brand.mailGreeting ? brand.mailGreeting.replaceAll('{vorname}', firstName) : `Hallo ${firstName},`;
   const font = brand.textFont === 'SOURCE_SERIF' ? "Georgia,'Times New Roman',serif" : 'Arial,Helvetica,sans-serif';
   const lines = (text: string) => esc(text).replace(/\n/g, '<br>');
@@ -151,7 +175,7 @@ export function mailHtml(brand: Brand, club: { name: string; shortName: string }
     `<tr><td style="padding:24px;font-family:${font};font-size:15px;line-height:1.5;color:${brand.text};">` +
     `<p style="margin:0 0 16px;">${esc(greeting)}</p>` +
     `<h1 style="margin:0 0 8px;font-size:20px;line-height:1.3;color:${brand.primary}${brand.headingCaps ? ';text-transform:uppercase' : ''};">${esc(title)}</h1>` +
-    `<p style="margin:0 0 16px;">So sehen E-Mails des Vereins aus. Fällig: Samstag, 18:00.</p>` +
+    `<p style="margin:0 0 16px;">${lines(body)}</p>` +
     (link
       ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 24px;"><tr><td style="background:${brand.primary};border-radius:${brand.radiusSmall}px;">` +
         `<a href="${esc(link)}" style="display:inline-block;padding:10px 20px;font-weight:bold;text-decoration:none;color:${onPrimary};">In der App öffnen</a></td></tr></table>`

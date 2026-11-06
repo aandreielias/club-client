@@ -104,6 +104,8 @@ export interface BrandAssets {
   logo: string | null;
   logoSecondary: string | null;
   favicon: string | null;
+  /** PNG/JPEG for e-mails (mail programs don't show SVG). */
+  mailLogo: string | null;
 }
 
 /** What admins and the board edit (server: PUT /club); empty values fall back to club.yml. */
@@ -111,6 +113,13 @@ export interface BrandAssets {
 export interface MailPreview {
   subject: string;
   html: string;
+}
+
+/** server: NotificationsApi.MailSample — a brand draft with a sample subject and plain text (empty = the built-in sample). */
+export interface MailSample {
+  brand: Brand;
+  subject: string | null;
+  text: string | null;
 }
 
 export type ClubEdit = Pick<Club, 'name' | 'shortName' | 'website' | 'contactEmail' | 'address' | 'registerNumber' | 'seasonStartMonth'>;

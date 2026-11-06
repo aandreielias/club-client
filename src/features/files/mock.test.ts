@@ -148,6 +148,15 @@ describe('mock setting files (server: SettingFileHandlers)', () => {
     expect(files.listSettingFiles(member('vorstand')).items.map((s) => s.slot)).not.toContain('FAVICON');
   });
 
+  it('refuses an SVG as e-mail logo (mail programs do not show SVG)', async () => {
+    expect(() => files.pickSettingFile(member('vorstand'), 'MAIL_LOGO', 'file-logo-black')).toThrow(
+      expect.objectContaining({ code: 'setting-file.wrong-type' }),
+    );
+    await expect(files.uploadSettingFile(slotRequest('MAIL_LOGO', svg('#000000'), 'mail.svg'))).rejects.toMatchObject({
+      code: 'setting-file.wrong-type',
+    });
+  });
+
   it('lets only admin and board change a file a setting follows', async () => {
     const own = await files.upload(uploadRequest('trainer', 'f-damen', svg('#00ff00'), 'team.svg'));
     files.pickSettingFile(member('vorstand'), 'LOGO_SECONDARY', own.id);

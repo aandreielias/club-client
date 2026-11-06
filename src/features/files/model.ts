@@ -149,7 +149,7 @@ export interface FileSettings {
 }
 
 /** What the club settings use a file for (server: FilesApi.SettingSlot). */
-export type SettingSlot = 'LOGO' | 'LOGO_SECONDARY' | 'FAVICON' | 'INVITATION_TEMPLATE' | 'PROTOCOL_TEMPLATE';
+export type SettingSlot = 'LOGO' | 'LOGO_SECONDARY' | 'FAVICON' | 'MAIL_LOGO' | 'INVITATION_TEMPLATE' | 'PROTOCOL_TEMPLATE';
 
 /** server: FilesApi.SettingFileDto — the slot's copy in "Einstellungen"; `sourceId` while it follows a file in Dateien. */
 export interface SettingFile {

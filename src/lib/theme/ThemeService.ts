@@ -78,13 +78,11 @@ export class ThemeService {
    * can still force either palette.
    */
   css(overrides: ThemeOverrides = {}): string {
-    const { colors, scheme, ...groups } = ThemeService.merge(this.#brand ? ThemeService.branded(this.theme, this.#brand) : this.theme, overrides);
-    const tokens = Object.entries(groups).flatMap(([group, values]) =>
-      Object.entries(values).map(([name, value]) => `--${ThemeService.kebab(group)}-${ThemeService.kebab(name)}: ${value};`),
-    );
+    const theme = ThemeService.merge(this.#brand ? ThemeService.branded(this.theme, this.#brand) : this.theme, overrides);
+    const { colors, scheme } = theme;
     const light = `${ThemeService.palette(colors.light)} color-scheme: light;`;
     const dark = `${ThemeService.palette(colors.dark)} color-scheme: dark;`;
-    const rules = [`:root { ${tokens.join(' ')} ${scheme === 'dark' ? dark : light} }`];
+    const rules = [`:root { ${ThemeService.tokens(theme)} ${scheme === 'dark' ? dark : light} }`];
     if (scheme === 'system') {
       rules.push(`@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { ${dark} } }`);
     }
@@ -167,6 +165,21 @@ export class ThemeService {
     };
     update();
     query.addEventListener('change', update);
+  }
+
+  /** Every token and the light or dark palette as declarations, for a container styled apart from the page (brand preview). */
+  static vars(theme: Settings['theme'], dark = false): string {
+    return `${ThemeService.tokens(theme)} ${ThemeService.palette(dark ? theme.colors.dark : theme.colors.light)}`;
+  }
+
+  /** `--font-size-base: 15px;` etc. for every token group but the colours. */
+  private static tokens(theme: Settings['theme']): string {
+    const { colors: _colors, scheme: _scheme, ...groups } = theme;
+    return Object.entries(groups)
+      .flatMap(([group, values]) =>
+        Object.entries(values).map(([name, value]) => `--${ThemeService.kebab(group)}-${ThemeService.kebab(name)}: ${value};`),
+      )
+      .join(' ');
   }
 
   private static palette(palette: Palette): string {

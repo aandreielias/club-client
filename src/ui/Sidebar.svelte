@@ -6,7 +6,7 @@
   import { MediaQuery } from 'svelte/reactivity';
   import { bus, commands, keyboard, keymap, motion, pageNavigator, preferences, session } from '../lib/container';
   import { searchSettings, visibleSettings } from '../features/settings/settingsTree';
-  import type { Role } from '../lib/types';
+  import { guestOnly, type Role } from '../lib/types';
   import { settings } from '../settings';
   import { SPLIT_OPEN } from '../lib/split/SplitView.svelte';
   import { menu } from './contextMenu';
@@ -43,8 +43,10 @@
   // --- settings mode: the tree of Einstellungen, filtered by the search field ---
   let settingsQuery = $state('');
   const sees = (roles: readonly Role[]) => session.hasRole(...roles);
-  const settingsTree = $derived(settingsBack !== null ? visibleSettings(sees) : null);
-  const settingsFound = $derived(settingsTree && settingsQuery.trim() ? new Set(searchSettings(settingsQuery, sees).map((t) => t.id)) : null);
+  const settingsTree = $derived(settingsBack !== null ? visibleSettings(sees, guestOnly(session.member.roles)) : null);
+  const settingsFound = $derived(
+    settingsTree && settingsQuery.trim() ? new Set(searchSettings(settingsQuery, sees, guestOnly(session.member.roles)).map((t) => t.id)) : null,
+  );
   const shown = (id: string) => !settingsFound || settingsFound.has(id as never);
 
   let open = $state(false);

@@ -4,13 +4,14 @@
   import { tooltip } from '../../ui/tooltip';
   import { SETTINGS_SECTIONS as COMPONENTS } from './sections';
   import { session } from '../../lib/container';
+  import { guestOnly } from '../../lib/types';
   import Icon from '../../ui/Icon.svelte';
   import { LAST_TAB, tabPath, visibleSettings, type SectionId, type SettingsTab } from './settingsTree';
 
   /** Settings in the window, with their own tree; on the page the sidebar holds the tree (SettingsPage). `id`: the section shown first. */
   let { id, handle }: { id: string; handle?: WindowHandle } = $props();
 
-  const { groups, tabs } = visibleSettings((roles) => session.hasRole(...roles));
+  const { groups, tabs } = visibleSettings((roles) => session.hasRole(...roles), guestOnly(session.member.roles));
 
   // svelte-ignore state_referenced_locally
   let current = $state<SectionId>(tabs.some((t) => t.id === id) ? (id as SectionId) : 'appearance');

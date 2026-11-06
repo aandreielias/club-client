@@ -6,6 +6,8 @@ describe('settings tree', () => {
     const player = visibleSettings(() => false);
     expect(player.groups.map((g) => g.id)).toEqual(['personal']);
     expect(player.tabs.map((t) => t.id)).toEqual(['appearance', 'home', 'sidebar', 'notifications', 'shortcuts', 'security', 'general']);
+    // tournament guests: no start page or sidebar order
+    expect(visibleSettings(() => false, true).tabs.map((t) => t.id)).toEqual(['appearance', 'notifications', 'shortcuts', 'security', 'general']);
     const board = visibleSettings(() => true);
     expect(board.tabs.at(-1)?.id).toBe('general');
     expect(board.tabs.map((t) => t.id)).toContain('resolution-rules');

@@ -3305,7 +3305,7 @@ export interface components {
         };
         "at.clubserver.files.api.FilesApi.SettingFileDto": {
             /** @enum {string} */
-            slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE";
+            slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE";
             file: components["schemas"]["at.clubserver.files.api.FilesApi.FileDto"];
             /** Format: uuid */
             sourceId: string;
@@ -3348,6 +3348,7 @@ export interface components {
             logo: string;
             logoSecondary: string;
             favicon: string;
+            mailLogo: string;
         };
         "at.clubserver.platform.club.ClubSettings.Club": {
             name: string;
@@ -3824,6 +3825,11 @@ export interface components {
             canUpload: boolean;
             canManage: boolean;
             system: boolean;
+        };
+        "at.clubserver.notifications.api.NotificationsApi.MailSample": {
+            brand: components["schemas"]["at.clubserver.platform.club.Brand"];
+            subject: string;
+            text: string;
         };
         "at.clubserver.notifications.api.NotificationsApi.MailPreview": {
             subject: string;
@@ -5542,7 +5548,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE";
+                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE";
             };
             cookie?: never;
         };
@@ -5568,7 +5574,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE";
+                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE";
             };
             cookie?: never;
         };
@@ -5597,7 +5603,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE";
+                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE";
             };
             cookie?: never;
         };
@@ -7723,7 +7729,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["at.clubserver.platform.club.Brand"];
+                "application/json": components["schemas"]["at.clubserver.notifications.api.NotificationsApi.MailSample"];
             };
         };
         responses: {
@@ -7745,7 +7751,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["at.clubserver.platform.club.Brand"];
+                "application/json": components["schemas"]["at.clubserver.notifications.api.NotificationsApi.MailSample"];
             };
         };
         responses: {

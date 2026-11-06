@@ -41,7 +41,7 @@ const limits = settings.files;
 const LINK_LIFETIME_MS = 5 * 60_000;
 const EICAR = 'EICAR-STANDARD-ANTIVIRUS-TEST-FILE';
 const SVG = 'image/svg+xml';
-const LOGO_SLOTS: readonly SettingSlot[] = ['LOGO', 'LOGO_SECONDARY', 'FAVICON'];
+const LOGO_SLOTS: readonly SettingSlot[] = ['LOGO', 'LOGO_SECONDARY', 'FAVICON', 'MAIL_LOGO'];
 const SLOTS: readonly SettingSlot[] = [...LOGO_SLOTS, 'INVITATION_TEMPLATE', 'PROTOCOL_TEMPLATE'];
 const OFFICE: Readonly<Record<string, string>> = {
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -153,6 +153,10 @@ export class MockFiles {
       const row = this.settingFiles.data.find((r) => r.slot === slot);
       const file = row && this.files.data.find((f) => f.id === row.fileId);
       return file ? this.objectUrl(file) : null;
+    };
+    brandFiles.contentType = (slot) => {
+      const row = this.settingFiles.data.find((r) => r.slot === slot);
+      return this.files.data.find((f) => f.id === row?.fileId)?.contentType ?? null;
     };
     this.saveSettingRows();
   }
@@ -690,7 +694,9 @@ export class MockFiles {
 
   /** server: SettingFileHandlers.requireFits — logos: PNG, JPEG or SVG; templates: Word templates. */
   private static requireFits(slot: SettingSlot, contentType: string | null): void {
-    const fits = LOGO_SLOTS.includes(slot) ? ['image/png', 'image/jpeg', SVG].includes(contentType ?? '') : contentType === OFFICE.dotx;
+    // server: SettingFileHandlers.requireFits — the e-mail logo takes no SVG (mail programs don't show it)
+    const images = slot === 'MAIL_LOGO' ? ['image/png', 'image/jpeg'] : ['image/png', 'image/jpeg', SVG];
+    const fits = LOGO_SLOTS.includes(slot) ? images.includes(contentType ?? '') : contentType === OFFICE.dotx;
     if (!fits) fail(400, 'setting-file.wrong-type');
   }
 

@@ -21,8 +21,11 @@
 
   const LOGO = ['image/png', 'image/jpeg', 'image/svg+xml'];
   const TEMPLATE = ['application/vnd.openxmlformats-officedocument.wordprocessingml.template'];
-  const typesOf = (slot: SettingSlot) => (slot.endsWith('_TEMPLATE') ? TEMPLATE : LOGO);
-  const accept = (slot: SettingSlot) => (slot.endsWith('_TEMPLATE') ? '.dotx' : 'image/png,image/jpeg,image/svg+xml,.svg');
+  // Mail programs don't show SVG: the e-mail logo takes PNG and JPEG only (server: SettingFileHandlers).
+  const MAIL_LOGO = ['image/png', 'image/jpeg'];
+  const typesOf = (slot: SettingSlot) => (slot.endsWith('_TEMPLATE') ? TEMPLATE : slot === 'MAIL_LOGO' ? MAIL_LOGO : LOGO);
+  const accept = (slot: SettingSlot) =>
+    slot.endsWith('_TEMPLATE') ? '.dotx' : slot === 'MAIL_LOGO' ? 'image/png,image/jpeg' : 'image/png,image/jpeg,image/svg+xml,.svg';
 
   const files = new Resource(() => filesApi.settingFiles());
   void files.load();

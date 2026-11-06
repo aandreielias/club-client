@@ -1,7 +1,7 @@
 import type { ApiClient } from '../http/ApiClient';
 import { Formatter } from '../time/Formatter';
 import { ZonedClock } from '../time/ZonedClock';
-import { type Brand, type Club, type ClubEdit, type MailPreview, type Me, type Member, type Role, type Team } from '../types';
+import { type Brand, type Club, type ClubEdit, type MailPreview, type MailSample, type Me, type Member, type Role, type Team } from '../types';
 
 export type ProfilePatch = Partial<Pick<Member, 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'photoConsent'>>;
 
@@ -32,8 +32,8 @@ export class SessionStore {
   /** Takes the club facts (loaded, saved or pushed live). */
   setClub(club: Club): Club {
     const url = (path: string | null) => (path?.startsWith('/') ? this.assetBase + path : path);
-    const { logo, logoSecondary, favicon } = club.assets;
-    this.club = { ...club, assets: { logo: url(logo), logoSecondary: url(logoSecondary), favicon: url(favicon) } };
+    const { logo, logoSecondary, favicon, mailLogo } = club.assets;
+    this.club = { ...club, assets: { logo: url(logo), logoSecondary: url(logoSecondary), favicon: url(favicon), mailLogo: url(mailLogo) } };
     return this.club;
   }
 
@@ -100,13 +100,13 @@ export class SessionStore {
 
   /** Back to the server's default look; the logos (setting files) stay. */
   /** A sample notification e-mail in a draft of the brand (admin/board). */
-  mailPreview(brand: Brand): Promise<MailPreview> {
-    return this.api.post('/api/v1/club/brand/mail-preview', brand);
+  mailPreview(sample: MailSample): Promise<MailPreview> {
+    return this.api.post('/api/v1/club/brand/mail-preview', sample);
   }
 
   /** The sample e-mail in the draft look to the actor's own address. */
-  sendTestMail(brand: Brand): Promise<void> {
-    return this.api.post('/api/v1/club/brand/test-mail', brand);
+  sendTestMail(sample: MailSample): Promise<void> {
+    return this.api.post('/api/v1/club/brand/test-mail', sample);
   }
 
   async resetBrand(): Promise<void> {

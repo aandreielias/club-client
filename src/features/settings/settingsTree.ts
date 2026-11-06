@@ -32,6 +32,8 @@ export interface SettingsTab {
   keywords?: string;
   /** Only shown to these, within a group others see too. */
   roles?: readonly Role[];
+  /** Not for tournament guests (they have no start page and almost no navigation). */
+  noGuests?: boolean;
 }
 
 /** A group of the tree (like a sidebar group): subgroups of tabs; `roles`: only shown to these (club-wide settings). */
@@ -53,8 +55,8 @@ export const SETTINGS_TREE: readonly SettingsGroup[] = [
         label: 'Ansicht',
         tabs: [
           { id: 'appearance', label: 'Darstellung', icon: 'appearance', keywords: 'farbe theme dunkel hell schrift dichte' },
-          { id: 'home', label: 'Startseite', icon: 'home', keywords: 'bereiche start übersicht' },
-          { id: 'sidebar', label: 'Seitenleiste', icon: 'sidebar', keywords: 'navigation reihenfolge menü' },
+          { id: 'home', label: 'Startseite', icon: 'home', keywords: 'bereiche start übersicht', noGuests: true },
+          { id: 'sidebar', label: 'Seitenleiste', icon: 'sidebar', keywords: 'navigation reihenfolge menü', noGuests: true },
         ],
       },
       {
@@ -126,11 +128,12 @@ export const SETTINGS_TREE: readonly SettingsGroup[] = [
 /** Below every group. */
 export const LAST_TAB: SettingsTab = { id: 'general', label: 'Allgemein', icon: 'settings', keywords: 'sprache zeitzone app version' };
 
-/** The groups a member sees, and all their tabs in display order (Allgemein last). */
-export function visibleSettings(sees: (roles: readonly Role[]) => boolean): { groups: SettingsGroup[]; tabs: SettingsTab[] } {
+/** The groups a member sees, and all their tabs in display order (Allgemein last); `guest`: a tournament guest only. */
+export function visibleSettings(sees: (roles: readonly Role[]) => boolean, guest = false): { groups: SettingsGroup[]; tabs: SettingsTab[] } {
+  const shown = (t: SettingsTab) => (!t.roles || sees(t.roles)) && !(guest && t.noGuests);
   const groups = SETTINGS_TREE.filter((g) => !g.roles || sees(g.roles)).map((g) => ({
     ...g,
-    subgroups: g.subgroups.map((s) => ({ ...s, tabs: s.tabs.filter((t) => !t.roles || sees(t.roles)) })).filter((s) => s.tabs.length),
+    subgroups: g.subgroups.map((s) => ({ ...s, tabs: s.tabs.filter(shown) })).filter((s) => s.tabs.length),
   }));
   return { groups, tabs: [...groups.flatMap((g) => g.subgroups.flatMap((s) => s.tabs)), LAST_TAB] };
 }
@@ -143,9 +146,9 @@ export function tabPath(id: SectionId): string {
 }
 
 /** Tabs whose label, path or keywords contain every word of `query` (any case); all visible tabs for an empty query. */
-export function searchSettings(query: string, sees: (roles: readonly Role[]) => boolean): SettingsTab[] {
+export function searchSettings(query: string, sees: (roles: readonly Role[]) => boolean, guest = false): SettingsTab[] {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-  return visibleSettings(sees).tabs.filter((tab) => {
+  return visibleSettings(sees, guest).tabs.filter((tab) => {
     const text = `${tabPath(tab.id)} ${tab.keywords ?? ''}`.toLowerCase();
     return words.every((w) => text.includes(w));
   });
