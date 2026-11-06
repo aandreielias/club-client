@@ -533,6 +533,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/club/brand": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["saveBrand"];
+        post?: never;
+        delete: operations["resetBrand"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/calendar/types/{key}": {
         parameters: {
             query?: never;
@@ -1488,6 +1504,22 @@ export interface paths {
         put?: never;
         post: operations["uploadVersion"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/assets/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["asset"];
+        put?: never;
+        post: operations["uploadAsset"];
+        delete: operations["deleteAsset"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3197,6 +3229,33 @@ export interface components {
             /** Format: int32 */
             seasonStartMonth: number;
         };
+        "at.clubserver.platform.club.Brand": {
+            primary: string;
+            primaryHover: string;
+            accent: string;
+            text: string;
+            textMuted: string;
+            tint: string;
+            line: string;
+            /** @enum {string} */
+            headingFont: "INTER" | "ANTON" | "OSWALD" | "ROBOTO" | "SOURCE_SERIF" | "SYSTEM";
+            /** @enum {string} */
+            textFont: "INTER" | "ANTON" | "OSWALD" | "ROBOTO" | "SOURCE_SERIF" | "SYSTEM";
+            headingCaps: boolean;
+            /** Format: int32 */
+            radiusSmall: number;
+            /** Format: int32 */
+            radiusLarge: number;
+            appName: string;
+            mailGreeting: string;
+            mailSignOff: string;
+            mailFooter: string;
+        };
+        "at.clubserver.platform.club.BrandSettings.BrandAssets": {
+            logo: string;
+            logoSecondary: string;
+            favicon: string;
+        };
         "at.clubserver.platform.club.ClubSettings.Club": {
             name: string;
             shortName: string;
@@ -3210,6 +3269,8 @@ export interface components {
             registerNumber: string;
             /** Format: int32 */
             seasonStartMonth: number;
+            brand: components["schemas"]["at.clubserver.platform.club.Brand"];
+            assets: components["schemas"]["at.clubserver.platform.club.BrandSettings.BrandAssets"];
             configured: boolean;
         };
         "at.clubserver.gateway.rest.CalendarController.AppointmentTypeBody": {
@@ -5419,6 +5480,50 @@ export interface operations {
             };
         };
     };
+    saveBrand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.platform.club.Brand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.platform.club.ClubSettings.Club"];
+                };
+            };
+        };
+    };
+    resetBrand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.platform.club.ClubSettings.Club"];
+                };
+            };
+        };
+    };
     updateType_1: {
         parameters: {
             query?: never;
@@ -7411,6 +7516,79 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.files.api.FilesApi.FileDto"];
+                };
+            };
+        };
+    };
+    asset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
+    uploadAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.platform.club.ClubSettings.Club"];
+                };
+            };
+        };
+    };
+    deleteAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.platform.club.ClubSettings.Club"];
                 };
             };
         };
