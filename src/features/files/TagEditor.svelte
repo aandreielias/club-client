@@ -14,8 +14,13 @@
    * Marks members on a photo. Candidates: the folder's team, or for club folders the member list
    * (admin/board) or the member's own teams. Members without photo consent are refused by the server.
    */
-  let { file, folder, contents, ondone }: { file: StoredFile; folder: Folder; contents: FolderContents; ondone: (updated: StoredFile) => void } =
-    $props();
+  let {
+    file,
+    folder,
+    contents,
+    ondone,
+    oncancel,
+  }: { file: StoredFile; folder: Folder; contents: FolderContents; ondone: (updated: StoredFile) => void; oncancel: () => void } = $props();
 
   // svelte-ignore state_referenced_locally
   let selected = $state<string[]>([...file.taggedMemberIds]);
@@ -52,5 +57,8 @@
   <PeoplePicker {list} chosen={selected} ontoggle={toggle} max={settings.files.maxTags} />
   <p class="small empty">Nur Personen mit Foto-Einwilligung können markiert werden.</p>
   <ErrorNote error={contents.tagAction.error} />
-  <div><Button variant="primary" busy={contents.tagAction.busy} onclick={save}>Markierungen speichern</Button></div>
+  <div class="row">
+    <Button variant="primary" busy={contents.tagAction.busy} onclick={save}>Markierungen speichern</Button>
+    <Button variant="ghost" onclick={oncancel}>Abbrechen</Button>
+  </div>
 </div>

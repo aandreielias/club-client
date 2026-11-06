@@ -5,7 +5,7 @@
   import { Resource } from '../../lib/state/Resource.svelte';
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
+  import EditorForm from '../../ui/EditorForm.svelte';
   import Field from '../../ui/Field.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { SET_PATTERN, type Appointment } from './model';
@@ -41,8 +41,7 @@
 
   const invalidSet = $derived(sets.some((s) => s.trim() && !SET_PATTERN.test(s.trim())));
 
-  async function submit(event: SubmitEvent) {
-    event.preventDefault();
+  async function submit() {
     if (invalidSet) return;
     const saved = await save.attempt(() =>
       calendarApi.setExtras(appointment.id, {
@@ -63,7 +62,7 @@
 {#if extras.value && (editing || editable || extras.value.content || extras.value.opponent || extras.value.sets.length)}
   <h2>{isMatch ? 'Spiel' : 'Trainingsinhalt'}</h2>
   {#if editing}
-    <form class="stack" onsubmit={submit}>
+    <EditorForm action={save} submitLabel="Speichern" onsubmit={submit} oncancel={() => (editing = false)}>
       {#if isMatch}
         <div class="grid-2">
           <Field label="Gegner"><input bind:value={opponent} maxlength="80" /></Field>
@@ -81,12 +80,7 @@
       <Field label={isMatch ? 'Notizen' : 'Inhalt'} hint={isMatch ? undefined : 'Übungen, Schwerpunkte, was mitzubringen ist.'}>
         <textarea bind:value={content} rows="4" maxlength="4000"></textarea>
       </Field>
-      <ErrorNote error={save.error} />
-      <div class="row">
-        <Button type="submit" variant="primary" busy={save.busy}>Speichern</Button>
-        <Button variant="ghost" onclick={() => (editing = false)}>Abbrechen</Button>
-      </div>
-    </form>
+    </EditorForm>
   {:else}
     {@const x = extras.value}
     {#if isMatch && (x.opponent || x.sets.length)}

@@ -6,7 +6,7 @@
   import { BrowserFile } from '../../lib/files/BrowserFile';
   import { csvText } from '../../lib/files/csv';
   import { Resource } from '../../lib/state/Resource.svelte';
-  import { bus, commands, session } from '../../lib/container';
+  import { bus, commands, pendingDeletes, session } from '../../lib/container';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
@@ -151,15 +151,11 @@
     );
   }
 
-  async function remove() {
-    if (
-      await view.confirm(
-        { title: 'Entwurf löschen', message: 'Die Sitzung wurde noch nicht eingeladen.', confirmLabel: 'Löschen', danger: true },
-        () => view.attempt(model.action, () => model.delete()),
-        'Entwurf gelöscht.',
-      )
-    )
-      view.leave();
+  function remove(title: string) {
+    // The prop is gone once the view closed, before the undo time ends: keep the id itself.
+    const target = id;
+    pendingDeletes.schedule({ ids: [target], text: `Entwurf „${title}“ gelöscht.`, commit: () => meetingsApi.delete(target) });
+    view.leave();
   }
 
   async function saveProtocol() {
@@ -172,7 +168,7 @@
     <Detail title={m.title}>
       {#snippet actions()}
         {#if m.canManage && m.status === 'DRAFT'}
-          <Button variant="ghost" busy={model.action.busy} onclick={remove}>Löschen</Button>
+          <Button variant="danger" icon="delete" onclick={() => remove(m.title)}>Löschen</Button>
           <Button variant="primary" busy={model.action.busy} disabled={late(m)} onclick={() => invite(m)}>Einladen</Button>
         {:else if m.canManage && m.status === 'INVITED'}
           <Button variant="ghost" busy={model.action.busy} onclick={cancel}>Absagen</Button>

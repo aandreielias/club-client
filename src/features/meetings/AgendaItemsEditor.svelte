@@ -48,7 +48,7 @@
             <Button
               size="sm"
               variant="ghost"
-              icon="delete"
+              icon="close"
               tooltip={row.locked ? 'Abgestimmte Beschlüsse bleiben' : 'Punkt entfernen'}
               disabled={row.locked}
               onclick={() => (rows = rows.filter((r) => r.key !== row.key))}

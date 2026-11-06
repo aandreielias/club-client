@@ -337,6 +337,12 @@ legend {
   font-size: var(--font-size-small);
   font-weight: var(--font-weight-medium);
 }
+/* A validation message under a control or group (request errors: ErrorNote). */
+.invalid {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--font-size-small);
+}
 /* A number field that holds a few digits. */
 input.short {
   width: 6rem;

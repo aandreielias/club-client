@@ -51,15 +51,9 @@
     {:else}
       <p class="muted">Es gibt keinen Ordner, den du verwaltest und in den diese Dateien passen.</p>
     {/if}
-    <div class="row end">
-      <Button variant="ghost" onclick={onclose}>Abbrechen</Button>
+    <div class="row">
       <Button type="submit" variant="primary" {busy} disabled={!targetId}>Verschieben</Button>
+      <Button variant="ghost" onclick={onclose}>Abbrechen</Button>
     </div>
   </form>
 </Dialog>
-
-<style>
-  .end {
-    justify-content: flex-end;
-  }
-</style>

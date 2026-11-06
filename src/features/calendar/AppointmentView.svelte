@@ -150,7 +150,7 @@
         {#if !edit.form && policy.canEdit(appointment)}
           <Button icon="edit" onclick={() => edit.edit(AppointmentForm.edit(session.clock, appointment, appointmentTypes))}>Bearbeiten</Button>
           <Button variant="danger" onclick={() => (cancelOpen = true)}>Absagen</Button>
-          <Button variant="ghost" icon="delete" busy={detail.deleteAction.busy} onclick={() => remove(appointment)}>Löschen</Button>
+          <Button variant="danger" icon="delete" busy={detail.deleteAction.busy} onclick={() => remove(appointment)}>Löschen</Button>
           {#if appointment.seriesId}<Button onclick={() => ((extendTo = ''), (extendOpen = true))}>Serie verlängern</Button>{/if}
         {:else if !edit.form && policy.canRestore(appointment)}
           <Button busy={detail.restoreAction.busy} onclick={restore}>Absage zurücknehmen</Button>

@@ -100,7 +100,9 @@
             {#if filePolicy.canModify(file, folder)}<Button icon="upload" onclick={() => (versioning = true)}>Neue Version</Button>{/if}
             {#if image && filePolicy.canTag(file, folder) && !tagging}<Button onclick={() => (tagging = true)}>Personen markieren</Button>{/if}
             {#if filePolicy.canModify(file, folder)}
-              <Button variant="danger" onclick={() => remove(file)} tooltip="{image ? 'Foto' : 'Datei'} endgültig löschen">Löschen</Button>
+              <Button variant="danger" icon="delete" onclick={() => remove(file)} tooltip="{image ? 'Foto' : 'Datei'} endgültig löschen"
+                >Löschen</Button
+              >
             {/if}
           {/snippet}
 
@@ -132,7 +134,7 @@
 
           {#if tagging}
             <h2>Personen markieren</h2>
-            <TagEditor bind:this={tagEditor} {file} {folder} {contents} ondone={() => (tagging = false)} />
+            <TagEditor bind:this={tagEditor} {file} {folder} {contents} ondone={() => (tagging = false)} oncancel={() => (tagging = false)} />
           {/if}
           <VersionsSection
             {file}

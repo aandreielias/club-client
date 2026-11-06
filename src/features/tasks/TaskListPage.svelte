@@ -150,7 +150,7 @@
           )}>Wieder öffnen</Button
       >
       <Button busy={bulkBusy} disabled={!chosen.size} onclick={openAssign}>Zuweisen</Button>
-      <Button variant="danger" busy={bulkBusy} disabled={!chosen.size} onclick={bulkDelete}>Auswahl löschen</Button>
+      <Button variant="danger" icon="delete" busy={bulkBusy} disabled={!chosen.size} onclick={bulkDelete}>Auswahl löschen</Button>
       <Button variant="ghost" onclick={stopSelecting}>Fertig</Button>
     {:else}
       <Button onclick={() => (selecting = true)}>Auswählen</Button>

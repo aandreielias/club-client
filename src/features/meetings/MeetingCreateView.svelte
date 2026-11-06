@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { autofocus } from '../../ui/autofocus';
   import { bus, directory, session } from '../../lib/container';
   import { CreateController } from '../../lib/detail/CreateController.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
@@ -7,7 +6,7 @@
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
+  import EditorForm from '../../ui/EditorForm.svelte';
   import Field from '../../ui/Field.svelte';
   import MeetingPlaceFields from './MeetingPlaceFields.svelte';
   import DateTimeInput from '../../ui/DateTimeInput.svelte';
@@ -57,14 +56,8 @@
   const deadline = $derived(form.start && form.type ? latestInvite(form.type, form.startsAt) : null);
   const late = $derived(!!deadline && deadline < new Date().toISOString());
 
-  let inviteNow = false;
-
   async function submit(event: SubmitEvent) {
-    event.preventDefault();
-    form.submitted = true;
-    if (!form.valid) return;
-    const invite = inviteNow;
-    inviteNow = false;
+    const invite = event.submitter?.hasAttribute('data-invite') ?? false;
     await create.submit(
       async () => {
         const meeting = await meetingsApi.create(form.toNew());
@@ -81,7 +74,7 @@
   <AsyncView resource={kinds}>
     {#snippet children(options)}
       {#if options.length}
-        <form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
+        <EditorForm action={create.save} submitLabel="Anlegen" validate={form} onsubmit={submit} oncancel={() => handle.close()}>
           <Field label="Art">
             <Select bind:value={() => form.type?.key ?? '', (k) => k && setKind(k)} {options} />
           </Field>
@@ -113,7 +106,7 @@
             standing={form.type?.videoUrl ?? null}
             error={form.error('videoUrl')}
           />
-          <fieldset class="stack agenda">
+          <fieldset class="stack">
             <legend>Tagesordnung</legend>
             <AgendaItemsEditor
               bind:rows={form.rows}
@@ -121,15 +114,12 @@
               candidates={people.value ?? []}
               today={session.clock.today()}
             />
-            {#if form.error('items')}<p class="error small" role="alert">{form.error('items')}</p>{/if}
+            {#if form.error('items')}<p class="invalid" role="alert">{form.error('items')}</p>{/if}
           </fieldset>
-          <ErrorNote error={create.save.error} />
-          <div class="row">
-            <Button type="submit" variant="primary" busy={create.save.busy}>Anlegen</Button>
-            <Button type="submit" busy={create.save.busy} disabled={late} onclick={() => (inviteNow = true)}>Anlegen und einladen</Button>
-            <Button variant="ghost" onclick={() => handle.close()}>Abbrechen</Button>
-          </div>
-        </form>
+          {#snippet actions()}
+            <Button type="submit" busy={create.save.busy} disabled={late} data-invite>Anlegen und einladen</Button>
+          {/snippet}
+        </EditorForm>
       {:else}
         <p class="muted">Sitzungen berufen die Funktionen ein, die bei der Sitzungsart eingestellt sind.</p>
       {/if}
@@ -138,17 +128,8 @@
 </Detail>
 
 <style>
-  .late,
-  .error {
+  .late {
     color: var(--color-danger);
-  }
-  .error {
-    margin: 0;
-  }
-  .agenda {
-    margin: 0;
-    padding: 0;
-    border: 0;
   }
   legend {
     color: var(--color-text);

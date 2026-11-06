@@ -8,6 +8,7 @@
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import DataTable from '../../ui/DataTable.svelte';
   import Empty from '../../ui/Empty.svelte';
+  import LoadMore from '../../ui/LoadMore.svelte';
   import Page from '../../ui/Page.svelte';
   import Select from '../../ui/Select.svelte';
   import Tag from '../../ui/Tag.svelte';
@@ -90,21 +91,12 @@
       {/snippet}
     </DataTable>
     {#if list.next}
-      <div class="more">
-        <Button busy={more.busy} onclick={() => void more.run(() => list.loadMore())} tooltip="Die nächsten 50 E-Mails dieses Ordners laden"
-          >Mehr laden</Button
-        >
-      </div>
+      <LoadMore action={more} onload={() => more.run(() => list.loadMore())} tooltip="Die nächsten 50 E-Mails dieses Ordners laden" />
     {/if}
   {/if}
 </Page>
 
 <style>
-  .more {
-    display: flex;
-    justify-content: center;
-    padding: var(--space-sm);
-  }
   .unread {
     font-weight: var(--font-weight-bold);
   }

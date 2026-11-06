@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { bus } from '../../lib/container';
+  import { bus, pendingDeletes } from '../../lib/container';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import type { Resource } from '../../lib/state/Resource.svelte';
   import { MEETING_CHANGED, RESOLUTION_CHANGED } from './events';
@@ -17,7 +17,9 @@
   useBus(bus, MEETING_CHANGED, ({ data }) => data.meetingId === meeting.id && void resolutions.load());
 
   const byId = $derived(new Map((resolutions.value ?? []).map((r) => [r.id, r])));
-  const unlisted = $derived((resolutions.value ?? []).filter((r) => !meeting.agendaItems.some((i) => i.resolutionId === r.id)));
+  const unlisted = $derived(
+    (resolutions.value ?? []).filter((r) => !pendingDeletes.isHidden(r.id) && !meeting.agendaItems.some((i) => i.resolutionId === r.id)),
+  );
 
   const replace = (updated: Resolution) => resolutions.set((resolutions.value ?? []).map((r) => (r.id === updated.id ? updated : r)));
 </script>
@@ -26,26 +28,28 @@
   <ol class="agenda">
     {#each meeting.agendaItems as item, i (item.id)}
       {@const r = item.resolutionId ? byId.get(item.resolutionId) : undefined}
-      <li class="stack">
-        <div class="head">
-          <span class="number">{i + 1}.</span>
-          <span class="title">{item.title}</span>
-          {#if item.resolutionId}<span class="muted small">Beschluss</span>{/if}
-        </div>
-        {#if item.note}<p class="muted small note">{item.note}</p>{/if}
-        {#if r}
-          <div class="card">
-            <ResolutionCard resolution={r} meetingOpen={meeting.status === 'OPEN'} onchanged={replace} ondeleted={() => void resolutions.load()} />
+      {#if !item.resolutionId || !pendingDeletes.isHidden(item.resolutionId)}
+        <li class="stack">
+          <div class="head">
+            <span class="number">{i + 1}.</span>
+            <span class="title">{item.title}</span>
+            {#if item.resolutionId}<span class="muted small">Beschluss</span>{/if}
           </div>
-        {/if}
-      </li>
+          {#if item.note}<p class="muted small note">{item.note}</p>{/if}
+          {#if r}
+            <div class="card">
+              <ResolutionCard resolution={r} meetingOpen={meeting.status === 'OPEN'} onchanged={replace} />
+            </div>
+          {/if}
+        </li>
+      {/if}
     {/each}
   </ol>
   {#if unlisted.length}
     <h3>Weitere Beschlüsse</h3>
     <div class="stack">
       {#each unlisted as r (r.id)}
-        <ResolutionCard resolution={r} meetingOpen={meeting.status === 'OPEN'} onchanged={replace} ondeleted={() => void resolutions.load()} />
+        <ResolutionCard resolution={r} meetingOpen={meeting.status === 'OPEN'} onchanged={replace} />
       {/each}
     </div>
   {/if}

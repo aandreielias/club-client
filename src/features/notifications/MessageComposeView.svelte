@@ -97,7 +97,7 @@
         <TeamPicker list={teams} chosen={form.teamIds} ontoggle={(id) => form.toggleTeam(id)} error={form.error('recipients')} />
       {:else if form.audience === 'people'}
         <PeoplePicker list={people} chosen={form.memberIds} ontoggle={(id) => form.toggleMember(id)} emptyText="Keine passenden Mitglieder." />
-        {#if form.error('recipients')}<span class="error" role="alert">{form.error('recipients')}</span>{/if}
+        {#if form.error('recipients')}<span class="invalid" role="alert">{form.error('recipients')}</span>{/if}
       {:else}
         <p class="muted">Alle aktiven Mitglieder des Vereins.</p>
       {/if}
@@ -130,10 +130,6 @@
   .reach {
     min-height: 1lh;
     margin: 0;
-    font-size: var(--font-size-small);
-  }
-  .error {
-    color: var(--color-danger);
     font-size: var(--font-size-small);
   }
 </style>

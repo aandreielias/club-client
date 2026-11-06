@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { backStack, bus, session } from '../../lib/container';
+  import { backStack, bus, pendingDeletes, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
@@ -32,9 +32,14 @@
   }
 
   function remove(name: string) {
-    void stored.remove(`„${name}“ löschen? Bestehende Termine bleiben.`, 'Ferien löschen', 'Ferien gelöscht.', edit.save, () =>
-      calendarApi.deleteHoliday(id),
-    );
+    // The prop is gone once the view closed, before the undo time ends: keep the id itself.
+    const target = id;
+    pendingDeletes.schedule({
+      ids: [target],
+      text: `„${name}“ gelöscht. Bestehende Termine bleiben.`,
+      commit: () => calendarApi.deleteHoliday(target).then(() => holidays.load()),
+    });
+    view.leave();
   }
 </script>
 

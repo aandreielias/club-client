@@ -91,10 +91,6 @@ export class MeetingModel {
     return this.write(() => this.api.setLinks(this.id, refs));
   }
 
-  delete(): Promise<boolean> {
-    return this.action.run(() => this.api.delete(this.id));
-  }
-
   private async write(request: () => Promise<Meeting>): Promise<boolean> {
     const updated = await this.action.attempt(request);
     if (updated) this.meeting.set(updated);

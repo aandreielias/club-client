@@ -127,13 +127,11 @@
         </div>
       {/if}
       <div class="row between">
-        <div>
-          {#if !isNew}<Button variant="ghost" icon="delete" onclick={onremove}>Schritt entfernen</Button>{/if}
-        </div>
         <div class="row">
-          <Button variant="ghost" onclick={onclose}>Abbrechen</Button>
           <Button type="submit" variant="primary">Übernehmen</Button>
+          <Button variant="ghost" onclick={onclose}>Abbrechen</Button>
         </div>
+        {#if !isNew}<Button variant="danger" icon="delete" onclick={onremove}>Schritt entfernen</Button>{/if}
       </div>
     </form>
   {/if}

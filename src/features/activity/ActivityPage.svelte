@@ -2,9 +2,8 @@
   import { activityApi, bus, session, store } from '../../lib/container';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { settings } from '../../settings';
-  import Button from '../../ui/Button.svelte';
   import DataTable from '../../ui/DataTable.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
+  import LoadMore from '../../ui/LoadMore.svelte';
   import Page from '../../ui/Page.svelte';
   import { APPOINTMENTS_CHANGED } from '../calendar/events';
   import { FILES_CHANGED } from '../files/events';
@@ -23,16 +22,5 @@
 
 <Page title="Aktivität">
   <DataTable model={list} rowKey={entryKey} onopen={(e) => openRecord(bus, e)} emptyText="Noch keine Änderungen aufgezeichnet." />
-  <ErrorNote error={list.more.error} />
-  {#if list.hasMore}
-    <div class="more"><Button busy={list.more.busy} onclick={() => list.loadMore()}>Ältere laden</Button></div>
-  {/if}
+  {#if list.hasMore}<LoadMore action={list.more} onload={() => list.loadMore()} />{/if}
 </Page>
-
-<style>
-  .more {
-    display: flex;
-    justify-content: center;
-    margin-top: var(--space-md);
-  }
-</style>

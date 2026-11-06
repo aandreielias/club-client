@@ -3,10 +3,9 @@
   import { TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
-  import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import Empty from '../../ui/Empty.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
+  import EditorForm from '../../ui/EditorForm.svelte';
   import RichTextEditor from '../../ui/RichTextEditor.svelte';
   import { mailApi, mailCenter as center } from './services';
 
@@ -26,8 +25,7 @@
   $effect(() => handle.setTitle(mailbox ? `Signatur ${mailbox.address}` : 'Signatur'));
 
   const save = new Action();
-  async function submit(event: SubmitEvent) {
-    event.preventDefault();
+  async function submit() {
     if (await save.run(() => mailApi.setSignature(id, html))) {
       await center.mailboxes.load();
       bus.publish(TOAST, { text: html ? 'Signatur gespeichert.' : 'Signatur entfernt.' });
@@ -38,22 +36,11 @@
 
 {#if mailbox?.signatureEditable}
   <Detail title="Signatur">
-    <form class="stack" onsubmit={submit}>
+    <EditorForm action={save} submitLabel="Speichern" onsubmit={submit} oncancel={() => handle.close()}>
       <p class="muted">Steht unter jeder neuen E-Mail, Antwort und Weiterleitung aus {mailbox.address}. Leer lassen für keine Signatur.</p>
       <RichTextEditor bind:value={html} label="Signatur" placeholder="z. B. Name, Funktion im Verein, Telefon" rows={5} />
-      <ErrorNote error={save.error} />
-      <div class="row">
-        <Button type="submit" variant="primary" busy={save.busy}>Speichern</Button>
-        <Button variant="ghost" onclick={() => handle.close()}>Abbrechen</Button>
-      </div>
-    </form>
+    </EditorForm>
   </Detail>
 {:else if center.mailboxes.value}
   <Empty text="Diese Signatur kannst du nicht ändern." />
 {/if}
-
-<style>
-  p {
-    margin: 0;
-  }
-</style>

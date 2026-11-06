@@ -9,8 +9,8 @@
 </script>
 
 <script lang="ts">
-  import { bus, pendingDeletes, session } from '../../lib/container';
-  import { DetailController } from '../../lib/detail/DetailController.svelte';
+  import { backStack, bus, pendingDeletes, session } from '../../lib/container';
+  import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
@@ -26,7 +26,9 @@
   import { FORMAT_LABELS, matchPlace, STATUS_LABELS, STATUS_TONES, type Tournament } from './model';
   import TeamsTab from './TeamsTab.svelte';
   import { locationsApi } from '../locations/services';
-  import TournamentEditDialog from './TournamentEditDialog.svelte';
+  import EditorForm from '../../ui/EditorForm.svelte';
+  import TournamentFields from './TournamentFields.svelte';
+  import { TournamentForm } from './TournamentForm.svelte';
   import { TournamentModel } from './TournamentModel.svelte';
   import { tournamentPolicy as policy, tournamentsApi } from './services';
 
@@ -90,7 +92,14 @@
     pendingDeletes.schedule({ ids: [target], text: `„${name}“ gelöscht.`, commit: () => tournamentsApi.delete(target) });
     view.leave();
   }
-  let editing = $state(false);
+  /** Name, days and place; before the draw also groups, fields and format. */
+  const edit = new EditSession<TournamentForm>(bus, backStack);
+  async function save() {
+    await edit.submit(async (form) => {
+      const patch = form.toPatch();
+      if (Object.keys(patch).length) model.tournament.set(await tournamentsApi.update(id, patch));
+    }, 'Turnier gespeichert.');
+  }
 </script>
 
 <AsyncView resource={model.tournament}>
@@ -115,7 +124,7 @@
             >
           {/if}
         {/if}
-        {#if policy.canManage()}<Button icon="edit" onclick={() => (editing = true)}>Bearbeiten</Button>{/if}
+        {#if policy.canManage()}<Button icon="edit" disabled={edit.editing} onclick={() => edit.edit(TournamentForm.from(t))}>Bearbeiten</Button>{/if}
         {#if policy.canDelete()}<Button variant="danger" icon="delete" onclick={() => remove(t.name)}>Löschen</Button>{/if}
       {/snippet}
       {#snippet meta()}
@@ -126,7 +135,14 @@
       <ErrorNote error={model.action.error} />
       <div class="tabs"><ChoiceGroup name="tournament-tab-{t.id}" label="Ansicht" options={tabs} bind:value={tab} /></div>
 
-      {#if tab === 'overview'}
+      {#if edit.form}
+        {@const form = edit.form}
+        <div class="editing" {@attach edit.track}>
+          <EditorForm action={edit.save} submitLabel="Speichern" validate={form} oncancel={() => edit.cancel()} onsubmit={save}>
+            <TournamentFields {form} />
+          </EditorForm>
+        </div>
+      {:else if tab === 'overview'}
         {#if model.champion}
           <div class="champion"><Icon name="trophy" /> <span>Turniersieger: <strong>{model.champion}</strong></span></div>
         {/if}
@@ -170,11 +186,11 @@
         <TeamsTab tournament={t} {model} />
       {/if}
     </Detail>
-    {#if editing}<TournamentEditDialog tournament={t} {model} onclose={() => (editing = false)} />{/if}
   {/snippet}
 </AsyncView>
 
 <style>
+  .editing,
   .tabs {
     margin-bottom: var(--space-lg);
   }

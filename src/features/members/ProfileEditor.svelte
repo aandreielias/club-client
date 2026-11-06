@@ -1,11 +1,9 @@
 <script lang="ts">
-  import { autofocus } from '../../ui/autofocus';
   import { settings } from '../../settings';
   import { bus, session } from '../../lib/container';
   import { TOAST } from '../../channels';
   import type { Member } from '../../lib/types';
-  import Button from '../../ui/Button.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
+  import EditorForm from '../../ui/EditorForm.svelte';
   import Field from '../../ui/Field.svelte';
   import DateInput from '../../ui/DateInput.svelte';
   import type { MemberDetailModel } from './MemberDetailModel.svelte';
@@ -21,10 +19,7 @@
   // Guardians change phone, photo consent and a missing birth date; names only admin/board (server: member.change-needs-request).
   const names = policy.canEditNames();
 
-  async function submit(event: SubmitEvent) {
-    event.preventDefault();
-    form.submitted = true;
-    if (!form.valid) return;
+  async function submit() {
     const patch = form.toPatch();
     const email = form.changedEmail();
     if ((!Object.keys(patch).length && !email) || (await model.saveProfile(patch, email))) {
@@ -34,8 +29,8 @@
   }
 </script>
 
-<form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
-  <div class="grid">
+<EditorForm action={model.profileAction} submitLabel="Speichern" validate={form} onsubmit={submit} oncancel={ondone}>
+  <div class="grid-2">
     {#if policy.canChangeEmail(member)}
       <Field label="Private E-Mail" hint="Ändert auch die Anmeldung." error={form.error('email')}>
         <input type="email" bind:value={form.email} autocomplete="off" required />
@@ -70,17 +65,4 @@
     Foto-Einwilligung liegt vor
   </label>
   {#if !names}<p class="muted small">Namen und Geburtsdatum ändert {member.firstName} über „Mein Konto“ → „Änderung anfragen“.</p>{/if}
-  <ErrorNote error={model.profileAction.error} />
-  <div class="row">
-    <Button type="submit" variant="primary" busy={model.profileAction.busy}>Speichern</Button>
-    <Button variant="ghost" onclick={ondone}>Abbrechen</Button>
-  </div>
-</form>
-
-<style>
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-    gap: var(--space-md);
-  }
-</style>
+</EditorForm>

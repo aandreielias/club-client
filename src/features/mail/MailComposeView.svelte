@@ -212,7 +212,7 @@
       </Field>
       <div class="text">
         <RichTextEditor bind:value={f.html} label="Text" placeholder="Mailtext" records rows={12} />
-        {#if f.error('body')}<span class="error" role="alert">{f.error('body')}</span>{/if}
+        {#if f.error('body')}<span class="invalid" role="alert">{f.error('body')}</span>{/if}
       </div>
 
       <RefPicker form={f.links} label="Anhängen (optional)" />
@@ -237,10 +237,6 @@
   .text {
     display: grid;
     gap: var(--space-xxs);
-  }
-  .error {
-    color: var(--color-danger);
-    font-size: var(--font-size-small);
   }
   .footer {
     align-items: center;

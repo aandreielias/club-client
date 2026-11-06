@@ -1,40 +1,31 @@
 <script lang="ts">
-  import { bus, commands, directory, permissions, session, store } from '../../lib/container';
-  import { TOAST, WINDOW_OPEN } from '../../channels';
+  import { bus, commands, permissions, session, store } from '../../lib/container';
+  import { WINDOW_OPEN } from '../../channels';
+  import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
-  import type { Team } from '../../lib/types';
   import Button from '../../ui/Button.svelte';
   import TeamTable from './TeamTable.svelte';
   import Page from '../../ui/Page.svelte';
-  import TeamDialog from './TeamDialog.svelte';
+  import { TEAMS_CHANGED } from './events';
   import { TeamListModel } from '../../lib/directory/TeamListModel.svelte';
   import { teamPolicy, teamsApi } from './services';
 
   const list = new TeamListModel(async () => [...(permissions.isManager ? await teamsApi.list(false) : session.teams)], session, store);
   void list.load();
 
-  let creating = $state(false);
-  useCommands(commands, { 'page.new': { run: () => (creating = true), when: () => teamPolicy.canCreate() } });
-
-  function created(team: Team) {
-    creating = false;
-    directory.forgetTeams();
-    void list.load();
-    bus.publish(TOAST, { text: 'Team angelegt.' });
-    bus.publish(WINDOW_OPEN, { kind: 'team', id: team.id });
-  }
+  useBus(bus, TEAMS_CHANGED, () => void list.load());
+  const create = () => bus.publish(WINDOW_OPEN, { kind: 'team-new', id: '-' });
+  useCommands(commands, { 'page.new': { run: create, when: () => teamPolicy.canCreate() } });
 </script>
 
 <Page title="Teams">
   {#snippet actions()}
-    {#if teamPolicy.canCreate()}<Button variant="primary" icon="add" onclick={() => (creating = true)}>Neues Team</Button>{/if}
+    {#if teamPolicy.canCreate()}<Button variant="primary" icon="add" onclick={create}>Neues Team</Button>{/if}
   {/snippet}
 
   <TeamTable
     {list}
     emptyText={teamPolicy.canCreate() ? 'Noch keine Teams.' : undefined}
-    emptyAction={teamPolicy.canCreate() ? { label: 'Neues Team', icon: 'add', run: () => (creating = true) } : null}
+    emptyAction={teamPolicy.canCreate() ? { label: 'Neues Team', icon: 'add', run: create } : null}
   />
 </Page>
-
-{#if creating}<TeamDialog onsaved={created} onclose={() => (creating = false)} />{/if}

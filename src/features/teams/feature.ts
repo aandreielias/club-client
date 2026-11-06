@@ -1,7 +1,9 @@
 import TeamsHome from './TeamsHome.svelte';
 import { detailRoute, type Feature } from '../Feature';
 import { TEAM_MESSAGES } from './messages';
+import { teamPolicy } from './services';
 import TeamsPage from './TeamsPage.svelte';
+import TeamCreateView from './TeamCreateView.svelte';
 import TeamView from './TeamView.svelte';
 
 export const teamsFeature: Feature = {
@@ -12,6 +14,7 @@ export const teamsFeature: Feature = {
   ],
   windows: {
     team: { component: TeamView, page: (id) => `/teams/${encodeURIComponent(id)}` },
+    'team-new': { component: TeamCreateView, canOpen: () => teamPolicy.canCreate() },
   },
   messages: TEAM_MESSAGES,
   home: { id: 'teams', label: 'Meine Teams', component: TeamsHome },

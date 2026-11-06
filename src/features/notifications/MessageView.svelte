@@ -3,7 +3,7 @@
   import { TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
   import Button from '../../ui/Button.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
+  import EditorForm from '../../ui/EditorForm.svelte';
   import Field from '../../ui/Field.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Detail from '../../ui/Detail.svelte';
@@ -22,8 +22,7 @@
   let answer = $state('');
   const send = new Action();
 
-  async function reply(event: SubmitEvent) {
-    event.preventDefault();
+  async function reply() {
     if (!message || !answer.trim()) return;
     const title = message.title.startsWith('Re: ') ? message.title : `Re: ${message.title}`;
     const ok = await send.run(() =>
@@ -57,16 +56,11 @@
     {#if message.body}<p class="prose text">{message.body}</p>{/if}
     {#if message.senderId && message.senderId !== session.member.id}
       {#if replying}
-        <form class="stack" onsubmit={reply}>
+        <EditorForm action={send} submitLabel="Senden" onsubmit={reply} oncancel={() => (replying = false)}>
           <Field label="Antwort an {message.senderName ?? 'den Absender'}">
             <textarea bind:value={answer} rows="4" maxlength="1000" required></textarea>
           </Field>
-          <ErrorNote error={send.error} />
-          <div class="row">
-            <Button type="submit" variant="primary" busy={send.busy} disabled={!answer.trim()}>Senden</Button>
-            <Button variant="ghost" onclick={() => (replying = false)}>Abbrechen</Button>
-          </div>
-        </form>
+        </EditorForm>
       {:else}
         <div><Button icon="reply" onclick={() => (replying = true)}>Antworten</Button></div>
       {/if}

@@ -15,7 +15,7 @@
       {#each form.checklist as line, index (line.key)}
         <li class="row">
           <input bind:value={line.text} maxlength={limits.checklistItemMaxLength} aria-label="Punkt {index + 1}" />
-          <Button variant="ghost" onclick={() => form.removeLine(line.key)} tooltip="Checklistenpunkt entfernen">Entfernen</Button>
+          <Button size="sm" variant="ghost" icon="close" onclick={() => form.removeLine(line.key)} tooltip="Checklistenpunkt entfernen" />
         </li>
       {/each}
     </ol>
@@ -23,7 +23,7 @@
   {#if form.resetsTicks}
     <p class="warning">Beim Speichern einer geänderten Checkliste werden alle Haken zurückgesetzt.</p>
   {/if}
-  {#if error}<span class="error" role="alert">{error}</span>{/if}
+  {#if error}<span class="invalid" role="alert">{error}</span>{/if}
   <div>
     <Button onclick={() => form.addLine()} disabled={form.checklist.length >= limits.maxChecklistItems}>Punkt hinzufügen</Button>
   </div>
@@ -48,10 +48,6 @@
   .warning {
     margin: 0;
     color: var(--color-warning);
-    font-size: var(--font-size-small);
-  }
-  .error {
-    color: var(--color-danger);
     font-size: var(--font-size-small);
   }
 </style>

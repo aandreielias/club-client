@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { session } from '../../lib/container';
+  import { pendingDeletes, session } from '../../lib/container';
   import { Action } from '../../lib/state/Action.svelte';
   import SettingsList from '../../ui/SettingsList.svelte';
   import { holidays } from './services';
@@ -10,13 +10,15 @@
   reload();
 
   const rows = $derived(
-    holidays.items.map((h) => ({
-      key: h.id,
-      label: h.name,
-      detail: h.from === h.to ? session.format.date(h.from) : `${session.format.date(h.from)} – ${session.format.date(h.to)}`,
-      archived: false,
-      inUse: false,
-    })),
+    holidays.items
+      .filter((h) => !pendingDeletes.isHidden(h.id))
+      .map((h) => ({
+        key: h.id,
+        label: h.name,
+        detail: h.from === h.to ? session.format.date(h.from) : `${session.format.date(h.from)} – ${session.format.date(h.to)}`,
+        archived: false,
+        inUse: false,
+      })),
   );
 </script>
 

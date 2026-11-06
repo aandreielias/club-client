@@ -1,8 +1,7 @@
 <script lang="ts">
   import { session } from '../../lib/container';
-  import Button from '../../ui/Button.svelte';
   import DateTimeInput from '../../ui/DateTimeInput.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
+  import EditorForm from '../../ui/EditorForm.svelte';
   import Field from '../../ui/Field.svelte';
   import { MeetingForm } from './MeetingForm.svelte';
   import type { MeetingModel } from './MeetingModel.svelte';
@@ -15,14 +14,12 @@
   // svelte-ignore state_referenced_locally
   const form = MeetingForm.of(meeting, meetingTypes.get(meeting.kind) ?? null, session.clock);
 
-  async function submit(event: SubmitEvent) {
-    event.preventDefault();
-    form.submitted = true;
-    if (form.valid && (await model.save(form.toPatch()))) onclose();
+  async function submit() {
+    if (await model.save(form.toPatch())) onclose();
   }
 </script>
 
-<form class="stack editor" onsubmit={submit} novalidate>
+<EditorForm action={model.action} submitLabel="Speichern" validate={form} onsubmit={submit} oncancel={onclose}>
   <Field label="Titel" error={form.error('title')}>
     <input bind:value={form.title} maxlength="120" required />
   </Field>
@@ -39,17 +36,4 @@
       <DateTimeInput bind:value={form.end} min={form.start} required />
     </Field>
   </div>
-  <ErrorNote error={model.action.error} />
-  <div class="row">
-    <Button type="submit" variant="primary" busy={model.action.busy}>Speichern</Button>
-    <Button variant="ghost" onclick={onclose}>Abbrechen</Button>
-  </div>
-</form>
-
-<style>
-  .editor {
-    padding: var(--space-md);
-    border-radius: var(--radius-lg);
-    background: var(--color-surface);
-  }
-</style>
+</EditorForm>

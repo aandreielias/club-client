@@ -35,7 +35,7 @@
     candidates={people.value ?? []}
     today={session.clock.today()}
   />
-  {#if error}<p class="error small" role="alert">{error}</p>{/if}
+  {#if error}<p class="invalid" role="alert">{error}</p>{/if}
   {#if meeting.status !== 'DRAFT'}
     <p class="muted small">Nach der Einladung erfahren alle Eingeladenen, dass sich die Tagesordnung geändert hat.</p>
   {/if}
@@ -52,11 +52,7 @@
     border-radius: var(--radius-lg);
     background: var(--color-surface);
   }
-  .error,
   p {
     margin: 0;
-  }
-  .error {
-    color: var(--color-danger);
   }
 </style>

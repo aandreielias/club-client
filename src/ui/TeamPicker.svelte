@@ -24,7 +24,7 @@
       <span class="muted count">{chosen.length} ausgewählt</span>
     {/snippet}
   </DataTable>
-  {#if error}<span class="error" role="alert">{error}</span>{/if}
+  {#if error}<span class="invalid" role="alert">{error}</span>{/if}
 </div>
 
 <style>
@@ -35,9 +35,5 @@
   .count {
     font-size: var(--font-size-small);
     white-space: nowrap;
-  }
-  .error {
-    color: var(--color-danger);
-    font-size: var(--font-size-small);
   }
 </style>

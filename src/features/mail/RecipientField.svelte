@@ -40,7 +40,7 @@
       />
     </span>
   </div>
-  {#if error}<span class="message error" role="alert">{error}</span>{/if}
+  {#if error}<span class="invalid" role="alert">{error}</span>{/if}
 </div>
 
 <style>
@@ -74,9 +74,5 @@
   .input {
     flex: 1;
     min-width: 12rem;
-  }
-  .error {
-    color: var(--color-danger);
-    font-size: var(--font-size-small);
   }
 </style>

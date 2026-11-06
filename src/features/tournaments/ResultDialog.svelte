@@ -97,7 +97,7 @@
           >{:else}<span></span>{/if}
         <span class="muted">Sätze <strong class="won">{won.homeSets ?? 0}:{won.awaySets ?? 0}</strong></span>
       </div>
-      {#if error}<p class="error" role="alert">{error}</p>
+      {#if error}<p class="invalid" role="alert">{error}</p>
       {:else if open}<p class="muted note">Ein Team braucht {setsToWin} Gewinnsätze.</p>
       {:else}<p class="muted note">Sätze bis {format === 'BEACH' ? 21 : 25}, Entscheidungssatz bis 15, immer 2 Punkte Vorsprung.</p>{/if}
     {/if}
@@ -140,11 +140,6 @@
   }
   .note {
     margin: 0;
-    font-size: var(--font-size-small);
-  }
-  .error {
-    margin: 0;
-    color: var(--color-danger);
     font-size: var(--font-size-small);
   }
 </style>

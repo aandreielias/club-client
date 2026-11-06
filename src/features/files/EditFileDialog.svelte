@@ -66,9 +66,9 @@
       </Field>
     {/if}
     <ErrorNote error={action.error} />
-    <div class="row end">
-      <Button variant="ghost" onclick={onclose}>Abbrechen</Button>
+    <div class="row">
       <Button type="submit" variant="primary" busy={action.busy}>Speichern</Button>
+      <Button variant="ghost" onclick={onclose}>Abbrechen</Button>
     </div>
   </form>
 </Dialog>
@@ -81,8 +81,5 @@
   }
   .extension {
     flex-shrink: 0;
-  }
-  .end {
-    justify-content: flex-end;
   }
 </style>

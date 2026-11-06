@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { bus, commands, session } from '../../lib/container';
+  import { bus, commands, pendingDeletes, session } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
@@ -21,8 +21,12 @@
   useCommands(commands, { 'page.new': { run: create, when: () => policy.canCreate() } });
 
   const now = new Date().toISOString();
-  const upcoming = (all: MeetingSummary[]) => all.filter((m) => m.endsAt >= now && m.status !== 'CLOSED');
-  const past = (all: MeetingSummary[]) => all.filter((m) => m.endsAt < now || m.status === 'CLOSED').reverse();
+  const shown = (all: MeetingSummary[]) => all.filter((m) => !pendingDeletes.isHidden(m.id));
+  const upcoming = (all: MeetingSummary[]) => shown(all).filter((m) => m.endsAt >= now && m.status !== 'CLOSED');
+  const past = (all: MeetingSummary[]) =>
+    shown(all)
+      .filter((m) => m.endsAt < now || m.status === 'CLOSED')
+      .reverse();
   const card = (m: MeetingSummary): RecordCard => ({
     href: `#/meetings/${m.id}`,
     record: { kind: 'meeting', id: m.id, title: m.title },

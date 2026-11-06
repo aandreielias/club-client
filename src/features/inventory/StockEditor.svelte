@@ -72,7 +72,7 @@
     <Button size="sm" icon="add" onclick={() => form.add()}>Zeile hinzufügen</Button>
     <span class="muted total">Gesamt: <strong>{form.total}</strong></span>
   </div>
-  {#if form.submitted && form.error}<p class="error" role="alert">{form.error}</p>{/if}
+  {#if form.submitted && form.error}<p class="invalid" role="alert">{form.error}</p>{/if}
   <ErrorNote error={action.error} />
   <div class="row">
     <Button type="submit" variant="primary" busy={action.busy}>Speichern</Button>
@@ -96,10 +96,5 @@
   }
   .total {
     font-variant-numeric: tabular-nums;
-  }
-  .error {
-    margin: 0;
-    color: var(--color-danger);
-    font-size: var(--font-size-small);
   }
 </style>

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { backStack, bus, directory, permissions, router, store, windows } from '../../lib/container';
-  import { DetailController } from '../../lib/detail/DetailController.svelte';
+  import { backStack, bus, directory, permissions, router, session, store, windows } from '../../lib/container';
+  import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { TEAM_ROLE_LABELS, type RosterEntry, type TeamRole } from '../../lib/types';
   import AsyncView from '../../ui/AsyncView.svelte';
@@ -15,10 +15,11 @@
   import AddMemberPanel from './AddMemberPanel.svelte';
   import TeamAttendanceSection from '../calendar/TeamAttendanceSection.svelte';
   import TeamMatchesSection from '../calendar/TeamMatchesSection.svelte';
-  import TeamDialog from './TeamDialog.svelte';
+  import TeamEditor from './TeamEditor.svelte';
+  import { TeamForm } from './TeamForm.svelte';
   import TeamActionDialog from './TeamActionDialog.svelte';
   import { Action } from '../../lib/state/Action.svelte';
-  import { MEMBERSHIP_CHANGED } from './events';
+  import { MEMBERSHIP_CHANGED, TEAMS_CHANGED } from './events';
   import { RosterListModel } from './RosterListModel.svelte';
   import { RosterModel } from './RosterModel.svelte';
   import { teamPolicy as policy, teamsApi } from './services';
@@ -41,7 +42,7 @@
   });
 
   let adding = $state(false);
-  let editing = $state(false);
+  const edit = new EditSession<TeamForm>(bus, backStack);
   let dialog = $state<{ kind: 'player' | 'season' | 'request'; entry?: RosterEntry } | null>(null);
   const archiveAction = new Action();
 
@@ -157,10 +158,19 @@
     }
   }
 
-  function renamed() {
-    editing = false;
-    directory.forgetTeams();
-    void model.load();
+  function startEdit(name: string, season: string) {
+    const form = new TeamForm(session.clock, session.club?.seasonStartMonth ?? 7);
+    Object.assign(form, { name, season });
+    edit.edit(form);
+  }
+
+  async function rename() {
+    await edit.submit(async (form) => {
+      await teamsApi.update(model.teamId, { name: form.name.trim(), season: form.season.trim() });
+      directory.forgetTeams();
+      bus.publish(TEAMS_CHANGED);
+      await model.load();
+    }, 'Team gespeichert.');
   }
 
   function open(entry: RosterEntry) {
@@ -193,7 +203,7 @@
     {#if policy.canRequestPlayer(model.teamId)}<Button onclick={() => (dialog = { kind: 'request' })}>Spieler:in anfragen</Button>{/if}
     {#if policy.canEdit() && model.roster.value}
       {@const team = model.roster.value.team}
-      <Button icon="edit" onclick={() => (editing = true)}>Bearbeiten</Button>
+      <Button icon="edit" disabled={edit.editing} onclick={() => startEdit(team.name, team.season)}>Bearbeiten</Button>
       <Button onclick={() => (dialog = { kind: 'season' })}>Neue Saison</Button>
       {#if team.archived}
         <Button busy={archiveAction.busy} onclick={() => setArchived(false)}>Wiederherstellen</Button>
@@ -211,6 +221,11 @@
     {/if}
   {/snippet}
 
+  {#if edit.form}
+    <div class="editing" {@attach edit.track}>
+      <TeamEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={rename} />
+    </div>
+  {/if}
   {#if adding}
     <div class="add"><AddMemberPanel {model} onclose={() => (adding = false)} /></div>
   {/if}
@@ -282,9 +297,9 @@
     onclose={() => (dialog = null)}
   />
 {/if}
-{#if editing && model.roster.value}<TeamDialog team={model.roster.value.team} onsaved={renamed} onclose={() => (editing = false)} />{/if}
 
 <style>
+  .editing,
   .add {
     margin-bottom: var(--space-lg);
   }

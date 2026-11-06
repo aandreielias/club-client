@@ -87,7 +87,7 @@
                 bind:value={need.quantity}
               />
               <span class="muted stock">{need.stock !== null ? `von ${need.stock}` : ''}</span>
-              <Button size="sm" variant="ghost" onclick={() => model.removeItem(need.itemId)}>Entfernen</Button>
+              <Button size="sm" variant="ghost" icon="close" tooltip="{need.name} entfernen" onclick={() => model.removeItem(need.itemId)} />
             </li>
           {/each}
         </ul>
@@ -113,7 +113,7 @@
               {#if file.deleted}<Tag tone="danger">Gelöscht</Tag>{:else}<span></span>{/if}
               <span></span>
               <span></span>
-              <Button size="sm" variant="ghost" onclick={() => model.removeFile(file.id)}>Entfernen</Button>
+              <Button size="sm" variant="ghost" icon="close" tooltip="{file.name} entfernen" onclick={() => model.removeFile(file.id)} />
             </li>
           {/each}
         </ul>

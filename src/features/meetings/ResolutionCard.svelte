@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { bus, session } from '../../lib/container';
+  import { bus, pendingDeletes, session } from '../../lib/container';
   import { CONFIRM, TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
+  import EditorForm from '../../ui/EditorForm.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import Field from '../../ui/Field.svelte';
@@ -123,10 +124,10 @@
     editing = true;
   }
 
-  async function saveDraft(event: SubmitEvent) {
-    event.preventDefault();
+  const saving = new Action();
+  async function saveDraft() {
     if (!editTitle.trim()) return;
-    if (await action.run(() => meetingsApi.updateResolution(r.id, { title: editTitle.trim(), text: editText.trim() }).then(onchanged)))
+    if (await saving.run(() => meetingsApi.updateResolution(r.id, { title: editTitle.trim(), text: editText.trim() }).then(onchanged)))
       editing = false;
   }
 
@@ -135,23 +136,21 @@
     if (!action.error) extending = false;
   }
 
-  async function remove() {
-    if (!(await bus.request(CONFIRM, { title: 'Entwurf löschen', message: r.title, confirmLabel: 'Löschen', danger: true }))) return;
-    if (await action.run(() => meetingsApi.deleteResolution(r.id))) ondeleted?.();
+  /** Undo instead of a confirmation; lists hide the card meanwhile, the live event reloads them after the delete. */
+  function remove() {
+    const target = r.id;
+    pendingDeletes.schedule({ ids: [target], text: `Entwurf „${r.title}“ gelöscht.`, commit: () => meetingsApi.deleteResolution(target) });
+    ondeleted?.();
   }
 </script>
 
 <article class="resolution">
   <header>
     {#if editing}
-      <form class="stack edit" onsubmit={saveDraft}>
+      <EditorForm action={saving} submitLabel="Speichern" onsubmit={saveDraft} oncancel={() => (editing = false)}>
         <Field label="Antrag"><input bind:value={editTitle} maxlength="200" required /></Field>
         <Field label="Text (optional)"><textarea bind:value={editText} rows="3" maxlength="4000"></textarea></Field>
-        <div class="row">
-          <Button type="submit" variant="primary" busy={action.busy} disabled={!editTitle.trim()}>Speichern</Button>
-          <Button variant="ghost" onclick={() => (editing = false)}>Abbrechen</Button>
-        </div>
-      </form>
+      </EditorForm>
     {:else}
       <strong>{r.title}</strong>
     {/if}
@@ -257,7 +256,7 @@
       >
     </form>
     {#if r.analogEntered}<p class="muted small">Ein Zwischenstand ist gespeichert; das Ergebnis zeigt sich nach dem Schließen.</p>{/if}
-    {#if roomSum > r.presentVoters}<p class="error small" role="alert">Mehr Stimmen als Anwesende ({r.presentVoters}).</p>{/if}
+    {#if roomSum > r.presentVoters}<p class="invalid" role="alert">Mehr Stimmen als Anwesende ({r.presentVoters}).</p>{/if}
   {/if}
 
   {#if r.links.length || r.canManage}
@@ -274,7 +273,7 @@
     <div class="row">
       {#if r.status === 'DRAFT'}
         {#if !editing}<Button variant="ghost" icon="edit" onclick={startEdit}>Bearbeiten</Button>{/if}
-        <Button variant="ghost" busy={action.busy} onclick={remove}>Entwurf löschen</Button>
+        <Button variant="danger" icon="delete" onclick={remove}>Entwurf löschen</Button>
         {#if r.meetingId && meetingOpen}
           <Button variant="primary" busy={action.busy} onclick={openByHand}>Per Handzeichen</Button>
           <Button busy={action.busy} onclick={openInApp}>Geheim in der App</Button>
@@ -303,10 +302,6 @@
   }
   .hands input {
     width: 5rem;
-  }
-  .error {
-    margin: 0;
-    color: var(--color-danger);
   }
   .resolution {
     display: grid;

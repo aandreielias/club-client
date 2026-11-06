@@ -1,8 +1,7 @@
 <script lang="ts">
   import { auditApi, session, store } from '../../lib/container';
-  import Button from '../../ui/Button.svelte';
+  import LoadMore from '../../ui/LoadMore.svelte';
   import DataTable from '../../ui/DataTable.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
   import { AuditListModel } from './AuditListModel.svelte';
 
   /** Admin only: who changed what with extended rights, who opened member data, who exported data (server: AuditLog). */
@@ -16,6 +15,5 @@
     werden nach zwei Jahren gelöscht. Art, Bereich und Person filtern das ganze Protokoll, die Suche die geladenen Einträge.
   </p>
   <DataTable model={list} rowKey={(e) => String(e.id)} emptyText="Keine Einträge." />
-  <ErrorNote error={list.more.error} />
-  {#if list.hasMore}<div><Button busy={list.more.busy} onclick={() => list.loadMore()}>Ältere laden</Button></div>{/if}
+  {#if list.hasMore}<LoadMore action={list.more} onload={() => list.loadMore()} />{/if}
 </div>

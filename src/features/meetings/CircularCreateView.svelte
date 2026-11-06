@@ -1,12 +1,10 @@
 <script lang="ts">
-  import { autofocus } from '../../ui/autofocus';
   import { bus, session } from '../../lib/container';
   import { CreateController } from '../../lib/detail/CreateController.svelte';
   import { ZonedClock } from '../../lib/time/ZonedClock';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
-  import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
+  import EditorForm from '../../ui/EditorForm.svelte';
   import Field from '../../ui/Field.svelte';
   import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import DateInput from '../../ui/DateInput.svelte';
@@ -36,12 +34,20 @@
   void people.load();
   // Checked again when sending: the form may have been open for a while.
   let tooSoon = $derived(deadline < earliest);
+  const check = {
+    get submitted() {
+      return submitted;
+    },
+    set submitted(value: boolean) {
+      submitted = value;
+      tooSoon = deadline < earliestNow();
+    },
+    get valid() {
+      return !!title.trim() && !tooSoon;
+    },
+  };
 
-  async function submit(event: SubmitEvent) {
-    event.preventDefault();
-    submitted = true;
-    tooSoon = deadline < earliestNow();
-    if (!title.trim() || tooSoon) return;
+  async function submit() {
     await create.submit(
       async () => {
         // Created and opened in one request: a refused opening leaves no draft behind.
@@ -61,7 +67,7 @@
 </script>
 
 <Detail title="Neuer Umlaufbeschluss">
-  <form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
+  <EditorForm action={create.save} submitLabel="An den Vorstand schicken" validate={check} onsubmit={submit} oncancel={() => handle.close()}>
     <Field label="Antrag" error={submitted && !title.trim() ? 'Antrag angeben.' : null}>
       <input bind:value={title} maxlength="200" required />
     </Field>
@@ -81,10 +87,5 @@
     <Field label="Umsetzen bis (optional)" hint="Fälligkeit der Aufgabe, wenn der Beschluss angenommen ist.">
       <DateInput bind:value={implementDue} min={session.clock.today()} />
     </Field>
-    <ErrorNote error={create.save.error} />
-    <div class="row">
-      <Button type="submit" variant="primary" busy={create.save.busy}>An den Vorstand schicken</Button>
-      <Button variant="ghost" onclick={() => handle.close()}>Abbrechen</Button>
-    </div>
-  </form>
+  </EditorForm>
 </Detail>

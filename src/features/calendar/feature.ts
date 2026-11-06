@@ -10,6 +10,7 @@ import AppointmentTypeCreateView from './AppointmentTypeCreateView.svelte';
 import AppointmentTypeView from './AppointmentTypeView.svelte';
 import CalendarPage from './CalendarPage.svelte';
 import EventsPage from './EventsPage.svelte';
+import AbsenceCreateView from './AbsenceCreateView.svelte';
 import AbsencesPage from './AbsencesPage.svelte';
 import HolidayCreateView from './HolidayCreateView.svelte';
 import HolidayView from './HolidayView.svelte';
@@ -38,6 +39,7 @@ export const calendarFeature: Feature = {
     'appointment-type-new': { component: AppointmentTypeCreateView, roles: ADMIN_BOARD },
     holiday: { component: HolidayView, page: (id) => `/holidays/${encodeURIComponent(id)}`, roles: ADMIN_BOARD },
     'holiday-new': { component: HolidayCreateView, roles: ADMIN_BOARD },
+    'absence-new': { component: AbsenceCreateView },
   },
   start: () => appointmentTypes.start(),
   calendar: {

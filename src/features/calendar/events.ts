@@ -1,6 +1,10 @@
 // Live event types of the calendar and attendance modules (server: ClientEvent records).
 
+import { defineEvent } from '../../lib/bus';
 import { liveEvent } from '../../lib/live/LiveUpdates.svelte';
+
+/** An absence was entered in this browser (the server pushes no event for it); the list reloads. */
+export const ABSENCES_CHANGED = defineEvent('calendar/absences-changed');
 
 export const APPOINTMENTS_CHANGED = liveEvent<AppointmentsChanged>('calendar.appointments-changed');
 export const RIDES_CHANGED = liveEvent<RidesChanged>('attendance.rides-changed');

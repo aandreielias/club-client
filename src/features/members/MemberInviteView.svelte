@@ -1,13 +1,11 @@
 <script lang="ts">
-  import { autofocus } from '../../ui/autofocus';
   import { settings } from '../../settings';
   import { bus, directory, session } from '../../lib/container';
   import { Resource } from '../../lib/state/Resource.svelte';
   import { CreateController } from '../../lib/detail/CreateController.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
-  import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
-  import ErrorNote from '../../ui/ErrorNote.svelte';
+  import EditorForm from '../../ui/EditorForm.svelte';
   import Field from '../../ui/Field.svelte';
   import DateInput from '../../ui/DateInput.svelte';
   import { InviteForm } from './MemberForms.svelte';
@@ -29,17 +27,14 @@
     (guardians.value ?? []).filter((m) => m.active).map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` })),
   );
 
-  async function submit(event: SubmitEvent) {
-    event.preventDefault();
-    form.submitted = true;
-    if (!form.valid) return;
+  async function submit() {
     await create.submit(async () => (await membersApi.invite(form.toInvitation())).id, 'member', 'Konto angelegt, Einladung verschickt.');
   }
 </script>
 
 <Detail title="Neues Konto anlegen">
   <p class="muted">Daten aus dem Aufnahmeantrag eintragen. Die Person bekommt an ihre private E-Mail einen Link und legt ihr Passwort fest.</p>
-  <form class="stack" onsubmit={submit} novalidate {@attach autofocus}>
+  <EditorForm action={create.save} submitLabel="Konto anlegen" validate={form} onsubmit={submit} oncancel={() => handle.close()}>
     <div class="grid-3">
       <Field label="Vorname" error={form.error('firstName')}>
         <input bind:value={form.firstName} maxlength={max} required />
@@ -80,12 +75,7 @@
       </div>
     </details>
     <RoleChecklist bind:value={form.roles} allowed={policy.grantableRoles()} legend="Rollen" />
-    <ErrorNote error={create.save.error} />
-    <div class="row">
-      <Button type="submit" variant="primary" busy={create.save.busy}>Konto anlegen</Button>
-      <Button variant="ghost" onclick={() => handle.close()}>Abbrechen</Button>
-    </div>
-  </form>
+  </EditorForm>
 </Detail>
 
 <style>

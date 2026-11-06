@@ -7,7 +7,7 @@
 
   /**
    * The frame of every record editor: fields, the save error, save and cancel. With `validate`, the form checks itself
-   * (`submitted` shows the errors, `valid` gates the save) instead of the browser.
+   * (`submitted` shows the errors, `valid` gates the save) instead of the browser. `actions` adds buttons after the save button.
    */
   let {
     action,
@@ -15,13 +15,15 @@
     oncancel,
     onsubmit,
     validate,
+    actions,
     children,
   }: {
     action: Action;
     submitLabel: string;
     oncancel: () => void;
-    onsubmit: () => void;
+    onsubmit: (event: SubmitEvent) => void;
     validate?: { submitted: boolean; readonly valid: boolean };
+    actions?: Snippet;
     children: Snippet;
   } = $props();
 
@@ -31,7 +33,7 @@
       validate.submitted = true;
       if (!validate.valid) return;
     }
-    onsubmit();
+    onsubmit(event);
   }
 </script>
 
@@ -40,6 +42,7 @@
   <ErrorNote error={action.error} />
   <div class="row">
     <Button type="submit" variant="primary" busy={action.busy}>{submitLabel}</Button>
+    {@render actions?.()}
     <Button variant="ghost" onclick={oncancel}>Abbrechen</Button>
   </div>
 </form>

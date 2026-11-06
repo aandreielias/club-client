@@ -41,12 +41,8 @@
 <fieldset class="stack" {@attach recordDrop(['member'], (ref) => drop(ref.id))}>
   <legend>Zugewiesen</legend>
   <PeoplePicker {list} chosen={form.assignees} ontoggle={(id) => form.toggleAssignee(id)} emptyText="Keine passenden Mitglieder." />
-  {#if error}<span class="error" role="alert">{error}</span>{/if}
+  {#if error}<span class="invalid" role="alert">{error}</span>{/if}
 </fieldset>
 
 <style>
-  .error {
-    color: var(--color-danger);
-    font-size: var(--font-size-small);
-  }
 </style>

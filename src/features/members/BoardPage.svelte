@@ -1,22 +1,20 @@
 <script lang="ts">
   /** Board size warnings (too few people, an even number): shown in red. */
   const SIZE_WARNINGS = ['board.too-small', 'board.even'];
-  import { bus, directory, permissions, session } from '../../lib/container';
+  import { bus, permissions, session } from '../../lib/container';
   import RecordLink from '../../ui/RecordLink.svelte';
-  import { CONFIRM, TOAST } from '../../channels';
-  import { Resource } from '../../lib/state/Resource.svelte';
+  import { CONFIRM, TOAST, WINDOW_OPEN } from '../../channels';
+  import { useBus } from '../../lib/bus/useBus.svelte';
+  import { OFFICES_CHANGED } from './events';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
-  import Field from '../../ui/Field.svelte';
-  import DateInput from '../../ui/DateInput.svelte';
   import Icon from '../../ui/Icon.svelte';
   import Page from '../../ui/Page.svelte';
-  import Select from '../../ui/Select.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { BoardModel } from './BoardModel.svelte';
   import { boardWarning } from './messages';
-  import type { Office, OfficeKind } from './MembersApi';
+  import type { Office } from './MembersApi';
   import { boardSettings, memberPolicy as policy, membersApi } from './services';
 
   /** Vorstand and Rechnungsprüfer: who holds which function, until when. */
@@ -24,36 +22,7 @@
   void model.load();
 
   const today = session.clock.today();
-  const candidates = new Resource(() => directory.allMembers());
-  if (policy.canManageOffices()) void candidates.load();
-  const officeOptions = $derived(boardSettings.enabled.map((kind) => ({ value: kind, label: boardSettings.label(kind) })));
-
-  let memberId = $state('');
-  let office = $state<OfficeKind | ''>('');
-  let startsOn = $state(today);
-  let termEndsOn = $state('');
-  let coopted = $state(false);
-  /** server: MembershipHandlers.assign — elected for a later date, entered up to a year ahead. */
-  const latestStart = `${Number(today.slice(0, 4)) + 1}${today.slice(4)}`;
-  const termYears = $derived(office ? (boardSettings.get(office)?.termYears ?? 3) : null);
-
-  /** server: MembershipRules.eligible — only members whose membership allows an office. */
-  const memberOptions = $derived(
-    (candidates.value ?? []).filter((m) => m.eligible).map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` })),
-  );
-
-  async function assign(event: SubmitEvent) {
-    event.preventDefault();
-    if (!memberId || !office) return;
-    const assigned = await model.assign({ memberId, office, startsOn, termEndsOn: termEndsOn || null, coopted });
-    if (!assigned) return;
-    bus.publish(TOAST, { text: `${boardSettings.label(assigned.office)}: ${assigned.name}.` });
-    if (assigned.memberId === session.member.id) await session.loadMe();
-    memberId = '';
-    office = '';
-    termEndsOn = '';
-    coopted = false;
-  }
+  useBus(bus, OFFICES_CHANGED, () => void model.load());
 
   async function end(o: Office) {
     const ok = await bus.request(CONFIRM, {
@@ -92,6 +61,11 @@
 {/snippet}
 
 <Page title="Vorstand">
+  {#snippet actions()}
+    {#if policy.canManageOffices()}
+      <Button variant="primary" icon="add" onclick={() => bus.publish(WINDOW_OPEN, { kind: 'office-assign', id: '-' })}>Funktion vergeben</Button>
+    {/if}
+  {/snippet}
   <AsyncView resource={model.board}>
     {#snippet children(board)}
       {#if board.warnings.length}
@@ -115,37 +89,6 @@
       <ErrorNote error={model.endAction.error} />
     {/snippet}
   </AsyncView>
-
-  {#if policy.canManageOffices()}
-    <h2>Funktion vergeben</h2>
-    <form class="stack" onsubmit={assign}>
-      <div class="grid-2">
-        <Field
-          label="Mitglied"
-          hint={candidates.value && !memberOptions.length
-            ? 'Noch niemand ist wählbar: zuerst Mitglieder einladen und ihnen eine Mitgliedsart mit Wählbarkeit geben.'
-            : 'Nur wählbare Mitglieder (Einstellungen › Mitgliedschaft).'}
-        >
-          <Select bind:value={memberId} placeholder="Bitte wählen" options={memberOptions} />
-        </Field>
-        <Field label="Funktion">
-          <Select bind:value={office} placeholder="Bitte wählen" options={officeOptions} />
-        </Field>
-        <Field label="Beginn">
-          <DateInput bind:value={startsOn} max={latestStart} required />
-        </Field>
-        <Field
-          label="Ende der Funktionsperiode (optional)"
-          hint={termYears ? `Leer = ${termYears === 1 ? 'ein Jahr' : `${termYears} Jahre`} nach Beginn.` : 'Leer = Funktionsperiode der Funktion.'}
-        >
-          <DateInput bind:value={termEndsOn} min={startsOn} />
-        </Field>
-      </div>
-      <label class="check"><input type="checkbox" bind:checked={coopted} /> Kooptiert, bis die nächste Mitgliederversammlung bestätigt</label>
-      <ErrorNote error={model.assignAction.error} />
-      <div><Button type="submit" variant="primary" busy={model.assignAction.busy} disabled={!memberId || !office}>Funktion vergeben</Button></div>
-    </form>
-  {/if}
 </Page>
 
 <style>

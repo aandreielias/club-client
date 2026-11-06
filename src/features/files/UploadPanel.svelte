@@ -96,7 +96,7 @@
           <span class="name">{item.file.name}</span>
           <progress max="1" value={item.progress} aria-label="Fortschritt {item.file.name}"></progress>
           <span class="state">{STATE_LABELS[item.state]}</span>
-          {#if item.error}<span class="error">{item.error}</span>{/if}
+          {#if item.error}<span class="invalid">{item.error}</span>{/if}
         </li>
       {/each}
     </ul>
@@ -149,7 +149,7 @@
   progress {
     width: 100%;
   }
-  .error {
+  .invalid {
     grid-column: 1 / -1;
     color: var(--color-danger);
   }
