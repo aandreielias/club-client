@@ -39,6 +39,7 @@ import Plus from '@lucide/svelte/icons/plus';
 import Search from '@lucide/svelte/icons/search';
 import Send from '@lucide/svelte/icons/send';
 import Landmark from '@lucide/svelte/icons/landmark';
+import Network from '@lucide/svelte/icons/network';
 import Link from '@lucide/svelte/icons/link';
 import Mail from '@lucide/svelte/icons/mail';
 import Palette from '@lucide/svelte/icons/palette';
@@ -80,6 +81,7 @@ export const ICONS = {
   events: CalendarDays,
   eventGroup: Ticket,
   club: Landmark,
+  orgChart: Network,
   archive: Archive,
   tasks: ListChecks,
   files: Folder,

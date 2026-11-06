@@ -2101,6 +2101,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/members/org-chart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["orgChart"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/members/names": {
         parameters: {
             query?: never;
@@ -4230,6 +4246,28 @@ export interface components {
             memberId: string;
             name: string;
             canOpen: boolean;
+        };
+        "at.clubserver.members.api.MembersApi.GuardianLink": {
+            /** Format: uuid */
+            guardianId: string;
+            /** Format: uuid */
+            minorId: string;
+        };
+        "at.clubserver.members.api.MembersApi.OrgChart": {
+            teams: components["schemas"]["at.clubserver.teams.api.TeamsApi.Roster"][];
+            people: components["schemas"]["at.clubserver.members.api.MembersApi.OrgPerson"][];
+            guardians: components["schemas"]["at.clubserver.members.api.MembersApi.GuardianLink"][];
+        };
+        "at.clubserver.members.api.MembersApi.OrgPerson": {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            membershipTypes: string[];
+            minor: boolean;
+            /** @enum {string} */
+            login: "SIGNED_IN" | "INVITED" | "NONE";
+            roles: ("ADMIN" | "BOARD" | "COACH" | "PLAYER" | "PARENT" | "VOLUNTEER" | "GUEST")[];
+            active: boolean;
         };
         "at.clubserver.members.api.MembersApi.MemberNames": {
             names: {
@@ -9100,6 +9138,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.Family"];
+                };
+            };
+        };
+    };
+    orgChart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.OrgChart"];
                 };
             };
         };

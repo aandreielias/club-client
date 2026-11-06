@@ -1,5 +1,5 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
-import type { Member, MemberList, MembershipType, Role } from '../../lib/types';
+import type { Member, MemberList, MembershipType, Role, Roster } from '../../lib/types';
 
 /** The membership application: names, private e-mail (the login) and birth date; the rest is optional. */
 export interface Invitation {
@@ -189,6 +189,33 @@ export interface GuardianRef {
   name: string;
 }
 
+/** Account state, admin/board only (server: MembersApi.LoginState). */
+export type LoginState = 'SIGNED_IN' | 'INVITED' | 'NONE';
+
+/** server: MembersApi.OrgPerson; `login` null and `roles` empty for guardians when a coach asks; `active` false only for admin/board. */
+export interface OrgPerson {
+  id: string;
+  name: string;
+  membershipTypes: MembershipType[];
+  minor: boolean;
+  login: LoginState | null;
+  roles: Role[];
+  active: boolean;
+}
+
+/** server: MembersApi.GuardianLink */
+export interface GuardianLink {
+  guardianId: string;
+  minorId: string;
+}
+
+/** server: MembersApi.OrgChart — admin/board see everyone, coaches their teams and those members' guardians. */
+export interface OrgChart {
+  teams: Roster[];
+  people: OrgPerson[];
+  guardians: GuardianLink[];
+}
+
 export class MembersApi {
   static readonly BASE = '/api/v1/members';
 
@@ -196,6 +223,10 @@ export class MembersApi {
 
   list(): Promise<MemberList> {
     return this.api.get<MemberList>(MembersApi.BASE);
+  }
+
+  orgChart(): Promise<OrgChart> {
+    return this.api.get<OrgChart>(`${MembersApi.BASE}/org-chart`);
   }
 
   get(id: string): Promise<Member> {

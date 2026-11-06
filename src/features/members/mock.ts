@@ -4,7 +4,7 @@ import { generatedKey } from '../../lib/mock/keys';
 import { directory, MockDirectory, OFFICES, type OfficeRow } from '../../lib/mock/core';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
-import { ADMIN_BOARD, type Member } from '../../lib/types';
+import { ADMIN_BOARD, coaches, type Member } from '../../lib/types';
 import { settings } from '../../settings';
 import {
   HONORARY,
@@ -250,7 +250,49 @@ const officeNamedByMeetings = (office: string): boolean => officeUses.some((uses
 /** server: members_member.first_login_at — invited through the mock and never "signed in" (seeded members all have). */
 const pendingInvites = new Set<string>();
 
+/** server: MemberHandlers.orgChart + TeamHandlers.rosters — admin/board everyone, coaches their active teams and those members' guardians. */
+function orgChart(viewer: Member) {
+  directory.requirePrivileged(viewer);
+  const board = directory.isManager(viewer);
+  const rank = { COACH: 0, ASSISTANT: 1, PLAYER: 2 };
+  const teams = directory.teams.data
+    .filter((t) => !t.archived && (board || coaches(directory.teamRoles(viewer.id)[t.id])))
+    .map((t) => {
+      const roster = directory.roster(viewer, t.id);
+      return { ...roster, entries: roster.entries.sort((a, b) => rank[a.teamRole] - rank[b.teamRole] || a.name.localeCompare(b.name)) };
+    });
+  const players = new Set(teams.flatMap((t) => t.entries.map((e) => e.memberId)));
+  const active = (id: string) => directory.members.data.some((m) => m.id === id && m.active);
+  const guardians = Object.keys(directory.wards.data)
+    .filter(active)
+    .flatMap((guardianId) =>
+      directory
+        .wardsOf(guardianId)
+        .filter(active)
+        .map((minorId) => ({ guardianId, minorId })),
+    )
+    .filter((l) => board || players.has(l.minorId));
+  const shown = new Set([...players, ...guardians.map((l) => l.guardianId)]);
+  const today = directory.clock.today();
+  const adultBornBy = `${Number(today.slice(0, 4)) - directory.boardSettings.data.guardianUntilAge}${today.slice(4)}`;
+  // admin/board also see deactivated accounts, not erased ones (MockDirectory.erase writes this name)
+  const people = directory.members.data
+    .filter((m) => (board ? m.active || m.firstName !== 'Gelöschtes' : m.active && shown.has(m.id)))
+    .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName))
+    .map((m) => ({
+      id: m.id,
+      name: `${m.firstName} ${m.lastName}`,
+      membershipTypes: directory.ordered(m.membershipTypes),
+      minor: !!m.birthDate && m.birthDate > adultBornBy,
+      login: !board ? null : pendingInvites.has(m.id) ? ('INVITED' as const) : m.login ? ('SIGNED_IN' as const) : ('NONE' as const),
+      roles: board || players.has(m.id) ? [...m.roles] : [],
+      active: m.active,
+    }));
+  return { teams, people, guardians };
+}
+
 mockServer
+  .on('GET', '/api/v1/members/org-chart', (req) => orgChart(directory.actor(req)))
   .on('GET', '/api/v1/members/invitations', (req) => {
     directory.requireRole(directory.actor(req), ADMIN_BOARD);
     return { ids: [...pendingInvites].filter((id) => directory.members.data.some((m) => m.id === id && m.active)) };

@@ -39,6 +39,7 @@ export const SHORTCUTS = {
   'nav.meetings': { label: 'Zu den Sitzungen', group: 'Navigation', context: 'global', keys: 'g s', path: '/meetings' },
   'nav.resolutions': { label: 'Zu den Beschlüssen', group: 'Navigation', context: 'global', keys: 'g u', path: '/resolutions' },
   'nav.board': { label: 'Zum Vorstand', group: 'Navigation', context: 'global', keys: 'g v', path: '/board' },
+  'nav.org-chart': { label: 'Zum Organigramm', group: 'Navigation', context: 'global', keys: 'g c', path: '/org-chart' },
   'nav.tasks': { label: 'Zu den Aufgaben', group: 'Navigation', context: 'global', keys: 'g a', path: '/tasks' },
   'nav.files': { label: 'Zu den Dateien', group: 'Navigation', context: 'global', keys: 'g d', path: '/files' },
   'nav.inventory': { label: 'Zum Inventar', group: 'Navigation', context: 'global', keys: 'g i', path: '/inventory' },

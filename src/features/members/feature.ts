@@ -2,7 +2,7 @@ import BoardPage from './BoardPage.svelte';
 import MembersHome from './MembersHome.svelte';
 import BoardHome from './BoardHome.svelte';
 import { permissions } from '../../lib/container';
-import { ADMIN_BOARD } from '../../lib/types';
+import { ADMIN_BOARD, PRIVILEGED } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
 import MemberInviteView from './MemberInviteView.svelte';
 import MemberView from './MemberView.svelte';
@@ -11,6 +11,7 @@ import { boardSettings, memberPolicy, membershipKinds } from './services';
 import MembersPage from './MembersPage.svelte';
 import MembershipKindCreateView from './MembershipKindCreateView.svelte';
 import OfficeAssignView from './OfficeAssignView.svelte';
+import OrgChartPage from './OrgChartPage.svelte';
 import OfficeSettingCreateView from './OfficeSettingCreateView.svelte';
 import OfficeSettingView from './OfficeSettingView.svelte';
 import MembershipKindView from './MembershipKindView.svelte';
@@ -26,6 +27,8 @@ export const membersFeature: Feature = {
     ),
     // Who holds which function is known club-wide (server: LIST_OFFICES for every member).
     { path: '/board', component: BoardPage, nav: 'Vorstand', icon: 'club' },
+    // server: MemberHandlers.orgChart — coaches see only their teams and those members' guardians.
+    { path: '/org-chart', component: OrgChartPage, nav: 'Organigramm', icon: 'orgChart', roles: PRIVILEGED },
     detailRoute('/membership-kinds/:key', MembershipKindView, { href: '/settings/membership', label: 'Mitgliedschaft' }, { roles: ADMIN_BOARD }),
   ],
   windows: {
