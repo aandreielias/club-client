@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CONFIRM } from '../../channels';
+  import { CONFIRM, TOAST } from '../../channels';
   import { bus, session } from '../../lib/container';
   import { Action } from '../../lib/state/Action.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
@@ -15,10 +15,24 @@
   import SettingsForm from '../../ui/SettingsForm.svelte';
   import SettingFilesSection from '../files/SettingFilesSection.svelte';
 
-  /** The club's look for everyone (admin/board): colours, fonts, corners, app name, and the logo images. */
-  type BrandForm = Omit<Brand, 'appName'> & { appName: string };
+  /** The club's look for everyone (admin/board): colours, fonts, corners, app name, e-mails, and the logo images. */
+  type Texts = 'appName' | 'mailGreeting' | 'mailSignOff' | 'mailFooter';
+  type BrandForm = Omit<Brand, Texts> & Record<Texts, string>;
 
-  const formOf = (brand: Brand): BrandForm => ({ ...brand, appName: brand.appName ?? '' });
+  const formOf = (brand: Brand): BrandForm => ({
+    ...brand,
+    appName: brand.appName ?? '',
+    mailGreeting: brand.mailGreeting ?? '',
+    mailSignOff: brand.mailSignOff ?? '',
+    mailFooter: brand.mailFooter ?? '',
+  });
+  const brandOf = (form: BrandForm): Brand => ({
+    ...form,
+    appName: form.appName.trim() || null,
+    mailGreeting: form.mailGreeting.trim() || null,
+    mailSignOff: form.mailSignOff.trim() || null,
+    mailFooter: form.mailFooter.trim() || null,
+  });
   const draft = new SettingsDraft<BrandForm>(formOf(session.club!.brand));
 
   const COLORS: readonly { key: keyof Brand; label: string; hint: string }[] = [
@@ -44,8 +58,7 @@
     const v = draft.value;
     const color = (key: keyof Brand) => (HEX.test(v[key] as string) ? (v[key] as string) : (saved[key] as string));
     return {
-      ...v,
-      appName: v.appName || null,
+      ...brandOf(v),
       ...Object.fromEntries(COLORS.map(({ key }) => [key, color(key)])),
       radiusSmall: Number.isInteger(v.radiusSmall) ? v.radiusSmall : saved.radiusSmall,
       radiusLarge: Number.isInteger(v.radiusLarge) ? v.radiusLarge : saved.radiusLarge,
@@ -89,7 +102,7 @@
   });
 
   async function save(value: BrandForm): Promise<BrandForm> {
-    await session.updateBrand({ ...value, appName: value.appName.trim() || null });
+    await session.updateBrand(brandOf(value));
     return formOf(session.club!.brand);
   }
 
@@ -97,10 +110,26 @@
   async function resetBrand() {
     const confirmed = await bus.request(CONFIRM, {
       title: 'Standard wiederherstellen',
-      message: 'Farben, Schriften, Ecken und App-Name gehen für alle auf den Standard zurück. Die Bilder bleiben.',
+      message: 'Farben, Schriften, Ecken, App-Name und E-Mail-Texte gehen für alle auf den Standard zurück. Die Bilder bleiben.',
       confirmLabel: 'Wiederherstellen',
     });
     if (confirmed && (await reset.run(() => session.resetBrand()))) draft.load(formOf(session.club!.brand));
+  }
+
+  // The sample e-mail follows the draft, a moment after typing stops; a refused draft keeps the last preview.
+  let mail = $state('');
+  const mailError = new Action();
+  $effect(() => {
+    const brand = $state.snapshot(valid);
+    const timer = setTimeout(() => {
+      void mailError.run(async () => (mail = (await session.mailPreview(brand)).html));
+    }, settings.brand.mailPreviewDebounceMs);
+    return () => clearTimeout(timer);
+  });
+
+  const testMail = new Action();
+  async function sendTestMail() {
+    if (await testMail.run(() => session.sendTestMail(valid))) bus.publish(TOAST, { text: 'Testmail an deine Adresse gesendet.' });
   }
 </script>
 
@@ -151,6 +180,26 @@
       <input bind:value={draft.value.appName} maxlength="30" />
     </Field>
 
+    <h3>E-Mails</h3>
+    <p class="muted small">Benachrichtigungen per E-Mail tragen Logo, Hauptfarbe und diese Texte.</p>
+    <div class="grid-2">
+      <Field label="Anrede" hint="{'{vorname}'} wird zum Vornamen; leer = „Hallo Vorname,“">
+        <input bind:value={draft.value.mailGreeting} maxlength="100" placeholder="Hallo {'{vorname}'}," />
+      </Field>
+      <Field label="Grußformel" hint="Darunter steht der Vereinsname; leer = „Viele Grüße“">
+        <input bind:value={draft.value.mailSignOff} maxlength="200" placeholder="Viele Grüße" />
+      </Field>
+    </div>
+    <Field label="Fußzeile" hint="Z. B. Adresse oder Registernummer; bis 500 Zeichen">
+      <textarea bind:value={draft.value.mailFooter} maxlength="500" rows="3"></textarea>
+    </Field>
+    <iframe class="mail" title="Vorschau der E-Mail" sandbox="" srcdoc={mail}></iframe>
+    <div class="row">
+      <Button busy={testMail.busy} tooltip="Diese Beispiel-E-Mail an deine eigene Adresse senden" onclick={sendTestMail}>Testmail senden</Button>
+      <ErrorNote error={testMail.error ?? mailError.error} />
+    </div>
+    <p class="muted small">Einladungs- und Passwort-E-Mails kommen vom Anmeldedienst und werden dort gestaltet.</p>
+
     <h3>Vorschau</h3>
     <div class="preview" style={preview} aria-hidden="true">
       <div class="nav"><span class="entry active">Kalender</span><span class="entry">Aufgaben</span></div>
@@ -177,7 +226,7 @@
     <Button
       variant="ghost"
       busy={reset.busy}
-      tooltip="Farben, Schriften, Ecken und App-Name auf den Standard zurücksetzen; die Bilder bleiben"
+      tooltip="Farben, Schriften, Ecken, App-Name und E-Mail-Texte auf den Standard zurücksetzen; die Bilder bleiben"
       onclick={resetBrand}>Standard wiederherstellen</Button
     >
     <ErrorNote error={reset.error} />
@@ -196,6 +245,13 @@
     width: var(--control-height);
     flex: none;
     padding: 2px;
+  }
+  .mail {
+    width: 100%;
+    height: 420px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: #fff;
   }
   .preview {
     display: grid;

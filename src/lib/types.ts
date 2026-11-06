@@ -94,6 +94,12 @@ export interface BrandAssets {
 }
 
 /** What admins and the board edit (server: PUT /club); empty values fall back to club.yml. */
+/** A sample e-mail in a draft of the brand (Einstellungen › Erscheinungsbild). */
+export interface MailPreview {
+  subject: string;
+  html: string;
+}
+
 export type ClubEdit = Pick<Club, 'name' | 'shortName' | 'website' | 'contactEmail' | 'address' | 'registerNumber' | 'seasonStartMonth'>;
 
 export interface Member {

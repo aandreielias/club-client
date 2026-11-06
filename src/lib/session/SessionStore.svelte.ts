@@ -1,7 +1,7 @@
 import type { ApiClient } from '../http/ApiClient';
 import { Formatter } from '../time/Formatter';
 import { ZonedClock } from '../time/ZonedClock';
-import { type Brand, type Club, type ClubEdit, type Me, type Member, type Role, type Team } from '../types';
+import { type Brand, type Club, type ClubEdit, type MailPreview, type Me, type Member, type Role, type Team } from '../types';
 
 export type ProfilePatch = Partial<Pick<Member, 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'photoConsent'>>;
 
@@ -99,6 +99,16 @@ export class SessionStore {
   }
 
   /** Back to the server's default look; the logos (setting files) stay. */
+  /** A sample notification e-mail in a draft of the brand (admin/board). */
+  mailPreview(brand: Brand): Promise<MailPreview> {
+    return this.api.post('/api/v1/club/brand/mail-preview', brand);
+  }
+
+  /** The sample e-mail in the draft look to the actor's own address. */
+  sendTestMail(brand: Brand): Promise<void> {
+    return this.api.post('/api/v1/club/brand/test-mail', brand);
+  }
+
   async resetBrand(): Promise<void> {
     this.setClub(await this.api.delete<Club>('/api/v1/club/brand'));
   }

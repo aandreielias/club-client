@@ -56,3 +56,15 @@ describe('isSafeSvg (server: SvgCheck)', () => {
     ['<svg><rect onclick="x()"/></svg>', false],
   ])('%s → %s', (svg, safe) => expect(isSafeSvg(svg)).toBe(safe));
 });
+
+describe('mock brand e-mail', () => {
+  it('previews a checked draft for admin/board, escaped like the server', () => {
+    expect(() => directory.sampleMail(member('spieler'), { ...SDG_BRAND })).toThrow();
+    expect(() => directory.sampleMail(member('vorstand'), { ...SDG_BRAND, primary: 'red' })).toThrow();
+    const { subject, html } = directory.sampleMail(member('vorstand'), { ...SDG_BRAND, mailGreeting: 'Servus {vorname}!', mailFooter: 'A <b>\nB' });
+    expect(subject).toMatch(/^\[.+\] Neue Aufgabe/);
+    expect(html).toContain(`Servus ${member('vorstand').firstName}!`);
+    expect(html).toContain('A &lt;b&gt;<br>B');
+    expect(html).toContain('color:#57263C');
+  });
+});

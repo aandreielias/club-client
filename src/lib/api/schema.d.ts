@@ -1541,6 +1541,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/club/brand/test-mail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["testMail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/brand/mail-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["mailPreview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/calendar/types": {
         parameters: {
             query?: never;
@@ -3792,6 +3824,10 @@ export interface components {
             canUpload: boolean;
             canManage: boolean;
             system: boolean;
+        };
+        "at.clubserver.notifications.api.NotificationsApi.MailPreview": {
+            subject: string;
+            html: string;
         };
         "at.clubserver.gateway.rest.MembersController.NewOfficeBody": {
             label: string;
@@ -7674,6 +7710,52 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.files.api.FilesApi.FileDto"];
+                };
+            };
+        };
+    };
+    testMail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.platform.club.Brand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    mailPreview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.platform.club.Brand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.notifications.api.NotificationsApi.MailPreview"];
                 };
             };
         };

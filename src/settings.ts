@@ -385,6 +385,9 @@ export const settings = {
     recordSequenceMs: 900,
   },
 
+  /** Einstellungen › Erscheinungsbild: typing pause before the e-mail preview is rendered again. */
+  brand: { mailPreviewDebounceMs: 400 },
+
   /** Choices offered under Einstellungen > Darstellung; the first entry of each is the default. */
   appearance: {
     fontSizes: {

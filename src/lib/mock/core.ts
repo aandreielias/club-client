@@ -22,7 +22,7 @@ import {
 import { SEEDED_MEMBERSHIP_KINDS, type BoardSettings, type MembershipKind } from '../../features/members/MembersApi';
 import { MockEventBus, type MockAudience } from './MockEventBus';
 import { MockServer, mockServer, type MockRequest } from './MockServer';
-import { MockBrand } from './MockBrand';
+import { MockBrand, mailHtml } from './MockBrand';
 import { MockTable } from './MockTable';
 
 /** server: MembersApi.Relative */
@@ -480,6 +480,15 @@ export class MockDirectory {
     this.requirePrivileged(member, ADMIN_BOARD);
     change(this.brand);
     return this.clubChanged();
+  }
+
+  /** server: NotificationHandlers sample mail - admin/board, a brand draft checked like a save. The mock sends nothing. */
+  sampleMail(member: Member, body: Record<string, unknown>) {
+    this.requirePrivileged(member, ADMIN_BOARD);
+    const brand = MockBrand.checked(body);
+    const club = this.clubInfo();
+    const link = club.website ? `${club.website.replace(/\/+$/, '')}/app/tasks` : null;
+    return mailHtml(brand, club, member.firstName, club.assets.logo, link);
   }
 
   /** server: ClubSettings.changed — also after a logo setting file changed. */
@@ -976,6 +985,12 @@ mockServer
   .on('PUT', '/api/v1/club', (req) => directory.updateClub(directory.actor(req), req.body ?? {}))
   .on('PUT', '/api/v1/club/brand', (req) => directory.changeBrand(directory.actor(req), (b) => b.save(req.body ?? {})))
   .on('DELETE', '/api/v1/club/brand', (req) => directory.changeBrand(directory.actor(req), (b) => b.reset()))
+  .on('POST', '/api/v1/club/brand/mail-preview', (req) => directory.sampleMail(directory.actor(req), req.body ?? {}))
+  .on('POST', '/api/v1/club/brand/test-mail', (req) => {
+    const member = directory.actor(req);
+    directory.sampleMail(member, req.body ?? {});
+    if (!member.email) MockServer.fail(400, 'member.email-missing');
+  })
   .on('GET', '/api/v1/me', (req) => {
     const member = directory.actor(req, true);
     const own = directory.teamRoles(member.id);
