@@ -1,16 +1,16 @@
 <script lang="ts">
-  import { bus, permissions, session } from '../../lib/container';
+  import { bus, permissions, session, store } from '../../lib/container';
   import { TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
-  import { Resource } from '../../lib/state/Resource.svelte';
   import { ZonedClock } from '../../lib/time/ZonedClock';
-  import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
+  import DataTable from '../../ui/DataTable.svelte';
   import DateInput from '../../ui/DateInput.svelte';
   import Dialog from '../../ui/Dialog.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import { calendarApi } from './services';
+  import { TeamStatsListModel } from './TeamStatsListModel.svelte';
 
   /**
    * In the team window, for its coaches, admin and board: answers and presence per member over a range (default the last 90 days),
@@ -22,14 +22,12 @@
   let from = $state(ZonedClock.addDays(today, -90));
   let to = $state(today);
   // svelte-ignore state_referenced_locally
-  const stats = new Resource(() => calendarApi.teamStats(teamId, from, to));
+  const stats = new TeamStatsListModel(() => calendarApi.teamStats(teamId, from, to), store);
   $effect(() => {
     void from;
     void to;
     if (from && to && from <= to) void stats.load();
   });
-
-  const percent = (part: number, whole: number) => (whole ? `${Math.round((100 * part) / whole)} %` : '–');
 
   let rangeOpen = $state(false);
   let rangeFrom = $state(today);
@@ -54,31 +52,17 @@
       <Field label="Von"><DateInput bind:value={from} max={to} /></Field>
       <Field label="Bis"><DateInput bind:value={to} min={from} /></Field>
     </div>
-    <AsyncView resource={stats}>
-      {#snippet children(s)}
-        {#if !s.appointments}
-          <p class="muted">In diesem Zeitraum fanden keine Termine statt.</p>
-        {:else}
-          <p class="muted small">
-            {s.appointments}
-            {s.appointments === 1 ? 'Termin' : 'Termine'}. „Da“ zählt die Termine, bei denen die Anwesenheit eingetragen wurde.
-          </p>
-          <table class="stats">
-            <thead><tr><th>Name</th><th>Zusagen</th><th>Absagen</th><th>Da</th></tr></thead>
-            <tbody>
-              {#each s.items as m (m.memberId)}
-                <tr>
-                  <td>{m.name}</td>
-                  <td>{m.yes} ({percent(m.yes, m.appointments)})</td>
-                  <td>{m.no}</td>
-                  <td>{m.marked ? `${m.present} von ${m.marked} (${percent(m.present, m.marked)})` : '–'}</td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        {/if}
-      {/snippet}
-    </AsyncView>
+    {#if stats.data.value && !stats.appointments}
+      <p class="muted">In diesem Zeitraum fanden keine Termine statt.</p>
+    {:else}
+      {#if stats.data.value}
+        <p class="muted small">
+          {stats.appointments}
+          {stats.appointments === 1 ? 'Termin' : 'Termine'}. „Da“ zählt die Termine, bei denen die Anwesenheit eingetragen wurde.
+        </p>
+      {/if}
+      <DataTable model={stats} rowKey={(m) => m.memberId} toolbar={false} emptyText="Keine Mitglieder im Team." />
+    {/if}
     <div><Button onclick={() => (rangeOpen = true)}>Zeitraum absagen</Button></div>
   </section>
 
@@ -104,16 +88,5 @@
 <style>
   .filters {
     align-items: end;
-  }
-  .stats {
-    width: 100%;
-    border-collapse: collapse;
-    font-variant-numeric: tabular-nums;
-  }
-  .stats th,
-  .stats td {
-    padding: var(--space-xxs) var(--space-sm);
-    border-bottom: 1px solid var(--color-border);
-    text-align: start;
   }
 </style>

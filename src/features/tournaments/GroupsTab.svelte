@@ -3,6 +3,7 @@
   import type { Tournament } from './model';
   import Button from '../../ui/Button.svelte';
   import ResultDialog from './ResultDialog.svelte';
+  import StandingsTable from './StandingsTable.svelte';
   import { matchPlace, type TournamentMatch } from './model';
   import type { TournamentModel } from './TournamentModel.svelte';
   import { tournamentPolicy as policy } from './services';
@@ -14,7 +15,6 @@
   let editing = $state<TournamentMatch | null>(null);
   /** Simple tournaments note only who won: draws instead of sets and ball points. */
   const simple = $derived(tournament.format === 'SIMPLE');
-  const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 </script>
 
 {#if !tournament.groups.length}
@@ -25,31 +25,7 @@
       {@const matches = tournament.matches.filter((m) => m.stage === 'GROUP' && m.group === group.label)}
       <section class="group">
         <h2>Gruppe {group.label}</h2>
-        <table>
-          <thead>
-            <tr>
-              <th class="num" title="Platz">Pl</th><th>Team</th><th class="num" title="Spiele">Sp</th><th class="num" title="Siege">S</th>
-              {#if simple}<th class="num" title="Unentschieden">U</th>{/if}<th class="num" title="Niederlagen">N</th>
-              {#if !simple}<th class="num">Sätze</th><th class="num" title="Ballpunkte">Bälle</th>{/if}<th class="num" title="Tabellenpunkte">Pkt</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each group.standings as row, i (row.teamId)}
-              <tr class:qualifies={i < tournament.advancePerGroup}>
-                <td class="num">{i + 1}</td>
-                <td class="team">{row.name}</td>
-                <td class="num">{row.played}</td><td class="num">{row.won}</td>{#if simple}<td class="num">{row.drawn}</td>{/if}<td class="num"
-                  >{row.lost}</td
-                >
-                {#if !simple}
-                  <td class="num" title="Differenz {signed(row.setsWon - row.setsLost)}">{row.setsWon}:{row.setsLost}</td>
-                  <td class="num" title="Differenz {signed(row.ballsWon - row.ballsLost)}">{row.ballsWon}:{row.ballsLost}</td>
-                {/if}
-                <td class="num points">{row.points}</td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
+        <StandingsTable rows={group.standings} {simple} qualify={tournament.advancePerGroup} />
         <ul class="matches">
           {#each matches as m (m.id)}
             <li>
@@ -93,36 +69,6 @@
   }
   .group h2 {
     margin-top: 0;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: var(--font-size-small);
-  }
-  th {
-    color: var(--color-text-muted);
-    font-weight: var(--font-weight-medium);
-    text-align: left;
-  }
-  th,
-  td {
-    padding: var(--space-xs) var(--space-xs);
-    border-bottom: 1px solid var(--color-border);
-  }
-  .num {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-  }
-  .team {
-    width: 100%;
-    font-size: var(--font-size-base);
-  }
-  .points {
-    font-weight: var(--font-weight-bold);
-  }
-  /* Qualifying places: a thin accent bar on the left. */
-  tr.qualifies td:first-child {
-    box-shadow: inset 2px 0 0 var(--color-accent);
   }
   .matches {
     display: grid;

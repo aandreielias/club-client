@@ -1,41 +1,30 @@
 <script lang="ts">
-  import { bus, commands, pendingDeletes, session } from '../../lib/container';
+  import { bus, commands, router, session, store, windows } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
-  import { Resource } from '../../lib/state/Resource.svelte';
-  import AsyncView from '../../ui/AsyncView.svelte';
+  import { windowMenu } from '../../lib/window/windowMenu';
   import Button from '../../ui/Button.svelte';
-  import Empty from '../../ui/Empty.svelte';
+  import DataTable from '../../ui/DataTable.svelte';
   import Page from '../../ui/Page.svelte';
-  import RecordCards, { type RecordCard } from '../../ui/RecordCards.svelte';
+  import Tag from '../../ui/Tag.svelte';
   import { MEETING_CHANGED } from './events';
-  import { isAssembly, STATUS_LABELS, STATUS_TONES, type MeetingSummary } from './model';
+  import { MeetingListModel } from './MeetingListModel.svelte';
+  import { STATUS_LABELS, STATUS_TONES } from './model';
   import { meetingPolicy as policy, meetingsApi, meetingTypes } from './services';
 
-  /** Mitgliederversammlungen and Vorstandssitzungen: upcoming first, then the past ones (newest first). */
-  const list = new Resource(() => meetingsApi.list());
+  /** Mitgliederversammlungen and Vorstandssitzungen: the coming ones first; each opens in the window. */
+  const list = new MeetingListModel(
+    meetingsApi,
+    meetingTypes,
+    () => session.format,
+    () => new Date().toISOString(),
+    store,
+  );
   void list.load();
   useBus(bus, MEETING_CHANGED, () => void list.load());
   const create = () => bus.publish(WINDOW_OPEN, { kind: 'meeting-new', id: '-' });
   useCommands(commands, { 'page.new': { run: create, when: () => policy.canCreate() } });
-
-  const now = new Date().toISOString();
-  const shown = (all: MeetingSummary[]) => all.filter((m) => !pendingDeletes.isHidden(m.id));
-  const upcoming = (all: MeetingSummary[]) => shown(all).filter((m) => m.endsAt >= now && m.status !== 'CLOSED');
-  const past = (all: MeetingSummary[]) =>
-    shown(all)
-      .filter((m) => m.endsAt < now || m.status === 'CLOSED')
-      .reverse();
-  const card = (m: MeetingSummary): RecordCard => ({
-    href: `#/meetings/${m.id}`,
-    record: { kind: 'meeting', id: m.id, title: m.title },
-    icon: 'meetings',
-    altIcon: !isAssembly(meetingTypes.get(m.kind)),
-    detail: meetingTypes.label(m.kind),
-    meta: session.format.dateTime(m.startsAt),
-    tag: { tone: STATUS_TONES[m.status], label: STATUS_LABELS[m.status] },
-  });
 </script>
 
 <Page title="Sitzungen">
@@ -43,20 +32,22 @@
     {#if policy.canCreate()}<Button variant="primary" icon="add" onclick={create}>Neue Sitzung</Button>{/if}
   {/snippet}
 
-  <AsyncView resource={list}>
-    {#snippet children(all)}
-      {#if all.length}
-        {#if upcoming(all).length}<RecordCards cards={upcoming(all).map(card)} />{:else}<p class="muted">Keine Sitzung geplant.</p>{/if}
-        {#if past(all).length}
-          <h2>Vergangen</h2>
-          <RecordCards cards={past(all).map(card)} />
-        {/if}
+  <DataTable
+    model={list}
+    rowKey={(m) => m.id}
+    record={(m) => ({ kind: 'meeting', id: m.id, title: m.title })}
+    onopen={(m) => bus.publish(WINDOW_OPEN, { kind: 'meeting', id: m.id })}
+    menu={(m) => windowMenu(bus, windows, router, 'meeting', m.id)}
+    selected={windows.current?.kind === 'meeting' ? windows.current.id : null}
+    emptyText="Keine Sitzungen. Mitgliederversammlungen sehen die stimmberechtigten Mitglieder, Vorstandssitzungen nur der Vorstand."
+    emptyAction={policy.canCreate() ? { label: 'Neue Sitzung', icon: 'add', run: create } : null}
+  >
+    {#snippet cell(m, column)}
+      {#if column.key === 'status'}
+        <Tag tone={STATUS_TONES[m.status]}>{STATUS_LABELS[m.status]}</Tag>
       {:else}
-        <Empty
-          text="Noch keine Sitzung. Mitgliederversammlungen sehen die stimmberechtigten Mitglieder, Vorstandssitzungen nur der Vorstand."
-          action={policy.canCreate() ? { label: 'Neue Sitzung', icon: 'add', run: create } : null}
-        />
+        {list.display(m, column)}
       {/if}
     {/snippet}
-  </AsyncView>
+  </DataTable>
 </Page>

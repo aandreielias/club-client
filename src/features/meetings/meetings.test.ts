@@ -5,6 +5,8 @@ import { SessionStore } from '../../lib/session/SessionStore.svelte';
 import { ZonedClock } from '../../lib/time/ZonedClock';
 import type { Member, Role } from '../../lib/types';
 import { MeetingForm } from './MeetingForm.svelte';
+import { isUpcoming } from './MeetingListModel.svelte';
+import type { MeetingSummary } from './model';
 import { MeetingPolicy } from './MeetingPolicy';
 import { MeetingTypeForm } from './MeetingTypeForm.svelte';
 import { tasks } from '../tasks/mock';
@@ -436,5 +438,15 @@ describe('mock online meetings', () => {
     } finally {
       Object.assign(assembly, { online: false, videoUrl: null });
     }
+  });
+});
+
+describe('isUpcoming', () => {
+  const m = (endsAt: string, status: MeetingSummary['status']) => ({ endsAt, status }) as MeetingSummary;
+  const now = '2026-11-06T12:00:00Z';
+  it('keeps meetings not yet over and not closed', () => {
+    expect(isUpcoming(m('2026-11-07T00:00:00Z', 'INVITED'), now)).toBe(true);
+    expect(isUpcoming(m('2026-11-07T00:00:00Z', 'CLOSED'), now)).toBe(false);
+    expect(isUpcoming(m('2026-11-05T00:00:00Z', 'DRAFT'), now)).toBe(false);
   });
 });

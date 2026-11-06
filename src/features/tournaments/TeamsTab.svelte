@@ -8,6 +8,7 @@
   import Select from '../../ui/Select.svelte';
   import Tag from '../../ui/Tag.svelte';
   import GuestDialog from './GuestDialog.svelte';
+  import StandingsTable from './StandingsTable.svelte';
   import { teamStats } from './logic';
   import type { Tournament } from './model';
   import type { TournamentModel } from './TournamentModel.svelte';
@@ -52,8 +53,6 @@
   });
   const simple = $derived(tournament.format === 'SIMPLE');
   const stats = $derived(teamStats(tournament));
-  const knockout = $derived(stats.some((s) => s.knockout !== null));
-  const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 </script>
 
 {#if editable}
@@ -83,40 +82,7 @@
   </ul>
 {:else}
   <!-- After the draw: every team over the whole tournament, group and knockout. -->
-  <div class="scroll">
-    <table class="stats">
-      <thead>
-        <tr>
-          <th>Team</th><th title="Gruppe">Gr.</th><th class="num" title="Platz in der Gruppe">Pl</th>
-          <th class="num" title="Spiele">Sp</th><th class="num" title="Siege">S</th>
-          {#if simple}<th class="num" title="Unentschieden">U</th>{/if}<th class="num" title="Niederlagen">N</th>
-          {#if !simple}<th class="num">Sätze</th><th class="num" title="Ballpunkte">Bälle</th>{/if}
-          <th class="num" title="Tabellenpunkte der Gruppe">Pkt</th>
-          {#if knockout}<th>KO-Runde</th>{/if}
-        </tr>
-      </thead>
-      <tbody>
-        {#each stats as s (s.teamId)}
-          <tr>
-            <td class="team">
-              {s.name}
-              {#if tournament.teams.find((t) => t.id === s.teamId)?.clubTeamId}<Tag tone="blue">Eigenes Team</Tag>{/if}
-            </td>
-            <td>{s.group ?? '–'}</td>
-            <td class="num">{s.rank ?? '–'}</td>
-            <td class="num">{s.played}</td><td class="num">{s.won}</td>
-            {#if simple}<td class="num">{s.drawn}</td>{/if}<td class="num">{s.lost}</td>
-            {#if !simple}
-              <td class="num" title="Differenz {signed(s.setsWon - s.setsLost)}">{s.setsWon}:{s.setsLost}</td>
-              <td class="num" title="Differenz {signed(s.ballsWon - s.ballsLost)}">{s.ballsWon}:{s.ballsLost}</td>
-            {/if}
-            <td class="num points">{s.points ?? '–'}</td>
-            {#if knockout}<td class="ko" class:winner={s.knockout === 'Sieger'}>{s.knockout}</td>{/if}
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-  </div>
+  <StandingsTable rows={stats} {simple} overall own={(id) => !!tournament.teams.find((t) => t.id === id)?.clubTeamId} />
 {/if}
 
 {#if policy.canManage()}
@@ -144,43 +110,6 @@
 {#if inviting}<GuestDialog {tournament} {model} onclose={() => (inviting = false)} />{/if}
 
 <style>
-  .scroll {
-    overflow-x: auto;
-  }
-  .stats {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: var(--font-size-small);
-  }
-  .stats th {
-    color: var(--color-text-muted);
-    font-weight: var(--font-weight-medium);
-    text-align: left;
-    white-space: nowrap;
-  }
-  .stats th,
-  .stats td {
-    padding: var(--space-xs);
-    border-bottom: 1px solid var(--color-border);
-  }
-  .stats .num {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-  }
-  .stats .team {
-    width: 100%;
-    font-size: var(--font-size-base);
-  }
-  .stats .points {
-    font-weight: var(--font-weight-bold);
-  }
-  .ko {
-    white-space: nowrap;
-  }
-  .ko.winner {
-    font-weight: var(--font-weight-bold);
-    color: var(--color-accent);
-  }
   .lines {
     display: grid;
     gap: var(--space-xs);

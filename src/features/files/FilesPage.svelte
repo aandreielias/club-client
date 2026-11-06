@@ -199,21 +199,38 @@
 
 <Page title={folder?.name ?? 'Dateien'}>
   {#snippet actions()}
-    <ChoiceGroup name="files-view" label="Ansicht" options={VIEWS} bind:value={() => shownView, (v) => v && preferences.set('filesView', v)} />
-    {#if folder}
+    {#if fileActions.selectedFiles.length && folder}
+      <span class="muted count">{fileActions.selectedFiles.length} ausgewählt</span>
+      {#if folder.canManage}<Button icon="move" onclick={() => (moving = true)}>Verschieben</Button>{/if}
       <Button
         icon="download"
         busy={fileActions.zipping}
-        onclick={() => fileActions.zip(folder)}
-        tooltip="Ordner mit Unterordnern als ZIP herunterladen"
-      />
-      <Button icon="copy" onclick={() => LinkClipboard.copy(bus, `/files/${folder.id}`)} tooltip="Link zu diesem Ordner kopieren" />
+        onclick={() => fileActions.zip(folder, fileActions.selectedFiles)}
+        tooltip="Auswahl als ZIP herunterladen">Als ZIP</Button
+      >
+      {#if fileActions.selectedFiles.every((f) => fileActions.canModify(f))}
+        <Button variant="danger" icon="delete" onclick={() => fileActions.remove(fileActions.selectedFiles)} tooltip="Ausgewählte Dateien löschen"
+          >Löschen</Button
+        >
+      {/if}
+      <Button variant="ghost" onclick={() => fileActions.selected.clear()}>Auswahl aufheben</Button>
+    {:else}
+      <ChoiceGroup name="files-view" label="Ansicht" options={VIEWS} bind:value={() => shownView, (v) => v && preferences.set('filesView', v)} />
+      {#if folder}
+        <Button
+          icon="download"
+          busy={fileActions.zipping}
+          onclick={() => fileActions.zip(folder)}
+          tooltip="Ordner mit Unterordnern als ZIP herunterladen"
+        />
+        <Button icon="copy" onclick={() => LinkClipboard.copy(bus, `/files/${folder.id}`)} tooltip="Link zu diesem Ordner kopieren" />
+      {/if}
+      {#if folder?.canManage}
+        <Button icon="edit" onclick={() => (editingFolder = folder)} tooltip="Name, Sichtbarkeit, Farbe und Titelbild ändern">Bearbeiten</Button>
+        <Button variant="danger" icon="delete" onclick={() => deleteFolder(folder)}>Ordner löschen</Button>
+      {/if}
+      {#if canCreate}<Button variant="primary" onclick={() => (creating = true)}>{folderId ? 'Neuer Unterordner' : 'Neuer Ordner'}</Button>{/if}
     {/if}
-    {#if folder?.canManage}
-      <Button icon="edit" onclick={() => (editingFolder = folder)} tooltip="Name, Sichtbarkeit, Farbe und Titelbild ändern">Bearbeiten</Button>
-      <Button variant="danger" icon="delete" onclick={() => deleteFolder(folder)}>Ordner löschen</Button>
-    {/if}
-    {#if canCreate}<Button variant="primary" onclick={() => (creating = true)}>{folderId ? 'Neuer Unterordner' : 'Neuer Ordner'}</Button>{/if}
   {/snippet}
   {#snippet context()}
     <Breadcrumb path={folder ? tree.path(folder.id) : []} drag={crumbDrag} />
@@ -222,29 +239,6 @@
   {#if folderId && tree.folders.value && !folder}
     <Empty text="Ordner nicht gefunden." />
   {:else}
-    {#if fileActions.selectedFiles.length && folder}
-      <div class="selection" role="toolbar" aria-label="Auswahl">
-        <span class="count">{fileActions.selectedFiles.length} ausgewählt</span>
-        {#if folder.canManage}<Button size="sm" icon="move" onclick={() => (moving = true)}>Verschieben</Button>{/if}
-        <Button
-          size="sm"
-          icon="download"
-          busy={fileActions.zipping}
-          onclick={() => fileActions.zip(folder, fileActions.selectedFiles)}
-          tooltip="Auswahl als ZIP herunterladen">Als ZIP</Button
-        >
-        {#if fileActions.selectedFiles.every((f) => fileActions.canModify(f))}
-          <Button
-            size="sm"
-            variant="danger"
-            icon="delete"
-            onclick={() => fileActions.remove(fileActions.selectedFiles)}
-            tooltip="Ausgewählte Dateien löschen">Löschen</Button
-          >
-        {/if}
-        <Button size="sm" variant="ghost" onclick={() => fileActions.selected.clear()}>Auswahl aufheben</Button>
-      </div>
-    {/if}
     {#if shownView === 'gallery'}
       <FolderGallery
         model={list}
@@ -358,20 +352,8 @@
 {/if}
 
 <style>
-  .selection {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-sm);
-    margin-bottom: var(--space-sm);
-    padding: var(--space-xs) var(--space-sm);
-    border-radius: var(--radius-lg);
-    background: var(--color-accent-soft);
-    animation: rise var(--motion-base) var(--motion-easing);
-  }
   .count {
-    margin-right: auto;
-    font-weight: var(--font-weight-medium);
+    align-self: center;
   }
   .name-cell {
     display: inline-flex;
