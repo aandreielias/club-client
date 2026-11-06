@@ -80,6 +80,8 @@ export interface StoredFile {
   createdAt: string;
   /** Label of the current version; null while there is only the first upload. */
   version: string | null;
+  /** A club setting (logo, template) follows this file: only admin and board change it. */
+  settingSource: boolean;
 }
 
 /** One version of a document (server: FilesApi.VersionDto); newest first in lists. */

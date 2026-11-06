@@ -154,6 +154,7 @@ export class MockFiles {
       const file = row && this.files.data.find((f) => f.id === row.fileId);
       return file ? this.objectUrl(file) : null;
     };
+    this.saveSettingRows();
   }
 
   listFolders(member: Member): Folder[] {
@@ -395,6 +396,7 @@ export class MockFiles {
       taggedMemberIds: tags,
       createdAt: new Date().toISOString(),
       version: null,
+      settingSource: false,
     };
     this.#blobs.set(stored.id, new Blob([bytes], { type: stored.contentType }));
     this.files.data.push(stored);
@@ -523,7 +525,7 @@ export class MockFiles {
     this.files.save();
     this.#blobs.delete(file.id);
     for (const row of this.settingFiles.data) if (row.sourceId === file.id) row.sourceId = null;
-    this.settingFiles.save();
+    this.saveSettingRows();
     this.changed(folder, file.id, 'DELETED');
     MockActivity.record('FILE', file.id, viewer.member, 'DELETED', { title: file.name, teamIds: folder.teamIds, parentId: folder.id });
   }
@@ -580,7 +582,7 @@ export class MockFiles {
     const copy = this.files.data.find((f) => f.id === row.fileId)!;
     this.settingFiles.data.splice(this.settingFiles.data.indexOf(row), 1);
     this.files.data.splice(this.files.data.indexOf(copy), 1);
-    this.settingFiles.save();
+    this.saveSettingRows();
     this.files.save();
     this.changed(this.folder(copy.folderId), copy.id, 'DELETED');
     if (LOGO_SLOTS.includes(key)) directory.clubChanged();
@@ -641,6 +643,7 @@ export class MockFiles {
         taggedMemberIds: [],
         createdAt,
         version: null,
+        settingSource: false,
       };
       this.files.data.push(copy);
     }
@@ -652,7 +655,7 @@ export class MockFiles {
     if (at >= 0) rows.splice(at, 1);
     rows.push({ slot, fileId: copy.id, sourceId });
     this.files.save();
-    this.settingFiles.save();
+    this.saveSettingRows();
     this.changed(folder, copy.id, row ? 'UPDATED' : 'UPLOADED');
     if (LOGO_SLOTS.includes(slot)) directory.clubChanged();
   }
@@ -748,8 +751,18 @@ export class MockFiles {
   }
 
   /** Delete and tag: the uploader, or a folder manager. */
+  /** server: FileAccess.requireModify — a file a setting follows only admin/board change (its versions reach the copy). */
   private requireModify(viewer: Viewer, folder: StoredFolder, file: StoredFile): void {
     if (!viewer.canManage(folder) && (folder.system || file.uploadedBy !== viewer.member.id)) fail(403, 'access.denied');
+    if (file.settingSource) directory.requirePrivileged(viewer.member, ADMIN_BOARD);
+  }
+
+  /** Saves the slot rows and marks the files they follow (server: FileDto.settingSource). */
+  private saveSettingRows(): void {
+    const sources = new Set(this.settingFiles.data.map((r) => r.sourceId));
+    for (const file of this.files.data) file.settingSource = sources.has(file.id);
+    this.settingFiles.save();
+    this.files.save();
   }
 
   private requireTaggable(image: boolean, tags: readonly string[]): void {
@@ -1049,6 +1062,7 @@ export class MockFiles {
       taggedMemberIds: image?.tags ?? [],
       createdAt: new Date(Date.now() - daysAgo * day).toISOString(),
       version: null,
+      settingSource: false,
     });
     return [
       file('file-1', 'f-docs', 'Satzung.pdf', 'application/pdf', 182_000, 'admin', 90),

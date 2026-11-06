@@ -148,6 +148,17 @@ describe('mock setting files (server: SettingFileHandlers)', () => {
     expect(files.listSettingFiles(member('vorstand')).items.map((s) => s.slot)).not.toContain('FAVICON');
   });
 
+  it('lets only admin and board change a file a setting follows', async () => {
+    const own = await files.upload(uploadRequest('trainer', 'f-damen', svg('#00ff00'), 'team.svg'));
+    files.pickSettingFile(member('vorstand'), 'LOGO_SECONDARY', own.id);
+    expect(files.listFiles(member('trainer'), 'f-damen').find((f) => f.id === own.id)).toMatchObject({ settingSource: true });
+    expect(() => files.deleteFile(member('trainer'), own.id)).toThrow(expect.objectContaining({ code: 'access.denied' }));
+
+    await files.uploadSettingFile(slotRequest('LOGO_SECONDARY', svg('#000000'), 'eigen.svg'));
+    expect(files.listFiles(member('trainer'), 'f-damen').find((f) => f.id === own.id)).toMatchObject({ settingSource: false });
+    files.deleteFile(member('trainer'), own.id);
+  });
+
   it('seeds only safe SVGs', () => {
     const svgs = import.meta.glob<string>('../../lib/mock/brand/*.svg', { query: '?raw', import: 'default', eager: true });
     expect(Object.keys(svgs).length).toBeGreaterThan(5);

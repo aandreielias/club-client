@@ -3257,6 +3257,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             version: string;
+            settingSource: boolean;
         };
         "at.clubserver.gateway.rest.FilesController.SettingsBody": {
             /** Format: int32 */

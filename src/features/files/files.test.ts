@@ -101,6 +101,7 @@ describe('UploadQueue', () => {
     taggedMemberIds: [],
     createdAt: '',
     version: null,
+    settingSource: false,
   });
 
   it('checks files before sending and uploads the rest one by one', async () => {
