@@ -11,6 +11,7 @@ import FileSettingsSection from '../files/FileSettingsSection.svelte';
 import TaskSettingsSection from '../tasks/TaskSettingsSection.svelte';
 import AppearanceSection from './AppearanceSection.svelte';
 import AuditSection from './AuditSection.svelte';
+import BrandSection from './BrandSection.svelte';
 import ClubSection from './ClubSection.svelte';
 import GeneralSection from './GeneralSection.svelte';
 import HomeSettingsSection from './HomeSettingsSection.svelte';
@@ -28,6 +29,7 @@ export const SETTINGS_SECTIONS: Record<SectionId, Component> = {
   security: SecuritySection,
   general: GeneralSection,
   club: ClubSection,
+  brand: BrandSection,
   'meeting-types': MeetingTypesSection,
   membership: MembershipSection,
   offices: BoardSettingsSection,

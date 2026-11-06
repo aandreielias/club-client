@@ -27,6 +27,7 @@
     session,
     split,
     splitPane,
+    theme,
     windows,
   } from './lib/container';
   import PaneHost from './ui/PaneHost.svelte';
@@ -96,6 +97,11 @@
   $effect(() => {
     document.title = documentTitle.text;
   });
+  // The club's look for everyone: colours, fonts, favicon (also live when the Vorstand changes it).
+  $effect(() => {
+    const club = session.club;
+    if (club) untrack(() => theme.setBrand(club.brand, club.assets));
+  });
 
   // Tournament guests have no start page: they land on their tournament list (which opens their tournament).
   $effect(() => {
@@ -131,6 +137,7 @@
   <div class="shell">
     <Sidebar
       title={session.club.name}
+      logo={session.club.assets.logo}
       user="{session.member.firstName} {session.member.lastName}"
       items={app.navigation}
       current={router.path}

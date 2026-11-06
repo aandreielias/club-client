@@ -1,12 +1,17 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { session } from '../lib/container';
 
   /** Narrow centred column for login, onboarding and status screens. */
   let { title, subtitle, children }: { title: string; subtitle?: string; children?: Snippet } = $props();
+
+  // The secondary logo is the club's variant for light pages; the main logo otherwise.
+  const logo = $derived(session.club?.assets.logoSecondary ?? session.club?.assets.logo);
 </script>
 
 <main>
   <section class="enter">
+    {#if logo}<img class="logo" src={logo} alt={session.club?.name ?? ''} />{/if}
     {#if subtitle}<p class="muted subtitle">{subtitle}</p>{/if}
     <h1>{title}</h1>
     {@render children?.()}
@@ -30,6 +35,11 @@
     border-radius: var(--radius-xl);
     background: var(--color-elevated);
     box-shadow: var(--color-shadow-popover);
+  }
+  .logo {
+    display: block;
+    height: 64px;
+    margin-bottom: var(--space-md);
   }
   .subtitle {
     margin: 0 0 var(--space-xs);

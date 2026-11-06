@@ -56,7 +56,7 @@ export const bus = new EventBus();
 
 export const store = new LocalStore(settings.storage.prefix);
 
-export const theme = new ThemeService(settings.theme, settings.compactBelowPx);
+export const theme = new ThemeService(settings.theme, settings.compactBelowPx, store);
 
 export const preferences = new PreferencesService(
   settings.appearance,
@@ -92,14 +92,14 @@ const transport: Transport =
 // 401: the login is gone (expired, revoked); AppController sees the signed-out state and clears the session.
 export const api: ApiClient = new ApiClient(transport, () => void auth.signOut());
 
-export const session = new SessionStore(api);
+export const session = new SessionStore(api, runtime.apiUrl);
 
 export const directory = new TeamDirectory(api, session);
 
 export const permissions = new ClubPermissions(session, directory);
 
 /** Browser tab title, kept by Page, WindowHost and App. */
-export const documentTitle = new DocumentTitle(() => session.club?.name ?? '');
+export const documentTitle = new DocumentTitle(() => session.club?.brand.appName ?? session.club?.name ?? '');
 
 /** Escape steps (edit modes, panels) of whatever is open; see the `view.back` command. */
 export const backStack = new BackStack();

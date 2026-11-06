@@ -141,7 +141,7 @@ export class AppController {
         directory.forgetRoster(data.teamId);
         if (data.memberId === session.me?.member.id) void session.loadMe();
       }).unsubscribe,
-      bus.subscribe(CLUB_CHANGED, ({ data }) => (session.club = data.club)).unsubscribe,
+      bus.subscribe(CLUB_CHANGED, ({ data }) => session.setClub(data.club)).unsubscribe,
       detachKeyboard,
       removeCommands,
       () => removeEventListener('online', wake),

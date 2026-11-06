@@ -53,9 +53,47 @@ export interface Club {
   registerNumber: string | null;
   /** Month (1-12) in which a new season starts, e.g. for the default season of a new team. */
   seasonStartMonth: number;
+  /** Colours, fonts and logos the Vorstand chose (Einstellungen > Erscheinungsbild). */
+  brand: Brand;
+  assets: BrandAssets;
   /** The club saved its facts once; until then admins see the setup page. */
   configured: boolean;
 }
+
+/** Fonts a club may pick (server: Brand.Font); the client bundles each. */
+export type BrandFont = 'INTER' | 'ANTON' | 'OSWALD' | 'ROBOTO' | 'SOURCE_SERIF' | 'SYSTEM';
+
+/** server: platform.club.Brand; colours as #RRGGBB, radii in px. */
+export interface Brand {
+  primary: string;
+  primaryHover: string;
+  /** Small marks only (active entry, unread dot), never text or areas. */
+  accent: string;
+  text: string;
+  textMuted: string;
+  /** Quiet background areas. */
+  tint: string;
+  line: string;
+  headingFont: BrandFont;
+  textFont: BrandFont;
+  headingCaps: boolean;
+  radiusSmall: number;
+  radiusLarge: number;
+  /** Browser tab name; null = the club's name. */
+  appName: string | null;
+  mailGreeting: string | null;
+  mailSignOff: string | null;
+  mailFooter: string | null;
+}
+
+/** URLs of the uploaded images (versioned), null when none. */
+export interface BrandAssets {
+  logo: string | null;
+  logoSecondary: string | null;
+  favicon: string | null;
+}
+
+export type BrandAssetKind = 'logo' | 'logo-secondary' | 'favicon';
 
 /** What admins and the board edit (server: PUT /club); empty values fall back to club.yml. */
 export type ClubEdit = Pick<Club, 'name' | 'shortName' | 'website' | 'contactEmail' | 'address' | 'registerNumber' | 'seasonStartMonth'>;

@@ -9,6 +9,7 @@ export type SectionId =
   | 'security'
   | 'general'
   | 'club'
+  | 'brand'
   | 'meeting-types'
   | 'membership'
   | 'offices'
@@ -73,7 +74,10 @@ export const SETTINGS_TREE: readonly SettingsGroup[] = [
     subgroups: [
       {
         label: 'Stammdaten',
-        tabs: [{ id: 'club', label: 'Verein', icon: 'club', keywords: 'name adresse website kontakt zvr saison' }],
+        tabs: [
+          { id: 'club', label: 'Verein', icon: 'club', keywords: 'name adresse website kontakt zvr saison' },
+          { id: 'brand', label: 'Erscheinungsbild', icon: 'brand', keywords: 'logo farben schrift marke favicon design aussehen ecken' },
+        ],
       },
       {
         label: 'Mitglieder',

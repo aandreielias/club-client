@@ -75,7 +75,7 @@
     height: 38px;
     background:
       linear-gradient(#fff, #fff) bottom center / 3px 10px no-repeat,
-      radial-gradient(circle at 15px 15px, #fff 0 4px, #ff3b30 4.5px 12px, #fff 12.5px 15px, transparent 15.5px) top / 30px 30px no-repeat;
+      radial-gradient(circle at 15px 15px, #fff 0 4px, var(--color-accent) 4.5px 12px, #fff 12.5px 15px, transparent 15.5px) top / 30px 30px no-repeat;
     filter: drop-shadow(0 3px 5px rgb(0 0 0 / 0.3));
   }
   .map :global(.maplibregl-ctrl-group) {

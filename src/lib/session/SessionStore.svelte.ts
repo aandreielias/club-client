@@ -1,7 +1,7 @@
 import type { ApiClient } from '../http/ApiClient';
 import { Formatter } from '../time/Formatter';
 import { ZonedClock } from '../time/ZonedClock';
-import { type Club, type ClubEdit, type Me, type Member, type Role, type Team } from '../types';
+import { type Brand, type BrandAssetKind, type Club, type ClubEdit, type Me, type Member, type Role, type Team } from '../types';
 
 export type ProfilePatch = Partial<Pick<Member, 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'photoConsent'>>;
 
@@ -16,14 +16,25 @@ export class SessionStore {
   #format: Formatter | null = null;
   #clock: ZonedClock | null = null;
 
-  constructor(private readonly api: ApiClient) {}
+  /** `assetBase`: origin of the server, put before the brand images' paths (they are served by the API). */
+  constructor(
+    private readonly api: ApiClient,
+    private readonly assetBase = '',
+  ) {}
 
   async loadClub(): Promise<Club> {
-    const club = await this.api.get<Club>('/api/v1/club');
+    const club = this.setClub(await this.api.get<Club>('/api/v1/club'));
     this.#format = new Formatter(club.locale, club.timeZone);
     this.#clock = new ZonedClock(club.timeZone);
-    this.club = club;
     return club;
+  }
+
+  /** Takes the club facts (loaded, saved or pushed live). */
+  setClub(club: Club): Club {
+    const url = (path: string | null) => (path?.startsWith('/') ? this.assetBase + path : path);
+    const { logo, logoSecondary, favicon } = club.assets;
+    this.club = { ...club, assets: { logo: url(logo), logoSecondary: url(logoSecondary), favicon: url(favicon) } };
+    return this.club;
   }
 
   async loadMe(): Promise<Me> {
@@ -79,7 +90,27 @@ export class SessionStore {
 
   /** Admin/board; time zone and locale stay as loaded (server: club.yml only). */
   async updateClub(edit: ClubEdit): Promise<void> {
-    this.club = await this.api.put<Club>('/api/v1/club', edit);
+    this.setClub(await this.api.put<Club>('/api/v1/club', edit));
+  }
+
+  /** Erscheinungsbild (admin/board). */
+  async updateBrand(brand: Brand): Promise<void> {
+    this.setClub(await this.api.put<Club>('/api/v1/club/brand', brand));
+  }
+
+  /** Back to the server's default look; the images stay. */
+  async resetBrand(): Promise<void> {
+    this.setClub(await this.api.delete<Club>('/api/v1/club/brand'));
+  }
+
+  async uploadBrandAsset(kind: BrandAssetKind, file: File): Promise<void> {
+    const form = new FormData();
+    form.append('file', file);
+    this.setClub(await this.api.upload<Club>(`/api/v1/club/assets/${kind}`, form));
+  }
+
+  async deleteBrandAsset(kind: BrandAssetKind): Promise<void> {
+    this.setClub(await this.api.delete<Club>(`/api/v1/club/assets/${kind}`));
   }
 
   /** Everything the club keeps about the member (or a ward), as the server's JSON export. */

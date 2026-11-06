@@ -138,7 +138,7 @@
   }
   .primary:hover:not(:disabled) {
     border-color: transparent;
-    background: color-mix(in srgb, var(--color-accent), black 8%);
+    background: var(--color-accent-hover);
   }
   .ghost {
     border-color: transparent;

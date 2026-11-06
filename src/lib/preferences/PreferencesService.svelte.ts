@@ -10,7 +10,6 @@ export type FilesViewPreference = 'gallery' | 'table';
 
 export interface Preferences {
   scheme: ColorScheme;
-  accent: keyof Appearance['accents'];
   fontSize: keyof Appearance['fontSizes'];
   density: keyof Appearance['densities'];
   reduceMotion: boolean;
@@ -45,7 +44,6 @@ export class PreferencesService {
   ) {
     this.#defaults = {
       scheme: defaults.scheme,
-      accent: PreferencesService.first(appearance.accents),
       fontSize: PreferencesService.first(appearance.fontSizes),
       density: PreferencesService.first(appearance.densities),
       reduceMotion: false,
@@ -82,7 +80,6 @@ export class PreferencesService {
     const v = this.values;
     return {
       scheme: v.scheme,
-      accent: this.appearance.accents[v.accent].color,
       fontSize: this.appearance.fontSizes[v.fontSize].size,
       controlHeight: this.appearance.densities[v.density].controlHeight,
       reduceMotion: v.reduceMotion,
@@ -94,7 +91,6 @@ export class PreferencesService {
     const d = this.#defaults;
     return {
       scheme: ['light', 'dark', 'system'].includes(values.scheme) ? values.scheme : d.scheme,
-      accent: values.accent in this.appearance.accents ? values.accent : d.accent,
       fontSize: values.fontSize in this.appearance.fontSizes ? values.fontSize : d.fontSize,
       density: values.density in this.appearance.densities ? values.density : d.density,
       reduceMotion: values.reduceMotion === true,

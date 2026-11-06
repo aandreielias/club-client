@@ -42,6 +42,7 @@ import Landmark from '@lucide/svelte/icons/landmark';
 import Link from '@lucide/svelte/icons/link';
 import Mail from '@lucide/svelte/icons/mail';
 import Palette from '@lucide/svelte/icons/palette';
+import Brush from '@lucide/svelte/icons/brush';
 import Keyboard from '@lucide/svelte/icons/keyboard';
 import ShieldCheck from '@lucide/svelte/icons/shield-check';
 import Briefcase from '@lucide/svelte/icons/briefcase';
@@ -93,6 +94,7 @@ export const ICONS = {
   send: Send,
   mail: Mail,
   appearance: Palette,
+  brand: Brush,
   keyboard: Keyboard,
   security: ShieldCheck,
   offices: Briefcase,

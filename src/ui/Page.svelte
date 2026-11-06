@@ -86,7 +86,6 @@
   h1 {
     margin: 0;
     font-size: var(--font-size-title);
-    letter-spacing: -0.02em;
   }
   .actions,
   .side {

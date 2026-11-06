@@ -1,33 +1,53 @@
 import type { ColorScheme, Palette, Settings } from '../../settings';
+import type { LocalStore } from '../storage/LocalStore';
+import type { Brand, BrandAssets } from '../types';
+import { mix, readableOn, textOn } from './contrast';
+import { BRAND_FONTS } from './fonts';
 
-/** Runtime changes on top of the settings (from the user's appearance preferences). */
+/** Runtime changes on top of the settings and the club brand (from the user's appearance preferences). */
 export interface ThemeOverrides {
   scheme?: ColorScheme;
-  /** Accent colour for both schemes. */
-  accent?: string;
   fontSize?: string;
   controlHeight?: string;
   /** Turns transitions and the window animation off. */
   reduceMotion?: boolean;
 }
 
+const BRAND_KEY = 'brand';
+
 /**
  * Turns the theme section of the settings into CSS custom properties, so stylesheets never carry
- * literal values. Also flags the compact layout on <html>, because media queries cannot read
- * custom properties.
+ * literal values. Three layers: the settings, the club brand on top, the member's overrides last.
+ * Also flags the compact layout on <html>, because media queries cannot read custom properties.
  */
 export class ThemeService {
   static readonly STYLE_ID = 'theme-tokens';
 
   #layoutTracked = false;
+  #overrides: ThemeOverrides = {};
+  #brand: Brand | null;
 
   constructor(
     private readonly theme: Settings['theme'],
     private readonly compactBelowPx: number,
-  ) {}
+    private readonly store: LocalStore | null = null,
+  ) {
+    // The last brand seen, so the next start does not flash in the default look before the club loads.
+    const cached = store?.get<Brand>(BRAND_KEY);
+    this.#brand = cached && cached.headingFont in BRAND_FONTS && cached.textFont in BRAND_FONTS ? cached : null;
+  }
+
+  /** The club's brand and images (from the club facts); remembered for the next start. */
+  setBrand(brand: Brand, assets: BrandAssets, doc: Document = document): void {
+    this.#brand = brand;
+    this.store?.set(BRAND_KEY, brand);
+    this.apply(this.#overrides, doc);
+    ThemeService.head(doc, 'link[rel="icon"]', 'link', { rel: 'icon' }).setAttribute('href', assets.favicon ?? assets.logo ?? 'data:,');
+  }
 
   /** (Re)writes the token stylesheet; call again whenever the overrides change. */
   apply(overrides: ThemeOverrides = {}, doc: Document = document): void {
+    this.#overrides = overrides;
     let style = doc.getElementById(ThemeService.STYLE_ID);
     if (!style) {
       style = doc.createElement('style');
@@ -41,6 +61,11 @@ export class ThemeService {
     const scheme = overrides.scheme ?? this.theme.scheme;
     // Native controls (date pickers, scrollbars) follow this before the stylesheet applies.
     doc.querySelector('meta[name="color-scheme"]')?.setAttribute('content', scheme === 'system' ? 'light dark' : scheme);
+    const brand = this.#brand;
+    if (brand) {
+      for (const font of new Set([brand.headingFont, brand.textFont])) void BRAND_FONTS[font].load?.();
+      ThemeService.head(doc, 'meta[name="theme-color"]', 'meta', { name: 'theme-color' }).setAttribute('content', brand.primary);
+    }
     if (!this.#layoutTracked) {
       this.#layoutTracked = true;
       this.trackLayout(doc);
@@ -53,7 +78,7 @@ export class ThemeService {
    * can still force either palette.
    */
   css(overrides: ThemeOverrides = {}): string {
-    const { colors, scheme, ...groups } = ThemeService.merge(this.theme, overrides);
+    const { colors, scheme, ...groups } = ThemeService.merge(this.#brand ? ThemeService.branded(this.theme, this.#brand) : this.theme, overrides);
     const tokens = Object.entries(groups).flatMap(([group, values]) =>
       Object.entries(values).map(([name, value]) => `--${ThemeService.kebab(group)}-${ThemeService.kebab(name)}: ${value};`),
     );
@@ -72,14 +97,66 @@ export class ThemeService {
     return {
       ...theme,
       scheme: o.scheme ?? theme.scheme,
-      colors: {
-        light: { ...theme.colors.light, ...(o.accent ? { accent: o.accent } : {}) },
-        dark: { ...theme.colors.dark, ...(o.accent ? { accent: o.accent } : {}) },
-      },
       font: { ...theme.font, ...(o.fontSize ? { sizeBase: o.fontSize } : {}) },
       control: { ...theme.control, ...(o.controlHeight ? { height: o.controlHeight } : {}) },
       motion,
     } as Settings['theme'];
+  }
+
+  /**
+   * The brand on top of the settings. Light mode takes its colours as they are; dark mode keeps the neutral surfaces and
+   * lightens the brand colours until they read on the dark background.
+   */
+  static branded(theme: Settings['theme'], brand: Brand): Settings['theme'] {
+    const { light, dark } = theme.colors;
+    const darkAccent = readableOn(brand.primary, dark.background);
+    const heading = BRAND_FONTS[brand.headingFont];
+    const px = (n: number) => `${n}px`;
+    const [small, large] = [brand.radiusSmall, brand.radiusLarge];
+    return {
+      ...theme,
+      colors: {
+        light: {
+          ...light,
+          accent: brand.primary,
+          accentHover: brand.primaryHover,
+          highlight: brand.accent,
+          onAccent: textOn(brand.primary, brand.text),
+          text: brand.text,
+          textMuted: brand.textMuted,
+          surface: brand.tint,
+          border: brand.line,
+        },
+        dark: {
+          ...dark,
+          accent: darkAccent,
+          accentHover: mix(darkAccent, '#ffffff', 0.12),
+          // graphical marks need 3:1, not the 4.5:1 of text
+          highlight: readableOn(brand.accent, dark.background, 3),
+          onAccent: textOn(darkAccent, brand.text),
+        },
+      },
+      font: {
+        ...theme.font,
+        family: BRAND_FONTS[brand.textFont].stack,
+        display: heading.stack,
+        displayWeight: heading.headingWeight,
+        displayTransform: brand.headingCaps ? 'uppercase' : 'none',
+        displayTracking: brand.headingCaps ? '0.02em' : theme.font.displayTracking,
+      },
+      radius: { ...theme.radius, sm: px(small), md: px(Math.round(small + (large - small) / 3)), lg: px(large), xl: px(Math.round(large * 1.4)) },
+    } as Settings['theme'];
+  }
+
+  /** The element in <head> matching `selector`, created when missing. */
+  private static head(doc: Document, selector: string, tag: string, attributes: Record<string, string>): Element {
+    let element = doc.head.querySelector(selector);
+    if (!element) {
+      element = doc.createElement(tag);
+      for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, value);
+      doc.head.append(element);
+    }
+    return element;
   }
 
   private trackLayout(doc: Document): void {

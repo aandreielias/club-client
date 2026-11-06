@@ -46,6 +46,10 @@ export interface Palette {
   /** Stronger line, e.g. focused or hovered inputs. */
   borderStrong: string;
   accent: string;
+  /** Primary buttons on hover. */
+  accentHover: string;
+  /** The brand's second colour: small marks only (active sidebar entry, unread dots), never text or areas. */
+  highlight: string;
   /** Translucent accent: focus rings, text selection. */
   accentSoft: string;
   onAccent: string;
@@ -104,6 +108,8 @@ export const settings = {
         border: 'rgba(24, 26, 36, 0.08)',
         borderStrong: 'rgba(24, 26, 36, 0.15)',
         accent: '#5e6ad2',
+        accentHover: '#5762c1',
+        highlight: '#5e6ad2',
         accentSoft: 'color-mix(in srgb, var(--color-accent) 18%, transparent)',
         onAccent: '#ffffff',
         danger: '#e5484d',
@@ -143,6 +149,8 @@ export const settings = {
         border: 'rgba(255, 255, 255, 0.07)',
         borderStrong: 'rgba(255, 255, 255, 0.14)',
         accent: '#7c84f0',
+        accentHover: '#8d94f3',
+        highlight: '#7c84f0',
         accentSoft: 'color-mix(in srgb, var(--color-accent) 26%, transparent)',
         onAccent: '#ffffff',
         danger: '#f0676b',
@@ -185,6 +193,11 @@ export const settings = {
       tracking: '-0.006em',
       weightMedium: '500',
       weightBold: '600',
+      /** Page and window titles (club brand: heading font, capitals). */
+      display: "'Inter Variable', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+      displayWeight: '600',
+      displayTransform: 'none',
+      displayTracking: '-0.015em',
     },
     radius: {
       sm: '4px',
@@ -374,14 +387,6 @@ export const settings = {
 
   /** Choices offered under Einstellungen > Darstellung; the first entry of each is the default. */
   appearance: {
-    accents: {
-      indigo: { label: 'Indigo', color: '#5e6ad2' },
-      blue: { label: 'Blau', color: '#2f7fe0' },
-      green: { label: 'Grün', color: '#2f9e6b' },
-      violet: { label: 'Violett', color: '#8b5cf6' },
-      orange: { label: 'Orange', color: '#e0702a' },
-      red: { label: 'Rot', color: '#e5484d' },
-    },
     fontSizes: {
       normal: { label: 'Normal', size: '14px' },
       small: { label: 'Klein', size: '13px' },

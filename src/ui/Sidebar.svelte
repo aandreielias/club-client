@@ -20,6 +20,7 @@
 
   let {
     title,
+    logo = null,
     user,
     items,
     current,
@@ -28,6 +29,8 @@
     settingsBack = null,
   }: {
     title: string;
+    /** The club's logo; without one the mark shows the first letter. */
+    logo?: string | null;
     user: string;
     items: readonly NavItem[];
     current: string;
@@ -166,7 +169,7 @@
 
 <nav id="sidebar" class:open class:collapsed aria-label="Hauptnavigation">
   <div class="title">
-    <span class="mark" aria-hidden="true">{title.slice(0, 1)}</span>
+    {#if logo}<img class="logo" src={logo} alt="" />{:else}<span class="mark" aria-hidden="true">{title.slice(0, 1)}</span>{/if}
     <span class="name">{title}</span>
     <button
       class="icon-button collapse"
@@ -350,6 +353,18 @@
     color: var(--color-on-accent);
     font-size: var(--font-size-small);
   }
+  .logo {
+    width: 22px;
+    height: 22px;
+    flex: none;
+    object-fit: contain;
+  }
+  .name {
+    font-family: var(--font-display);
+    font-weight: var(--font-display-weight);
+    letter-spacing: var(--font-display-tracking);
+    text-transform: var(--font-display-transform);
+  }
   .name,
   .label {
     min-width: 0;
@@ -395,6 +410,15 @@
     transition:
       transform var(--motion-slow) var(--motion-easing),
       height var(--motion-slow) var(--motion-easing);
+  }
+  /* The brand's second colour marks the active entry. */
+  .indicator::before {
+    position: absolute;
+    inset: 7px auto 7px 0;
+    width: 3px;
+    border-radius: var(--radius-full);
+    background: var(--color-highlight);
+    content: '';
   }
   a,
   .link {

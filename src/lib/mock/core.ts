@@ -22,6 +22,7 @@ import {
 import { SEEDED_MEMBERSHIP_KINDS, type BoardSettings, type MembershipKind } from '../../features/members/MembersApi';
 import { MockEventBus, type MockAudience } from './MockEventBus';
 import { MockServer, mockServer, type MockRequest } from './MockServer';
+import { MockBrand } from './MockBrand';
 import { MockTable } from './MockTable';
 
 /** server: MembersApi.Relative */
@@ -120,7 +121,7 @@ const SEEDED_BOARD_SETTINGS: BoardSettings = {
 
 /** Members and teams of the mock club, plus the server's authorization helpers. */
 export class MockDirectory {
-  readonly club: Club = {
+  readonly club: Omit<Club, 'brand' | 'assets'> = {
     name: 'Mein Verein',
     shortName: 'Verein',
     sport: 'Volleyball',
@@ -137,6 +138,9 @@ export class MockDirectory {
 
   /** server: platform_club - edited facts on top of club.yml (blank = file value). */
   readonly clubEdits = new MockTable<Partial<ClubEdit>>('club', () => ({}));
+
+  /** server: platform_brand + platform_brand_asset. */
+  readonly brand = new MockBrand();
 
   readonly clock = new ZonedClock(this.club.timeZone);
 
@@ -438,6 +442,8 @@ export class MockDirectory {
       address: e.address || null,
       registerNumber: e.registerNumber || null,
       seasonStartMonth: e.seasonStartMonth ?? this.club.seasonStartMonth,
+      brand: this.brand.brand(),
+      assets: this.brand.assets(),
       configured: Object.keys(e).length > 0,
     };
   }
@@ -466,8 +472,19 @@ export class MockDirectory {
       seasonStartMonth: (month as number | null) ?? undefined,
     });
     this.clubEdits.save();
+    return this.clubChanged();
+  }
+
+  /** server: ClubController brand and asset endpoints - admin/board, each change pushed to everyone. */
+  async changeBrand(member: Member, change: (brand: MockBrand) => void | Promise<void>): Promise<Club> {
+    this.requirePrivileged(member, ADMIN_BOARD);
+    await change(this.brand);
+    return this.clubChanged();
+  }
+
+  private clubChanged(): Club {
     const club = this.clubInfo();
-    mockServer.events.publish({ type: 'platform.club-changed', data: { club } });
+    mockServer.events.publish({ type: 'platform.club-changed', data: { club }, audience: { everyone: true } });
     return club;
   }
 
@@ -956,6 +973,12 @@ mockServer
   })
   .on('GET', '/api/v1/club', () => directory.clubInfo())
   .on('PUT', '/api/v1/club', (req) => directory.updateClub(directory.actor(req), req.body ?? {}))
+  .on('PUT', '/api/v1/club/brand', (req) => directory.changeBrand(directory.actor(req), (b) => b.save(req.body ?? {})))
+  .on('DELETE', '/api/v1/club/brand', (req) => directory.changeBrand(directory.actor(req), (b) => b.reset()))
+  .on('POST', '/api/v1/club/assets/:kind', (req) =>
+    directory.changeBrand(directory.actor(req), (b) => b.saveAsset(req.params.kind, req.body instanceof FormData ? req.body.get('file') : null)),
+  )
+  .on('DELETE', '/api/v1/club/assets/:kind', (req) => directory.changeBrand(directory.actor(req), (b) => b.deleteAsset(req.params.kind)))
   .on('GET', '/api/v1/me', (req) => {
     const member = directory.actor(req, true);
     const own = directory.teamRoles(member.id);
