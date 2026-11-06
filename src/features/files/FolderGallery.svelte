@@ -8,8 +8,7 @@
   import { pendingDeletes } from '../../lib/container';
   import { menu as contextMenu } from '../../ui/contextMenu';
   import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
-  import CoverImage from './CoverImage.svelte';
-  import Icon from '../../ui/Icon.svelte';
+  import FolderCover from './FolderCover.svelte';
   import { colorHue } from './model';
   import { RowDragging, type RowDrag } from '../../ui/rowDrag';
   import { RecordDrag, type RecordRef } from '../../lib/records/RecordDrag';
@@ -89,21 +88,7 @@
                   {#if item.kind === 'file'}
                     <Thumbnail file={item.file} />
                   {:else}
-                    {#snippet folderIcon()}
-                      <span
-                        class="folder"
-                        style:--hue={item.kind === 'folder' && colorHue(item.folder.color)
-                          ? `var(--color-tag-${colorHue(item.folder.color)}-text)`
-                          : null}
-                      >
-                        <Icon name="files" />
-                      </span>
-                    {/snippet}
-                    {#if item.folder.coverFileId}
-                      <CoverImage fileId={item.folder.coverFileId} alt="Titelbild {item.name}" fallback={folderIcon} />
-                    {:else}
-                      {@render folderIcon()}
-                    {/if}
+                    <FolderCover folder={item.folder} />
                   {/if}
                 </span>
                 <span class="name">
@@ -182,17 +167,6 @@
     display: block;
     aspect-ratio: 4 / 3;
     background: var(--color-surface);
-  }
-  .folder {
-    display: grid;
-    place-items: center;
-    height: 100%;
-    color: var(--hue, var(--color-text-faint));
-    background: color-mix(in srgb, var(--hue, var(--color-text-faint)) 10%, transparent);
-  }
-  .folder :global(.icon) {
-    width: 32px;
-    height: 32px;
   }
   .dot {
     display: inline-block;

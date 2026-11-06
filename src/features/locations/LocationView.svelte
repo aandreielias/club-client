@@ -85,18 +85,18 @@
         <AsyncView resource={upcoming}>
           {#snippet children(list)}
             {#if list.length}
-              <ul class="uses">
+              <ul class="rows">
                 {#each list as a (a.id)}
                   <li>
-                    <button type="button" onclick={() => view.open('appointment', a.id)} {@attach tooltip('Termin öffnen')}>
-                      <span class="title">{a.title}</span>
+                    <button type="button" class="link-button" onclick={() => view.open('appointment', a.id)} {@attach tooltip('Termin öffnen')}>
+                      <span class="ellipsis">{a.title}</span>
                       <span class="muted">{session.format.dateTime(a.startsAt)}</span>
                     </button>
                   </li>
                 {/each}
               </ul>
             {:else}
-              <p class="muted none">In den nächsten zwei Monaten ist hier nichts eingetragen.</p>
+              <p class="empty">In den nächsten zwei Monaten ist hier nichts eingetragen.</p>
             {/if}
           {/snippet}
         </AsyncView>
@@ -122,33 +122,5 @@
   }
   .note {
     white-space: pre-line;
-  }
-  .uses li {
-    border-bottom: 1px solid var(--color-border);
-  }
-  .uses button {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: var(--space-md);
-    width: 100%;
-    min-height: var(--control-height);
-    padding: 2px var(--space-xs);
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: none;
-    text-align: left;
-    cursor: pointer;
-  }
-  .uses button:hover {
-    background: var(--color-hover);
-  }
-  .title {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .none {
-    margin: 0;
   }
 </style>

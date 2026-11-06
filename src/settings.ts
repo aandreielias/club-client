@@ -61,6 +61,8 @@ export interface Palette {
   shadowPopover: string;
   /** Resting cards and segmented controls. */
   shadowRaised: string;
+  /** Light top edge of filled buttons. */
+  insetHighlight: string;
   /** Tag colours (Notion-like): background and text per hue. */
   tagGrayBg: string;
   tagGrayText: string;
@@ -119,6 +121,7 @@ export const settings = {
         shadowWindow: '0 0 0 1px rgba(24, 26, 36, 0.06), 0 8px 24px -6px rgba(24, 26, 36, 0.14), 0 24px 64px -12px rgba(24, 26, 36, 0.18)',
         shadowPopover: '0 0 0 1px rgba(24, 26, 36, 0.07), 0 4px 12px -2px rgba(24, 26, 36, 0.10), 0 12px 32px -8px rgba(24, 26, 36, 0.14)',
         shadowRaised: '0 1px 2px rgba(24, 26, 36, 0.06), 0 0 0 1px rgba(24, 26, 36, 0.06)',
+        insetHighlight: 'rgba(255, 255, 255, 0.14)',
         tagGrayBg: 'rgba(107, 110, 120, 0.12)',
         tagGrayText: '#5f626b',
         tagBrownBg: 'rgba(150, 102, 72, 0.13)',
@@ -160,6 +163,7 @@ export const settings = {
         shadowWindow: '0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 24px -6px rgba(0, 0, 0, 0.5), 0 24px 64px -12px rgba(0, 0, 0, 0.6)',
         shadowPopover: '0 0 0 1px rgba(255, 255, 255, 0.07), 0 4px 12px -2px rgba(0, 0, 0, 0.45), 0 12px 32px -8px rgba(0, 0, 0, 0.55)',
         shadowRaised: '0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+        insetHighlight: 'rgba(255, 255, 255, 0.14)',
         tagGrayBg: 'rgba(154, 156, 164, 0.16)',
         tagGrayText: '#b3b5bc',
         tagBrownBg: 'rgba(186, 133, 111, 0.18)',
@@ -185,6 +189,8 @@ export const settings = {
       features: "'cv01', 'ss03'",
       sizeBase: '14px',
       sizeSmall: '12.5px',
+      /** Badges, key caps, timeline labels. */
+      sizeTiny: '11px',
       sizeTitle: '24px',
       sizeH1: '22px',
       sizeH2: '15px',
@@ -200,6 +206,8 @@ export const settings = {
       displayTracking: '-0.015em',
     },
     radius: {
+      /** Thin marks: scrollbar thumbs, bars. */
+      xs: '2px',
       sm: '4px',
       md: '6px',
       lg: '10px',
@@ -233,6 +241,8 @@ export const settings = {
       readableWidth: '720px',
       /** Height of one hour in the calendar week view. */
       calendarHour: '44px',
+      /** One row of a table or settings list. */
+      rowHeight: '38px',
       narrowWidth: '400px',
       fieldWidth: '320px',
     },
@@ -417,7 +427,7 @@ export const settings = {
   },
 
   activity: {
-    /** Changes loaded per page of the "Logs" page (server: at most 100). */
+    /** Changes loaded per page of the "Aktivität" page (server: at most 100). */
     pageSize: 50,
   },
 

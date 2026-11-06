@@ -114,14 +114,4 @@
     border-left: 3px solid var(--color-warning);
     color: var(--color-warning);
   }
-  p,
-  h2 {
-    margin: 0;
-  }
-  h2 {
-    font-size: var(--font-size-base);
-  }
-  .short {
-    width: 7rem;
-  }
 </style>

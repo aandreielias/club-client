@@ -6,6 +6,7 @@
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
+  import DetailSkeleton from '../../ui/DetailSkeleton.svelte';
   import MailboxEditor from './MailboxEditor.svelte';
   import { MailboxForm } from './MailboxForm.svelte';
   import { mailApi, mailboxes, mailCenter } from './services';
@@ -72,6 +73,8 @@
       </dl>
     {/if}
   </Detail>
+{:else}
+  <DetailSkeleton />
 {/if}
 
 <style>

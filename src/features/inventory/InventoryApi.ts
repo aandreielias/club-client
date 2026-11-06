@@ -39,11 +39,6 @@ export class InventoryApi {
     return (await this.api.get<{ items: OwnItem[] }>(`${InventoryApi.BASE}/held/${encodeURIComponent(memberId)}`)).items;
   }
 
-  /** What the signed-in member holds; every member may ask. */
-  async mine(): Promise<OwnItem[]> {
-    return (await this.api.get<{ items: OwnItem[] }>(`${InventoryApi.BASE}/mine`)).items;
-  }
-
   /** "Benötigt" lists keep the entry, marked as deleted. */
   delete(id: string): Promise<void> {
     return this.api.delete(this.path(id));

@@ -55,7 +55,7 @@
       <Button size="sm" icon="search" busy={search.busy} disabled={!form.address} onclick={locate}>Auf der Karte suchen</Button>
       {#if form.pinned}<Button size="sm" variant="ghost" onclick={() => form.clearPin()}>Punkt entfernen</Button>{/if}
     </div>
-    {#if searchNote}<p class="muted small" aria-live="polite">{searchNote}</p>{/if}
+    {#if searchNote}<p class="small empty" aria-live="polite">{searchNote}</p>{/if}
     <ErrorNote error={search.error} />
     <div class="grid-2">
       <Field label="Breite" error={form.error('coordinates')}><input bind:value={form.lat} inputmode="decimal" placeholder="48.208200" /></Field>
@@ -78,14 +78,5 @@
     margin: 0;
     padding: 0;
     border: 0;
-  }
-  legend {
-    margin-bottom: var(--space-xs);
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-medium);
-  }
-  .small {
-    margin: 0;
-    font-size: var(--font-size-small);
   }
 </style>

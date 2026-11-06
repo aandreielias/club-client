@@ -100,16 +100,3 @@
     />
   </section>
 </div>
-
-<style>
-  p,
-  h2 {
-    margin: 0;
-  }
-  h2 {
-    font-size: var(--font-size-base);
-  }
-  .short {
-    width: 6rem;
-  }
-</style>

@@ -1,12 +1,10 @@
 <script lang="ts">
   import { settings } from '../../settings';
   import AsyncView from '../../ui/AsyncView.svelte';
-  import Icon from '../../ui/Icon.svelte';
   import SectionHeading from '../../ui/SectionHeading.svelte';
   import { tooltip } from '../../ui/tooltip';
-  import CoverImage from './CoverImage.svelte';
+  import FolderCover from './FolderCover.svelte';
   import { FolderTree } from './FolderTree.svelte';
-  import { colorHue } from './model';
   import { filePolicy, filesApi } from './services';
 
   /** Start page section: the top-level folders as small tiles (cover photo or coloured folder). */
@@ -21,24 +19,16 @@
     {#if roots.length}
       <ul class="tiles">
         {#each roots as folder (folder.id)}
-          {@const hue = colorHue(folder.color)}
           <li>
             <a class="tile" href="#/files/{folder.id}" {@attach tooltip(`${folder.name} öffnen`)}>
-              <span class="preview" style:--hue={hue ? `var(--color-tag-${hue}-text)` : null}>
-                {#snippet icon()}<Icon name="files" />{/snippet}
-                {#if folder.coverFileId}<CoverImage
-                    fileId={folder.coverFileId}
-                    alt="Titelbild {folder.name}"
-                    fallback={icon}
-                  />{:else}{@render icon()}{/if}
-              </span>
+              <span class="preview"><FolderCover {folder} /></span>
               <span class="name">{folder.name}</span>
             </a>
           </li>
         {/each}
       </ul>
     {:else}
-      <p class="muted">
+      <p class="empty">
         Noch keine Ordner.{#if filePolicy.canCreateRoot()}
           <a href="#/files">Neuer Ordner</a>{/if}
       </p>
@@ -56,8 +46,8 @@
     display: grid;
     overflow: hidden;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    background: var(--color-elevated);
+    border-radius: var(--radius-md);
+    background: var(--color-background);
     color: inherit;
     text-decoration: none;
     transition:
@@ -70,25 +60,20 @@
   }
   .preview {
     position: relative;
-    display: grid;
-    place-items: center;
+    display: block;
     overflow: hidden;
     aspect-ratio: 16 / 9;
-    color: var(--hue, var(--color-text-faint));
-    background: color-mix(in srgb, var(--hue, var(--color-text-faint)) 10%, transparent);
+    background: var(--color-surface);
   }
   /* The cover fills the tile without stretching it. */
   .preview :global(img) {
     position: absolute;
     inset: 0;
   }
-  .preview :global(.icon) {
-    width: 24px;
-    height: 24px;
-  }
   .name {
     padding: var(--space-xs) var(--space-sm);
     overflow: hidden;
+    border-top: 1px solid var(--color-border);
     font-size: var(--font-size-small);
     font-weight: var(--font-weight-medium);
     text-overflow: ellipsis;

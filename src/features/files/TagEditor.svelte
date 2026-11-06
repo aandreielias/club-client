@@ -50,14 +50,7 @@
 
 <div class="stack">
   <PeoplePicker {list} chosen={selected} ontoggle={toggle} max={settings.files.maxTags} />
-  <p class="muted hint">Nur Personen mit Foto-Einwilligung können markiert werden.</p>
+  <p class="small empty">Nur Personen mit Foto-Einwilligung können markiert werden.</p>
   <ErrorNote error={contents.tagAction.error} />
   <div><Button variant="primary" busy={contents.tagAction.busy} onclick={save}>Markierungen speichern</Button></div>
 </div>
-
-<style>
-  .hint {
-    margin: 0;
-    font-size: var(--font-size-small);
-  }
-</style>

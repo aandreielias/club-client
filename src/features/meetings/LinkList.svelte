@@ -1,15 +1,13 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { backStack, bus, permissions } from '../../lib/container';
+  import { backStack, bus } from '../../lib/container';
   import { TOAST } from '../../channels';
   import { RefList } from '../../lib/records/RefList.svelte';
-  import { DROPPABLE, REF_ICONS, refWindow, type LinkedRef, type RefKind } from '../../lib/records/refs';
+  import { DROPPABLE, type LinkedRef, type RefKind } from '../../lib/records/refs';
   import Button from '../../ui/Button.svelte';
-  import Icon from '../../ui/Icon.svelte';
-  import RecordLink from '../../ui/RecordLink.svelte';
+  import LinkedRecords from '../../ui/LinkedRecords.svelte';
   import RefPicker from '../../ui/RefPicker.svelte';
   import { recordDrop } from '../../ui/recordDrop';
-  import { kindLabel } from '../search/model';
 
   /**
    * Records linked to a meeting or resolution (files, people, appointments, ...); who runs it edits the list by search or drag and drop.
@@ -39,8 +37,6 @@
     () => (draft = null),
   );
 
-  const allowed = (kind: string, id: string) => kind !== 'MEMBER' || permissions.canSeeMember(id);
-
   async function submit() {
     if (!draft) return;
     if (await save(draft.refs.filter((r) => !(self && r.kind.toLowerCase() === self.kind && r.id === self.id)))) {
@@ -65,18 +61,9 @@
   </div>
 {:else}
   {#if links.length}
-    <ul class="refs">
-      {#each links as ref (`${ref.kind}:${ref.id}`)}
-        {@const target = refWindow(ref)}
-        <li>
-          <Icon name={REF_ICONS[ref.kind]} small />
-          <span class="muted kind">{kindLabel(ref.kind)}</span>
-          <RecordLink kind={target.kind} id={target.id} allowed={allowed(ref.kind, ref.id)}>{ref.title}</RecordLink>
-        </li>
-      {/each}
-    </ul>
-  {:else if canEdit}
-    <p class="muted small">Nichts verknüpft.</p>
+    <LinkedRecords refs={links} />
+  {:else}
+    <p class="empty">Nichts verknüpft.</p>
   {/if}
   {#if canEdit}
     <div class="row">
@@ -85,23 +72,3 @@
     </div>
   {/if}
 {/if}
-
-<style>
-  .refs {
-    display: grid;
-    gap: var(--space-xs);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .refs li {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    min-width: 0;
-  }
-  .kind {
-    min-width: 5.5rem;
-    font-size: var(--font-size-small);
-  }
-</style>

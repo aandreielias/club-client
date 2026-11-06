@@ -4,6 +4,7 @@
   import { APP_ERROR } from '../../channels';
   import { Resource } from '../../lib/state/Resource.svelte';
   import { SPLIT_OPEN } from '../../lib/split/SplitView.svelte';
+  import SectionHeading from '../../ui/SectionHeading.svelte';
   import Button from '../../ui/Button.svelte';
   import MemberName from '../../ui/MemberName.svelte';
   import Tag from '../../ui/Tag.svelte';
@@ -50,11 +51,12 @@
 </script>
 
 {#if (versions.value?.length ?? 0) > 1}
-  <h2 class="heading">
-    Versionen
-    {#if comparable}<Button size="sm" variant="ghost" icon="split" disabled={picked.length !== 2} onclick={compare}>Vergleichen</Button>{/if}
-  </h2>
-  <ul class="versions">
+  <SectionHeading title="Versionen">
+    {#snippet actions()}
+      {#if comparable}<Button size="sm" variant="ghost" icon="split" disabled={picked.length !== 2} onclick={compare}>Vergleichen</Button>{/if}
+    {/snippet}
+  </SectionHeading>
+  <ul class="rows versions">
     {#each versions.value ?? [] as version (version.id)}
       <li>
         {#if comparable}
@@ -81,33 +83,15 @@
 {/if}
 
 <style>
-  .heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-sm);
-  }
-  .versions {
-    display: grid;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
   .versions li {
     display: grid;
     grid-template-columns: auto 8rem minmax(0, 1fr) minmax(0, 1fr) 5rem auto;
-    align-items: center;
     gap: var(--space-sm);
-    min-height: var(--control-height);
-    border-bottom: 1px solid var(--color-border);
   }
   .label {
     display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
-  }
-  .small {
-    font-size: var(--font-size-small);
   }
   .size {
     text-align: right;

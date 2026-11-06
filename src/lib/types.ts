@@ -36,6 +36,19 @@ export const ROLE_LABELS: Readonly<Record<Role, string>> = {
   GUEST: 'Gast',
 };
 
+const ROLE_HUES: Readonly<Record<Role, Hue>> = {
+  ADMIN: 'red',
+  BOARD: 'purple',
+  COACH: 'blue',
+  PLAYER: 'green',
+  PARENT: 'orange',
+  VOLUNTEER: 'brown',
+  GUEST: 'gray',
+};
+
+/** Tag colour of a club role. */
+export const roleHue = (role: Role): Hue => ROLE_HUES[role];
+
 /** Key of a club-defined membership kind (server: members_membership_kind); seeded ORDINARY, EXTRAORDINARY. */
 export type MembershipType = string;
 

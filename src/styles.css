@@ -233,16 +233,16 @@ input[type='radio']:disabled {
 progress {
   height: 4px;
   border: 0;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--color-hover);
   accent-color: var(--color-accent);
 }
 progress::-webkit-progress-bar {
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--color-hover);
 }
 progress::-webkit-progress-value {
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--color-accent);
 }
 
@@ -313,6 +313,86 @@ label.check {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   gap: var(--space-md);
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-md);
+}
+/* Inside a stack the gap spaces headings and text. */
+.stack > :is(h2, h3, p) {
+  margin: 0;
+}
+/* A group of controls; its legend reads like a Field label. */
+fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+legend {
+  padding: 0;
+  margin-bottom: var(--space-xs);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+}
+/* A number field that holds a few digits. */
+input.short {
+  width: 6rem;
+}
+/* "Nothing here" inside a section; the Empty component is for a whole page or list. */
+.empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+/* A button that reads as text (a record line, a name). */
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+/* Records one per line with a rule below (held items, versions, offices …); columns stay with the list. */
+.rows {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rows > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-height: var(--control-height);
+  border-bottom: 1px solid var(--color-border);
+}
+/* A line that opens its record: the button fills it. */
+.rows > li > .link-button:only-child {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-columns: auto;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 2px var(--space-xs);
+  border-radius: var(--radius-sm);
+}
+.rows > li > .link-button:only-child:hover {
+  background: var(--color-hover);
+}
+/* Text that must stay on one line. */
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 /* An element that takes the record being dragged over it (ui/recordDrop.ts). */
 [data-record-drop] {

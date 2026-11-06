@@ -253,7 +253,7 @@
     white-space: nowrap;
   }
   td {
-    height: 38px;
+    height: var(--layout-row-height);
     border-bottom: 1px solid var(--color-border);
     transition: background var(--motion-fast);
   }

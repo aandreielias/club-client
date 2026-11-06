@@ -138,7 +138,7 @@
   .handle::after {
     content: '';
     position: absolute;
-    border-radius: 2px;
+    border-radius: var(--radius-xs);
     background: var(--chip-text);
   }
   .handle.days {

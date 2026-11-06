@@ -107,7 +107,4 @@
   p {
     margin: 0;
   }
-  .short {
-    width: 6rem;
-  }
 </style>

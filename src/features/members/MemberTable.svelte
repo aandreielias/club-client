@@ -2,12 +2,11 @@
   import { bus, router, windows } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
   import { windowMenu } from '../../lib/window/windowMenu';
-  import { ROLE_LABELS } from '../../lib/types';
+  import { ROLE_LABELS, roleHue } from '../../lib/types';
   import DataTable from '../../ui/DataTable.svelte';
   import type { EmptyAction } from '../../ui/Empty.svelte';
   import Tag from '../../ui/Tag.svelte';
   import type { MemberListModel } from './MemberListModel.svelte';
-  import { roleHue } from './roles';
 
   /** Members as rows (members page, start page): roles and status as tags, opens in the window. */
   let {

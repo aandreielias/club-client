@@ -43,7 +43,7 @@
     display: grid;
     gap: var(--space-sm);
     min-width: 0;
-    padding: var(--space-lg) var(--space-xl) var(--space-md);
+    padding: var(--space-lg);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-xl);
     background: var(--color-surface);

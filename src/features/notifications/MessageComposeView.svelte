@@ -127,16 +127,6 @@
 </Detail>
 
 <style>
-  fieldset {
-    margin: 0;
-    padding: 0;
-    border: 0;
-  }
-  legend {
-    margin-bottom: var(--space-xs);
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-medium);
-  }
   .reach {
     min-height: 1lh;
     margin: 0;

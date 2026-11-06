@@ -172,9 +172,7 @@
     gap: var(--space-sm);
     align-items: end;
   }
-  @media (max-width: 560px) {
-    .offer {
-      grid-template-columns: 1fr;
-    }
+  :global([data-layout='compact']) .offer {
+    grid-template-columns: 1fr;
   }
 </style>

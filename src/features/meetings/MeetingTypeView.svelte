@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { backStack, bus } from '../../lib/container';
+  import { backStack, bus, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
+  import DetailSkeleton from '../../ui/DetailSkeleton.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { boardSettings } from '../members/services';
   import MeetingTypeEditor from './MeetingTypeEditor.svelte';
@@ -92,42 +93,37 @@
             .join(', ')}
         </dd>
         {#if type.dueBy}<dt>Jährlich</dt>
-          <dd>geplant bis {type.dueBy.split('-').reverse().join('.')}.</dd>{/if}
+          <dd>geplant bis {session.format.shortDate(`2000-${type.dueBy}`)}</dd>{/if}
         {#if type.needsReason}<dt>Dringlichkeit</dt>
           <dd>Die Einladung nennt den Grund.</dd>{/if}
       </dl>
       <h2>Ablauf rund um jede Sitzung</h2>
-      <ul class="steps">
-        {#each type.steps as step (step.id)}
-          <li>
-            <span>{noticeText(step.offsetHours)} {STEP_ANCHOR_TEXT[step.anchor]}</span>
-            <span>{step.system ? SYSTEM_STEP_LABELS[step.system] : step.title}</span>
-            <span class="muted small">{ACTION_KIND_LABELS[step.action]} an {AUDIENCE_LABELS[step.audience]}</span>
-          </li>
-        {:else}
-          <li class="muted">Keine Erinnerungen oder Aufgaben.</li>
-        {/each}
-      </ul>
+      {#if type.steps.length}
+        <ul class="rows steps">
+          {#each type.steps as step (step.id)}
+            <li>
+              <span>{noticeText(step.offsetHours)} {STEP_ANCHOR_TEXT[step.anchor]}</span>
+              <span>{step.system ? SYSTEM_STEP_LABELS[step.system] : step.title}</span>
+              <span class="muted small">{ACTION_KIND_LABELS[step.action]} an {AUDIENCE_LABELS[step.audience]}</span>
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <p class="empty">Keine Erinnerungen oder Aufgaben.</p>
+      {/if}
     {/if}
   </Detail>
+{:else}
+  <DetailSkeleton />
 {/if}
 
 <style>
   .editing {
     display: contents;
   }
-  .steps {
-    display: grid;
-    gap: var(--space-xs);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
   .steps li {
     display: grid;
     grid-template-columns: 12rem minmax(0, 1fr) auto;
-    gap: var(--space-sm);
-    align-items: baseline;
   }
   :global(:root[data-layout='compact']) .steps li {
     grid-template-columns: minmax(0, 1fr);

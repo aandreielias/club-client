@@ -17,7 +17,7 @@ export type NotificationKind =
 
 import type { LinkedRef, RefKind } from '../../lib/records/refs';
 
-export { REF_ICONS, refWindow, type RefKind } from '../../lib/records/refs';
+export type { RefKind } from '../../lib/records/refs';
 
 /** A linked record with its title when the message was sent. */
 export type MessageRef = LinkedRef;

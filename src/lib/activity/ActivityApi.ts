@@ -32,7 +32,7 @@ export class ActivityApi {
 
   constructor(private readonly api: ApiClient) {}
 
-  /** The "Logs" page: changes across records, newest first; `before` pages back (`next` of the previous page). */
+  /** The "Aktivität" page: changes across records, newest first; `before` pages back (`next` of the previous page). */
   feed(kind: ActivityKind | null, before: string | null, limit: number): Promise<ActivityFeed> {
     return this.api.get<ActivityFeed>('/api/v1/activity', { kind, before, limit });
   }

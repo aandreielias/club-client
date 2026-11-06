@@ -152,7 +152,14 @@
 </div>
 
 <style>
+  /* Geometry: everything hangs off the axis line. */
   .timeline {
+    --axis-y: 40px;
+    --tick-y: 8px;
+    --dot-size: 16px;
+    --meeting-height: 26px;
+    /* Labels of markers close to a neighbour drop below it. */
+    --label-drop: 30px;
     position: relative;
     height: 132px;
     margin: var(--space-sm) var(--space-xl) var(--space-lg);
@@ -161,7 +168,7 @@
   }
   .axis {
     position: absolute;
-    top: 40px;
+    top: var(--axis-y);
     right: 0;
     left: 0;
     height: 2px;
@@ -169,8 +176,8 @@
   }
   .meeting {
     position: absolute;
-    top: 28px;
-    height: 26px;
+    top: calc(var(--axis-y) + 1px - var(--meeting-height) / 2);
+    height: var(--meeting-height);
     display: grid;
     place-items: center;
     border-radius: var(--radius-md);
@@ -181,18 +188,18 @@
   }
   .tick {
     position: absolute;
-    top: 8px;
+    top: var(--tick-y);
     transform: translateX(-50%);
     color: var(--color-text-faint);
-    font-size: 11px;
+    font-size: var(--font-size-tiny);
     white-space: nowrap;
   }
   .marker {
     position: absolute;
-    top: 32px;
+    top: calc(var(--axis-y) - var(--dot-size) / 2);
     display: grid;
     justify-items: center;
-    gap: 4px;
+    gap: var(--space-xs);
     width: 0;
     padding: 0;
     border: 0;
@@ -207,8 +214,8 @@
     outline: none;
   }
   .dot {
-    width: 16px;
-    height: 16px;
+    width: var(--dot-size);
+    height: var(--dot-size);
     border: 2px solid var(--color-accent);
     border-radius: var(--radius-full);
     background: var(--color-elevated);
@@ -219,7 +226,7 @@
   .invite .dot {
     border-color: var(--color-warning);
     transform: rotate(45deg);
-    border-radius: 2px;
+    border-radius: var(--radius-xs);
   }
   .selected .dot,
   .marker:focus-visible .dot {
@@ -232,14 +239,14 @@
   .label {
     max-width: 9rem;
     overflow: hidden;
-    font-size: 11.5px;
+    font-size: var(--font-size-tiny);
     line-height: 1.25;
     text-align: center;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .low .label {
-    margin-top: 30px;
+    margin-top: var(--label-drop);
   }
   .invite .label {
     color: var(--color-warning);

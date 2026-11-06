@@ -114,15 +114,3 @@
     {/if}
   </SettingsForm>
 </div>
-
-<style>
-  p,
-  h2,
-  h3 {
-    margin: 0;
-  }
-  h2,
-  h3 {
-    font-size: var(--font-size-base);
-  }
-</style>

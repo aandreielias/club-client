@@ -264,21 +264,17 @@
   fieldset {
     display: grid;
     gap: var(--space-sm);
-    margin: 0;
-    padding: 0 0 var(--space-lg);
-    border: 0;
+    padding-bottom: var(--space-lg);
     border-bottom: 1px solid var(--color-border);
   }
   legend {
-    gap: var(--space-xs);
     margin-bottom: var(--space-sm);
+    color: var(--color-text);
+    font-size: var(--font-size-base);
     font-weight: var(--font-weight-bold);
   }
   .nested {
     padding-left: var(--space-lg);
-  }
-  .short {
-    width: 6rem;
   }
   .steps {
     display: grid;

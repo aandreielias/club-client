@@ -2,6 +2,7 @@
   import { untrack } from 'svelte';
   import { bus, permissions, session } from '../../lib/container';
   import { TOAST } from '../../channels';
+  import SectionHeading from '../../ui/SectionHeading.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Select from '../../ui/Select.svelte';
@@ -72,7 +73,7 @@
   </div>
   <ErrorNote error={model.action.error} />
 {:else if tournament.status === 'DRAFT'}
-  <ul class="teams">
+  <ul class="rows teams">
     {#each tournament.teams as team (team.id)}
       <li>
         <span>{team.name}</span>
@@ -119,15 +120,16 @@
 {/if}
 
 {#if policy.canManage()}
-  <h2 class="heading">
-    Gastzugänge
-    {#if policy.canInviteGuests()}<Button size="sm" variant="ghost" icon="add" onclick={() => (inviting = true)}>Gastzugang anlegen</Button>{/if}
-  </h2>
+  <SectionHeading title="Gastzugänge">
+    {#snippet actions()}
+      {#if policy.canInviteGuests()}<Button size="sm" variant="ghost" icon="add" onclick={() => (inviting = true)}>Gastzugang anlegen</Button>{/if}
+    {/snippet}
+  </SectionHeading>
   <p class="muted small">
     Gastteams sehen damit nur dieses Turnier: Tabellen, Spielplan und KO-Runde. Die Zugänge werden einen Monat nach dem Turnier gelöscht.
   </p>
   {#if tournament.guests.length}
-    <ul class="teams">
+    <ul class="rows teams">
       {#each tournament.guests as guest (guest.memberId)}
         <li>
           <span>{guest.name}</span>
@@ -179,16 +181,12 @@
     font-weight: var(--font-weight-bold);
     color: var(--color-accent);
   }
-  .lines,
-  .teams {
+  .lines {
     display: grid;
-    margin: 0;
+    gap: var(--space-xs);
+    margin: 0 0 var(--space-sm);
     padding: 0;
     list-style: none;
-  }
-  .lines {
-    gap: var(--space-xs);
-    margin-bottom: var(--space-sm);
   }
   .lines li {
     display: grid;
@@ -201,19 +199,6 @@
     font-variant-numeric: tabular-nums;
   }
   .teams li {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-sm);
-    min-height: var(--control-height);
-    border-bottom: 1px solid var(--color-border);
-  }
-  .heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .small {
-    font-size: var(--font-size-small);
+    justify-content: flex-start;
   }
 </style>

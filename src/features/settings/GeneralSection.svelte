@@ -43,12 +43,3 @@
     <div><Button variant="danger" onclick={resetMockData}>Testdaten zurücksetzen</Button></div>
   {/if}
 </div>
-
-<style>
-  h3 {
-    margin: var(--space-sm) 0 0;
-  }
-  p {
-    margin: 0;
-  }
-</style>

@@ -5,6 +5,7 @@
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
+  import SectionHeading from '../../ui/SectionHeading.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import Tag from '../../ui/Tag.svelte';
@@ -88,20 +89,21 @@
         </dl>
         {#if value.description}<p class="prose">{value.description}</p>{/if}
 
-        <h2 class="heading">
-          Wo ist es?
-          {#if !stockEdit.form && permissions.isPrivileged}
-            <Button size="sm" variant="ghost" onclick={() => stockEdit.edit(new StockForm(value.stock))} tooltip="Auf Orte und Personen verteilen"
-              >Bearbeiten</Button
-            >
-          {/if}
-        </h2>
+        <SectionHeading title="Wo ist es?">
+          {#snippet actions()}
+            {#if !stockEdit.form && permissions.isPrivileged}
+              <Button size="sm" variant="ghost" onclick={() => stockEdit.edit(new StockForm(value.stock))} tooltip="Auf Orte und Personen verteilen"
+                >Bearbeiten</Button
+              >
+            {/if}
+          {/snippet}
+        </SectionHeading>
         {#if stockEdit.form}
           <div class="editing" {@attach stockEdit.track}>
             <StockEditor form={stockEdit.form} action={stockEdit.save} oncancel={() => stockEdit.cancel()} onsubmit={submitStock} />
           </div>
         {:else if value.stock.length}
-          <ul class="stock">
+          <ul class="rows stock">
             {#each value.stock as place, i (i)}
               <li>
                 <Icon name={place.kind === 'PERSON' ? 'account' : 'location'} small />
@@ -117,22 +119,23 @@
             {/each}
           </ul>
         {:else}
-          <p class="muted none">Kein Bestand.</p>
+          <p class="empty">Kein Bestand.</p>
         {/if}
 
         <h2>Benötigt für</h2>
         <AsyncView resource={uses}>
           {#snippet children(list)}
             {#if list.length}
-              <ul class="uses">
+              <ul class="rows">
                 {#each list as use (use.kind + use.id)}
                   <li>
                     <button
                       type="button"
+                      class="link-button"
                       onclick={() => view.open(use.kind === 'APPOINTMENT' ? 'appointment' : 'task', use.id)}
                       {@attach tooltip(use.kind === 'APPOINTMENT' ? 'Termin öffnen' : 'Aufgabe öffnen')}
                     >
-                      <span class="title">{use.title}</span>
+                      <span class="ellipsis">{use.title}</span>
                       <span class="muted"
                         >{use.kind === 'APPOINTMENT' ? 'Termin' : 'Aufgabe'}{use.at ? `, ${session.format.dateTime(use.at)}` : ''}</span
                       >
@@ -142,7 +145,7 @@
                 {/each}
               </ul>
             {:else}
-              <p class="muted none">Kein kommender Termin und keine offene Aufgabe braucht diesen Gegenstand.</p>
+              <p class="empty">Kein kommender Termin und keine offene Aufgabe braucht diesen Gegenstand.</p>
             {/if}
           {/snippet}
         </AsyncView>
@@ -155,58 +158,19 @@
   .editing {
     display: contents;
   }
-  .uses li {
-    border-bottom: 1px solid var(--color-border);
-  }
-  .uses button {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto 4rem;
-    align-items: center;
-    gap: var(--space-md);
-    width: 100%;
-    min-height: var(--control-height);
-    padding: 2px var(--space-xs);
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: none;
-    text-align: left;
-    cursor: pointer;
-  }
-  .uses button:hover {
-    background: var(--color-hover);
-  }
-  .title {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
   .quantity {
+    min-width: 4rem;
     text-align: right;
     font-variant-numeric: tabular-nums;
   }
   .short {
     color: var(--color-danger);
   }
-  .heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-sm);
-  }
-  .stock {
-    display: grid;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
   .stock li {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) 4rem;
-    align-items: center;
     gap: var(--space-sm);
-    min-height: var(--control-height);
     padding: 2px var(--space-xs);
-    border-bottom: 1px solid var(--color-border);
   }
   .count {
     text-align: right;
@@ -214,8 +178,5 @@
   }
   .inactive {
     color: var(--color-danger);
-  }
-  .none {
-    margin: 0;
   }
 </style>

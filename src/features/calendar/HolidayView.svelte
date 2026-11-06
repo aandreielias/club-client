@@ -5,6 +5,7 @@
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
+  import DetailSkeleton from '../../ui/DetailSkeleton.svelte';
   import HolidayEditor from './HolidayEditor.svelte';
   import type { Holiday } from './model';
   import { calendarApi, holidays } from './services';
@@ -60,6 +61,8 @@
       <p class="muted small">Neue wöchentliche Serien lassen diese Tage aus. Bestehende Termine sagst du im Kalender mit „Zeitraum absagen“ ab.</p>
     {/if}
   </Detail>
+{:else}
+  <DetailSkeleton />
 {/if}
 
 <style>

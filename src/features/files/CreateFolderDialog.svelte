@@ -42,7 +42,7 @@
       <Select bind:value={form.kind} options={FOLDER_KINDS} />
     </Field>
     {#if parent}
-      <p class="muted hint">Sichtbarkeit und Team übernimmt der Unterordner vom übergeordneten Ordner.</p>
+      <p class="small empty">Sichtbarkeit und Team übernimmt der Unterordner vom übergeordneten Ordner.</p>
     {:else}
       <FolderVisibility bind:scope={form.scope} bind:teamIds={form.teamIds} {scopes} {teamList} error={form.error('team')} />
     {/if}
@@ -57,10 +57,3 @@
     </div>
   </form>
 </Dialog>
-
-<style>
-  .hint {
-    margin: 0;
-    font-size: var(--font-size-small);
-  }
-</style>

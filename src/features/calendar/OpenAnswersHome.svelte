@@ -38,11 +38,11 @@
 <AsyncView resource={open}>
   {#snippet children(items)}
     {#if items.length}
-      <ul class="answers">
+      <ul class="rows">
         {#each items as o (key(o))}
           <li>
             <button
-              class="link"
+              class="link-button answer"
               type="button"
               {@attach tooltip('Termin öffnen')}
               onclick={() => bus.publish(WINDOW_OPEN, { kind: 'appointment', id: o.appointmentId })}
@@ -70,37 +70,14 @@
       </ul>
       <ErrorNote error={answer.error} />
     {:else}
-      <p class="muted">Alles beantwortet.</p>
+      <p class="empty">Alles beantwortet.</p>
     {/if}
   {/snippet}
 </AsyncView>
 
 <style>
-  p {
-    margin: 0;
-  }
-  .answers {
+  .answer {
     display: grid;
-    gap: var(--space-sm);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .answers li {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-sm);
-    align-items: center;
-    justify-content: space-between;
-  }
-  .link {
-    display: grid;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: inherit;
-    font: inherit;
-    text-align: start;
-    cursor: pointer;
+    padding: var(--space-xs) 0;
   }
 </style>

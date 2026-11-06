@@ -7,6 +7,7 @@
   import Button from '../../ui/Button.svelte';
   import Dialog from '../../ui/Dialog.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
+  import ColorSwatches from '../../ui/ColorSwatches.svelte';
   import Field from '../../ui/Field.svelte';
   import { TeamListModel } from '../../lib/directory/TeamListModel.svelte';
   import { session } from '../../lib/container';
@@ -22,6 +23,7 @@
 
   // svelte-ignore state_referenced_locally
   const form = new FolderEditForm(folder);
+  const COLOR_OPTIONS = [{ value: null, label: 'Keine Farbe', hue: null }, ...FOLDER_COLORS];
   const action = new Action();
   // The folder's own visibility stays selectable even if the member could not create it (e.g. coach editing a club folder name).
   // svelte-ignore state_referenced_locally
@@ -70,37 +72,14 @@
         hintSuffix=" Unterordner und Dateien folgen."
       />
     {:else}
-      <p class="muted hint">Sichtbar für: {scopeLabel(folder.scope)}. Unterordner übernehmen die Sichtbarkeit vom obersten Ordner.</p>
+      <p class="small empty">Sichtbar für: {scopeLabel(folder.scope)}. Unterordner übernehmen die Sichtbarkeit vom obersten Ordner.</p>
     {/if}
 
     <label class="check"><input type="checkbox" bind:checked={form.membersCanUpload} /> Mitglieder dürfen hochladen</label>
 
-    <fieldset class="group">
-      <legend>Farbe</legend>
-      <div class="swatches">
-        <button
-          type="button"
-          class="swatch none"
-          class:chosen={form.color === null}
-          onclick={() => (form.color = null)}
-          aria-pressed={form.color === null}
-          {@attach tooltip('Keine Farbe')}><span class="visually-hidden">Keine Farbe</span></button
-        >
-        {#each FOLDER_COLORS as color (color.value)}
-          <button
-            type="button"
-            class="swatch"
-            class:chosen={form.color === color.value}
-            style:--swatch="var(--color-tag-{color.hue}-text)"
-            onclick={() => (form.color = color.value)}
-            aria-pressed={form.color === color.value}
-            {@attach tooltip(color.label)}
-          >
-            <span class="visually-hidden">{color.label}</span>
-          </button>
-        {/each}
-      </div>
-    </fieldset>
+    <Field label="Farbe" group>
+      <ColorSwatches label="Farbe" options={COLOR_OPTIONS} bind:value={form.color} />
+    </Field>
 
     <fieldset class="group">
       <legend>Titelbild in der Galerie</legend>
@@ -130,7 +109,7 @@
               {/each}
             </div>
           {:else}
-            <p class="muted hint">Lade Fotos in diesen Ordner hoch, um eins als Titelbild zu wählen.</p>
+            <p class="small empty">Lade Fotos in diesen Ordner hoch, um eins als Titelbild zu wählen.</p>
           {/if}
         {/snippet}
       </AsyncView>
@@ -145,49 +124,9 @@
 </Dialog>
 
 <style>
-  .hint {
-    margin: 0;
-    font-size: var(--font-size-small);
-  }
   .group {
     display: grid;
     gap: var(--space-xs);
-    margin: 0;
-    padding: 0;
-    border: 0;
-  }
-  legend {
-    margin-bottom: var(--space-xs);
-    color: var(--color-text-muted);
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-medium);
-  }
-  .swatches {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-sm);
-  }
-  .swatch {
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: 2px solid var(--color-elevated);
-    border-radius: 50%;
-    background: var(--swatch);
-    box-shadow: 0 0 0 1px var(--color-border);
-    cursor: pointer;
-    transition:
-      transform var(--motion-fast) var(--motion-easing),
-      box-shadow var(--motion-fast);
-  }
-  .swatch:hover {
-    transform: scale(1.1);
-  }
-  .swatch.none {
-    background: linear-gradient(135deg, transparent 45%, var(--color-text-faint) 45% 55%, transparent 55%), var(--color-field);
-  }
-  .swatch.chosen {
-    box-shadow: 0 0 0 2px var(--color-accent);
   }
   .covers {
     display: grid;

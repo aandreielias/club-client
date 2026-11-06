@@ -14,7 +14,7 @@ function changeText(e: FeedEntry): string {
   return ACTIVITY_ACTIONS[e.action] ?? e.action;
 }
 
-/** The "Logs" list: newest changes first, filtered by kind on the server, older pages on demand. */
+/** The "Aktivität" list: newest changes first, filtered by kind on the server, older pages on demand. */
 export class ActivityFeedModel extends ListModel<FeedEntry> {
   readonly more = new Action();
   #next: string | null = $state(null);

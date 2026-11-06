@@ -7,7 +7,7 @@ export const activityFeature: Feature = {
   id: 'activity',
   routes: [
     // server: ActivityHandlers.feed - admin and board all changes, coaches those of their teams.
-    { path: '/activity', component: ActivityPage, nav: 'Logs', icon: 'activity', roles: PRIVILEGED },
+    { path: '/activity', component: ActivityPage, nav: 'Aktivität', icon: 'activity', roles: PRIVILEGED },
   ],
-  home: { id: 'activity', label: 'Logs', component: ActivityHome, roles: PRIVILEGED },
+  home: { id: 'activity', label: 'Aktivität', component: ActivityHome, roles: PRIVILEGED },
 };

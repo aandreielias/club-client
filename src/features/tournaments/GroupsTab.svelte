@@ -170,9 +170,6 @@
     color: var(--color-text-faint);
     font-weight: normal;
   }
-  .small {
-    font-size: var(--font-size-small);
-  }
   .legend {
     display: flex;
     align-items: center;

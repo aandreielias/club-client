@@ -69,7 +69,7 @@
 </script>
 
 {#snippet list(offices: Office[], empty: string)}
-  <ul class="offices">
+  <ul class="rows offices">
     {#each offices as o (o.id)}
       <li>
         <span class="function">{boardSettings.label(o.office)}</span>
@@ -102,6 +102,7 @@
             </li>{/each}
         </ul>
       {/if}
+      <h2>Vorstandsfunktionen</h2>
       {@render list(
         board.offices.filter((o) => boardSettings.isBoard(o.office)),
         'Noch keine Funktionen eingetragen.',
@@ -118,7 +119,7 @@
   {#if policy.canManageOffices()}
     <h2>Funktion vergeben</h2>
     <form class="stack" onsubmit={assign}>
-      <div class="grid">
+      <div class="grid-2">
         <Field
           label="Mitglied"
           hint={candidates.value && !memberOptions.length
@@ -149,18 +150,12 @@
 
 <style>
   .offices {
-    display: grid;
     margin: 0 0 var(--space-md);
-    padding: 0;
-    list-style: none;
   }
   .offices li {
     display: grid;
     grid-template-columns: 10rem minmax(0, 1fr) auto auto;
     gap: var(--space-md);
-    align-items: center;
-    min-height: var(--control-height);
-    border-bottom: 1px solid var(--color-border);
   }
   .function {
     font-weight: var(--font-weight-medium);
@@ -171,15 +166,10 @@
     margin: 0 0 var(--space-md);
     padding: 0;
     list-style: none;
-    color: var(--color-text-muted);
+    color: var(--color-warning);
   }
   .warnings .danger {
     color: var(--color-danger);
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-    gap: var(--space-md);
   }
   :global([data-layout='compact']) .offices li {
     grid-template-columns: 1fr auto;

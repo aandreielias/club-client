@@ -6,6 +6,7 @@
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
+  import DetailSkeleton from '../../ui/DetailSkeleton.svelte';
   import Tag from '../../ui/Tag.svelte';
   import MembershipKindEditor from './MembershipKindEditor.svelte';
   import type { MembershipKindInput } from './MembersApi';
@@ -89,6 +90,8 @@
       </dl>
     {/if}
   </Detail>
+{:else}
+  <DetailSkeleton />
 {/if}
 
 <style>

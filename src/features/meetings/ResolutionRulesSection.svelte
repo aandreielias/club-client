@@ -42,9 +42,3 @@
     </div>
   </SettingsForm>
 </div>
-
-<style>
-  .short {
-    width: 6rem;
-  }
-</style>

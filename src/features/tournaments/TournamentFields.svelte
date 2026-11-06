@@ -98,12 +98,6 @@
 </fieldset>
 
 <style>
-  fieldset {
-    margin: 0;
-    padding: 0;
-    border: 0;
-    min-width: 0;
-  }
   .format {
     display: grid;
     gap: var(--space-xs);

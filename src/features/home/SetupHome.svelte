@@ -4,6 +4,7 @@
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import Icon from '../../ui/Icon.svelte';
+  import SectionHeading from '../../ui/SectionHeading.svelte';
   import { filesApi } from '../files/services';
   import { locationsApi } from '../locations/services';
   import { mailApi } from '../mail/services';
@@ -50,7 +51,9 @@
   }
 </script>
 
-<h2>Einrichtung</h2>
+<SectionHeading title="Einrichtung">
+  {#snippet actions()}<Button size="sm" variant="ghost" onclick={hide}>Ausblenden</Button>{/snippet}
+</SectionHeading>
 <AsyncView resource={steps}>
   {#snippet children(facts)}
     {@const list = setupSteps({ ...facts, visited })}
@@ -69,7 +72,6 @@
         </li>
       {/each}
     </ol>
-    <div><Button size="sm" variant="ghost" onclick={hide}>Ausblenden</Button></div>
   {/snippet}
 </AsyncView>
 

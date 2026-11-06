@@ -73,7 +73,7 @@
     color: var(--color-text-muted);
   }
   .title {
-    font-weight: 600;
+    font-weight: var(--font-weight-bold);
   }
   .note,
   .card {

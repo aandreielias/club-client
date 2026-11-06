@@ -3,7 +3,7 @@
   import { bus, session } from '../../lib/container';
   import { TOAST, WINDOW_OPEN } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
-  import { ROLE_LABELS } from '../../lib/types';
+  import { ROLE_LABELS, roleHue } from '../../lib/types';
   import Button from '../../ui/Button.svelte';
   import LinkButton from '../../ui/LinkButton.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -15,17 +15,13 @@
   import ChangeRequestDialog from './ChangeRequestDialog.svelte';
   import FamilySection from '../members/FamilySection.svelte';
   import { OwnChangeRequests } from './OwnChangeRequests.svelte';
-  import { Resource } from '../../lib/state/Resource.svelte';
-  import { inventoryApi } from '../inventory/services';
+  import HeldItemsSection from '../members/HeldItemsSection.svelte';
   import { BrowserFile } from '../../lib/files/BrowserFile';
 
   const savePhone = new Action();
   const requests = new OwnChangeRequests(membersApi);
   void requests.load();
   let asking = $state<ChangeField | null>(null);
-  /** Club items the member has at home; they get a reminder before appointments that need them. */
-  const held = new Resource(() => inventoryApi.mine());
-  void held.load();
 
   const member = $derived(session.member);
   let phone = $state(session.member.phone ?? '');
@@ -73,12 +69,12 @@
     <dt>Nachname</dt>
     {@render changeable('LAST_NAME', member.lastName)}
     <dt>Private E-Mail</dt>
-    {@render changeable('EMAIL', member.email ?? '')}
+    {@render changeable('EMAIL', member.email ?? '–')}
     <dt>Geburtsdatum</dt>
     {@render changeable('BIRTH_DATE', member.birthDate ? session.format.date(member.birthDate) : '–')}
     <dt>Rollen</dt>
     <dd>
-      {#each member.roles as role (role)}<Tag tone="gray">{ROLE_LABELS[role]}</Tag>{/each}
+      {#each member.roles as role (role)}<Tag tone={roleHue(role)}>{ROLE_LABELS[role]}</Tag>{/each}
     </dd>
     <dt>Teams</dt>
     <dd>
@@ -87,15 +83,7 @@
   </dl>
   <FamilySection memberId={member.id} firstName={member.firstName} self parent={member.roles.includes('PARENT')} />
 
-  {#if held.value?.length}
-    <h2>Bei mir</h2>
-    <ul class="held">
-      {#each held.value as item (item.itemId)}
-        <li><span>{item.name}</span><span class="count">{item.quantity}</span></li>
-      {/each}
-    </ul>
-    <p class="muted small">Vor Terminen, die diese Sachen brauchen, bekommst du eine Erinnerung.</p>
-  {/if}
+  <HeldItemsSection memberId={member.id} title="Bei mir" note="Vor Terminen, die diese Sachen brauchen, bekommst du eine Erinnerung." />
 
   <h2>Telefon</h2>
   <form class="stack narrow" onsubmit={submitPhone}>
@@ -103,7 +91,7 @@
       <input type="tel" bind:value={phone} maxlength={settings.profile.phoneMaxLength} autocomplete="tel" />
     </Field>
     <ErrorNote error={savePhone.error} />
-    <div><Button type="submit" busy={savePhone.busy}>Speichern</Button></div>
+    <div><Button type="submit" variant="primary" busy={savePhone.busy}>Speichern</Button></div>
   </form>
 
   <h2>Meine Daten</h2>
@@ -121,26 +109,6 @@
 <ChangeRequestDialog bind:field={asking} {requests} onsent={() => bus.publish(TOAST, { text: 'Anfrage an den Vorstand gesendet.' })} />
 
 <style>
-  .held {
-    display: grid;
-    max-width: var(--layout-readable-width);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .held li {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-md);
-    padding: var(--space-xs) 0;
-    border-bottom: 1px solid var(--color-border);
-  }
-  .count {
-    font-variant-numeric: tabular-nums;
-  }
-  .small {
-    font-size: var(--font-size-small);
-  }
   .changeable {
     display: flex;
     flex-wrap: wrap;

@@ -158,7 +158,7 @@
   }
   .lane-label {
     padding: var(--space-xs);
-    font-size: 11px;
+    font-size: var(--font-size-tiny);
     text-align: right;
   }
   .all-day-row {
@@ -183,7 +183,7 @@
   }
   .hour {
     padding: 0 var(--space-xs);
-    font-size: 11px;
+    font-size: var(--font-size-tiny);
     text-align: right;
     transform: translateY(-0.6em);
   }

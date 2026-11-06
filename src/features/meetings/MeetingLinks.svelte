@@ -26,7 +26,5 @@
   {/snippet}
 </LinkList>
 {#if meeting.canManage}
-  <p class="muted small">Das Layout kommt aus der Einladungsvorlage unter Einstellungen › Vorlagen.</p>
-{:else if !meeting.links.length}
-  <p class="muted">Nichts verknüpft.</p>
+  <p class="muted small">Das Layout kommt aus der Einladungsvorlage unter Einstellungen › Verein › Vorlagen.</p>
 {/if}

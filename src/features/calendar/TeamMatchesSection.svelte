@@ -21,12 +21,12 @@
   <section class="stack">
     <h2>Spiele</h2>
     <p class="muted small">{list.won} gewonnen, {list.lost} verloren in den letzten zwölf Monaten.</p>
-    <ul class="matches">
+    <ul class="rows">
       {#each list.items as m (m.appointmentId)}
         <li>
           <button
             type="button"
-            class="link"
+            class="link-button row"
             {@attach tooltip('Spiel öffnen')}
             onclick={() => bus.publish(WINDOW_OPEN, { kind: 'appointment', id: m.appointmentId })}
           >
@@ -39,33 +39,3 @@
     </ul>
   </section>
 {/if}
-
-<style>
-  p,
-  h2 {
-    margin: 0;
-  }
-  .matches {
-    display: grid;
-    gap: var(--space-xs);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .matches li {
-    display: flex;
-    gap: var(--space-sm);
-    align-items: center;
-    justify-content: space-between;
-  }
-  .link {
-    display: flex;
-    gap: var(--space-sm);
-    padding: 0;
-    border: 0;
-    background: none;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
-  }
-</style>

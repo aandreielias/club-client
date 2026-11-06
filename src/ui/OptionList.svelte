@@ -44,9 +44,6 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
     gap: var(--space-xs);
-    margin: 0;
-    padding: 0;
-    border: 0;
   }
   .option {
     display: flex;

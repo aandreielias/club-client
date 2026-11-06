@@ -40,7 +40,7 @@
 </script>
 
 {#if linked.value?.length}
-  <ul class="linked">
+  <ul class="rows linked">
     {#each linked.value as guardian (guardian.memberId)}
       <li>
         <span>{guardian.name}</span>
@@ -70,18 +70,7 @@
 
 <style>
   .linked {
-    display: grid;
-    margin: 0 0 var(--space-md);
-    padding: 0;
-    list-style: none;
-  }
-  .linked li {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-sm);
-    min-height: var(--control-height);
-    border-bottom: 1px solid var(--color-border);
+    margin-bottom: var(--space-md);
   }
   .link {
     display: grid;

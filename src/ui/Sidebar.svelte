@@ -474,7 +474,7 @@
     border-radius: var(--radius-full);
     background: var(--color-accent);
     color: var(--color-on-accent);
-    font-size: 11px;
+    font-size: var(--font-size-tiny);
     font-weight: var(--font-weight-bold);
     line-height: 18px;
     text-align: center;

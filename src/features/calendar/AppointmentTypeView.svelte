@@ -6,6 +6,7 @@
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
+  import DetailSkeleton from '../../ui/DetailSkeleton.svelte';
   import Tag from '../../ui/Tag.svelte';
   import AppointmentTypeEditor from './AppointmentTypeEditor.svelte';
   import type { AppointmentTypeInput } from './model';
@@ -92,6 +93,8 @@
       </dl>
     {/if}
   </Detail>
+{:else}
+  <DetailSkeleton />
 {/if}
 
 <style>

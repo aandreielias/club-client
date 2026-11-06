@@ -12,7 +12,7 @@
   import { ActivityFeedModel } from './ActivityFeedModel.svelte';
   import { entryKey, openRecord } from './open';
 
-  /** "Logs": who changed which task, appointment or file. Admin and board see all, coaches their teams. */
+  /** "Aktivität": who changed which task, appointment or file. Admin and board see all, coaches their teams. */
   const list = new ActivityFeedModel(activityApi, () => session.format, store, settings.activity.pageSize);
   void list.load();
   // New changes arrive with the record's own live event; reload unless older pages are shown.
@@ -21,7 +21,7 @@
   });
 </script>
 
-<Page title="Logs">
+<Page title="Aktivität">
   <DataTable model={list} rowKey={entryKey} onopen={(e) => openRecord(bus, e)} emptyText="Noch keine Änderungen aufgezeichnet." />
   <ErrorNote error={list.more.error} />
   {#if list.hasMore}

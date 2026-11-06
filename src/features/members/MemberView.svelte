@@ -3,8 +3,7 @@
   import { backStack, bus, commands, session } from '../../lib/container';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
-  import { ROLE_LABELS, type Member, type Role } from '../../lib/types';
-  import { roleHue } from './roles';
+  import { ROLE_LABELS, roleHue, type Member, type Role } from '../../lib/types';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -13,7 +12,7 @@
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import FamilySection from './FamilySection.svelte';
   import GuardianLinker from './GuardianLinker.svelte';
-  import HeldItems from './HeldItems.svelte';
+  import HeldItemsSection from './HeldItemsSection.svelte';
   import MembershipEditor from './MembershipEditor.svelte';
   import { MemberDetailModel } from './MemberDetailModel.svelte';
   import ProfileEditor from './ProfileEditor.svelte';
@@ -139,7 +138,7 @@
             self={policy.isSelf(member)}
             parent={member.roles.includes('PARENT')}
           />{/key}
-        <HeldItems memberId={member.id} />
+        <HeldItemsSection memberId={member.id} />
       {/if}
 
       {#if policy.canSetMembership(member) && !editing}

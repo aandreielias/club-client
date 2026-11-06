@@ -89,11 +89,6 @@
 </Detail>
 
 <style>
-  .grid-3 {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-    gap: var(--space-md);
-  }
   .more summary {
     cursor: pointer;
     margin-bottom: var(--space-sm);

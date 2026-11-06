@@ -30,16 +30,6 @@
 </fieldset>
 
 <style>
-  fieldset {
-    margin: 0;
-    padding: 0;
-    border: 0;
-  }
-  legend {
-    margin-bottom: var(--space-xs);
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-medium);
-  }
   .lines {
     display: grid;
     gap: var(--space-xs);

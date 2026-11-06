@@ -25,6 +25,7 @@
   import GroupsTab from './GroupsTab.svelte';
   import { FORMAT_LABELS, matchPlace, STATUS_LABELS, STATUS_TONES, type Tournament } from './model';
   import TeamsTab from './TeamsTab.svelte';
+  import { locationsApi } from '../locations/services';
   import TournamentEditDialog from './TournamentEditDialog.svelte';
   import { TournamentModel } from './TournamentModel.svelte';
   import { tournamentPolicy as policy, tournamentsApi } from './services';
@@ -46,6 +47,20 @@
     { value: 'ko', label: 'KO-Runde' },
     { value: 'teams', label: 'Teams' },
   ];
+
+  /** The linked place's name; a place the member cannot open keeps the generic label. */
+  let placeName = $state<string | null>(null);
+  $effect(() => {
+    const locationId = model.tournament.value?.locationId;
+    placeName = null;
+    let current = true; // an older answer must not replace the name of a newer link
+    if (locationId)
+      locationsApi.get(locationId).then(
+        (p) => current && (placeName = p.name),
+        () => {},
+      );
+    return () => (current = false);
+  });
 
   view.title(() => model.tournament.value?.name);
   view.watch(TOURNAMENT_CHANGED, (data) => data.tournamentId === id, {
@@ -120,7 +135,7 @@
           <dd>{days(t)}</dd>
           {#if t.locationId}
             <dt>Ort</dt>
-            <dd><RecordLink kind="location" id={t.locationId}>Ort öffnen</RecordLink></dd>
+            <dd><RecordLink kind="location" id={t.locationId}>{placeName ?? 'Ort öffnen'}</RecordLink></dd>
           {/if}
           <dt>Modus</dt>
           <dd>
@@ -137,7 +152,7 @@
         </dl>
         {#if upcoming(t).length}
           <h2>Nächste Spiele</h2>
-          <ul class="next">
+          <ul class="rows next">
             {#each upcoming(t) as m (m.id)}
               <li>
                 <span class="muted">{m.stage === 'GROUP' ? `Gruppe ${m.group}` : 'KO-Runde'}</span>
@@ -174,18 +189,9 @@
     background: var(--color-accent-soft);
     color: var(--color-accent);
   }
-  .next {
-    display: grid;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
   .next li {
     display: grid;
     grid-template-columns: 7rem minmax(0, 1fr) auto;
     gap: var(--space-md);
-    min-height: var(--control-height);
-    align-items: center;
-    border-bottom: 1px solid var(--color-border);
   }
 </style>

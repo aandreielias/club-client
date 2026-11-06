@@ -66,7 +66,7 @@
   >
     <p class="muted">Dateien hierher ziehen oder</p>
     <Button onclick={() => input.click()}>Dateien auswählen</Button>
-    <p class="muted hint">
+    <p class="small empty">
       {fileTypes.describe(folder.kind)}, höchstens {Math.floor(settings.files.maxUploadBytes / 1024 / 1024)} MB pro Datei. Dateien werden auf Viren geprüft.
     </p>
     <input bind:this={input} type="file" multiple accept={fileTypes.accept(folder.kind)} onchange={picked} hidden />
@@ -85,7 +85,7 @@
     </Button>
     {#if tagging}
       <PeoplePicker list={people} chosen={tags} ontoggle={toggleTag} max={settings.files.maxTags} />
-      <p class="muted hint">Gilt für alle Fotos, die du jetzt hochlädst. Nur Personen mit Foto-Einwilligung können markiert werden.</p>
+      <p class="small empty">Gilt für alle Fotos, die du jetzt hochlädst. Nur Personen mit Foto-Einwilligung können markiert werden.</p>
     {/if}
   </div>
 
@@ -129,9 +129,6 @@
   }
   .zone p {
     margin: 0;
-  }
-  .hint {
-    font-size: var(--font-size-small);
   }
   .queue {
     display: grid;

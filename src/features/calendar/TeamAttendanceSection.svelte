@@ -102,10 +102,6 @@
 {/if}
 
 <style>
-  p,
-  h2 {
-    margin: 0;
-  }
   .filters {
     align-items: end;
   }

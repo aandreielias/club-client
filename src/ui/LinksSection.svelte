@@ -11,6 +11,7 @@
   import { placeName, type FileRef } from '../lib/links/model';
   import Button from './Button.svelte';
   import ErrorNote from './ErrorNote.svelte';
+  import SectionHeading from './SectionHeading.svelte';
   import SearchSelect from './SearchSelect.svelte';
   import Tag from './Tag.svelte';
   import { recordDrop } from './recordDrop';
@@ -51,6 +52,14 @@
     if (!(await model.dropFile(id.slice(id.indexOf(':') + 1), name))) bus.publish(TOAST, { text: `„${name}“ lässt sich hier nicht anhängen.` });
   }
 </script>
+
+{#snippet heading(title: string)}
+  <SectionHeading {title}>
+    {#snippet actions()}
+      {#if editable}<Button size="sm" variant="ghost" onclick={() => model.edit()} tooltip="{title} bearbeiten">Bearbeiten</Button>{/if}
+    {/snippet}
+  </SectionHeading>
+{/snippet}
 
 {#if model.editing}
   <div class="stack">
@@ -130,10 +139,7 @@
 {:else if model.links.value}
   {@const links = model.links.value}
   {#if links.needs.length || editable}
-    <h2 class="heading">
-      Benötigt
-      {#if editable}<Button size="sm" variant="ghost" onclick={() => model.edit()}>Bearbeiten</Button>{/if}
-    </h2>
+    {@render heading('Benötigt')}
     {#if links.needs.length}
       <ul class="entries">
         {#each links.needs as need (need.itemId)}
@@ -169,36 +175,27 @@
         {/each}
       </ul>
     {:else}
-      <p class="muted none">Nichts eingetragen.</p>
+      <p class="empty">Nichts eingetragen.</p>
     {/if}
   {/if}
   {#if links.files.length || editable}
-    <h2>Dateien</h2>
+    {@render heading('Dateien')}
     {#if links.files.length}
       <ul class="entries">
         {#each links.files as file (file.id)}
-          <li class:deleted={file.deleted}>
+          <li class="file" class:deleted={file.deleted}>
             {#if file.deleted}
               <span class="name">{file.name}</span>
               <Tag tone="danger">Gelöscht</Tag>
             {:else}
               <span class="name"><RecordLink kind="file" id="{file.folderId}:{file.id}" hint="Vorschau öffnen">{file.name}</RecordLink></span>
-              <span></span>
+              <Button size="sm" variant="ghost" icon="download" onclick={() => download(file)} tooltip="{file.name} herunterladen" />
             {/if}
-            {#if file.deleted}<span></span>{:else}<Button
-                size="sm"
-                variant="ghost"
-                icon="download"
-                onclick={() => download(file)}
-                tooltip="{file.name} herunterladen"
-              />{/if}
-            <span></span>
-            <span></span>
           </li>
         {/each}
       </ul>
     {:else}
-      <p class="muted none">Keine Dateien.</p>
+      <p class="empty">Keine Dateien.</p>
     {/if}
   {/if}
 {:else}
@@ -206,12 +203,6 @@
 {/if}
 
 <style>
-  .heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-sm);
-  }
   .entries {
     display: grid;
   }
@@ -244,6 +235,9 @@
   .stock.short {
     color: var(--color-danger);
   }
+  li.file {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
   li.need {
     grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: start;
@@ -274,8 +268,5 @@
   }
   .drop {
     border-radius: var(--radius-md);
-  }
-  .none {
-    margin: 0;
   }
 </style>

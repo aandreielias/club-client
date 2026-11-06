@@ -37,12 +37,12 @@
     box-shadow: 0 1px 0 var(--color-border);
     color: var(--color-text-muted);
     font-family: var(--font-family);
-    font-size: 11px;
+    font-size: var(--font-size-tiny);
     font-weight: var(--font-weight-medium);
     line-height: 1;
   }
   .then {
     color: var(--color-text-faint);
-    font-size: 11px;
+    font-size: var(--font-size-tiny);
   }
 </style>

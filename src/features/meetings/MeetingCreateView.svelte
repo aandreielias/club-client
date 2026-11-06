@@ -151,8 +151,7 @@
     border: 0;
   }
   legend {
-    padding: 0;
-    margin-bottom: var(--space-xs);
-    font-weight: 600;
+    color: var(--color-text);
+    font-weight: var(--font-weight-bold);
   }
 </style>

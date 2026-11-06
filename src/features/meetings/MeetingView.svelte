@@ -228,7 +228,7 @@
         {:else}
           <div>
             <Button size="sm" icon="edit" tooltip="Ort und Link zur Videokonferenz ändern" onclick={() => (editingPlace = true)}
-              >Ort & Link bearbeiten</Button
+              >Ort und Link bearbeiten</Button
             >
           </div>
         {/if}
@@ -313,7 +313,7 @@
           {/if}
           <Button size="sm" variant="ghost" icon="download" tooltip="Anwesenheitsliste als CSV-Datei" onclick={() => attendanceCsv(m)}>Liste</Button>
         </div>
-        <ul class="people">
+        <ul class="rows people">
           {#each m.electorate.filter((p) => !presenceFilter || p.name
                 .toLocaleLowerCase()
                 .includes(presenceFilter.toLocaleLowerCase())) as person (person.memberId)}
@@ -404,20 +404,5 @@
   }
   .filter {
     max-width: 14rem;
-  }
-  .people {
-    display: grid;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .people li {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-sm);
-    min-height: var(--control-height);
-    border-bottom: 1px solid var(--color-border);
   }
 </style>

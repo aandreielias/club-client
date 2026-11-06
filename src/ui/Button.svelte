@@ -128,7 +128,7 @@
     border-color: transparent;
     background: var(--color-accent);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.14),
+      inset 0 1px 0 var(--color-inset-highlight),
       0 1px 2px color-mix(in srgb, var(--color-accent) 40%, transparent);
     color: var(--color-on-accent);
   }

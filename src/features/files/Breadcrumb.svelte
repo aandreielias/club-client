@@ -46,8 +46,11 @@
     content: '/';
     margin-right: var(--space-xs);
   }
+  a,
+  span {
+    padding: 1px var(--space-xs);
+  }
   a {
-    padding: 1px 4px;
     border-radius: var(--radius-sm);
     text-decoration: none;
     transition: background var(--motion-fast);

@@ -6,6 +6,7 @@
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
+  import DetailSkeleton from '../../ui/DetailSkeleton.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { Action } from '../../lib/state/Action.svelte';
   import { SEEDED_OFFICES, type OfficeKind } from './MembersApi';
@@ -92,6 +93,8 @@
       </dl>
     {/if}
   </Detail>
+{:else}
+  <DetailSkeleton />
 {/if}
 
 <style>

@@ -143,9 +143,6 @@
   p {
     margin: 0;
   }
-  .short {
-    width: 6rem;
-  }
   .when {
     flex-wrap: wrap;
   }

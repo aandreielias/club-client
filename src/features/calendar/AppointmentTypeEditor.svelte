@@ -31,7 +31,7 @@
     purple: 'Violett',
     red: 'Rot',
   };
-  const HUE_OPTIONS = HUES.map((h) => ({ value: h, label: HUE_LABELS[h] }));
+  const HUE_OPTIONS = HUES.map((h) => ({ value: h, label: HUE_LABELS[h], hue: h }));
 </script>
 
 <EditorForm {action} {submitLabel} {oncancel} {onsubmit}>
@@ -56,9 +56,3 @@
     />
   </Field>
 </EditorForm>
-
-<style>
-  .short {
-    width: 6rem;
-  }
-</style>

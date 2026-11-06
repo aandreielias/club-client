@@ -3,7 +3,6 @@
   import { settings } from '../../settings';
   import { session } from '../../lib/container';
   import Button from '../../ui/Button.svelte';
-  import Empty from '../../ui/Empty.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import type { TaskDetailModel } from './TaskDetailModel.svelte';
@@ -32,7 +31,7 @@
     {/each}
   </ol>
 {:else}
-  <Empty text="Noch keine Kommentare." />
+  <p class="empty">Noch keine Kommentare.</p>
 {/if}
 
 <form class="stack" onsubmit={submit}>

@@ -25,7 +25,7 @@
 </script>
 
 <dialog bind:this={element} {onclose} aria-label={title} class:wide>
-  <h3>{title}</h3>
+  <h2 class="title">{title}</h2>
   {@render children()}
 </dialog>
 
@@ -40,7 +40,7 @@
     box-shadow: var(--color-shadow-window);
   }
   dialog.wide {
-    width: min(720px, calc(100vw - 2 * var(--space-lg)));
+    width: min(var(--layout-readable-width), calc(100vw - 2 * var(--space-lg)));
   }
   dialog[open] {
     animation: dialog-in var(--motion-base) var(--motion-easing);
@@ -63,8 +63,13 @@
       opacity: 0;
     }
   }
-  h3 {
-    margin-bottom: var(--space-md);
+  /* Also inside a window, whose section headings are small and ruled. */
+  dialog > h2.title {
+    margin: 0 0 var(--space-md);
+    padding: 0;
+    border: 0;
+    color: var(--color-text);
     font-size: var(--font-size-h2);
+    letter-spacing: -0.015em;
   }
 </style>

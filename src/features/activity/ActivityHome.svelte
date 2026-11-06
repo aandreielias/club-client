@@ -11,7 +11,7 @@
   void list.load();
 </script>
 
-<SectionHeading title="Logs" href="#/activity" />
+<SectionHeading title="Aktivität" href="#/activity" />
 <DataTable
   model={list}
   toolbar={false}

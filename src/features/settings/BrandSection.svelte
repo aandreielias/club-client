@@ -234,9 +234,6 @@
 </div>
 
 <style>
-  h3 {
-    margin: var(--space-sm) 0 0;
-  }
   .color {
     display: flex;
     gap: var(--space-xs);
