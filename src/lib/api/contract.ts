@@ -3,7 +3,7 @@
 // Not checked: whether a field may be null (the server's records write every field; nullability is not in the document).
 import type { components } from './schema';
 import type { Absence, AbsenceList, Appointment, AppointmentList, Attendance, Ride, RideList } from '../../features/calendar/model';
-import type { DownloadLink, FileList, FilePatch, FileSettings, FolderList, FolderPatch } from '../../features/files/model';
+import type { DownloadLink, FileHits, FileList, FilePatch, FileSettings, FolderList, FolderPatch, SettingFileList } from '../../features/files/model';
 import type { Item, ItemList, ItemUse, OwnItem, StockInput } from '../../features/inventory/model';
 import type { GeocodeResult, Location } from '../../features/locations/model';
 import type { AddressEntry, Mail, Mailbox, MailboxAdmin, MailPage, MailRef, MailSettings, MailSummary } from '../../features/mail/model';
@@ -48,6 +48,8 @@ export type Contract = [
   Satisfies<S['at.clubserver.files.api.FilesApi.FileList'], FileList>,
   Satisfies<S['at.clubserver.files.api.FilesApi.DownloadLink'], DownloadLink>,
   Satisfies<S['at.clubserver.files.api.FilesApi.FileSettings'], FileSettings>,
+  Satisfies<S['at.clubserver.files.api.FilesApi.FileHits'], FileHits>,
+  Satisfies<S['at.clubserver.files.api.FilesApi.SettingFileList'], SettingFileList>,
   Satisfies<S['at.clubserver.inventory.api.InventoryApi.ItemDto'], Item>,
   Satisfies<S['at.clubserver.inventory.api.InventoryApi.ItemList'], ItemList>,
   Satisfies<S['at.clubserver.inventory.api.InventoryApi.ItemUse'], ItemUse>,

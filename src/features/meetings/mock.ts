@@ -549,9 +549,9 @@ export class MockMeetings {
       });
     const content = await fill(
       JSZip,
-      await this.template(viewer, PROTOCOL_TEMPLATE_NAME, () => protocolTemplate(JSZip)),
+      await files.settingTemplate(viewer, 'PROTOCOL_TEMPLATE', PROTOCOL_TEMPLATE_NAME, () => protocolTemplate(JSZip)),
       {
-        Verein: this.people.clubInfo().name,
+        ...this.letterhead(meeting),
         Art: type.invitationLabel,
         Titel: meeting.title.toLowerCase() === type.label.toLowerCase() ? null : meeting.title,
         Wann: this.when(meeting),
@@ -619,9 +619,9 @@ export class MockMeetings {
     ]);
     const content = await fill(
       JSZip,
-      await this.template(viewer, TEMPLATE_NAME, () => defaultTemplate(JSZip)),
+      await files.settingTemplate(viewer, 'INVITATION_TEMPLATE', TEMPLATE_NAME, () => defaultTemplate(JSZip)),
       {
-        Verein: this.people.clubInfo().name,
+        ...this.letterhead(meeting),
         Art: type.invitationLabel,
         Titel: meeting.title.toLowerCase() === type.label.toLowerCase() ? null : meeting.title,
         Wann: this.when(meeting),
@@ -680,14 +680,25 @@ export class MockMeetings {
     );
   }
 
-  /** The club's template in "Vorlagen", put there with the built-in layout on first use. */
-  private async template(viewer: Member, name: string, builtIn: () => Promise<Blob>): Promise<Blob> {
-    const folder = this.topFolder(viewer, 'Vorlagen', 'BOARD');
-    const file =
-      files.listFiles(viewer, folder.id).find((f) => f.name.toLowerCase() === name.toLowerCase()) ??
-      (await this.upload(viewer, folder.id, new File([await builtIn()], name)));
-    // Mock blobs live only for the session; after a reload the built-in template stands in.
-    return files.blob(file.id) ?? builtIn();
+  /** server: AgendaDocument.Letterhead — club facts for letterheads and footers; `{{Sitzung}}` is always the title. */
+  private letterhead(meeting: StoredMeeting): Record<string, string | null> {
+    const club = this.people.clubInfo();
+    return {
+      Verein: club.name,
+      Adresse: club.address,
+      Webseite: club.website,
+      Kontakt: club.contactEmail,
+      Registernummer: club.registerNumber,
+      Sitzung: meeting.title,
+    };
+  }
+
+  /** server: InvitationDocuments.seedTemplates — both template slots get the built-in layout when empty. */
+  async seedTemplates(viewer: Member): Promise<void> {
+    this.people.requirePrivileged(viewer, ADMIN_BOARD);
+    const { default: JSZip } = await import('jszip');
+    await files.settingTemplate(viewer, 'INVITATION_TEMPLATE', TEMPLATE_NAME, () => defaultTemplate(JSZip));
+    await files.settingTemplate(viewer, 'PROTOCOL_TEMPLATE', PROTOCOL_TEMPLATE_NAME, () => protocolTemplate(JSZip));
   }
 
   /** The meeting's own folder below "Mitgliederversammlungen" or "Vorstandssitzungen", created on first use. */
@@ -1284,6 +1295,7 @@ const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer
   .on('GET', '/api/v1/meetings', (req) => meetings.list(actor(req), req.query.get('from'), req.query.get('to')))
+  .on('POST', '/api/v1/meetings/templates', (req) => meetings.seedTemplates(actor(req)))
   .on('GET', '/api/v1/meetings/resolution-rules', (req) => (actor(req), { circular: meetings.circular.data }))
   .on('PUT', '/api/v1/meetings/resolution-rules', (req) => meetings.saveRules(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/meetings/types', (req) => (actor(req), meetings.listTypes()))

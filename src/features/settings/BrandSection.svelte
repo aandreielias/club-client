@@ -1,18 +1,19 @@
 <script lang="ts">
-  import { CONFIRM, TOAST } from '../../channels';
+  import { CONFIRM } from '../../channels';
   import { bus, session } from '../../lib/container';
   import { Action } from '../../lib/state/Action.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
   import { contrast } from '../../lib/theme/contrast';
   import { BRAND_FONTS } from '../../lib/theme/fonts';
   import { ThemeService } from '../../lib/theme/ThemeService';
-  import type { Brand, BrandAssetKind, BrandAssets, BrandFont } from '../../lib/types';
+  import type { Brand, BrandFont } from '../../lib/types';
   import { settings } from '../../settings';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
   import SettingsForm from '../../ui/SettingsForm.svelte';
+  import SettingFilesSection from '../files/SettingFilesSection.svelte';
 
   /** The club's look for everyone (admin/board): colours, fonts, corners, app name, and the logo images. */
   type BrandForm = Omit<Brand, 'appName'> & { appName: string };
@@ -30,11 +31,11 @@
     { key: 'line', label: 'Linien', hint: 'Rahmen und Trennlinien' },
   ];
   const FONTS = (Object.entries(BRAND_FONTS) as [BrandFont, { label: string }][]).map(([value, font]) => ({ value, label: font.label }));
-  const ASSETS: readonly { kind: BrandAssetKind; key: keyof BrandAssets; label: string; hint: string }[] = [
-    { kind: 'logo', key: 'logo', label: 'Logo', hint: 'In der Seitenleiste' },
-    { kind: 'logo-secondary', key: 'logoSecondary', label: 'Zweitlogo', hint: 'Auf hellen Seiten wie der Anmeldung; sonst das Logo' },
-    { kind: 'favicon', key: 'favicon', label: 'Browsersymbol', hint: 'Im Browser-Tab; sonst das Logo' },
-  ];
+  const LOGOS = [
+    { slot: 'LOGO', label: 'Logo', hint: 'In der Seitenleiste' },
+    { slot: 'LOGO_SECONDARY', label: 'Zweitlogo', hint: 'Auf hellen Seiten wie der Anmeldung; sonst das Logo' },
+    { slot: 'FAVICON', label: 'Browsersymbol', hint: 'Im Browser-Tab; sonst das Logo' },
+  ] as const;
 
   const HEX = /^#[0-9A-Fa-f]{6}$/;
   // While a hex code is half typed, the preview and the warnings keep the saved colour.
@@ -101,21 +102,6 @@
     });
     if (confirmed && (await reset.run(() => session.resetBrand()))) draft.load(formOf(session.club!.brand));
   }
-
-  const upload = new Action();
-  let input = $state<HTMLInputElement>();
-  let picking: BrandAssetKind = 'logo';
-
-  function pick(kind: BrandAssetKind) {
-    picking = kind;
-    input?.click();
-  }
-
-  async function picked(event: Event & { currentTarget: HTMLInputElement }) {
-    const file = event.currentTarget.files?.[0];
-    event.currentTarget.value = '';
-    if (file && (await upload.run(() => session.uploadBrandAsset(picking, file)))) bus.publish(TOAST, { text: 'Bild gespeichert.' });
-  }
 </script>
 
 <div class="stack">
@@ -179,33 +165,12 @@
   <section class="panel stack" aria-label="Bilder">
     <header>
       <h2>Bilder</h2>
-      <p class="muted small">SVG oder PNG, höchstens 512 KB. SVGs dürfen nur Zeichnungen enthalten (keine Skripte oder Verweise nach außen).</p>
+      <p class="muted small">
+        Aus Dateien gewählt, liegt eine Kopie im geschützten Ordner „Einstellungen“; neue Versionen des Originals werden übernommen. PNG, JPEG oder
+        SVG (nur Zeichnungen, keine Skripte oder Verweise nach außen).
+      </p>
     </header>
-    <input bind:this={input} type="file" accept="image/svg+xml,image/png,.svg,.png" onchange={picked} hidden />
-    {#each ASSETS as asset (asset.kind)}
-      {@const url = session.club!.assets[asset.key]}
-      <div class="asset">
-        <span class="thumb"
-          >{#if url}<img src={url} alt="" />{/if}</span
-        >
-        <span class="stack-tight">
-          <strong>{asset.label}</strong>
-          <span class="muted small">{asset.hint}</span>
-        </span>
-        <span class="row">
-          <Button icon="upload" busy={upload.busy} onclick={() => pick(asset.kind)}>Hochladen</Button>
-          {#if url}
-            <Button
-              variant="danger"
-              icon="delete"
-              tooltip="{asset.label} entfernen"
-              onclick={() => upload.run(() => session.deleteBrandAsset(asset.kind))}
-            />
-          {/if}
-        </span>
-      </div>
-    {/each}
-    <ErrorNote error={upload.error} />
+    <SettingFilesSection slots={LOGOS} />
   </section>
 
   <div class="row">
@@ -288,27 +253,5 @@
     background: var(--color-accent);
     color: var(--color-on-accent);
     font-weight: var(--font-weight-medium);
-  }
-  .asset {
-    display: grid;
-    grid-template-columns: 48px 1fr auto;
-    align-items: center;
-    gap: var(--space-md);
-  }
-  .thumb {
-    display: grid;
-    place-items: center;
-    width: 48px;
-    height: 48px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-surface);
-  }
-  .thumb img {
-    max-width: 40px;
-    max-height: 40px;
-  }
-  .stack-tight {
-    display: grid;
   }
 </style>

@@ -29,10 +29,10 @@ export const FILE_MESSAGES: MessageCatalog = {
   'file.version-date-missing': 'Bitte ein Datum für die Version angeben.',
   'file.version-not-found': 'Die Version gibt es nicht mehr.',
   'file.version-type-mismatch': 'Die neue Version muss dasselbe Dateiformat haben.',
-  'file.versions-documents-only': 'Versionen gibt es nur für Dokumente, nicht für Fotos.',
   'folder.cover-invalid': 'Das Titelbild muss ein Foto aus diesem Ordner sein.',
   'folder.scope-inherited': 'Unterordner übernehmen die Sichtbarkeit ihres obersten Ordners.',
   'folder.move-into-self': 'Ein Ordner kann nicht in sich selbst verschoben werden.',
+  'setting-file.wrong-type': 'Logos: PNG, JPEG oder SVG; Vorlagen: Word-Vorlage (.dotx).',
   'file.quota-exceeded': 'Dein Speicherplatz für Uploads ist voll. Lösche alte Dateien oder frag den Vorstand.',
   'file-settings.invalid': 'Der Speicherplatz muss zwischen 0,1 und 100 GB liegen.',
 };

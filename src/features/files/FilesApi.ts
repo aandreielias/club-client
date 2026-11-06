@@ -1,6 +1,21 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
 import type { ProgressListener } from '../../lib/http/Transport';
-import type { DownloadLink, FileList, FilePatch, FileSettings, FileVersion, Folder, FolderList, FolderPatch, NewFolder, StoredFile } from './model';
+import type {
+  DownloadLink,
+  FileHits,
+  FileList,
+  FilePatch,
+  FileSettings,
+  FileVersion,
+  Folder,
+  FolderList,
+  FolderPatch,
+  NewFolder,
+  SettingFile,
+  SettingFileList,
+  SettingSlot,
+  StoredFile,
+} from './model';
 
 /** Typed access to the files endpoints of club-server. */
 export class FilesApi {
@@ -15,6 +30,32 @@ export class FilesApi {
 
   saveSettings(settings: FileSettings): Promise<FileSettings> {
     return this.api.put<FileSettings>(`${FilesApi.BASE}/files/settings`, settings);
+  }
+
+  /** Admin and board: the files the settings use (logos, templates). */
+  async settingFiles(): Promise<SettingFile[]> {
+    return (await this.api.get<SettingFileList>(`${FilesApi.BASE}/files/setting-files`)).items;
+  }
+
+  /** Copies a visible file into the slot; the copy follows its new versions. */
+  pickSettingFile(slot: SettingSlot, fileId: string): Promise<SettingFile> {
+    return this.api.put<SettingFile>(`${FilesApi.BASE}/files/setting-files/${slot}`, { fileId });
+  }
+
+  /** Own bytes for the slot; unlinks it from the file it followed. */
+  uploadSettingFile(slot: SettingSlot, file: File): Promise<SettingFile> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.api.upload<SettingFile>(`${FilesApi.BASE}/files/setting-files/${slot}`, form);
+  }
+
+  clearSettingFile(slot: SettingSlot): Promise<void> {
+    return this.api.delete(`${FilesApi.BASE}/files/setting-files/${slot}`);
+  }
+
+  /** Visible files whose name contains `query`. */
+  async search(query: string, limit: number): Promise<FileHits['files']> {
+    return (await this.api.get<FileHits>(`${FilesApi.BASE}/files`, { q: query.trim(), limit })).files;
   }
 
   /** Every folder the member may see (flat; build the tree from parentId). */

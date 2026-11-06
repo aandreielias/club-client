@@ -1,7 +1,7 @@
 import type { ApiClient } from '../http/ApiClient';
 import { Formatter } from '../time/Formatter';
 import { ZonedClock } from '../time/ZonedClock';
-import { type Brand, type BrandAssetKind, type Club, type ClubEdit, type Me, type Member, type Role, type Team } from '../types';
+import { type Brand, type Club, type ClubEdit, type Me, type Member, type Role, type Team } from '../types';
 
 export type ProfilePatch = Partial<Pick<Member, 'firstName' | 'lastName' | 'birthDate' | 'phone' | 'photoConsent'>>;
 
@@ -98,19 +98,9 @@ export class SessionStore {
     this.setClub(await this.api.put<Club>('/api/v1/club/brand', brand));
   }
 
-  /** Back to the server's default look; the images stay. */
+  /** Back to the server's default look; the logos (setting files) stay. */
   async resetBrand(): Promise<void> {
     this.setClub(await this.api.delete<Club>('/api/v1/club/brand'));
-  }
-
-  async uploadBrandAsset(kind: BrandAssetKind, file: File): Promise<void> {
-    const form = new FormData();
-    form.append('file', file);
-    this.setClub(await this.api.upload<Club>(`/api/v1/club/assets/${kind}`, form));
-  }
-
-  async deleteBrandAsset(kind: BrandAssetKind): Promise<void> {
-    this.setClub(await this.api.delete<Club>(`/api/v1/club/assets/${kind}`));
   }
 
   /** Everything the club keeps about the member (or a ward), as the server's JSON export. */

@@ -24,6 +24,7 @@ const folder = (id: string, parentId: string | null, name = id): Folder => ({
   coverFileId: null,
   canUpload: true,
   canManage: false,
+  system: false,
 });
 
 describe('FileTypes', () => {
@@ -33,7 +34,7 @@ describe('FileTypes', () => {
     expect(types.allows('DOCUMENTS', 'plan.pdf')).toBe(true);
     expect(types.allows('DOCUMENTS', 'macro.docm')).toBe(false);
     expect(types.label('application/pdf')).toBe('PDF');
-    expect(types.describe('PHOTOS')).toBe('JPG, PNG, HEIC');
+    expect(types.describe('PHOTOS')).toBe('JPG, PNG, HEIC, SVG');
   });
 });
 

@@ -54,7 +54,6 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Antwort speichern': { text: 'Antwort und Begründung für diesen Termin speichern' },
   Bearbeiten: { text: 'Angaben ändern' },
   'Darstellung zurücksetzen': { text: 'Farbschema, Schriftgröße und Dichte auf den Standard zurücksetzen' },
-  Hochladen: { text: 'Ein Bild vom Gerät hochladen (SVG oder PNG)' },
   'Dateien auswählen': { text: 'Dateien vom Gerät zum Hochladen auswählen' },
   Deaktivieren: { text: 'Mitglied deaktivieren; die Person kann sich danach nicht mehr anmelden' },
   Reaktivieren: { text: 'Mitglied wieder freischalten; die Person kann sich wieder anmelden' },

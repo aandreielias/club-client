@@ -9,11 +9,6 @@
   /** Documents and records of a meeting, and its invitation as a Word document from the template. */
   let { meeting, model }: { meeting: Meeting; model: MeetingModel } = $props();
 
-  /** server: AgendaDocument.PLACEHOLDERS */
-  const PLACEHOLDERS = ['Verein', 'Art', 'Titel', 'Wann', 'Ort', 'Video', 'Dringlichkeit', 'Tagesordnung', 'Versandt']
-    .map((name) => `{{${name}}}`)
-    .join(', ');
-
   async function invitation() {
     if (await model.generateInvitation()) bus.publish(TOAST, { text: 'Einladung im Sitzungsordner gespeichert und verknüpft.' });
   }
@@ -31,10 +26,7 @@
   {/snippet}
 </LinkList>
 {#if meeting.canManage}
-  <p class="muted small">
-    Das Layout kommt aus der Vorlage „Einladung Sitzung.dotx“ im Ordner „Vorlagen“; zum Ändern eine neue Version hochladen. Platzhalter: {PLACEHOLDERS}.
-    Absätze mit leerem Platzhalter entfallen, der Absatz mit {'{{Tagesordnung}}'} wiederholt sich pro Punkt.
-  </p>
+  <p class="muted small">Das Layout kommt aus der Einladungsvorlage unter Einstellungen › Vorlagen.</p>
 {:else if !meeting.links.length}
   <p class="muted">Nichts verknüpft.</p>
 {/if}

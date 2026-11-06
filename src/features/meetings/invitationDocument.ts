@@ -124,17 +124,28 @@ function fillParagraph(paragraph: string, values: Record<string, string | null>,
     .join('');
 }
 
+/** server: AgendaDocument.emptyRow — a table row whose placeholders (not the agenda) all have no value. */
+function emptyRow(row: string, values: Record<string, string | null>): boolean {
+  const text = [...row.matchAll(/<w:t(?: [^>]*)?>([\s\S]*?)<\/w:t>/g)].map((m) => unescape(m[1])).join('');
+  const names = [...text.matchAll(/\{\{\s*(\p{L}+)\s*\}\}/gu)].map((m) => m[1]);
+  return names.length > 0 && names.every((name) => name !== AGENDA && name in values && !values[name]?.trim());
+}
+
+/** server: AgendaDocument.fillPart — empty rows go, paragraphs are filled, a cell left without paragraphs gets an empty one (Word needs it). */
+function fillPart(xml: string, values: Record<string, string | null>, agenda: readonly string[]): string {
+  return xml
+    .replace(/<w:tr[ >][\s\S]*?<\/w:tr>/g, (row) => (emptyRow(row, values) ? '' : row))
+    .replace(/<w:p[ >][\s\S]*?<\/w:p>|<w:p\/>/g, (para) => fillParagraph(para, values, agenda))
+    .replace(/(<\/w:tcPr>|<w:tc>)\s*<\/w:tc>/g, '$1<w:p/></w:tc>');
+}
+
 /** server: AgendaDocument.fill — the template's parts with placeholders filled, saved as a document. */
 export async function fill(Zip: typeof JSZip, template: Blob, values: Record<string, string | null>, agenda: readonly string[]): Promise<Blob> {
   const zip = await Zip.loadAsync(template);
   for (const name of Object.keys(zip.files)) {
     if (name === '[Content_Types].xml') zip.file(name, (await zip.file(name)!.async('string')).replace(TEMPLATE_TYPE, DOCUMENT_TYPE));
     else if (/^word\/(document|header\d*|footer\d*)\.xml$/.test(name)) {
-      const xml = await zip.file(name)!.async('string');
-      zip.file(
-        name,
-        xml.replace(/<w:p[ >][\s\S]*?<\/w:p>|<w:p\/>/g, (para) => fillParagraph(para, values, agenda)),
-      );
+      zip.file(name, fillPart(await zip.file(name)!.async('string'), values, agenda));
     }
   }
   return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });

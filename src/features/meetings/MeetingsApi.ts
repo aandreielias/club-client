@@ -132,6 +132,11 @@ export class MeetingsApi {
     return this.api.post<Meeting>(`${this.path(id)}/cancel`);
   }
 
+  /** Fills empty template slots (Einstellungen › Vorlagen) with the built-in A4 layouts. */
+  seedTemplates(): Promise<void> {
+    return this.api.post<void>(`${MeetingsApi.BASE}/templates`);
+  }
+
   /** The invitation with agenda as a Word document in the meeting's folder (again: a new version); it is linked first. */
   generateInvitation(id: string): Promise<Meeting> {
     return this.api.post<Meeting>(`${this.path(id)}/invitation-document`);

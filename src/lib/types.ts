@@ -93,8 +93,6 @@ export interface BrandAssets {
   favicon: string | null;
 }
 
-export type BrandAssetKind = 'logo' | 'logo-secondary' | 'favicon';
-
 /** What admins and the board edit (server: PUT /club); empty values fall back to club.yml. */
 export type ClubEdit = Pick<Club, 'name' | 'shortName' | 'website' | 'contactEmail' | 'address' | 'registerNumber' | 'seasonStartMonth'>;
 

@@ -248,7 +248,7 @@ describe('invitation document', () => {
 
     const templates = files.listFolders(member('vorstand')).find((f) => f.name === 'Vorlagen')!;
     expect(templates.scope).toBe('BOARD');
-    expect(files.listFiles(member('vorstand'), templates.id).map((f) => f.name)).toEqual(['Einladung Sitzung.dotx']);
+    expect(files.listFiles(member('vorstand'), templates.id).map((f) => f.name)).toContain('Einladung Sitzung.dotx');
     const { default: JSZip } = await import('jszip');
     const xml = await (await JSZip.loadAsync(files.blob(first.links[0].id)!)).file('word/document.xml')!.async('string');
     expect(xml).toContain('w:w="11906" w:h="16838"'); // A4

@@ -10,9 +10,9 @@
   import type { StoredFile } from './model';
   import { fileLinks, filesApi } from './services';
 
-  /** Version history of a document; two picked versions open side by side in the split view. */
+  /** Version history of a file; for documents (`comparable`) two picked versions open side by side in the split view. */
   /** `onopencompare` closes the window and then opens the comparison (or opens it right away without a window). */
-  let { file, onopencompare }: { file: StoredFile; onopencompare: (open: () => void) => void } = $props();
+  let { file, comparable, onopencompare }: { file: StoredFile; comparable: boolean; onopencompare: (open: () => void) => void } = $props();
 
   // svelte-ignore state_referenced_locally
   const versions = new Resource(() => filesApi.versions(file.id));
@@ -52,17 +52,19 @@
 {#if (versions.value?.length ?? 0) > 1}
   <h2 class="heading">
     Versionen
-    <Button size="sm" variant="ghost" icon="split" disabled={picked.length !== 2} onclick={compare}>Vergleichen</Button>
+    {#if comparable}<Button size="sm" variant="ghost" icon="split" disabled={picked.length !== 2} onclick={compare}>Vergleichen</Button>{/if}
   </h2>
   <ul class="versions">
     {#each versions.value ?? [] as version (version.id)}
       <li>
-        <input
-          type="checkbox"
-          checked={picked.includes(version.id)}
-          onchange={() => toggle(version.id)}
-          aria-label="Version {version.label} zum Vergleichen wählen"
-        />
+        {#if comparable}
+          <input
+            type="checkbox"
+            checked={picked.includes(version.id)}
+            onchange={() => toggle(version.id)}
+            aria-label="Version {version.label} zum Vergleichen wählen"
+          />
+        {:else}<span></span>{/if}
         <span class="label">
           <Tag tone={version.current ? 'blue' : 'gray'}>{version.label}</Tag>
           {#if version.current}<span class="muted small">aktuell</span>{/if}

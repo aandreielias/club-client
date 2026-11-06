@@ -1,6 +1,7 @@
 // Mock of the club-server files module (FileHandlers): folder visibility and management, content
 // type detection, a fake virus scan (EICAR), photo consent for tags. File bytes live in memory only.
 import { activity, MockActivity } from '../../lib/mock/MockActivity';
+import { brandFiles, isSafeSvg } from '../../lib/mock/MockBrand';
 import { settings } from '../../settings';
 import { directory, type MockDirectory } from '../../lib/mock/core';
 import type { MockAudience } from '../../lib/mock/MockEventBus';
@@ -9,14 +10,39 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import type { FileRef } from '../../lib/links/model';
 import { ADMIN_BOARD, coaches, type Member } from '../../lib/types';
-import type { DownloadLink, FileSettings, FileVersion, Folder, FolderKind, FolderScope, StoredFile } from './model';
+import type { DownloadLink, FileSettings, FileVersion, Folder, FolderKind, FolderScope, SettingFile, SettingSlot, StoredFile } from './model';
+import logoBlack from '../../lib/mock/brand/sdg-logo-mono-black.svg?url';
+import logoWhite from '../../lib/mock/brand/sdg-logo-mono-white.svg?url';
+import logoWine from '../../lib/mock/brand/sdg-logo-mono-wine.svg?url';
+import logoPng from '../../lib/mock/brand/sdg-logo-512.png?url';
+import secondaryBlack from '../../lib/mock/brand/sdg-logo-secondary-mono-black.svg?url';
+import secondaryWhite from '../../lib/mock/brand/sdg-logo-secondary-mono-white.svg?url';
+import secondaryWine from '../../lib/mock/brand/sdg-logo-secondary-mono-wine.svg?url';
+import secondaryPng from '../../lib/mock/brand/sdg-logo-secondary-512.png?url';
+import secondarySvg from '../../lib/mock/brand/sdg-logo-secondary.svg?url';
+import logoSvg from '../../lib/mock/brand/sdg-logo.svg?url';
+import faviconSvg from '../../lib/mock/brand/favicon.svg?url';
+import letterTemplate from '../../lib/mock/brand/Briefvorlage.dotx?url';
+import invitationTemplate from '../../lib/mock/brand/Einladung Sitzung.dotx?url';
+import protocolTemplate from '../../lib/mock/brand/Protokoll Sitzung.dotx?url';
 
-type StoredFolder = Omit<Folder, 'canUpload' | 'canManage'>;
+/** `system`: the read-only folder "Einstellungen" (server: files_folder.system). */
+type StoredFolder = Omit<Folder, 'canUpload' | 'canManage' | 'system'> & { system?: boolean };
+
+/** server: files_setting_file — the slot's copy and the file in Dateien it follows. */
+interface SettingRow {
+  slot: SettingSlot;
+  fileId: string;
+  sourceId: string | null;
+}
 
 const fail = MockServer.fail;
 const limits = settings.files;
 const LINK_LIFETIME_MS = 5 * 60_000;
 const EICAR = 'EICAR-STANDARD-ANTIVIRUS-TEST-FILE';
+const SVG = 'image/svg+xml';
+const LOGO_SLOTS: readonly SettingSlot[] = ['LOGO', 'LOGO_SECONDARY', 'FAVICON'];
+const SLOTS: readonly SettingSlot[] = [...LOGO_SLOTS, 'INVITATION_TEMPLATE', 'PROTOCOL_TEMPLATE'];
 const OFFICE: Readonly<Record<string, string>> = {
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   dotx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
@@ -50,12 +76,35 @@ class Viewer {
   }
 
   canManage(f: StoredFolder): boolean {
-    // Coaches manage a team folder only when they coach every one of its teams.
-    return this.board || (f.scope === 'TEAM' && f.teamIds.every((t) => this.coachTeamIds.has(t)));
+    // Coaches manage a team folder only when they coach every one of its teams; the system folder nobody.
+    return !f.system && (this.board || (f.scope === 'TEAM' && f.teamIds.every((t) => this.coachTeamIds.has(t))));
   }
 }
 
 type StoredVersion = FileVersion;
+
+/** Seeded files with bundled content: id, folder, name, type, size, content URL. */
+const SEEDED_FILES: readonly (readonly [string, string, string, string, number, string])[] = [
+  ['file-logo', 'f-logos', 'sdg-logo.svg', SVG, 5512, logoSvg],
+  ['file-logo-secondary', 'f-logos', 'sdg-logo-secondary.svg', SVG, 5799, secondarySvg],
+  ['file-favicon', 'f-logos', 'favicon.svg', SVG, 4959, faviconSvg],
+  ['file-logo-black', 'f-logos', 'sdg-logo-mono-black.svg', SVG, 4911, logoBlack],
+  ['file-logo-white', 'f-logos', 'sdg-logo-mono-white.svg', SVG, 4911, logoWhite],
+  ['file-logo-wine', 'f-logos', 'sdg-logo-mono-wine.svg', SVG, 4911, logoWine],
+  ['file-logo-secondary-black', 'f-logos', 'sdg-logo-secondary-mono-black.svg', SVG, 5403, secondaryBlack],
+  ['file-logo-secondary-white', 'f-logos', 'sdg-logo-secondary-mono-white.svg', SVG, 5403, secondaryWhite],
+  ['file-logo-secondary-wine', 'f-logos', 'sdg-logo-secondary-mono-wine.svg', SVG, 5403, secondaryWine],
+  ['file-logo-png', 'f-logos', 'sdg-logo-512.png', 'image/png', 33_258, logoPng],
+  ['file-logo-secondary-png', 'f-logos', 'sdg-logo-secondary-512.png', 'image/png', 38_112, secondaryPng],
+  ['file-tpl-invitation', 'f-templates', 'Einladung Sitzung.dotx', OFFICE.dotx, 69_828, invitationTemplate],
+  ['file-tpl-protocol', 'f-templates', 'Protokoll Sitzung.dotx', OFFICE.dotx, 69_811, protocolTemplate],
+  ['file-tpl-letter', 'f-templates', 'Briefvorlage.dotx', OFFICE.dotx, 70_237, letterTemplate],
+  ['file-set-logo', 'f-settings', 'sdg-logo.svg', SVG, 5512, logoSvg],
+  ['file-set-logo-secondary', 'f-settings', 'sdg-logo-secondary.svg', SVG, 5799, secondarySvg],
+  ['file-set-favicon', 'f-settings', 'favicon.svg', SVG, 4959, faviconSvg],
+  ['file-set-invitation', 'f-settings', 'Einladung Sitzung.dotx', OFFICE.dotx, 69_828, invitationTemplate],
+  ['file-set-protocol', 'f-settings', 'Protokoll Sitzung.dotx', OFFICE.dotx, 69_811, protocolTemplate],
+];
 
 /** Text of the seeded Hallenordnung versions (Word content is built on demand). */
 const SAMPLE_VERSIONS: Readonly<Record<string, readonly string[]>> = {
@@ -81,6 +130,10 @@ export class MockFiles {
   readonly versions: MockTable<Record<string, StoredVersion[]>>;
   /** server: files_setting */
   readonly settings = new MockTable<FileSettings>('file-settings', () => ({ quotaMb: 2048 }));
+  /** server: files_setting_file */
+  readonly settingFiles = new MockTable<SettingRow[]>('setting-files', () => MockFiles.seedSettingFiles());
+  /** Seeded files with real content (bundled assets), by file id; copies take their original's. */
+  readonly #seeded = new Map<string, string>(SEEDED_FILES.map(([id, , , , , url]) => [id, url]));
   /** fileId → content; lost on reload, links then fall back to a placeholder. */
   readonly #blobs = new Map<string, Blob>();
   readonly #urls = new Map<string, string>();
@@ -96,6 +149,11 @@ export class MockFiles {
       for (const file of this.files.data) file.taggedMemberIds = file.taggedMemberIds.filter((id) => id !== memberId);
       this.files.save();
     });
+    brandFiles.url = (slot) => {
+      const row = this.settingFiles.data.find((r) => r.slot === slot);
+      const file = row && this.files.data.find((f) => f.id === row.fileId);
+      return file ? this.objectUrl(file) : null;
+    };
   }
 
   listFolders(member: Member): Folder[] {
@@ -321,7 +379,8 @@ export class MockFiles {
     const tags = req.query.getAll('tag');
     this.requireTaggable(detected.image, tags);
 
-    const size = detected.image && !detected.heic ? await MockFiles.imageSize(file) : null;
+    const raster = detected.image && detected.contentType !== SVG;
+    const size = raster && !detected.heic ? await MockFiles.imageSize(file) : null;
     const stored: StoredFile = {
       id: crypto.randomUUID(),
       folderId: folder.id,
@@ -330,8 +389,8 @@ export class MockFiles {
       sizeBytes: file.size,
       width: size?.width ?? null,
       height: size?.height ?? null,
-      // The real server renders thumbnails for every image (HEIC after conversion); the mock cannot convert HEIC.
-      hasThumbnail: detected.image && !detected.heic,
+      // The real server renders thumbnails for raster images (HEIC after conversion); the mock cannot convert HEIC.
+      hasThumbnail: raster && !detected.heic,
       uploadedBy: viewer.member.id,
       taggedMemberIds: tags,
       createdAt: new Date().toISOString(),
@@ -353,7 +412,6 @@ export class MockFiles {
     this.requireModify(viewer, folder, file);
     const incoming = req.body instanceof FormData ? req.body.get('file') : null;
     if (!viewer.canManage(folder) && incoming instanceof Blob) this.requireQuota(viewer.member, incoming.size);
-    if (folder.kind !== 'DOCUMENTS' || file.contentType.startsWith('image/')) fail(400, 'file.versions-documents-only');
     const body = req.body instanceof FormData ? req.body : null;
     const upload = body?.get('file');
     const label = String(body?.get('label') ?? '').trim();
@@ -363,8 +421,8 @@ export class MockFiles {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) fail(400, 'file.version-date-missing');
     await MockFiles.simulateTransfer(upload.size, req.onProgress);
     const bytes = new Uint8Array(await upload.arrayBuffer());
-    if (MockFiles.detect(bytes, upload instanceof File ? upload.name : file.name)?.contentType !== file.contentType)
-      fail(400, 'file.version-type-mismatch');
+    const detected = MockFiles.detect(bytes, upload instanceof File ? upload.name : file.name);
+    if (detected?.contentType !== file.contentType) fail(400, 'file.version-type-mismatch');
     if (new TextDecoder().decode(bytes.subarray(0, 512)).includes(EICAR)) fail(400, 'file.infected');
     const list = (this.versions.data[file.id] ??= []);
     if (list.some((v) => v.label.toLowerCase() === label.toLowerCase()) || (!list.length && label === '1.0')) fail(409, 'file.version-exists');
@@ -400,11 +458,14 @@ export class MockFiles {
     this.#blobs.set(added.id, blob);
     this.#blobs.set(file.id, blob);
     this.#urls.delete(file.id);
-    Object.assign(file, { sizeBytes: upload.size, version: label });
+    // server: an image version is re-encoded and gets a new thumbnail
+    const size = detected!.image && !detected!.heic && detected!.contentType !== SVG ? await MockFiles.imageSize(upload) : null;
+    Object.assign(file, { sizeBytes: upload.size, version: label, ...(size ?? {}) });
     this.files.save();
     this.versions.save();
     this.changed(folder, file.id, 'UPDATED');
     MockActivity.record('FILE', file.id, viewer.member, 'UPDATED', { title: file.name, teamIds: folder.teamIds, parentId: folder.id });
+    this.follow(viewer.member, file);
     return file;
   }
 
@@ -461,8 +522,173 @@ export class MockFiles {
     this.files.data.splice(this.files.data.indexOf(file), 1);
     this.files.save();
     this.#blobs.delete(file.id);
+    for (const row of this.settingFiles.data) if (row.sourceId === file.id) row.sourceId = null;
+    this.settingFiles.save();
     this.changed(folder, file.id, 'DELETED');
     MockActivity.record('FILE', file.id, viewer.member, 'DELETED', { title: file.name, teamIds: folder.teamIds, parentId: folder.id });
+  }
+
+  // --- setting files (server: SettingFileHandlers) ---
+
+  listSettingFiles(member: Member): { items: SettingFile[] } {
+    directory.requireRole(member, ADMIN_BOARD);
+    return { items: this.settingFiles.data.map((row) => this.settingDto(row)) };
+  }
+
+  /** A visible file copied into the slot; the copy follows the file's new versions. */
+  pickSettingFile(member: Member, slot: string, fileId: unknown): SettingFile {
+    directory.requirePrivileged(member, ADMIN_BOARD);
+    const key = MockFiles.slot(slot);
+    const source = this.visibleFile(this.viewer(member), String(fileId));
+    MockFiles.requireFits(key, source.contentType);
+    this.install(member, key, source, this.contentOf(source), source.id);
+    return this.settingDto(this.settingRow(key)!);
+  }
+
+  /** Own bytes for the slot: unlinks the copy, the file it followed stays as it is. */
+  async uploadSettingFile(req: MockRequest): Promise<SettingFile> {
+    const member = directory.actor(req);
+    directory.requirePrivileged(member, ADMIN_BOARD);
+    const key = MockFiles.slot(req.params.slot);
+    const upload = req.body instanceof FormData ? req.body.get('file') : null;
+    if (!(upload instanceof Blob)) return fail(400, 'request.invalid');
+    if (upload.size > limits.maxUploadBytes) fail(413, 'request.too-large');
+    const bytes = new Uint8Array(await upload.arrayBuffer());
+    const name = upload instanceof File ? upload.name : 'datei';
+    const detected = MockFiles.detect(bytes, name);
+    MockFiles.requireFits(key, detected?.contentType ?? null);
+    if (new TextDecoder().decode(bytes.subarray(0, 512)).includes(EICAR)) fail(400, 'file.infected');
+    const raster = detected!.image && detected!.contentType !== SVG;
+    const size = raster && !detected!.heic ? await MockFiles.imageSize(upload) : null;
+    const content = {
+      name: name.replace(/[^\p{L}\p{N} ._()-]/gu, '_'),
+      contentType: detected!.contentType,
+      sizeBytes: upload.size,
+      width: size?.width ?? null,
+      height: size?.height ?? null,
+      hasThumbnail: raster && !detected!.heic,
+    };
+    this.install(member, key, content, { blob: new Blob([bytes], { type: content.contentType }) }, null);
+    return this.settingDto(this.settingRow(key)!);
+  }
+
+  clearSettingFile(member: Member, slot: string): void {
+    directory.requirePrivileged(member, ADMIN_BOARD);
+    const key = MockFiles.slot(slot);
+    const row = this.settingRow(key);
+    if (!row) return;
+    const copy = this.files.data.find((f) => f.id === row.fileId)!;
+    this.settingFiles.data.splice(this.settingFiles.data.indexOf(row), 1);
+    this.files.data.splice(this.files.data.indexOf(copy), 1);
+    this.settingFiles.save();
+    this.files.save();
+    this.changed(this.folder(copy.folderId), copy.id, 'DELETED');
+    if (LOGO_SLOTS.includes(key)) directory.clubChanged();
+  }
+
+  /**
+   * server: InvitationDocuments.template — the slot's template, filled with the built-in one on first use (SEED_SETTING_FILE).
+   * Mock bytes of uploads live only for the session; then the built-in template stands in.
+   */
+  async settingTemplate(member: Member, slot: SettingSlot, name: string, builtIn: () => Promise<Blob>): Promise<Blob> {
+    const row = this.settingRow(slot);
+    const copy = row && this.files.data.find((f) => f.id === row.fileId);
+    if (copy) {
+      const { blob, seeded } = this.contentOf(copy);
+      if (blob) return blob;
+      if (seeded) return fetch(seeded).then((r) => (r.ok ? r.blob() : builtIn()), builtIn);
+      return builtIn();
+    }
+    const blob = await builtIn();
+    const content = { name, contentType: OFFICE.dotx, sizeBytes: blob.size, width: null, height: null, hasThumbnail: false };
+    this.install(member, slot, content, { blob }, null);
+    return blob;
+  }
+
+  /** server: SettingFileHandlers.follow — copies of `original` take its new content. */
+  private follow(member: Member, original: StoredFile): void {
+    for (const row of this.settingFiles.data.filter((r) => r.sourceId === original.id)) {
+      this.install(member, row.slot, original, this.contentOf(original), original.id);
+    }
+  }
+
+  /** server: SettingFileHandlers.install — the slot's copy in the system folder, created on first use. */
+  private install(
+    member: Member,
+    slot: SettingSlot,
+    content: Pick<StoredFile, 'name' | 'contentType' | 'sizeBytes' | 'width' | 'height' | 'hasThumbnail'>,
+    from: { blob?: Blob; seeded?: string },
+    sourceId: string | null,
+  ): void {
+    const { name, contentType, sizeBytes, width, height, hasThumbnail } = content;
+    const row = this.settingRow(slot);
+    const folder = this.systemFolder();
+    let copy = row && this.files.data.find((f) => f.id === row.fileId);
+    if (copy) Object.assign(copy, { name, contentType, sizeBytes, width, height, hasThumbnail });
+    else {
+      const id = crypto.randomUUID();
+      const createdAt = new Date().toISOString();
+      copy = {
+        id,
+        folderId: folder.id,
+        name,
+        contentType,
+        sizeBytes,
+        width,
+        height,
+        hasThumbnail,
+        uploadedBy: member.id,
+        taggedMemberIds: [],
+        createdAt,
+        version: null,
+      };
+      this.files.data.push(copy);
+    }
+    for (const store of [this.#blobs, this.#seeded, this.#urls]) store.delete(copy.id);
+    if (from.blob) this.#blobs.set(copy.id, from.blob);
+    if (from.seeded) this.#seeded.set(copy.id, from.seeded);
+    const rows = this.settingFiles.data;
+    const at = rows.findIndex((r) => r.slot === slot);
+    if (at >= 0) rows.splice(at, 1);
+    rows.push({ slot, fileId: copy.id, sourceId });
+    this.files.save();
+    this.settingFiles.save();
+    this.changed(folder, copy.id, row ? 'UPDATED' : 'UPLOADED');
+    if (LOGO_SLOTS.includes(slot)) directory.clubChanged();
+  }
+
+  private contentOf(file: StoredFile): { blob?: Blob; seeded?: string } {
+    return { blob: this.#blobs.get(file.id), seeded: this.#seeded.get(file.id) };
+  }
+
+  private settingRow(slot: SettingSlot): SettingRow | undefined {
+    return this.settingFiles.data.find((r) => r.slot === slot);
+  }
+
+  private settingDto(row: SettingRow): SettingFile {
+    const file = this.files.data.find((f) => f.id === row.fileId)!;
+    const source = row.sourceId ? this.files.data.find((f) => f.id === row.sourceId) : undefined;
+    return { slot: row.slot, file, sourceId: row.sourceId, sourceName: source?.name ?? null };
+  }
+
+  private systemFolder(): StoredFolder {
+    let folder = this.folders.data.find((f) => f.system);
+    if (!folder) {
+      folder = { ...MockFiles.seedFolders().find((f) => f.system)!, id: crypto.randomUUID() };
+      this.folders.data.push(folder);
+      this.folders.save();
+    }
+    return folder;
+  }
+
+  private static slot(slot: string): SettingSlot {
+    return SLOTS.includes(slot as SettingSlot) ? (slot as SettingSlot) : fail(400, 'request.invalid');
+  }
+
+  /** server: SettingFileHandlers.requireFits — logos: PNG, JPEG or SVG; templates: Word templates. */
+  private static requireFits(slot: SettingSlot, contentType: string | null): void {
+    const fits = LOGO_SLOTS.includes(slot) ? ['image/png', 'image/jpeg', SVG].includes(contentType ?? '') : contentType === OFFICE.dotx;
+    if (!fits) fail(400, 'setting-file.wrong-type');
   }
 
   /** server: FileHandlers.fileRefs. Deleted files keep their last name for viewers of their last folder. */
@@ -523,7 +749,7 @@ export class MockFiles {
 
   /** Delete and tag: the uploader, or a folder manager. */
   private requireModify(viewer: Viewer, folder: StoredFolder, file: StoredFile): void {
-    if (!viewer.canManage(folder) && file.uploadedBy !== viewer.member.id) fail(403, 'access.denied');
+    if (!viewer.canManage(folder) && (folder.system || file.uploadedBy !== viewer.member.id)) fail(403, 'access.denied');
   }
 
   private requireTaggable(image: boolean, tags: readonly string[]): void {
@@ -563,6 +789,7 @@ export class MockFiles {
       ...f,
       canManage: manage,
       canUpload: manage || (f.membersCanUpload && viewer.canSee(f)),
+      system: !!f.system,
     };
   }
 
@@ -587,7 +814,8 @@ export class MockFiles {
   private objectUrl(file: StoredFile): string {
     let url = this.#urls.get(file.id);
     if (!url) {
-      url = URL.createObjectURL(this.#blobs.get(file.id) ?? MockFiles.placeholder(file));
+      const blob = this.#blobs.get(file.id);
+      url = blob || !this.#seeded.has(file.id) ? URL.createObjectURL(blob ?? MockFiles.placeholder(file)) : this.#seeded.get(file.id)!;
       this.#urls.set(file.id, url);
     }
     return url;
@@ -747,6 +975,7 @@ export class MockFiles {
     const brand = new TextDecoder().decode(bytes.subarray(4, 12));
     if (/^ftyp(heic|heix|mif1|msf1)/.test(brand)) return { contentType: 'image/jpeg', image: true, heic: true };
     if (starts(0x25, 0x50, 0x44, 0x46, 0x2d)) return { contentType: 'application/pdf', image: false, heic: false };
+    if (isSafeSvg(new TextDecoder().decode(bytes))) return { contentType: SVG, image: true, heic: false };
     const extension = name.toLowerCase().split('.').pop() ?? '';
     if (starts(0x50, 0x4b, 0x03, 0x04) && OFFICE[extension]) return { contentType: OFFICE[extension], image: false, heic: false };
     return null;
@@ -790,6 +1019,9 @@ export class MockFiles {
       folder('f-damen', 'Damen 1', 'DOCUMENTS', 'TEAM', 't-damen', true, null, { color: 'GREEN', coverFileId: null }),
       folder('f-u16', 'U16 Fotos', 'PHOTOS', 'TEAM', 't-u16', true),
       folder('f-board', 'Vorstand intern', 'DOCUMENTS', 'BOARD', null, false),
+      folder('f-logos', 'Logos', 'DOCUMENTS', 'CLUB', null, false),
+      folder('f-templates', 'Vorlagen', 'DOCUMENTS', 'BOARD', null, false),
+      { ...folder('f-settings', 'Einstellungen', 'DOCUMENTS', 'BOARD', null, false), system: true },
     ];
   }
 
@@ -829,6 +1061,22 @@ export class MockFiles {
       file('file-8', 'f-board', 'Budget 2027.xlsx', OFFICE.xlsx, 31_000, 'admin', 3),
       file('file-9', 'f-docs', 'Saisonplanung 2026-27.pptx', OFFICE.pptx, 88_000, 'vorstand', 6),
       { ...file('file-10', 'f-docs', 'Hallenordnung.docx', OFFICE.docx, 12_000, 'vorstand', 60), version: '1.1' },
+      // The SDG logos and templates (src/lib/mock/brand), and the copies the settings use.
+      ...SEEDED_FILES.map(([id, folderId, name, contentType, sizeBytes]) => {
+        const png = contentType === 'image/png';
+        return { ...file(id, folderId, name, contentType, sizeBytes, 'admin', 30, png ? { width: 512, height: 512 } : undefined) };
+      }),
+    ];
+  }
+
+  /** The SDG brand in the settings: copies that follow their originals in Logos and Vorlagen. */
+  private static seedSettingFiles(): SettingRow[] {
+    return [
+      { slot: 'LOGO', fileId: 'file-set-logo', sourceId: 'file-logo' },
+      { slot: 'LOGO_SECONDARY', fileId: 'file-set-logo-secondary', sourceId: 'file-logo-secondary' },
+      { slot: 'FAVICON', fileId: 'file-set-favicon', sourceId: 'file-favicon' },
+      { slot: 'INVITATION_TEMPLATE', fileId: 'file-set-invitation', sourceId: 'file-tpl-invitation' },
+      { slot: 'PROTOCOL_TEMPLATE', fileId: 'file-set-protocol', sourceId: 'file-tpl-protocol' },
     ];
   }
 
@@ -862,6 +1110,10 @@ mockServer
     const [ref] = files.refs(actor(req), [{ fileId: req.params.id, folderId: null, name: null }]);
     return ref && !ref.deleted ? activity.list(actor(req), 'FILE', ref.id) : MockServer.fail(404, 'file.not-found');
   })
+  .on('GET', '/api/v1/files/setting-files', (req) => files.listSettingFiles(actor(req)))
+  .on('PUT', '/api/v1/files/setting-files/:slot', (req) => files.pickSettingFile(actor(req), req.params.slot, req.body?.fileId))
+  .on('POST', '/api/v1/files/setting-files/:slot', (req) => files.uploadSettingFile(req))
+  .on('DELETE', '/api/v1/files/setting-files/:slot', (req) => files.clearSettingFile(actor(req), req.params.slot))
   .on('GET', '/api/v1/folders', (req) => ({ items: files.listFolders(actor(req)) }))
   .on('POST', '/api/v1/folders', (req) => files.createFolder(actor(req), req.body ?? {}))
   .on('PATCH', '/api/v1/folders/:id', (req) => files.updateFolder(actor(req), req.params.id, req.body ?? {}))

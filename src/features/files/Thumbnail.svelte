@@ -9,11 +9,12 @@
   let failed = $state(false);
 
   $effect(() => {
-    const wanted = full || file.hasThumbnail;
-    if (!wanted) return;
+    // SVGs have no thumbnail: the drawing itself is small.
+    const thumbnail = !full && file.hasThumbnail;
+    if (!thumbnail && !full && file.contentType !== 'image/svg+xml') return;
     let cancelled = false;
     fileLinks
-      .url(file.id, !full)
+      .url(file.id, thumbnail)
       .then((url) => !cancelled && (src = url))
       .catch(() => !cancelled && (failed = true));
     return () => (cancelled = true);
@@ -30,7 +31,9 @@
     onerror={() => (failed = true)}
   />
 {:else}
-  <span class="placeholder muted">{failed || !(full || file.hasThumbnail) ? fileTypes.label(file.contentType) : 'Laden …'}</span>
+  <span class="placeholder muted"
+    >{failed || !(full || file.hasThumbnail || file.contentType === 'image/svg+xml') ? fileTypes.label(file.contentType) : 'Laden …'}</span
+  >
 {/if}
 
 <style>

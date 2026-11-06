@@ -14,6 +14,7 @@ const folder = (overrides: Partial<Folder> = {}): Folder => ({
   coverFileId: 'p1',
   canUpload: true,
   canManage: true,
+  system: false,
   ...overrides,
 });
 

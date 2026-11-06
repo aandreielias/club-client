@@ -32,7 +32,9 @@ export class FilePolicy {
     return folder.canManage && depth < maxDepth;
   }
 
+  /** Never in the read-only system folder "Einstellungen" (its copies change only through the settings). */
   canModify(file: StoredFile, folder: Folder): boolean {
+    if (folder.system) return false;
     return folder.canManage || file.uploadedBy === this.session.member.id;
   }
 

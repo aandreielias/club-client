@@ -9,6 +9,7 @@ interface FileTypeInfo {
 const TYPES: Readonly<Record<string, FileTypeInfo>> = {
   'image/jpeg': { label: 'JPEG', image: true },
   'image/png': { label: 'PNG', image: true },
+  'image/svg+xml': { label: 'SVG', image: true },
   'application/pdf': { label: 'PDF', image: false },
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { label: 'Word', image: false },
   'application/vnd.openxmlformats-officedocument.wordprocessingml.template': { label: 'Word-Vorlage', image: false },

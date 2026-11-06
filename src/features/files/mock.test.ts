@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { directory } from '../../lib/mock/core';
 import type { MockRequest } from '../../lib/mock/MockServer';
 import type { Member } from '../../lib/types';
+import { isSafeSvg } from '../../lib/mock/MockBrand';
 import { files, MockFiles } from './mock';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
@@ -23,8 +24,8 @@ const PDF = '%PDF-1.7\n';
 
 describe('mock files', () => {
   it('shows folders by scope', () => {
-    expect(visible('spieler')).toEqual(['f-docs', 'f-minutes', 'f-photos', 'f-u16']);
-    expect(visible('vorstand')).toEqual(['f-board', 'f-damen', 'f-docs', 'f-minutes', 'f-photos', 'f-u16']);
+    expect(visible('spieler')).toEqual(['f-docs', 'f-logos', 'f-minutes', 'f-photos', 'f-u16']);
+    expect(visible('vorstand')).toEqual(['f-board', 'f-damen', 'f-docs', 'f-logos', 'f-minutes', 'f-photos', 'f-settings', 'f-templates', 'f-u16']);
     const damen = files.listFolders(member('trainer')).find((f) => f.id === 'f-damen')!;
     expect(damen).toMatchObject({ canManage: true, canUpload: true });
     expect(files.listFolders(member('spielerin')).find((f) => f.id === 'f-docs')).toMatchObject({ canManage: false, canUpload: false });
@@ -101,5 +102,55 @@ describe('mock sample documents', () => {
     offsets.forEach((offset, i) => expect(text.slice(offset).startsWith(`${i + 1} 0 obj`)).toBe(true));
     expect(Number(/startxref\n(\d+)/.exec(text)![1])).toBe(text.indexOf('xref\n'));
     expect(text).toContain('(Satzung \\(2026\\).pdf)');
+  });
+});
+
+describe('mock setting files (server: SettingFileHandlers)', () => {
+  const svg = (fill: string) => `<svg xmlns="http://www.w3.org/2000/svg"><rect fill="${fill}" width="1" height="1"/></svg>`;
+  const slotRequest = (slot: string, content: BlobPart, name: string): MockRequest => {
+    const form = new FormData();
+    form.append('file', new File([content], name));
+    return { params: { slot }, query: new URLSearchParams(), body: form, email: 'vorstand@example.at' };
+  };
+  const logo = () => files.listSettingFiles(member('vorstand')).items.find((s) => s.slot === 'LOGO')!;
+
+  it('copies a picked file into the read-only system folder and follows its new versions', async () => {
+    const picked = files.pickSettingFile(member('vorstand'), 'LOGO', 'file-logo-black');
+    expect(picked).toMatchObject({ sourceId: 'file-logo-black', file: { folderId: 'f-settings', name: 'sdg-logo-mono-black.svg' } });
+    expect(() => files.pickSettingFile(member('vorstand'), 'LOGO', 'file-tpl-letter')).toThrow(
+      expect.objectContaining({ code: 'setting-file.wrong-type' }),
+    );
+    expect(() => files.pickSettingFile(member('spieler'), 'LOGO', 'file-logo-black')).toThrow();
+
+    const content = svg('#123456');
+    const form = new FormData();
+    form.append('file', new File([content], 'neu.svg'));
+    form.append('label', '2.0');
+    form.append('date', '2026-11-01');
+    await files.uploadVersion({ params: { id: 'file-logo-black' }, query: new URLSearchParams(), body: form, email: 'vorstand@example.at' });
+    expect(logo().file.sizeBytes).toBe(content.length);
+
+    const settings = files.listFolders(member('vorstand')).find((f) => f.id === 'f-settings')!;
+    expect(settings).toMatchObject({ system: true, canManage: false, canUpload: false });
+    expect(visible('spieler')).not.toContain('f-settings');
+    expect(() => files.deleteFile(member('admin'), logo().file.id)).toThrow();
+  });
+
+  it('unlinks on an own upload, refuses unsafe SVGs and empties a slot', async () => {
+    files.pickSettingFile(member('vorstand'), 'LOGO', 'file-logo-wine');
+    const own = await files.uploadSettingFile(slotRequest('LOGO', svg('#000000'), 'eigen.svg'));
+    expect(own).toMatchObject({ sourceId: null, file: { name: 'eigen.svg' } });
+    expect(files.listFiles(member('vorstand'), 'f-logos').map((f) => f.id)).toContain('file-logo-wine');
+    await expect(files.uploadSettingFile(slotRequest('LOGO', '<svg onload="alert(1)"></svg>', 'x.svg'))).rejects.toMatchObject({
+      code: 'setting-file.wrong-type',
+    });
+    files.clearSettingFile(member('vorstand'), 'FAVICON');
+    expect(files.listSettingFiles(member('vorstand')).items.map((s) => s.slot)).not.toContain('FAVICON');
+  });
+
+  it('seeds only safe SVGs', () => {
+    const svgs = import.meta.glob<string>('../../lib/mock/brand/*.svg', { query: '?raw', import: 'default', eager: true });
+    expect(Object.keys(svgs).length).toBeGreaterThan(5);
+    for (const [name, text] of Object.entries(svgs)) expect([name, isSafeSvg(text)]).toEqual([name, true]);
   });
 });

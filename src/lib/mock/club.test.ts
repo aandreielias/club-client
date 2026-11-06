@@ -24,35 +24,20 @@ describe('mock club facts', () => {
 });
 
 describe('mock club brand', () => {
-  it('starts with the SDG brand and logos, validates like the server and resets to the defaults', async () => {
+  it('starts with the SDG brand, validates like the server and resets to the defaults', () => {
     expect(directory.clubInfo().brand).toEqual(SDG_BRAND);
-    expect(directory.clubInfo().assets.logo).toBeTruthy();
 
-    await expect(directory.changeBrand(member('spieler'), (b) => b.reset())).rejects.toThrow();
+    expect(() => directory.changeBrand(member('spieler'), (b) => b.reset())).toThrow();
     for (const bad of [{ primary: 'red' }, { radiusSmall: 13 }, { headingFont: 'COMIC' }, { appName: 'x'.repeat(31) }, { mailSignOff: 'a\nb' }]) {
-      await expect(directory.changeBrand(member('vorstand'), (b) => b.save({ ...SDG_BRAND, ...bad }))).rejects.toThrow();
+      expect(() => directory.changeBrand(member('vorstand'), (b) => b.save({ ...SDG_BRAND, ...bad }))).toThrow();
     }
-    const saved = await directory.changeBrand(member('vorstand'), (b) =>
+    const saved = directory.changeBrand(member('vorstand'), (b) =>
       b.save({ ...SDG_BRAND, primary: '#aa0000', mailFooter: 'Zeile 1\nZeile 2', appName: ' ' }),
     );
     expect(saved.brand).toMatchObject({ primary: '#AA0000', mailFooter: 'Zeile 1\nZeile 2', appName: null });
 
-    expect((await directory.changeBrand(member('admin'), (b) => b.reset())).brand).toEqual(DEFAULT_BRAND);
-    await directory.changeBrand(member('admin'), (b) => b.save({ ...SDG_BRAND }));
-  });
-
-  it('takes PNG and plain SVG images only', async () => {
-    const vorstand = member('vorstand');
-    const upload = (kind: string, content: BlobPart) => directory.changeBrand(vorstand, (b) => b.saveAsset(kind, new Blob([content])));
-    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]);
-
-    expect((await upload('favicon', png)).assets.favicon).toMatch(/^data:image\/png;base64,/);
-    expect((await upload('logo', '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>')).assets.logo).toMatch(/^data:image\/svg\+xml;/);
-    await expect(upload('logo', '<svg onload="alert(1)"></svg>')).rejects.toThrow();
-    await expect(upload('logo', 'GIF89a')).rejects.toThrow();
-    await expect(upload('logo', new Uint8Array(512 * 1024 + 1))).rejects.toThrow();
-    await expect(upload('banner', png)).rejects.toThrow();
-    expect((await directory.changeBrand(vorstand, (b) => b.deleteAsset('favicon'))).assets.favicon).toBeNull();
+    expect(directory.changeBrand(member('admin'), (b) => b.reset()).brand).toEqual(DEFAULT_BRAND);
+    directory.changeBrand(member('admin'), (b) => b.save({ ...SDG_BRAND }));
   });
 });
 

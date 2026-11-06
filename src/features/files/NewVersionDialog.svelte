@@ -11,7 +11,7 @@
   import { filesApi } from './services';
   import { nextVersion } from './VersionLabel';
 
-  /** Uploads a new version of a document: the file (same type), a version number and the date it stands for. */
+  /** Uploads a new version of a file: the file (same type), a version number and the date it stands for. */
   let { file, onclose, onsaved }: { file: StoredFile; onclose: () => void; onsaved: (saved: StoredFile) => void } = $props();
 
   // svelte-ignore state_referenced_locally

@@ -480,7 +480,7 @@ export const settings = {
     /** Download links live 5 minutes on the server; reuse them until this long before expiry. */
     linkReuseMarginMs: 30_000,
     /** File pickers offer these; the server checks the real type by content. */
-    imageExtensions: ['.jpg', '.jpeg', '.png', '.heic', '.heif'],
+    imageExtensions: ['.jpg', '.jpeg', '.png', '.heic', '.heif', '.svg'],
     documentExtensions: ['.pdf', '.docx', '.dotx', '.xlsx', '.pptx'],
     /** Simulated upload duration per MB in mock mode. */
     mockUploadMsPerMb: 400,

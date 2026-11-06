@@ -26,6 +26,8 @@ export interface Folder {
   /** Computed by the server for the signed-in member. */
   canUpload: boolean;
   canManage: boolean;
+  /** The read-only folder "Einstellungen" with the copies the settings use. */
+  system: boolean;
 }
 
 export interface FolderList {
@@ -97,6 +99,11 @@ export interface FileList {
   items: StoredFile[];
 }
 
+/** server: FilesApi.FileHits — the name search for pickers. */
+export interface FileHits {
+  files: { id: string; folderId: string; folderName: string; name: string; contentType: string; sizeBytes: number }[];
+}
+
 /** Presigned link, valid for about 5 minutes; use it right away, never store it. */
 export interface DownloadLink {
   url: string;
@@ -137,4 +144,19 @@ export const colorHue = (color: FolderColor | null): Hue | null => FOLDER_COLORS
 /** server: FilesApi.FileSettings — what one member who manages no folder may upload in total. */
 export interface FileSettings {
   quotaMb: number;
+}
+
+/** What the club settings use a file for (server: FilesApi.SettingSlot). */
+export type SettingSlot = 'LOGO' | 'LOGO_SECONDARY' | 'FAVICON' | 'INVITATION_TEMPLATE' | 'PROTOCOL_TEMPLATE';
+
+/** server: FilesApi.SettingFileDto — the slot's copy in "Einstellungen"; `sourceId` while it follows a file in Dateien. */
+export interface SettingFile {
+  slot: SettingSlot;
+  file: StoredFile;
+  sourceId: string | null;
+  sourceName: string | null;
+}
+
+export interface SettingFileList {
+  items: SettingFile[];
 }

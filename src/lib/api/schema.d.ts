@@ -517,6 +517,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/files/setting-files/{slot}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["pickSettingFile"];
+        post: operations["uploadSettingFile"];
+        delete: operations["clearSettingFile"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/club": {
         parameters: {
             query?: never;
@@ -1285,6 +1301,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/meetings/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["seedTemplates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/push-tokens/remove": {
         parameters: {
             query?: never;
@@ -1504,22 +1536,6 @@ export interface paths {
         put?: never;
         post: operations["uploadVersion"];
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/club/assets/{kind}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["asset"];
-        put?: never;
-        post: operations["uploadAsset"];
-        delete: operations["deleteAsset"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2333,6 +2349,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/files/setting-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["settingFiles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/assets/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["asset"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3218,6 +3266,18 @@ export interface components {
             /** Format: int32 */
             quotaMb: number;
         };
+        "at.clubserver.gateway.rest.FilesController.PickBody": {
+            /** Format: uuid */
+            fileId: string;
+        };
+        "at.clubserver.files.api.FilesApi.SettingFileDto": {
+            /** @enum {string} */
+            slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE";
+            file: components["schemas"]["at.clubserver.files.api.FilesApi.FileDto"];
+            /** Format: uuid */
+            sourceId: string;
+            sourceName: string;
+        };
         "at.clubserver.gateway.rest.ClubController.ClubBody": {
             name: string;
             shortName: string;
@@ -3730,6 +3790,7 @@ export interface components {
             coverFileId: string;
             canUpload: boolean;
             canManage: boolean;
+            system: boolean;
         };
         "at.clubserver.gateway.rest.MembersController.NewOfficeBody": {
             label: string;
@@ -4344,6 +4405,9 @@ export interface components {
             url: string;
             /** Format: date-time */
             expiresAt: string;
+        };
+        "at.clubserver.files.api.FilesApi.SettingFileList": {
+            items: components["schemas"]["at.clubserver.files.api.FilesApi.SettingFileDto"][];
         };
         "at.clubserver.calendar.api.CalendarApi.AppointmentTypeList": {
             items: components["schemas"]["at.clubserver.calendar.api.CalendarApi.AppointmentTypeDto"][];
@@ -5433,6 +5497,81 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["at.clubserver.files.api.FilesApi.FileSettings"];
                 };
+            };
+        };
+    };
+    pickSettingFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FilesController.PickBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.files.api.FilesApi.SettingFileDto"];
+                };
+            };
+        };
+    };
+    uploadSettingFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE";
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.files.api.FilesApi.SettingFileDto"];
+                };
+            };
+        };
+    };
+    clearSettingFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -6970,6 +7109,24 @@ export interface operations {
             };
         };
     };
+    seedTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     removePushToken: {
         parameters: {
             query?: never;
@@ -7516,79 +7673,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.files.api.FilesApi.FileDto"];
-                };
-            };
-        };
-    };
-    asset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                kind: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string;
-                };
-            };
-        };
-    };
-    uploadAsset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                kind: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "multipart/form-data": {
-                    /** Format: binary */
-                    file: string;
-                };
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.platform.club.ClubSettings.Club"];
-                };
-            };
-        };
-    };
-    deleteAsset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                kind: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.platform.club.ClubSettings.Club"];
                 };
             };
         };
@@ -9314,6 +9398,48 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.activity.api.ActivityApi.ActivityList"];
+                };
+            };
+        };
+    };
+    settingFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.files.api.FilesApi.SettingFileList"];
+                };
+            };
+        };
+    };
+    asset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
                 };
             };
         };

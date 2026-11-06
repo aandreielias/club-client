@@ -38,8 +38,6 @@ export const CORE_MESSAGES: MessageCatalog = {
   'idempotency.key-reused': 'Die Anfrage wurde schon mit anderen Daten gesendet. Bitte neu laden.',
   'idempotency.key-invalid': 'Die Anfrage hat eine ungültige Kennung. Bitte neu laden.',
   'brand.invalid': 'Das Erscheinungsbild ist ungültig (Farben als #RRGGBB, Texte zu lang?).',
-  'brand.asset-invalid': 'Nur sichere SVG- oder PNG-Dateien sind erlaubt.',
-  'brand.asset-too-large': 'Die Datei darf höchstens 512 KB groß sein.',
   'brand.asset-not-found': 'Diese Bilddatei gibt es nicht.',
   'rate-limited': 'Zu viele Anfragen. Bitte kurz warten.',
   internal: 'Fehler auf dem Server. Bitte später erneut versuchen.',

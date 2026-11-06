@@ -1,10 +1,7 @@
 // server: platform.club.BrandSettings / Brand / SvgCheck. The mock club wears the SDG brand (brand guide 2026).
-import type { Brand, BrandAssetKind, BrandAssets, BrandFont } from '../types';
+import type { Brand, BrandAssets, BrandFont } from '../types';
 import { MockServer } from './MockServer';
 import { MockTable } from './MockTable';
-import faviconUrl from './brand/favicon.svg?url';
-import logoSecondaryUrl from './brand/sdg-logo-secondary.svg?url';
-import logoUrl from './brand/sdg-logo.svg?url';
 
 const fail = MockServer.fail;
 
@@ -49,10 +46,11 @@ export const SDG_BRAND: Brand = {
 };
 
 const FONTS: readonly BrandFont[] = ['INTER', 'ANTON', 'OSWALD', 'ROBOTO', 'SOURCE_SERIF', 'SYSTEM'];
-const KINDS: readonly BrandAssetKind[] = ['logo', 'logo-secondary', 'favicon'];
-const MAX_ASSET_BYTES = 512 * 1024;
-const EICAR = 'EICAR-STANDARD-ANTIVIRUS-TEST-FILE';
-const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+/** The setting files the files mock registers (server: FilesApi.SETTING_FILE_KEYS over the bus), so lib needs no feature import. */
+export const brandFiles = {
+  url: (_slot: 'LOGO' | 'LOGO_SECONDARY' | 'FAVICON'): string | null => null,
+};
 
 /** server: SvgCheck - a plain drawing: no DTD, scripts, handlers, embedded documents, animation or outside references. */
 export function isSafeSvg(text: string): boolean {
@@ -68,15 +66,14 @@ export function isSafeSvg(text: string): boolean {
 export class MockBrand {
   /** server: platform_brand; null = club.yml defaults. */
   readonly saved = new MockTable<{ brand: Brand | null }>('brand', () => ({ brand: SDG_BRAND }));
-  /** server: platform_brand_asset, here as URLs (data: URLs for uploads). */
-  readonly images = new MockTable<BrandAssets>('brand-assets', () => ({ logo: logoUrl, logoSecondary: logoSecondaryUrl, favicon: faviconUrl }));
 
   brand(): Brand {
     return this.saved.data.brand ?? DEFAULT_BRAND;
   }
 
+  /** server: BrandSettings.assets — the logo slots of the setting files. */
   assets(): BrandAssets {
-    return { ...this.images.data };
+    return { logo: brandFiles.url('LOGO'), logoSecondary: brandFiles.url('LOGO_SECONDARY'), favicon: brandFiles.url('FAVICON') };
   }
 
   /** server: Brand.checked - hex colours (upper case), listed fonts, radius ranges, short single-line texts. */
@@ -124,31 +121,5 @@ export class MockBrand {
   reset(): void {
     this.saved.data.brand = null;
     this.saved.save();
-  }
-
-  /** server: BrandSettings.saveAsset - at most 512 KB, virus scan, PNG by its signature or a plain SVG. */
-  async saveAsset(kind: string, file: unknown): Promise<void> {
-    const key = MockBrand.key(kind);
-    if (!(file instanceof Blob)) return fail(400, 'request.invalid');
-    if (file.size > MAX_ASSET_BYTES) fail(400, 'brand.asset-too-large');
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const text = new TextDecoder().decode(bytes);
-    if (text.includes(EICAR)) fail(400, 'file.infected');
-    const png = PNG.every((b, i) => bytes[i] === b);
-    if (!png && !isSafeSvg(text)) fail(400, 'brand.asset-invalid');
-    let binary = '';
-    for (const b of bytes) binary += String.fromCharCode(b);
-    this.images.data[key] = `data:${png ? 'image/png' : 'image/svg+xml'};base64,${btoa(binary)}`;
-    this.images.save();
-  }
-
-  deleteAsset(kind: string): void {
-    this.images.data[MockBrand.key(kind)] = null;
-    this.images.save();
-  }
-
-  private static key(kind: string): keyof BrandAssets {
-    if (!KINDS.includes(kind as BrandAssetKind)) return fail(404, 'brand.asset-not-found');
-    return kind === 'logo-secondary' ? 'logoSecondary' : (kind as 'logo' | 'favicon');
   }
 }
