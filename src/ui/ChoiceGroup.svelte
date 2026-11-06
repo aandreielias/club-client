@@ -36,11 +36,14 @@
 
   let group: HTMLFieldSetElement | undefined = $state();
   let pill = $state<{ x: number; y: number; width: number; height: number } | null>(null);
+  let glide = $state(false);
 
   /** Follows the chosen label, also when the choices wrap onto a second line (narrow dialogs). */
   function measure() {
     const checked = group?.querySelector<HTMLElement>('label.checked');
     pill = checked?.offsetWidth ? { x: checked.offsetLeft, y: checked.offsetTop, width: checked.offsetWidth, height: checked.offsetHeight } : null;
+    // The first placement (and font or width settling right after it) jumps; only later changes glide.
+    if (pill && !glide) requestAnimationFrame(() => requestAnimationFrame(() => (glide = true)));
   }
 
   $effect(() => {
@@ -62,6 +65,7 @@
   <legend class="visually-hidden">{label}</legend>
   {#if pill}<span
       class="pill"
+      class:glide
       aria-hidden="true"
       style:transform="translate({pill.x}px, {pill.y}px)"
       style:width="{pill.width}px"
@@ -95,6 +99,8 @@
     border-radius: calc(var(--radius-md) - 2px);
     background: var(--color-elevated);
     box-shadow: var(--color-shadow-raised);
+  }
+  .pill.glide {
     transition:
       transform var(--motion-base) var(--motion-easing),
       width var(--motion-base) var(--motion-easing),

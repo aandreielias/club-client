@@ -5,6 +5,7 @@
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import Button from '../../ui/Button.svelte';
+  import Dialog from '../../ui/Dialog.svelte';
   import MemberTable from './MemberTable.svelte';
 
   import Page from '../../ui/Page.svelte';
@@ -44,12 +45,13 @@
       membershipLabels(),
       boardSettings.value?.multipleKinds ?? false,
     );
-    problems = parsed.problems;
     if (!parsed.rows.length) {
       bus.publish(TOAST, { text: 'Keine neuen Mitglieder in der Datei.', tone: 'error' });
+      problems = parsed.problems;
       return;
     }
-    const skipped = parsed.problems.length ? ` ${parsed.problems.length} Zeilen werden übersprungen (siehe Liste).` : '';
+    // The skipped lines are listed after the import, so the confirmation does not open over that list.
+    const skipped = parsed.problems.length ? ` ${parsed.problems.length} Zeilen werden übersprungen; die Liste folgt danach.` : '';
     const ok = await bus.request(CONFIRM, {
       title: 'Mitglieder importieren',
       message: `${parsed.rows.length} Konten anlegen? Jedes bekommt sofort eine Einladungs-E-Mail.${skipped}`,
@@ -93,15 +95,6 @@
     {/if}
   {/snippet}
 
-  {#if problems.length}
-    <section class="problems" aria-live="polite">
-      <p><strong>Import: {problems.length} Zeilen nicht angelegt</strong> <Button onclick={() => (problems = [])}>Ausblenden</Button></p>
-      <ul>
-        {#each problems as p (p.line + p.text)}<li>Zeile {p.line}: {p.text}</li>{/each}
-      </ul>
-    </section>
-  {/if}
-
   <MemberTable
     {list}
     emptyAction={policy.canInvite()
@@ -111,14 +104,21 @@
   {#if list.data.value}<p class="muted small count">{list.activeCount} aktive Mitglieder</p>{/if}
 </Page>
 
+<Dialog open={problems.length > 0} title="Import: {problems.length} Zeilen nicht angelegt" wide onclose={() => (problems = [])}>
+  <div class="stack">
+    <ul class="problems">
+      {#each problems as p (p.line + p.text)}<li>Zeile {p.line}: {p.text}</li>{/each}
+    </ul>
+    <div><Button variant="primary" onclick={() => (problems = [])}>Schließen</Button></div>
+  </div>
+</Dialog>
+
 <style>
   .count {
     margin-top: var(--space-sm);
   }
   .problems {
-    margin-bottom: var(--space-md);
-    padding: var(--space-sm) var(--space-md);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    margin: 0;
+    padding-left: var(--space-lg);
   }
 </style>

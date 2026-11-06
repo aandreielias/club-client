@@ -120,7 +120,7 @@
 
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle);
-  view.title(() => model.roster.value?.team.name);
+  view.title(() => model.roster.value?.team.name ?? directory.teamName(id) ?? undefined);
 
   useBus(bus, MEMBERSHIP_CHANGED, ({ data }) => {
     if (data.teamId === model.teamId && !model.busy) void model.load();
@@ -186,7 +186,7 @@
   }
 </script>
 
-<Detail title={model.roster.value?.team.name ?? 'Team'}>
+<Detail title={model.roster.value?.team.name ?? directory.teamName(id) ?? 'Team'}>
   {#snippet actions()}
     {#if policy.canAssign() && !adding}<Button variant="primary" onclick={() => (adding = true)}>Mitglied hinzufügen</Button>{/if}
     {#if selecting}

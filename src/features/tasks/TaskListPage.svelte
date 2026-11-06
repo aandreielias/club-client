@@ -162,7 +162,6 @@
     {/if}
   {/snippet}
 
-  {#if list.cut.truncated}<p class="muted small">Es gibt mehr Aufgaben, als die Liste zeigt. Bitte Filter eingrenzen.</p>{/if}
   <TaskTable
     {list}
     menu={taskMenu}
@@ -172,6 +171,7 @@
       ? { label: 'Neue Aufgabe', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'task-new', id: list.filters.team || '-' }) }
       : null}
   />
+  {#if list.cut.truncated}<p class="muted small">Es gibt mehr Aufgaben, als die Liste zeigt. Bitte Filter eingrenzen.</p>{/if}
 </Page>
 
 <Dialog open={assigning} title="Aufgaben zuweisen" onclose={() => (assigning = false)}>

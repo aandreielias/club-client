@@ -450,6 +450,12 @@ input.short {
 }
 
 /* Shimmer placeholder while content loads (AsyncView) */
+/* Holds the place of a section that is still loading, so the content below does not jump. */
+.skeleton.slot {
+  display: block;
+  height: 4rem;
+  margin: var(--space-md) 0;
+}
 .skeleton {
   border-radius: var(--radius-sm);
   background: linear-gradient(90deg, var(--color-hover) 0%, var(--color-selected) 50%, var(--color-hover) 100%);

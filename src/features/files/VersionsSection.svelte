@@ -50,7 +50,9 @@
   }
 </script>
 
-{#if (versions.value?.length ?? 0) > 1}
+{#if versions.value === undefined && !versions.error}
+  <span class="skeleton slot" aria-busy="true" aria-label="Laden"></span>
+{:else if (versions.value?.length ?? 0) > 1}
   <SectionHeading title="Versionen">
     {#snippet actions()}
       {#if comparable}<Button size="sm" variant="ghost" icon="split" disabled={picked.length !== 2} onclick={compare}>Vergleichen</Button>{/if}

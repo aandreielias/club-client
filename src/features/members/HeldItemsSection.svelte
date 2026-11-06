@@ -12,7 +12,9 @@
   void held.load();
 </script>
 
-{#if held.value?.length}
+{#if held.value === undefined && !held.error}
+  <span class="skeleton slot" aria-busy="true" aria-label="Laden"></span>
+{:else if held.value?.length}
   <h2>{title}</h2>
   <ul class="rows">
     {#each held.value as item (item.itemId)}

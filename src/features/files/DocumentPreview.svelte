@@ -47,7 +47,7 @@
   });
 </script>
 
-<div class="preview">
+<div class="preview" class:failed={!!docxError || !!office.error}>
   <AsyncView resource={content}>
     {#snippet children()}
       {#if kind === 'pdf' && pdfUrl}
@@ -81,6 +81,10 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     background: var(--color-surface);
+  }
+  /* The preview's height is held from the start, so what follows does not move when it arrives. */
+  .preview:not(.failed) {
+    min-height: min(75vh, 900px);
   }
   iframe {
     display: block;

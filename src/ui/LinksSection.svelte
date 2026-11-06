@@ -136,6 +136,8 @@
       <Button variant="ghost" onclick={() => model.cancel()}>Abbrechen</Button>
     </div>
   </div>
+{:else if model.links.value === undefined && !model.links.error}
+  <span class="skeleton slot" aria-busy="true" aria-label="Laden"></span>
 {:else if model.links.value}
   {@const links = model.links.value}
   {#if links.needs.length || editable}

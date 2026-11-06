@@ -28,13 +28,14 @@
 
   /** Places of the club, plus free text for one-off places (a beach court, the opponent's hall). */
   const OTHER = '';
-  let places = $state<Location[]>([]);
+  // undefined while loading: the "no places yet" hint waits for the answer.
+  let places = $state<Location[]>();
   locationsApi.list().then(
     (list) => (places = list),
-    () => {},
+    () => (places = []),
   );
   const placeOptions = $derived([
-    ...places.map((l) => ({ value: l.id, label: l.address ? `${l.name} · ${l.address}` : l.name })),
+    ...(places ?? []).map((l) => ({ value: l.id, label: l.address ? `${l.name} · ${l.address}` : l.name })),
     { value: OTHER, label: 'Anderer Ort …' },
   ]);
 </script>
@@ -60,7 +61,7 @@
   </div>
 
   <div class="grid-2">
-    <Field label="Ort" hint={places.length ? undefined : 'Orte trägst du unter „Orte“ ein.'}>
+    <Field label="Ort" hint={places && !places.length ? 'Orte trägst du unter „Orte“ ein.' : undefined}>
       <Select bind:value={form.locationId} options={placeOptions} />
     </Field>
     {#if form.locationId === OTHER}

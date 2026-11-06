@@ -59,7 +59,9 @@
   }
 </script>
 
-{#if extras.value && (editing || editable || extras.value.content || extras.value.opponent || extras.value.sets.length)}
+{#if extras.value === undefined && !extras.error}
+  <span class="skeleton slot" aria-busy="true" aria-label="Laden"></span>
+{:else if extras.value && (editing || editable || extras.value.content || extras.value.opponent || extras.value.sets.length)}
   <h2>{isMatch ? 'Spiel' : 'Trainingsinhalt'}</h2>
   {#if editing}
     <EditorForm action={save} submitLabel="Speichern" onsubmit={submit} oncancel={() => (editing = false)}>

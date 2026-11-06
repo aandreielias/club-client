@@ -42,7 +42,9 @@
   {/each}
 {/snippet}
 
-{#if family.value && parent && !family.value.guardians.length && !family.value.wards.length}
+{#if family.value === undefined && !family.error}
+  <span class="skeleton slot" aria-busy="true" aria-label="Laden"></span>
+{:else if family.value && parent && !family.value.guardians.length && !family.value.wards.length}
   <h2>Familie</h2>
   <p class="muted small">
     {self ? 'Mit dir ist' : `Mit ${firstName} ist`} noch kein Kind verknüpft. Admin oder Vorstand ordnen Erziehungsberechtigte im Profil des Kindes zu;

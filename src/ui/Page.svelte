@@ -83,6 +83,10 @@
     align-items: center;
     gap: var(--space-sm) var(--space-md);
   }
+  /* Holds its height while a breadcrumb or mailbox picker loads, so the content does not jump. */
+  .context {
+    min-height: var(--control-height);
+  }
   h1 {
     margin: 0;
     font-size: var(--font-size-title);

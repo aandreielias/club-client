@@ -16,7 +16,9 @@
   void matches.load();
 </script>
 
-{#if matches.value?.items.length}
+{#if matches.value === undefined && !matches.error}
+  <span class="skeleton slot" aria-busy="true" aria-label="Laden"></span>
+{:else if matches.value?.items.length}
   {@const list = matches.value}
   <section class="stack">
     <h2>Spiele</h2>

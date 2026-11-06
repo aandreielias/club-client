@@ -39,10 +39,12 @@
   const view = new DetailController(bus, handle, onclosed);
   // svelte-ignore state_referenced_locally
   const model = new TournamentModel(tournamentsApi, id);
-  void model.load().then(() => (tab = TournamentView.firstTab(model.tournament.value)));
+  void model.load();
 
   type Tab = 'overview' | 'groups' | 'ko' | 'teams';
-  let tab = $state<Tab>('overview');
+  // Picked by the member; until then the tab that fits the tournament's stage, known with the first render.
+  let chosen = $state<Tab | null>(null);
+  const tab = $derived(chosen ?? TournamentView.firstTab(model.tournament.value));
   const tabs: { value: Tab; label: string }[] = [
     { value: 'overview', label: 'Übersicht' },
     { value: 'groups', label: 'Gruppen' },
@@ -112,7 +114,7 @@
               variant="primary"
               busy={model.action.busy}
               disabled={t.teams.length < 2}
-              onclick={() => model.draw().then((ok) => ok && (tab = 'groups'))}>Auslosen</Button
+              onclick={() => model.draw().then((ok) => ok && (chosen = 'groups'))}>Auslosen</Button
             >
           {:else if t.status === 'GROUPS'}
             <Button
@@ -120,7 +122,7 @@
               busy={model.action.busy}
               disabled={model.openGroupMatches > 0}
               tooltip={model.openGroupMatches ? `Noch ${model.openGroupMatches} Gruppenspiele ohne Ergebnis` : undefined}
-              onclick={() => model.startKnockout().then((ok) => ok && (tab = 'ko'))}>KO-Runde starten</Button
+              onclick={() => model.startKnockout().then((ok) => ok && (chosen = 'ko'))}>KO-Runde starten</Button
             >
           {/if}
         {/if}
@@ -133,7 +135,7 @@
       {/snippet}
 
       <ErrorNote error={model.action.error} />
-      <div class="tabs"><ChoiceGroup name="tournament-tab-{t.id}" label="Ansicht" options={tabs} bind:value={tab} /></div>
+      <div class="tabs"><ChoiceGroup name="tournament-tab-{t.id}" label="Ansicht" options={tabs} bind:value={() => tab, (v) => (chosen = v)} /></div>
 
       {#if edit.form}
         {@const form = edit.form}
