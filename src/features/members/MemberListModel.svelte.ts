@@ -49,7 +49,7 @@ export class MemberListModel extends ListModel<Member> {
             key: 'family',
             label: 'Familie',
             kind: 'select',
-            allLabel: 'Alle',
+            allLabel: 'Alle Mitglieder',
             options: () => [
               { value: 'minor', label: 'Minderjährige' },
               { value: 'ward', label: 'Kinder (mit Erziehungsberechtigten)' },
@@ -61,7 +61,7 @@ export class MemberListModel extends ListModel<Member> {
             key: 'invited',
             label: 'Einladung',
             kind: 'select',
-            allLabel: 'Alle',
+            allLabel: 'Jede Einladung',
             options: () => [
               { value: 'pending', label: 'Noch nicht angemeldet' },
               { value: 'signed', label: 'Angemeldet' },

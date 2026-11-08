@@ -70,7 +70,7 @@
       <Field label="Name des Vereins" error={error('name')}>
         <input bind:value={name} maxlength={limits.nameMaxLength} placeholder="Sportverein Musterdorf" required />
       </Field>
-      <Field label="Kurzname" hint="Betreff der E-Mails" error={error('shortName')}>
+      <Field label="Kurzname" hint="Steht in eckigen Klammern vor dem Betreff jeder E-Mail." error={error('shortName')}>
         <input bind:value={shortName} maxlength={limits.shortNameMaxLength} placeholder="SV Musterdorf" required />
       </Field>
     </div>

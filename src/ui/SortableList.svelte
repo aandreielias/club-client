@@ -221,7 +221,10 @@
   .extra:empty {
     display: none;
   }
+  /* Fixed width so two-digit positions keep the column before them aligned. */
   .position {
+    min-width: 3ch;
+    text-align: end;
     font-variant-numeric: tabular-nums;
   }
 </style>

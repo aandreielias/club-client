@@ -172,7 +172,7 @@
 <nav id="sidebar" class:open class:collapsed aria-label="Hauptnavigation">
   <div class="title">
     {#if logo}<img class="logo" src={logo} alt="" />{:else}<span class="mark" aria-hidden="true">{title.slice(0, 1)}</span>{/if}
-    <span class="name">{title}</span>
+    <span class="name" {title}>{title}</span>
     <button
       class="icon-button collapse"
       onclick={() => preferences.set('sidebarCollapsed', !collapsed)}
@@ -361,13 +361,21 @@
     flex: none;
     object-fit: contain;
   }
+  /* Long club names wrap to a second line before they are cut. */
   .name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     font-family: var(--font-display);
     font-weight: var(--font-display-weight);
     letter-spacing: var(--font-display-tracking);
     text-transform: var(--font-display-transform);
   }
-  .name,
+  .name {
+    min-width: 0;
+    overflow: hidden;
+  }
   .label {
     min-width: 0;
     overflow: hidden;

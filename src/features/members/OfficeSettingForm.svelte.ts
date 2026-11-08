@@ -94,7 +94,7 @@ export class OfficeSettingForm extends FormState<Errors> {
   protected validate(): Errors {
     const errors: Errors = {};
     const label = this.label.trim();
-    if (!label || label.length > OFFICE_LIMITS.label) errors.label = `1 bis ${OFFICE_LIMITS.label} Zeichen.`;
+    if (!label || label.length > OFFICE_LIMITS.label) errors.label = `Bezeichnung mit 1 bis ${OFFICE_LIMITS.label} Zeichen angeben.`;
     const { minHolders: min, maxHolders: max } = this;
     if (!Number.isInteger(min) || min < 0 || min > OFFICE_LIMITS.holders) errors.holders = `Mindestens 0 bis ${OFFICE_LIMITS.holders}.`;
     else if (max != null && (!Number.isInteger(max) || max < 1 || max > OFFICE_LIMITS.holders || max < min)) {

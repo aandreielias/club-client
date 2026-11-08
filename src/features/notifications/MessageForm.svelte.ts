@@ -75,7 +75,7 @@ export class MessageForm extends FormState<Partial<Record<MessageField, string>>
   protected validate(): Partial<Record<MessageField, string>> {
     const errors: Partial<Record<MessageField, string>> = {};
     const title = this.title.trim();
-    if (!title || title.length > limits.titleMaxLength) errors.title = `Titel mit 1 bis ${limits.titleMaxLength} Zeichen.`;
+    if (!title || title.length > limits.titleMaxLength) errors.title = `Titel mit 1 bis ${limits.titleMaxLength} Zeichen angeben.`;
     if (this.body.trim().length > limits.bodyMaxLength) errors.body = `Höchstens ${limits.bodyMaxLength} Zeichen.`;
     if (!this.hasTargets) errors.recipients = this.audience === 'teams' ? 'Mindestens ein Team auswählen.' : 'Mindestens eine Person auswählen.';
     if (this.audience === 'everyone' && !this.mayWriteEveryone) errors.recipients = 'Nur Admin und Vorstand schreiben an alle.';

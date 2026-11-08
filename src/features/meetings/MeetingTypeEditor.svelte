@@ -315,5 +315,7 @@
     z-index: 1;
     padding: var(--space-sm) 0;
     background: var(--color-elevated);
+    /* Sticky stops at the window's bottom padding; cover that strip so no form text shows below the bar. */
+    box-shadow: 0 var(--space-xxl) 0 var(--color-elevated);
   }
 </style>

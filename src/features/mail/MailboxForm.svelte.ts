@@ -41,8 +41,8 @@ export class MailboxForm extends FormState<Partial<Record<MailboxField, string>>
   protected validate(): Partial<Record<MailboxField, string>> {
     const errors: Partial<Record<MailboxField, string>> = {};
     const input = this.toInput();
-    if (!ADDRESS.test(input.address)) errors.address = 'Gültige E-Mail-Adresse (ohne Umlaute vor dem @).';
-    if (!input.name || input.name.length > 100) errors.name = 'Name mit 1 bis 100 Zeichen.';
+    if (!ADDRESS.test(input.address)) errors.address = 'Gültige E-Mail-Adresse angeben (keine Umlaute vor dem @).';
+    if (!input.name || input.name.length > 100) errors.name = 'Name mit 1 bis 100 Zeichen angeben.';
     if (!input.memberId && !input.role) errors.owner = this.owner === 'member' ? 'Mitglied wählen.' : 'Rolle wählen.';
     return errors;
   }

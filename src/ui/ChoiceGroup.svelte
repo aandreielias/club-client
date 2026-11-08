@@ -11,6 +11,7 @@
 </script>
 
 <script lang="ts" generics="T extends string">
+  import { untrack } from 'svelte';
   import Icon from './Icon.svelte';
   import { tooltip } from './tooltip';
 
@@ -49,7 +50,8 @@
   $effect(() => {
     void value;
     void options.length;
-    measure();
+    // measure reads and writes pill/glide; untracked so it does not re-run itself.
+    untrack(measure);
   });
 
   // Late layout changes (web font, container width) move the labels; keep the pill on them.
@@ -85,6 +87,8 @@
     position: relative;
     display: inline-flex;
     flex-wrap: wrap;
+    /* In a grid (Field group) it keeps its own width instead of stretching. */
+    justify-self: start;
     gap: 2px;
     margin: 0;
     padding: 2px;

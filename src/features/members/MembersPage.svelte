@@ -5,6 +5,9 @@
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import Button from '../../ui/Button.svelte';
+  import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
+  import { usePane } from '../../lib/split/usePane';
+  import OrgChart from './OrgChart.svelte';
   import Dialog from '../../ui/Dialog.svelte';
   import MemberTable from './MemberTable.svelte';
 
@@ -14,6 +17,13 @@
   import { teamsApi } from '../teams/services';
   import { MemberListModel } from './MemberListModel.svelte';
   import { boardSettings, memberPolicy as policy, membersApi, membershipKinds } from './services';
+
+  const pane = usePane();
+  const VIEWS = [
+    { value: 'list', label: 'Liste' },
+    { value: 'org', label: 'Organigramm' },
+  ] as const;
+  const view = $derived(pane.query.get('view') === 'org' ? 'org' : 'list');
 
   const list = new MemberListModel(membersApi, store);
   void list.load();
@@ -87,7 +97,13 @@
 
 <Page title="Mitglieder">
   {#snippet actions()}
-    {#if policy.canInvite()}
+    <ChoiceGroup
+      name="members-view"
+      label="Ansicht"
+      options={VIEWS}
+      bind:value={() => view, (v) => pane.updateQuery({ view: v === 'org' ? 'org' : null }, true)}
+    />
+    {#if policy.canInvite() && view === 'list'}
       <Button icon="download" onclick={exportCsv} disabled={!list.rows.length}>Exportieren</Button>
       <Button icon="upload" onclick={() => fileInput?.click()} busy={importing}>Importieren</Button>
       <input bind:this={fileInput} type="file" accept=".csv,text/csv" onchange={picked} hidden />
@@ -95,13 +111,17 @@
     {/if}
   {/snippet}
 
-  <MemberTable
-    {list}
-    emptyAction={policy.canInvite()
-      ? { label: 'Neues Konto', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'member-new', id: '-' }) }
-      : null}
-  />
-  {#if list.data.value}<p class="muted small count">{list.activeCount} aktive Mitglieder</p>{/if}
+  {#if view === 'org'}
+    <OrgChart />
+  {:else}
+    <MemberTable
+      {list}
+      emptyAction={policy.canInvite()
+        ? { label: 'Neues Konto', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'member-new', id: '-' }) }
+        : null}
+    />
+    {#if list.data.value}<p class="muted small count">{list.activeCount} aktive Mitglieder</p>{/if}
+  {/if}
 </Page>
 
 <Dialog open={problems.length > 0} title="Import: {problems.length} Zeilen nicht angelegt" wide onclose={() => (problems = [])}>

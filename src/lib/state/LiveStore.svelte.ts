@@ -31,6 +31,6 @@ export class LiveStore<T> {
     const sequence = ++this.#sequence;
     const value = await this.fetch();
     if (sequence === this.#sequence) this.value = value;
-    return this.value;
+    return value;
   }
 }

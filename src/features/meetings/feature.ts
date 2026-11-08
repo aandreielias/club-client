@@ -33,7 +33,9 @@ export const meetingsFeature: Feature = {
   },
   calendar: {
     MEETING: (item) => {
-      const assembly = isAssembly(meetingTypes.get(item.detail ?? ''));
+      const type = meetingTypes.get(item.detail ?? '');
+      if (!type) return {}; // types not loaded yet: the category's own label, never a wrong one
+      const assembly = isAssembly(type);
       return { hue: assembly ? 'blue' : 'purple', label: assembly ? 'Mitgliederversammlung' : 'Vorstandssitzung' };
     },
   },

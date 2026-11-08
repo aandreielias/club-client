@@ -48,9 +48,42 @@ export function areaOf(e: AuditEntry): string {
   return e.route.split('/')[3] ?? '';
 }
 
-/** "members/{id}/roles" with its ids shortened, without the API prefix. */
-export function auditWhat(e: AuditEntry): string {
-  return e.route.replace('/api/v1/', '').replace(/\{(\w+)\}/g, (_, name: string) => e.params[name]?.slice(0, 8) ?? name);
+/** Path words after the area; others are shown as they are. */
+const WORDS: Readonly<Record<string, string>> = {
+  roles: 'Rollen',
+  membership: 'Mitgliedschaft',
+  family: 'Familie',
+  guardians: 'Erziehungsberechtigte',
+  invite: 'Einladung',
+  invitations: 'Einladungen',
+  email: 'E-Mail',
+  erase: 'Löschung',
+  deactivate: 'Deaktivierung',
+  reactivate: 'Reaktivierung',
+  'change-requests': 'Änderungsanträge',
+  approve: 'Annahme',
+  reject: 'Ablehnung',
+  'org-chart': 'Organigramm',
+  offices: 'Funktionen',
+  settings: 'Einstellungen',
+  end: 'Ende',
+  export: 'Datenexport',
+};
+
+/** Path variables that hold a member id. */
+const MEMBER_PARAMS = new Set(['memberId', 'guardianId', 'minorId']);
+
+/** "Anna Muster › Rollen" for members/{id}/roles: the area is its own column, member ids become names, other ids are shortened. */
+export function auditWhat(e: AuditEntry, nameOf: (memberId: string) => string | null = () => null): string {
+  const [, , , area, ...rest] = e.route.split('/');
+  const parts = rest.map((segment) => {
+    const param = /^\{(\w+)\}$/.exec(segment)?.[1];
+    if (!param) return WORDS[segment] ?? segment;
+    const value = e.params[param] ?? param;
+    const member = MEMBER_PARAMS.has(param) || (area === 'members' && param === 'id');
+    return (member ? nameOf(value) : null) ?? value.slice(0, 8);
+  });
+  return parts.join(' › ') || 'Liste';
 }
 
 export function auditAction(e: AuditEntry): string {
@@ -71,6 +104,7 @@ export class AuditListModel extends ListModel<AuditEntry> {
     private readonly api: AuditApi,
     format: () => Formatter,
     store: LocalStore | null,
+    nameOf: (memberId: string) => string | null = () => null,
   ) {
     super(
       {
@@ -84,13 +118,13 @@ export class AuditListModel extends ListModel<AuditEntry> {
         },
         defaultSort: { key: 'at', dir: 'desc' },
         searchText: (e) =>
-          `${e.actorName ?? 'Gelöschtes Mitglied'} ${AUDIT_AREAS[areaOf(e)] ?? ''} ${auditAction(e)} ${auditWhat(e)} ${Object.values(e.params).join(' ')}`,
+          `${e.actorName ?? 'Gelöschtes Mitglied'} ${AUDIT_AREAS[areaOf(e)] ?? ''} ${auditAction(e)} ${auditWhat(e, nameOf)} ${Object.values(e.params).join(' ')}`,
         columns: [
           { key: 'at', label: 'Wann', value: (e) => e.at, format: (e) => format().dateTime(e.at), width: '10rem' },
           { key: 'actor', label: 'Wer', value: (e) => e.actorName ?? 'Gelöschtes Mitglied', width: '12rem' },
           { key: 'action', label: 'Aktion', value: (e) => auditAction(e), width: '9rem' },
           { key: 'area', label: 'Bereich', value: (e) => AUDIT_AREAS[areaOf(e)] ?? areaOf(e), width: '9rem', hideOnCompact: true },
-          { key: 'what', label: 'Was', value: (e) => auditWhat(e) },
+          { key: 'what', label: 'Was', value: (e) => auditWhat(e, nameOf) },
         ],
         filters: [
           {

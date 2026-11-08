@@ -127,9 +127,9 @@ export class MeetingTypeForm extends FormState<Errors> {
   protected validate(): Errors {
     const errors: Errors = {};
     const label = this.label.trim();
-    if (!label || label.length > 80) errors.label = '1 bis 80 Zeichen.';
+    if (!label || label.length > 80) errors.label = 'Bezeichnung mit 1 bis 80 Zeichen angeben.';
     const invitation = this.invitationLabel.trim();
-    if (!invitation || invitation.length > 120) errors.invitationLabel = '1 bis 120 Zeichen.';
+    if (!invitation || invitation.length > 120) errors.invitationLabel = 'Text für die Einladung mit 1 bis 120 Zeichen angeben.';
     if (!Number.isInteger(this.notice) || this.notice < 0 || this.noticeHours > 8760) errors.notice = 'Ganze Zahl, höchstens ein Jahr.';
     if (this.grace != null && (!Number.isInteger(this.grace) || this.grace < 1 || this.grace > 1440)) errors.grace = '1 bis 1440 Minuten, oder leer.';
     if (!this.majorities.length) errors.majorities = 'Mindestens eine Mehrheit.';

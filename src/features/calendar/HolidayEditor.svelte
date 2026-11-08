@@ -31,7 +31,7 @@
 </script>
 
 <EditorForm {action} {submitLabel} {oncancel} {onsubmit} validate={check}>
-  <Field label="Name" error={check.submitted && !form.name.trim() ? 'Bitte einen Namen angeben.' : undefined}>
+  <Field label="Name" error={check.submitted && !form.name.trim() ? 'Name mit 1 bis 80 Zeichen angeben.' : undefined}>
     <input bind:value={form.name} maxlength="80" placeholder="Herbstferien" required />
   </Field>
   <div class="grid-2">

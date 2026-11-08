@@ -1,5 +1,6 @@
 <script lang="ts" generics="T">
   import type { Snippet } from 'svelte';
+  import { ProblemError } from '../lib/http/ProblemError';
   import type { Resource } from '../lib/state/Resource.svelte';
   import Button from './Button.svelte';
   import ErrorNote from './ErrorNote.svelte';
@@ -11,7 +12,10 @@
 {#if resource.error}
   <div class="stack">
     <ErrorNote error={resource.error} />
-    <div><Button onclick={() => resource.load()}>Erneut versuchen</Button></div>
+    <!-- A hidden or deleted record stays so: no retry. -->
+    {#if !(resource.error instanceof ProblemError && resource.error.status === 404)}
+      <div><Button onclick={() => resource.load()}>Erneut versuchen</Button></div>
+    {/if}
   </div>
 {:else if resource.value === undefined}
   <div class="loading" aria-busy="true" aria-label="Laden">

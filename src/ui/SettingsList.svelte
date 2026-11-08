@@ -150,7 +150,8 @@
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     min-height: var(--layout-row-height);
     padding: var(--space-xs) var(--space-sm);
     border: 0;

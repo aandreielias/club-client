@@ -117,7 +117,8 @@
 
   // A new record starts without the previous one's title until it has loaded (also for links opened by URL).
   let shownKey = '';
-  $effect(() => {
+  // pre: runs before the new content mounts, so a create form's fixed title is not wiped after it was set.
+  $effect.pre(() => {
     const key = target ? `${target.kind}/${target.id}` : '';
     if (key !== shownKey) {
       shownKey = key;

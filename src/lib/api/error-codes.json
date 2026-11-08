@@ -1,5 +1,6 @@
 [
   "absence.not-found",
+  "absence.overlaps",
   "absence.range-invalid",
   "absence.reason-too-long",
   "absence.too-long",

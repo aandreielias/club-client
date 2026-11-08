@@ -32,11 +32,23 @@
     red: 'Rot',
   };
   const HUE_OPTIONS = HUES.map((h) => ({ value: h, label: HUE_LABELS[h], hue: h }));
+  let submitted = $state(false);
+  const check = {
+    get submitted() {
+      return submitted;
+    },
+    set submitted(value: boolean) {
+      submitted = value;
+    },
+    get valid() {
+      return !!form.label.trim();
+    },
+  };
 </script>
 
-<EditorForm {action} {submitLabel} {oncancel} {onsubmit}>
+<EditorForm {action} {submitLabel} {oncancel} {onsubmit} validate={check}>
   <div class="grid-2">
-    <Field label="Bezeichnung">
+    <Field label="Bezeichnung" error={submitted && !form.label.trim() ? 'Bezeichnung mit 1 bis 40 Zeichen angeben.' : null}>
       <input bind:value={form.label} maxlength="40" required />
     </Field>
     <Field group label="Farbe" hint="So steht die Terminart im Kalender.">

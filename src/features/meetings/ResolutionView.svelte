@@ -27,8 +27,9 @@
 
 <AsyncView resource={resolution}>
   {#snippet children(r)}
-    <Detail title={r.meetingId ? 'Beschluss' : 'Umlaufbeschluss'}>
-      <ResolutionCard resolution={r} onchanged={(updated) => resolution.set(updated)} ondeleted={() => view.leave()} />
+    <Detail title={r.title}>
+      {#snippet meta()}<span class="muted">{r.meetingId ? 'Beschluss' : 'Umlaufbeschluss'}</span>{/snippet}
+      <ResolutionCard showTitle={false} resolution={r} onchanged={(updated) => resolution.set(updated)} ondeleted={() => view.leave()} />
     </Detail>
   {/snippet}
 </AsyncView>

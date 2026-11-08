@@ -44,7 +44,6 @@
         {@const options = filter.options?.(model.data.value ?? []) ?? []}
         {#each chosen as value (value)}
           <Button
-            size="sm"
             pressed
             icon="close"
             onclick={() => model.setFilter(filter.key, chosen.filter((v) => v !== value).join(','))}
@@ -62,7 +61,6 @@
         {/if}
       {:else}
         <Button
-          size="sm"
           pressed={!!model.filters[filter.key]}
           onclick={() => model.setFilter(filter.key, model.filters[filter.key] ? '' : '1')}
           tooltip="Filter „{filter.label}“ {model.filters[filter.key] ? 'ausschalten' : 'einschalten'}"
@@ -72,7 +70,7 @@
       {/if}
     {/each}
     {#if model.activeFilters > 0}
-      <Button size="sm" variant="ghost" onclick={() => model.reset()}>Zurücksetzen</Button>
+      <Button variant="ghost" onclick={() => model.reset()}>Zurücksetzen</Button>
     {/if}
   {/snippet}
   {#snippet end()}
@@ -85,7 +83,6 @@
         onchange={(key) => model.setSort({ key, dir: model.sort.dir })}
       />
       <Button
-        size="sm"
         variant="ghost"
         icon="sort"
         onclick={() => model.setSort({ key: model.sort.key, dir: model.sort.dir === 'asc' ? 'desc' : 'asc' })}

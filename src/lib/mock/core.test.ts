@@ -30,6 +30,15 @@ describe('mock core', () => {
     expect(() => directory.requirePrivileged(player)).toThrow(expect.objectContaining({ code: 'access.denied' }));
   });
 
+  it('lists coaches only the members whose profile they may open', () => {
+    const member = (id: string) => directory.members.data.find((m) => m.id === id)!;
+    const ids = directory.list(member('trainer')).items.map((m) => m.id);
+    expect(ids).toContain('trainer');
+    expect(ids.every((id) => directory.members.data.some((m) => m.id === id && m.active))).toBe(true);
+    expect(ids.length).toBeLessThan(directory.list(member('admin')).items.length);
+    expect(() => directory.list(member('spieler'))).toThrow(expect.objectContaining({ code: 'access.denied' }));
+  });
+
   it('sees the teams of wards', () => {
     expect([...directory.visibleTeamIds('eltern')]).toEqual(['t-u16']);
   });

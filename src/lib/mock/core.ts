@@ -137,7 +137,14 @@ export class MockDirectory {
   };
 
   /** server: platform_club - edited facts on top of club.yml (blank = file value). */
-  readonly clubEdits = new MockTable<Partial<ClubEdit>>('club', () => ({}));
+  // Seeded as already set up, so a fresh mock start skips the first-setup screen.
+  readonly clubEdits = new MockTable<Partial<ClubEdit>>('club', () => ({
+    name: 'SV Musterdorf Volleyball',
+    shortName: 'SV Musterdorf',
+    website: 'https://mein-verein.at',
+    contactEmail: 'vorstand@mein-verein.at',
+    address: 'Sportplatzweg 1, 1234 Musterdorf',
+  }));
 
   /** server: platform_brand. */
   readonly brand = new MockBrand();
@@ -390,18 +397,22 @@ export class MockDirectory {
   }
 
   list(viewer: Member): MemberList {
-    this.requirePrivileged(viewer, ADMIN_BOARD);
-    const items = [...this.members.data]
-      .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName))
-      .map((m) => ({ ...m }));
+    this.requirePrivileged(viewer, PRIVILEGED);
+    // Coaches: the active members whose profile they may open.
+    const board = this.hasRole(viewer, ADMIN_BOARD);
+    const listed = this.members.data.filter((m) => board || (m.active && this.mayOpen(viewer, m.id)));
+    const ids = new Set(listed.map((m) => m.id));
+    const items = [...listed].sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName)).map((m) => ({ ...m }));
     const today = this.clock.today();
     const adultBornBy = `${Number(today.slice(0, 4)) - 18}${today.slice(4)}`;
     const links = Object.entries(this.wards.data).filter(([g]) => this.members.data.some((m) => m.id === g && m.active));
     return {
       items,
-      minorIds: this.members.data.filter((m) => m.birthDate && m.birthDate > adultBornBy).map((m) => m.id),
-      wardIds: [...new Set(links.flatMap(([, minors]) => minors))].filter((id) => this.members.data.some((m) => m.id === id && m.active)),
-      guardianIds: links.filter(([, minors]) => minors.length).map(([g]) => g),
+      minorIds: listed.filter((m) => m.birthDate && m.birthDate > adultBornBy).map((m) => m.id),
+      wardIds: [...new Set(links.flatMap(([, minors]) => minors))].filter(
+        (id) => ids.has(id) && this.members.data.some((m) => m.id === id && m.active),
+      ),
+      guardianIds: links.filter(([g, minors]) => ids.has(g) && minors.length).map(([g]) => g),
     };
   }
 
@@ -935,7 +946,12 @@ const auditLog = new MockTable<AuditEntry[]>('audit', () => []);
 /** server: AuditLog.audited */
 function audited(member: Member, method: string, route: string): boolean {
   if (route === '/api/v1/me/export') return true;
-  if (method === 'GET') return directory.hasRole(member, ADMIN_BOARD) && route.startsWith('/api/v1/members');
+  if (method === 'GET')
+    return (
+      directory.hasRole(member, ADMIN_BOARD) &&
+      route !== '/api/v1/members/names' &&
+      (route === '/api/v1/members' || route.startsWith('/api/v1/members/'))
+    );
   return directory.isPrivileged(member);
 }
 

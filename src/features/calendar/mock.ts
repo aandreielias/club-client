@@ -612,6 +612,7 @@ export class MockCalendar {
     if (!body.from || !body.to || !date.test(body.from) || !date.test(body.to) || body.to < body.from) fail(400, 'absence.range-invalid');
     if ((Date.parse(body.to!) - Date.parse(body.from!)) / 86_400_000 >= 366) fail(400, 'absence.too-long');
     if ((body.reason?.length ?? 0) > limits.reasonMaxLength) fail(400, 'absence.reason-too-long');
+    this.requireNoOverlap(target, body.from!, body.to!);
     const createdAt = new Date().toISOString();
     const absence: StoredAbsence = {
       id: crypto.randomUUID(),
@@ -648,8 +649,14 @@ export class MockCalendar {
     const absence = this.absences.data.find((a) => a.id === id);
     if (!absence || (absence.memberId !== member.id && !this.people.wardsOf(member.id).includes(absence.memberId))) fail(404, 'absence.not-found');
     if (to < from) fail(400, 'absence.range-invalid');
+    this.requireNoOverlap(absence!.memberId, from, to, id);
     Object.assign(absence!, { from, to });
     this.absences.save();
+  }
+
+  /** server: AttendanceHandlers.requireNoOverlap — one absence per member and day. */
+  private requireNoOverlap(memberId: string, from: string, to: string, except?: string): void {
+    if (this.absences.data.some((a) => a.memberId === memberId && a.id !== except && a.to >= from && a.from <= to)) fail(409, 'absence.overlaps');
   }
 
   deleteAbsence(member: Member, id: string): void {

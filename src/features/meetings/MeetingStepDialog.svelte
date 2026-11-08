@@ -64,7 +64,9 @@
   ];
 
   const titleError = $derived(
-    submitted && draft && !draft.system && (!draft.title?.trim() || draft.title.trim().length > 150) ? 'Titel mit 1 bis 150 Zeichen.' : undefined,
+    submitted && draft && !draft.system && (!draft.title?.trim() || draft.title.trim().length > 150)
+      ? 'Titel mit 1 bis 150 Zeichen angeben.'
+      : undefined,
   );
 
   /** Puts a placeholder where the cursor stands in the text. */

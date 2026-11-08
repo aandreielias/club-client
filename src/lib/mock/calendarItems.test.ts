@@ -24,6 +24,7 @@ describe('mock calendar items', () => {
   it('lists absences for the member, their coach and the board, and moves them for the member', () => {
     const start = directory.clock.today();
     const absence = calendar.addAbsence(member('spielerin'), { from: start, to: start, reason: 'Urlaub' });
+    expect(() => calendar.addAbsence(member('spielerin'), { from: start, to: start })).toThrow(expect.objectContaining({ code: 'absence.overlaps' }));
     const day = new Date(Date.parse(directory.clock.startOfDay(start)));
     const range = [new Date(day.getTime() - 86_400_000).toISOString(), new Date(day.getTime() + 10 * 86_400_000).toISOString()] as const;
     const of = (id: string) => items(member(id), ...range).filter((i) => i.category === 'ABSENCE' && i.id === absence.id);

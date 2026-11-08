@@ -162,7 +162,7 @@ export class AppController {
         .filter(([, definition]) => 'path' in definition)
         .map(([id, definition]) => {
           const path = (definition as { path: string }).path;
-          return [id, { run: () => this.deps.pageNavigator.go(path), when: () => this.allowedRoutes.some((r) => r.path === path) }];
+          return [id, { run: () => this.deps.pageNavigator.go(path), when: () => this.allowedRoutes.some((r) => r.path === path.split('?')[0]) }];
         }),
     );
     return commands.register({

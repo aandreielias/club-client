@@ -30,7 +30,7 @@
   <SettingsList
     {rows}
     kind="holiday"
-    newLabel="Neue Ferien"
+    newLabel="Ferien eintragen"
     loading={load.busy && !holidays.items.length}
     error={load.error}
     onretry={reload}

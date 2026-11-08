@@ -129,7 +129,7 @@ export class MeetingForm extends FormState<Errors> {
   protected validate(): Errors {
     const errors: Errors = {};
     const title = this.title.trim();
-    if (!title || title.length > 120) errors.title = '1 bis 120 Zeichen.';
+    if (!title || title.length > 120) errors.title = 'Titel mit 1 bis 120 Zeichen angeben.';
     const agenda = agendaError(this.rows);
     if (agenda) errors.items = agenda;
     if (this.type?.needsReason && !this.urgency.trim()) errors.urgency = 'Grund der Dringlichkeit angeben.';

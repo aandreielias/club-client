@@ -2,7 +2,6 @@
   import { bus, permissions } from '../../lib/container';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
-  import Page from '../../ui/Page.svelte';
   import RecordLink from '../../ui/RecordLink.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { MEMBERSHIP_CHANGED, TEAMS_CHANGED } from '../teams/events';
@@ -11,7 +10,7 @@
   import { boardSettings, memberPolicy, membershipKinds, membersApi } from './services';
 
   /**
-   * Organigramm (admin, board, coaches): one layer per role with its number of accounts, deactivated ones greyed. Coaches and players
+   * Organigramm view of Mitglieder (admin, board, coaches): one layer per role with its number of accounts, deactivated ones greyed. Coaches and players
    * share the team columns, joined by a line. Hovering a card marks the same person in every other layer.
    */
   const model = new OrgChartModel(membersApi);
@@ -28,63 +27,61 @@
 
 {#snippet link(id: string, name: string)}<RecordLink kind="member" {id} allowed={permissions.canSeeMember(id)}>{name}</RecordLink>{/snippet}
 
-<Page title="Organigramm">
-  <AsyncView resource={model.data}>
-    {#snippet children({ chart, board })}
-      {@const layers = orgLayers(chart, board, labels, memberPolicy.isManager)}
-      <div class="scroll">
-        <div class="layers" style:--teams={Math.max(1, ...layers.map((l) => (l.byTeam ? l.groups.length : 1)))}>
-          {#each layers as layer, li (layer.key)}
-            <h2 class="label">
-              {layer.title}
-              <span class="count"
-                >{layer.active}{#if layer.inactive}<span class="muted"> · {layer.inactive} deaktiviert</span>{/if}</span
-              >
-            </h2>
-            {#each layer.groups as group (group.key)}
-              <div
-                class="cell"
-                class:wide={!layer.byTeam}
-                class:linked={layer.byTeam && layers[li - 1]?.byTeam}
-                class:feeds={layer.byTeam && layers[li + 1]?.byTeam}
-              >
-                {#if group.title}<h3 class="team">
-                    {group.title}{#if group.subtitle}<span class="muted"> {group.subtitle}</span>{/if}
-                  </h3>{/if}
-                <ul class="cards">
-                  {#each group.cards as c (c.key)}
-                    <li
-                      class="card"
-                      class:inactive={!c.active}
-                      class:marked={marked === c.memberId}
-                      onpointerenter={() => (marked = c.memberId)}
-                      onpointerleave={() => (marked = null)}
-                      onfocusin={() => (marked = c.memberId)}
-                      onfocusout={() => (marked = null)}
-                    >
-                      {#if c.role}<span class="role">{c.role}</span>{/if}
-                      <span class="name">{@render link(c.memberId, c.name)}</span>
-                      {#each c.relatives as r (r.id)}<span class="relative small">Eltern von {@render link(r.id, r.name)}</span>{/each}
-                      {#if c.tags.length || c.also.length}
-                        <span class="tags"
-                          >{#each c.tags as t, i (i)}<Tag tone={t.tone}>{t.text}</Tag>{/each}{#if c.also.length}<Tag tone="blue"
-                              >auch: {c.also.join(', ')}</Tag
-                            >{/if}</span
-                        >
-                      {/if}
-                    </li>
-                  {:else}
-                    <li class="muted small">{layer.byTeam ? 'Niemand' : 'Noch keine Funktionen eingetragen.'}</li>
-                  {/each}
-                </ul>
-              </div>
-            {/each}
+<AsyncView resource={model.data}>
+  {#snippet children({ chart, board })}
+    {@const layers = orgLayers(chart, board, labels, memberPolicy.isManager)}
+    <div class="scroll">
+      <div class="layers" style:--teams={Math.max(1, ...layers.map((l) => (l.byTeam ? l.groups.length : 1)))}>
+        {#each layers as layer, li (layer.key)}
+          <h2 class="label">
+            {layer.title}
+            <span class="count"
+              >{layer.active}{#if layer.inactive}<span class="muted"> · {layer.inactive} deaktiviert</span>{/if}</span
+            >
+          </h2>
+          {#each layer.groups as group (group.key)}
+            <div
+              class="cell"
+              class:wide={!layer.byTeam}
+              class:linked={layer.byTeam && layers[li - 1]?.byTeam}
+              class:feeds={layer.byTeam && layers[li + 1]?.byTeam}
+            >
+              {#if group.title}<h3 class="team">
+                  {group.title}{#if group.subtitle}<span class="muted">&nbsp;{group.subtitle}</span>{/if}
+                </h3>{/if}
+              <ul class="cards">
+                {#each group.cards as c (c.key)}
+                  <li
+                    class="card"
+                    class:inactive={!c.active}
+                    class:marked={marked === c.memberId}
+                    onpointerenter={() => (marked = c.memberId)}
+                    onpointerleave={() => (marked = null)}
+                    onfocusin={() => (marked = c.memberId)}
+                    onfocusout={() => (marked = null)}
+                  >
+                    {#if c.role}<span class="role">{c.role}</span>{/if}
+                    <span class="name">{@render link(c.memberId, c.name)}</span>
+                    {#each c.relatives as r (r.id)}<span class="relative small">Eltern von {@render link(r.id, r.name)}</span>{/each}
+                    {#if c.tags.length || c.also.length}
+                      <span class="tags"
+                        >{#each c.tags as t, i (i)}<Tag tone={t.tone}>{t.text}</Tag>{/each}{#if c.also.length}<Tag tone="blue"
+                            >auch: {c.also.join(', ')}</Tag
+                          >{/if}</span
+                      >
+                    {/if}
+                  </li>
+                {:else}
+                  <li class="muted small">{layer.byTeam ? 'Niemand' : 'Noch keine Funktionen eingetragen.'}</li>
+                {/each}
+              </ul>
+            </div>
           {/each}
-        </div>
+        {/each}
       </div>
-    {/snippet}
-  </AsyncView>
-</Page>
+    </div>
+  {/snippet}
+</AsyncView>
 
 <style>
   /* The knockout bracket's cards and 1px connectors: layers top-down, a team's coaches joined to its players. */

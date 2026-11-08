@@ -296,9 +296,6 @@ label.check {
 .panel > header p {
   margin: 0;
 }
-.panel > header h2 {
-  font-size: var(--font-size-base);
-}
 /* A row with its first part on the left and its last on the right. */
 .between {
   justify-content: space-between;

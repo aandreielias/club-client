@@ -195,6 +195,7 @@
                       <button
                         type="button"
                         class="open"
+                        aria-label={!model.display(item, column) && record?.(item) ? `${record(item)!.title} öffnen` : undefined}
                         onclick={(e) => (e.stopPropagation(), onopen(item))}
                         {@attach tooltip(menu ? 'Öffnen; Rechtsklick für weitere Aktionen' : 'Öffnen')}
                       >

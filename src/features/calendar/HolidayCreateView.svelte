@@ -13,7 +13,7 @@
   const today = session.clock.today();
   const form = $state<Omit<Holiday, 'id'>>({ name: '', from: today, to: today });
   // svelte-ignore state_referenced_locally
-  const create = new CreateController(bus, handle, 'Neue Ferien');
+  const create = new CreateController(bus, handle, 'Ferien eintragen');
 
   const submit = () =>
     create.submit(
@@ -27,6 +27,6 @@
     );
 </script>
 
-<Detail title="Neue Ferien">
+<Detail title="Ferien eintragen">
   <HolidayEditor {form} action={create.save} submitLabel="Eintragen" oncancel={() => handle.close()} onsubmit={submit} />
 </Detail>

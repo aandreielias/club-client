@@ -27,12 +27,15 @@
     onchanged,
     ondeleted,
     meetingOpen = true,
+    showTitle = true,
   }: {
     resolution: Resolution;
     onchanged: (r: Resolution) => void;
     ondeleted?: () => void;
     /** Votes open only in the open meeting (circular votes always). */
     meetingOpen?: boolean;
+    /** Off where the window heading already is the title. */
+    showTitle?: boolean;
   } = $props();
 
   const action = new Action();
@@ -151,7 +154,7 @@
         <Field label="Antrag"><input bind:value={editTitle} maxlength="200" required /></Field>
         <Field label="Text (optional)"><textarea bind:value={editText} rows="3" maxlength="4000"></textarea></Field>
       </EditorForm>
-    {:else}
+    {:else if showTitle}
       <strong>{r.title}</strong>
     {/if}
     <span class="tags">
@@ -231,7 +234,7 @@
         <Select bind:value={writtenBy} placeholder="Bitte wählen" options={r.pending.map((p) => ({ value: p.memberId, label: p.name }))} />
       </Field>
       <ChoiceGroup name="written-{r.id}" label="Stimme" size="sm" options={choices} bind:value={writtenChoice} />
-      <Button type="submit" busy={action.busy} disabled={!writtenBy || !writtenChoice}>Stimme erfassen</Button>
+      <Button size="sm" type="submit" busy={action.busy} disabled={!writtenBy || !writtenChoice}>Stimme erfassen</Button>
     </form>
   {/if}
 
@@ -246,9 +249,10 @@
       <label>Ja <input type="number" min="0" max={r.presentVoters} bind:value={roomYes} /></label>
       <label>Nein <input type="number" min="0" max={r.presentVoters} bind:value={roomNo} /></label>
       <label>Enthaltung <input type="number" min="0" max={r.presentVoters} bind:value={roomAbstain} /></label>
-      <Button type="submit" variant="primary" busy={action.busy} disabled={roomSum > r.presentVoters}>Ergebnis eintragen</Button>
-      <Button busy={action.busy} onclick={() => handResult(r.presentVoters, 0, 0)}>Einstimmig</Button>
+      <Button size="sm" type="submit" variant="primary" busy={action.busy} disabled={roomSum > r.presentVoters}>Ergebnis eintragen</Button>
+      <Button size="sm" busy={action.busy} onclick={() => handResult(r.presentVoters, 0, 0)}>Einstimmig</Button>
       <Button
+        size="sm"
         busy={action.busy}
         disabled={roomSum > r.presentVoters}
         tooltip="Die Zahlen speichern, ohne die Abstimmung zu schließen"
@@ -272,16 +276,16 @@
   {#if r.canManage && r.status !== 'CLOSED'}
     <div class="row">
       {#if r.status === 'DRAFT'}
-        {#if !editing}<Button variant="ghost" icon="edit" onclick={startEdit}>Bearbeiten</Button>{/if}
-        <Button variant="danger" icon="delete" onclick={remove}>Entwurf löschen</Button>
+        {#if !editing}<Button size="sm" variant="ghost" icon="edit" onclick={startEdit}>Bearbeiten</Button>{/if}
+        <Button size="sm" variant="danger" icon="delete" onclick={remove}>Entwurf löschen</Button>
         {#if r.meetingId && meetingOpen}
-          <Button variant="primary" busy={action.busy} onclick={openByHand}>Per Handzeichen</Button>
-          <Button busy={action.busy} onclick={openInApp}>Geheim in der App</Button>
+          <Button size="sm" variant="primary" busy={action.busy} onclick={openByHand}>Per Handzeichen</Button>
+          <Button size="sm" busy={action.busy} onclick={openInApp}>Geheim in der App</Button>
         {:else if !r.meetingId}
-          <Button variant="primary" busy={action.busy} onclick={openInApp}>An den Vorstand schicken</Button>
+          <Button size="sm" variant="primary" busy={action.busy} onclick={openInApp}>An den Vorstand schicken</Button>
         {/if}
       {:else if r.voteMode !== 'HAND'}
-        <Button busy={action.busy} onclick={close}>Abstimmung schließen</Button>
+        <Button size="sm" busy={action.busy} onclick={close}>Abstimmung schließen</Button>
       {/if}
     </div>
   {/if}

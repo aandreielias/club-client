@@ -47,35 +47,70 @@
       <a href="#/forgot-password" class="muted">Passwort vergessen?</a>
     </div>
   </form>
+</Centered>
 
-  {#if dev}
-    <section class="dev stack">
+{#if dev}
+  <aside class="dev" aria-labelledby="dev-title">
+    <header><h2 id="dev-title">Testkonten</h2></header>
+    <div class="body stack">
       <p class="muted">Testmodus ohne Server. Anmelden als:</p>
       <ul class="stack">
         {#each dev.accounts as account (account.email)}
           <li>
             <Button variant="ghost" onclick={() => signInAs(account)} tooltip="Als {account.name} anmelden ({account.email})">
               {account.name}
-              <span class="muted">{account.roles.map((r) => ROLE_LABELS[r]).join(', ')}</span>
+              <span class="muted">· {account.roles.map((r) => ROLE_LABELS[r]).join(', ')}</span>
             </Button>
           </li>
         {/each}
       </ul>
-    </section>
-  {/if}
-</Centered>
+    </div>
+  </aside>
+{/if}
 
 <style>
+  /* Docked on the right like a detail window, so the login card stays centred. */
   .dev {
-    margin-top: var(--space-xl);
-    padding-top: var(--space-lg);
-    border-top: 1px solid var(--color-border);
+    position: fixed;
+    top: var(--space-lg);
+    right: var(--space-lg);
+    bottom: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-elevated);
+    box-shadow: var(--color-shadow-window);
     font-size: var(--font-size-small);
+  }
+  .dev header {
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .dev h2 {
+    margin: 0;
+    font-size: var(--font-size-base);
+  }
+  .body {
+    overflow: auto;
+    padding: var(--space-md) var(--space-lg);
   }
   .dev p {
     margin: 0;
   }
   .dev ul {
     gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  /* Narrow screens: below the card instead of over it. */
+  @media (max-width: 1000px) {
+    .dev {
+      position: static;
+      width: auto;
+      margin: 0 var(--space-lg) var(--space-lg);
+    }
   }
 </style>

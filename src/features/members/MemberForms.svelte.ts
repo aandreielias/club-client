@@ -12,9 +12,9 @@ const EMAIL = /^[\x21-\x3f\x41-\x7e]+@[^@\s]+\.[^@\s]+$/;
 const PHONE = /^\+?[0-9 /-]{6,20}$/;
 const EMAIL_ERROR = 'Gültige E-Mail-Adresse angeben (keine Umlaute vor dem @).';
 
-function nameError(value: string): string | undefined {
+function nameError(field: string, value: string): string | undefined {
   const name = value.trim();
-  return !name || name.length > limits.nameMaxLength ? `1 bis ${limits.nameMaxLength} Zeichen.` : undefined;
+  return !name || name.length > limits.nameMaxLength ? `${field} mit 1 bis ${limits.nameMaxLength} Zeichen angeben.` : undefined;
 }
 
 function birthDateError(value: string, today: string, required = false): string | undefined {
@@ -56,9 +56,9 @@ abstract class MemberFormBase extends FormState<MemberFormErrors> {
     const errors: MemberFormErrors = {};
     const email = this.email.trim();
     if ((email || !this.emailOptional) && (!EMAIL.test(email) || email.includes('ß'))) errors.email = EMAIL_ERROR;
-    errors.firstName = nameError(this.firstName);
+    errors.firstName = nameError('Vorname', this.firstName);
     if (this.middleName.trim().length > limits.nameMaxLength) errors.middleName = `Höchstens ${limits.nameMaxLength} Zeichen.`;
-    errors.lastName = nameError(this.lastName);
+    errors.lastName = nameError('Nachname', this.lastName);
     errors.birthDate = birthDateError(this.birthDate, this.today, this.birthDateRequired);
     errors.phone = phoneError(this.phone);
     return Object.fromEntries(Object.entries(errors).filter(([, e]) => e)) as MemberFormErrors;

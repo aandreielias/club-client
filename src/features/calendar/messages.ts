@@ -43,6 +43,7 @@ export const CALENDAR_MESSAGES: MessageCatalog = {
   'attendance.status-missing': 'Bitte eine Antwort auswählen.',
   'calendar.range-invalid': `Der Zeitraum darf höchstens ${limits.maxRangeDays} Tage umfassen.`,
   'absence.not-found': 'Die Abwesenheit gibt es nicht mehr.',
+  'absence.overlaps': 'An diesen Tagen ist schon eine Abwesenheit eingetragen.',
   'absence.range-invalid': 'Das Ende der Abwesenheit liegt vor dem Beginn.',
   'absence.too-long': 'Die Abwesenheit ist zu lang.',
   'absence.reason-too-long': 'Der Grund ist zu lang (höchstens 300 Zeichen).',

@@ -7,6 +7,10 @@ const member = (id: string): Member => directory.members.data.find((m) => m.id =
 
 describe('mock club facts', () => {
   it('are set up once by an admin, then edited by the board; blank values fall back to club.yml', () => {
+    // The mock starts set up; without edits it is a fresh club.
+    expect(directory.clubInfo()).toMatchObject({ name: 'SV Musterdorf Volleyball', configured: true });
+    const edits = directory.clubEdits.data as Record<string, unknown>;
+    for (const key of Object.keys(edits)) delete edits[key];
     expect(directory.clubInfo()).toMatchObject({ name: 'Mein Verein', configured: false });
     expect(() => directory.updateClub(member('vorstand'), { name: 'X' })).toThrow(); // the first setup is the admin's
     expect(directory.updateClub(member('admin'), { name: 'VC Beispiel' })).toMatchObject({ name: 'VC Beispiel', configured: true });

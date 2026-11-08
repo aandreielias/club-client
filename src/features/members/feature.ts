@@ -11,7 +11,6 @@ import { boardSettings, memberPolicy, membershipKinds } from './services';
 import MembersPage from './MembersPage.svelte';
 import MembershipKindCreateView from './MembershipKindCreateView.svelte';
 import OfficeAssignView from './OfficeAssignView.svelte';
-import OrgChartPage from './OrgChartPage.svelte';
 import OfficeSettingCreateView from './OfficeSettingCreateView.svelte';
 import OfficeSettingView from './OfficeSettingView.svelte';
 import MembershipKindView from './MembershipKindView.svelte';
@@ -19,7 +18,8 @@ import MembershipKindView from './MembershipKindView.svelte';
 export const membersFeature: Feature = {
   id: 'members',
   routes: [
-    { path: '/members', component: MembersPage, nav: 'Mitglieder', icon: 'members', roles: ADMIN_BOARD },
+    // Coaches list the members whose profile they may open (server: MemberHandlers.list); ?view=org shows the Organigramm.
+    { path: '/members', component: MembersPage, nav: 'Mitglieder', icon: 'members', roles: PRIVILEGED },
     // Coaches open profiles of their team members (server: requireMaySee).
     // Guardians open their wards' profiles too (server: requireMaySee); the window checks per member.
     detailRoute('/members/:id', MemberView, () =>
@@ -27,8 +27,6 @@ export const membersFeature: Feature = {
     ),
     // Who holds which function is known club-wide (server: LIST_OFFICES for every member).
     { path: '/board', component: BoardPage, nav: 'Vorstand', icon: 'club' },
-    // server: MemberHandlers.orgChart — coaches see only their teams and those members' guardians.
-    { path: '/org-chart', component: OrgChartPage, nav: 'Organigramm', icon: 'orgChart', roles: PRIVILEGED },
     detailRoute('/membership-kinds/:key', MembershipKindView, { href: '/settings/membership', label: 'Mitgliedschaft' }, { roles: ADMIN_BOARD }),
   ],
   windows: {

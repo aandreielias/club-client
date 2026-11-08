@@ -39,11 +39,12 @@
         {#if keymap.isCustom(row.id)}<Tag tone="blue">Geändert</Tag>{/if}
       {:else if column.key === 'actions'}
         <span class="actions">
-          <Button size="sm" onclick={() => (recording = row.id)}>Ändern</Button>
           {#if keymap.keys(row.id)}<Button size="sm" variant="ghost" onclick={() => keymap.clear(row.id)} tooltip="Tastenkürzel entfernen"
               >Entfernen</Button
             >{/if}
           {#if keymap.isCustom(row.id)}<Button size="sm" variant="ghost" onclick={() => keymap.reset(row.id)}>Standard</Button>{/if}
+          <!-- last, so it keeps its place at the right edge in every row -->
+          <Button size="sm" onclick={() => (recording = row.id)}>Ändern</Button>
         </span>
       {:else}
         {list.display(row, column)}

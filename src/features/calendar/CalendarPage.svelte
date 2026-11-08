@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { background } from '../../lib/state/background';
   import { usePane } from '../../lib/split/usePane';
   import { untrack } from 'svelte';
   import { settings } from '../../settings';
-  import { bus, calendarSources, commands, directory, permissions, preferences, session, store } from '../../lib/container';
+  import { bus, calendarSources, commands, directory, preferences, session, store } from '../../lib/container';
   import { APP_ERROR, TOAST, WINDOW_OPEN } from '../../channels';
   import { BrowserFile } from '../../lib/files/BrowserFile';
   import { Action } from '../../lib/state/Action.svelte';
@@ -69,7 +68,6 @@
 
   void model.load();
   directory.loadRosters();
-  if (permissions.isManager) background(directory.loadTeams());
   useBus(bus, RELOAD_ON, () => void model.load());
 
   // View, date and team live in the URL (other keys such as the open window stay).
@@ -111,7 +109,6 @@
   <!-- Only the categories this range has (and hidden ones, so they can come back). -->
   {#each calendarSources.all.filter((c) => model.countOf(c.id) > 0 || !model.isShown(c.id)) as category (category.id)}
     <Button
-      size="sm"
       pressed={model.isShown(category.id)}
       onclick={() => model.toggleSource(category.id)}
       tooltip="{category.label} im Kalender {model.isShown(category.id) ? 'ausblenden' : 'einblenden'}"
@@ -121,7 +118,7 @@
     </Button>
   {/each}
   {#if model.hidden.length}
-    <Button size="sm" variant="ghost" onclick={() => model.showAll()} tooltip="Alle Arten wieder einblenden">Alle zeigen</Button>
+    <Button variant="ghost" onclick={() => model.showAll()} tooltip="Alle Arten wieder einblenden">Alle zeigen</Button>
   {/if}
   {#if teamOptions.length}
     <Select

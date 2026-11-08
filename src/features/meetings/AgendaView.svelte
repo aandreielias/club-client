@@ -25,28 +25,28 @@
 </script>
 
 {#if meeting.agendaItems.length || unlisted.length}
-  <ol class="agenda">
-    {#each meeting.agendaItems as item, i (item.id)}
-      {@const r = item.resolutionId ? byId.get(item.resolutionId) : undefined}
-      {#if !item.resolutionId || !pendingDeletes.isHidden(item.resolutionId)}
-        <li class="stack">
-          <div class="head">
-            <span class="number">{i + 1}.</span>
-            <span class="title">{item.title}</span>
-            {#if item.resolutionId}<span class="muted small">Beschluss</span>{/if}
-          </div>
-          {#if item.note}<p class="muted small note">{item.note}</p>{/if}
-          {#if r}
-            <div class="card">
-              <ResolutionCard resolution={r} meetingOpen={meeting.status === 'OPEN'} onchanged={replace} />
+  {#if meeting.agendaItems.length}<ol class="agenda">
+      {#each meeting.agendaItems as item, i (item.id)}
+        {@const r = item.resolutionId ? byId.get(item.resolutionId) : undefined}
+        {#if !item.resolutionId || !pendingDeletes.isHidden(item.resolutionId)}
+          <li class="stack">
+            <div class="head">
+              <span class="number">{i + 1}.</span>
+              <span class="title">{item.title}</span>
+              {#if item.resolutionId}<span class="muted small">Beschluss</span>{/if}
             </div>
-          {/if}
-        </li>
-      {/if}
-    {/each}
-  </ol>
+            {#if item.note}<p class="muted small note">{item.note}</p>{/if}
+            {#if r}
+              <div class="card">
+                <ResolutionCard resolution={r} meetingOpen={meeting.status === 'OPEN'} onchanged={replace} />
+              </div>
+            {/if}
+          </li>
+        {/if}
+      {/each}
+    </ol>{/if}
   {#if unlisted.length}
-    <h3>Weitere Beschlüsse</h3>
+    {#if meeting.agendaItems.length}<h3>Weitere Beschlüsse</h3>{/if}
     <div class="stack">
       {#each unlisted as r (r.id)}
         <ResolutionCard resolution={r} meetingOpen={meeting.status === 'OPEN'} onchanged={replace} />

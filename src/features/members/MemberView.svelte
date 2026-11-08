@@ -101,7 +101,7 @@
   {#snippet children(member)}
     <Detail title={editing ? 'Profil bearbeiten' : [member.firstName, member.middleName, member.lastName].filter(Boolean).join(' ')}>
       {#snippet actions()}
-        {#if !editing && policy.canEditProfile(member)}<Button onclick={() => (editing = true)}>Profil bearbeiten</Button>{/if}
+        {#if !editing && policy.canEditProfile(member)}<Button icon="edit" onclick={() => (editing = true)}>Profil bearbeiten</Button>{/if}
       {/snippet}
       {#snippet meta()}
         {#if !member.active}<Tag tone="red">Inaktiv</Tag>{:else if !member.login}<Tag>Ohne Login</Tag>{:else if invited}<Tag>Eingeladen</Tag>{/if}

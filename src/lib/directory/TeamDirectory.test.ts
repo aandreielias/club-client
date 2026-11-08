@@ -66,7 +66,7 @@ describe('TeamDirectory', () => {
     await Promise.all([directory.loadRosters(), directory.loadRosters(['a'])]);
     expect(directory.nameOf('m2')).toBe('Pia Player');
     expect(directory.nameOf('m1')).toBe('Clara Coach');
-    expect(send).toHaveBeenCalledTimes(3); // names once, rosters a and b once each
+    expect(send).toHaveBeenCalledTimes(4); // names and teams once, rosters a and b once each
   });
 
   it('knows members outside the own teams by name', async () => {

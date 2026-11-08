@@ -35,7 +35,13 @@ export class AgendaListModel extends ListModel<CalendarEntry> {
         defaultSort: { key: 'start', dir: 'asc' },
         columns: [
           { key: 'title', label: 'Titel', value: (e) => e.title },
-          { key: 'start', label: 'Wann', value: (e) => e.start, format: (e) => format().dateTime(e.start), width: '12rem' },
+          {
+            key: 'start',
+            label: 'Wann',
+            value: (e) => e.start,
+            format: (e) => (e.allDay ? format().date(clock.localDate(e.start)) : format().dateTime(e.start)),
+            width: '12rem',
+          },
           { key: 'label', label: 'Art', value: (e) => e.label, width: '9rem' },
           {
             key: 'team',

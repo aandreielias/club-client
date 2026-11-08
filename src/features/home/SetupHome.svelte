@@ -25,6 +25,7 @@
       or(membersApi.board(), null),
       or(locationsApi.list(), []),
       or(filesApi.folders(), []),
+      or(directory.loadTeams(), undefined),
     ]);
     const active = members.filter((m) => m.active);
     const admins = active.filter((m) => m.roles.includes('ADMIN')).length;

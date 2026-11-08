@@ -32,7 +32,7 @@
     mailboxes.items.map((m) => ({
       key: m.id,
       label: m.address,
-      detail: `${m.name} · ${m.memberId ? (m.memberName ?? 'Mitglied') : `alle ${ROLE_LABELS[m.role!]}`}`,
+      detail: [...new Set([m.name, m.memberId ? (m.memberName ?? 'Mitglied') : `alle mit Rolle ${ROLE_LABELS[m.role!]}`])].join(' · '),
       tags: m.memberId ? [] : ['geteilt'],
       archived: false,
       inUse: false,

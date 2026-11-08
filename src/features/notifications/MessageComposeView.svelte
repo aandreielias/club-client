@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { background } from '../../lib/state/background';
   import { untrack } from 'svelte';
   import { settings } from '../../settings';
   import { bus, directory, permissions, session, store } from '../../lib/container';
@@ -34,8 +33,15 @@
     { value: 'people', label: 'Personen' },
   ];
 
-  if (permissions.isManager) background(directory.loadTeams());
-  const teams = new TeamListModel(async () => [...permissions.manageableTeams()], session, null, 'message-teams');
+  const teams = new TeamListModel(
+    async () => {
+      if (permissions.isManager) await directory.loadTeams();
+      return [...permissions.manageableTeams()];
+    },
+    session,
+    null,
+    'message-teams',
+  );
   void teams.load();
   const people = new PersonListModel(
     async () => {

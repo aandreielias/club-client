@@ -2,6 +2,7 @@
   import { bus, directory, session } from '../../lib/container';
   import { CreateController } from '../../lib/detail/CreateController.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
+  import { ZonedClock } from '../../lib/time/ZonedClock';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
@@ -37,11 +38,23 @@
     ]);
     return types.filter((t) => !t.archived && policy.mayConvene(t, offices)).map((t) => ({ value: t.key, label: t.label }));
   });
-  void kinds.load().then(() => kinds.value?.[0] && setKind(kinds.value[0].value));
+  void kinds.load();
+  // Picks the first type once both the list and the type store have it (the store may still be loading when the list arrives).
+  $effect(() => {
+    if (!form.type && kinds.value?.[0]) setKind(kinds.value[0].value);
+  });
 
+  // Until the member picks a start, it follows the type: the first evening (19:00) that still meets its notice period.
+  let startPicked = false;
   function setKind(key: string) {
     const type = meetingTypes.get(key);
-    if (type) form.setType(type);
+    if (!type) return;
+    form.setType(type);
+    if (startPicked) return;
+    const now = new Date().toISOString();
+    let day = session.clock.today();
+    while (latestInvite(type, session.clock.toInstant(`${day}T19:00`)) < now) day = ZonedClock.addDays(day, 1);
+    form.setStart(`${day}T19:00`);
   }
 
   // Who may carry a Beschluss out: every active member (admin and board load the list).
@@ -88,7 +101,7 @@
           {/if}
           <div class="grid-2">
             <Field label="Beginn" error={form.error('start')}>
-              <DateTimeInput bind:value={() => form.start, (v) => form.setStart(v)} required />
+              <DateTimeInput bind:value={() => form.start, (v) => ((startPicked = true), form.setStart(v))} required />
             </Field>
             <Field label="Ende" error={form.error('end')}>
               <DateTimeInput bind:value={form.end} min={form.start} required />

@@ -6,6 +6,7 @@
   import { Resource } from '../../lib/state/Resource.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
+  import Icon from '../../ui/Icon.svelte';
   import RecordLink from '../../ui/RecordLink.svelte';
   import SearchSelect from '../../ui/SearchSelect.svelte';
   import { FILES_CHANGED } from './events';
@@ -68,7 +69,7 @@
   {@const current = files.value?.find((f) => f.slot === slot)}
   <div class="slot">
     <span class="thumb"
-      >{#if current && !slot.endsWith('_TEMPLATE')}<Thumbnail file={current.file} />{/if}</span
+      >{#if slot.endsWith('_TEMPLATE')}<Icon name="document" />{:else if current}<Thumbnail file={current.file} />{/if}</span
     >
     <span class="stack-tight">
       <strong>{label}</strong>
@@ -125,6 +126,7 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     background: var(--color-surface);
+    color: var(--color-text-muted);
   }
   .thumb :global(img) {
     max-width: 40px;

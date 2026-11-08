@@ -52,7 +52,7 @@
       <Field label="Name">
         <input bind:value={draft.value.name} maxlength={limits.nameMaxLength} />
       </Field>
-      <Field label="Kurzname" hint="Betreff der E-Mails">
+      <Field label="Kurzname" hint="Steht in eckigen Klammern vor dem Betreff jeder E-Mail.">
         <input bind:value={draft.value.shortName} maxlength={limits.shortNameMaxLength} />
       </Field>
     </div>

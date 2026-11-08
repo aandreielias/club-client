@@ -88,7 +88,7 @@
 <style>
   .datetime {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 5.5rem;
+    grid-template-columns: minmax(0, 1fr) 4.5rem;
     gap: var(--space-xs);
     min-width: 0;
   }

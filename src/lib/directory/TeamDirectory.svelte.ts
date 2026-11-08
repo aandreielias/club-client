@@ -70,7 +70,8 @@ export class TeamDirectory {
   async loadRosters(teamIds: Iterable<string | null> = []): Promise<void> {
     const ids = new Set([...teamIds].filter((id): id is string => !!id));
     this.session.teams.forEach((t) => ids.add(t.id));
-    await Promise.all([this.loadNames(), ...[...ids].map((id) => this.roster(id))]);
+    // Team names too: every member reads them (the "Für" column also for guardians outside the team).
+    await Promise.all([this.loadNames(), this.loadTeams().catch(() => {}), ...[...ids].map((id) => this.roster(id))]);
   }
 
   /** Every member's name once per session (guests get none; a failure is asked again next time). */

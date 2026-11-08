@@ -52,7 +52,7 @@
 <Page title="E-Mail">
   {#snippet actions()}
     {#if current?.signatureEditable}<Button icon="signature" onclick={editSignature}>Signatur</Button>{/if}
-    {#if boxes.length}<Button variant="primary" icon="mail" onclick={compose}>Neue E-Mail</Button>{/if}
+    {#if boxes.length}<Button variant="primary" icon="add" onclick={compose}>Neue E-Mail</Button>{/if}
   {/snippet}
   {#snippet context()}
     {#if boxes.length > 1}
@@ -66,7 +66,7 @@
       <span class="muted">{boxes[0].address}</span>
     {/if}
     {#if boxes.length}
-      <ChoiceGroup name="mail-folder" label="Ordner" size="sm" options={MAIL_FOLDERS} bind:value={() => list.folder, choose} />
+      <ChoiceGroup name="mail-folder" label="Ordner" options={MAIL_FOLDERS} bind:value={() => list.folder, choose} />
     {/if}
   {/snippet}
 
