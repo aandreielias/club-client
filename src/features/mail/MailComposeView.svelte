@@ -54,16 +54,13 @@
 
   void load.run(async () => {
     await center.mailboxes.load();
-    // A later load (page start) may still be running and holds back the shared value; then ask once more.
-    const all = center.mailboxes.value ?? (await mailApi.mailboxes());
-    const box = all.find((b) => b.id === mailboxId);
-    if (mode === 'new') return void (form = MailForm.compose(box ?? all[0]));
+    if (mode === 'new') return void (form = MailForm.compose(boxOf(mailboxId) ?? boxOf(boxes[0]?.id ?? '')));
     const original = await mailApi.get(mailboxId, mailId);
     if (mode === 'draft') {
       const refs = await mailApi.resolveRefs(refCodes(original.html ?? original.body));
       form = MailForm.fromDraft(original, mailboxId, new Map(refs.map((r) => [r.code, r])));
-    } else if (mode === 'forward') form = MailForm.forward(original, box);
-    else form = MailForm.reply(original, box, mode === 'reply-all');
+    } else if (mode === 'forward') form = MailForm.forward(original, boxOf(mailboxId));
+    else form = MailForm.reply(original, boxOf(mailboxId), mode === 'reply-all');
   });
 
   $effect(() => handle.setTitle(title));

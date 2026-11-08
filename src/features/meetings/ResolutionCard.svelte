@@ -27,6 +27,7 @@
     onchanged,
     ondeleted,
     meetingOpen = true,
+    byHandOnly = false,
     showTitle = true,
   }: {
     resolution: Resolution;
@@ -34,6 +35,8 @@
     ondeleted?: () => void;
     /** Votes open only in the open meeting (circular votes always). */
     meetingOpen?: boolean;
+    /** Guests from outside vote (no login): only a show of hands (server: resolution.vote-by-hand). */
+    byHandOnly?: boolean;
     /** Off where the window heading already is the title. */
     showTitle?: boolean;
   } = $props();
@@ -280,7 +283,7 @@
         <Button size="sm" variant="danger" icon="delete" onclick={remove}>Entwurf löschen</Button>
         {#if r.meetingId && meetingOpen}
           <Button size="sm" variant="primary" busy={action.busy} onclick={openByHand}>Per Handzeichen</Button>
-          <Button size="sm" busy={action.busy} onclick={openInApp}>Geheim in der App</Button>
+          {#if !byHandOnly}<Button size="sm" busy={action.busy} onclick={openInApp}>Geheim in der App</Button>{/if}
         {:else if !r.meetingId}
           <Button size="sm" variant="primary" busy={action.busy} onclick={openInApp}>An den Vorstand schicken</Button>
         {/if}

@@ -8,7 +8,7 @@
   import Tag from '../../ui/Tag.svelte';
   import type { MemberListModel } from './MemberListModel.svelte';
 
-  /** Members as rows (members page, start page): roles and status as tags, opens in the window. */
+  /** Members as rows (members page, start page): roles and status as tags, opens in the window (name-only rows stay plain). */
   let {
     list,
     toolbar = true,
@@ -23,9 +23,9 @@
   {limit}
   {emptyAction}
   rowKey={(m) => m.id}
-  record={(m) => ({ kind: 'member', id: m.id, title: `${m.firstName} ${m.lastName}` })}
-  onopen={(m) => bus.publish(WINDOW_OPEN, { kind: 'member', id: m.id })}
-  menu={(m) => windowMenu(bus, windows, router, 'member', m.id)}
+  record={(m) => (m.nameOnly ? null : { kind: 'member', id: m.id, title: `${m.firstName} ${m.lastName}` })}
+  onopen={(m) => !m.nameOnly && bus.publish(WINDOW_OPEN, { kind: 'member', id: m.id })}
+  menu={(m) => (m.nameOnly ? [] : windowMenu(bus, windows, router, 'member', m.id))}
   selected={windows.current?.kind === 'member' ? windows.current.id : null}
   emptyText="Noch keine Mitglieder."
 >
@@ -37,7 +37,7 @@
     {:else if column.key === 'status'}
       <Tag tone={member.active ? 'green' : 'red'}>{member.active ? 'Aktiv' : 'Inaktiv'}</Tag>
     {:else if column.key === 'email'}
-      <span class="muted">{member.email ?? 'ohne Login'}</span>
+      <span class="muted">{member.nameOnly ? '' : (member.email ?? 'ohne Login')}</span>
     {:else}
       {list.display(member, column)}
     {/if}

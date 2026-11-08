@@ -97,6 +97,30 @@ describe('ProfileForm', () => {
 });
 
 describe('MemberListModel', () => {
+  it('shows others by name only and no account state to non-board viewers', async () => {
+    const pendingInvitations = vi.fn();
+    const api = {
+      list: async () => ({
+        items: [member('bert', ['PLAYER'])],
+        minorIds: [],
+        wardIds: [],
+        guardianIds: [],
+        others: [{ id: 'dora', firstName: 'Dora', lastName: 'Fremd' }],
+      }),
+      pendingInvitations,
+    };
+    const list = new MemberListModel(api as unknown as MembersApi, null, false);
+    await list.load();
+    expect(list.rows.map((m) => [m.id, !!m.nameOnly])).toEqual(
+      expect.arrayContaining([
+        ['bert', false],
+        ['dora', true],
+      ]),
+    );
+    expect(list.columns.map((c) => c.key)).not.toContain('status');
+    expect(pendingInvitations).not.toHaveBeenCalled();
+  });
+
   it('filters by search, role and activity', async () => {
     const api = {
       list: async () => ({
@@ -104,6 +128,7 @@ describe('MemberListModel', () => {
         minorIds: ['bert'],
         wardIds: ['bert'],
         guardianIds: ['anna'],
+        others: [],
       }),
       pendingInvitations: async () => ['bert'],
     };

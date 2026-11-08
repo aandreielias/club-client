@@ -2,7 +2,7 @@ import BoardPage from './BoardPage.svelte';
 import MembersHome from './MembersHome.svelte';
 import BoardHome from './BoardHome.svelte';
 import { permissions } from '../../lib/container';
-import { ADMIN_BOARD, PRIVILEGED } from '../../lib/types';
+import { ADMIN_BOARD } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
 import MemberInviteView from './MemberInviteView.svelte';
 import MemberView from './MemberView.svelte';
@@ -18,13 +18,12 @@ import MembershipKindView from './MembershipKindView.svelte';
 export const membersFeature: Feature = {
   id: 'members',
   routes: [
-    // Coaches list the members whose profile they may open (server: MemberHandlers.list); ?view=org shows the Organigramm.
-    { path: '/members', component: MembersPage, nav: 'Mitglieder', icon: 'members', roles: PRIVILEGED },
+    // Every member: profiles they may open in full, the others by name (server: MemberHandlers.list); ?view=org shows the
+    // Organigramm to coaches, admin and board.
+    { path: '/members', component: MembersPage, nav: 'Mitglieder', icon: 'members' },
     // Coaches open profiles of their team members (server: requireMaySee).
     // Guardians open their wards' profiles too (server: requireMaySee); the window checks per member.
-    detailRoute('/members/:id', MemberView, () =>
-      memberPolicy.isManager ? { href: '/members', label: 'Mitglieder' } : { href: '/teams', label: 'Teams' },
-    ),
+    detailRoute('/members/:id', MemberView, { href: '/members', label: 'Mitglieder' }),
     // Who holds which function is known club-wide (server: LIST_OFFICES for every member).
     { path: '/board', component: BoardPage, nav: 'Vorstand', icon: 'club' },
     detailRoute('/membership-kinds/:key', MembershipKindView, { href: '/settings/membership', label: 'Mitgliedschaft' }, { roles: ADMIN_BOARD }),

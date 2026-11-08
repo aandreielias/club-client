@@ -12,13 +12,16 @@
   import { MeetingTypeForm } from './MeetingTypeForm.svelte';
   import {
     ACTION_KIND_LABELS,
+    ARBITRATION,
     AUDIENCE_LABELS,
+    INVITEES_LABELS,
     MAJORITY_LABELS,
     majorities,
     noticeText,
     quorumText,
     STEP_ANCHOR_TEXT,
     SYSTEM_STEP_LABELS,
+    VOTING_LABELS,
   } from './model';
   import { meetingPolicy as policy, meetingsApi, meetingTypes } from './services';
 
@@ -62,7 +65,9 @@
     {#snippet actions()}
       {#if !edit.form && policy.canEditTypes()}
         <Button icon="edit" onclick={() => edit.edit(new MeetingTypeForm(type))}>Bearbeiten</Button>
-        {#if type.archived}
+        {#if type.key === ARBITRATION}
+          <!-- server: meeting-type.fixed — the Schlichtungseinrichtung stays. -->
+        {:else if type.archived}
           <Button tooltip="Wieder für neue Sitzungen anbieten" onclick={() => setArchived(false)}>Wiederherstellen</Button>
         {:else if type.inUse}
           <Button tooltip="Für neue Sitzungen nicht mehr anbieten; bestehende behalten sie" onclick={() => setArchived(true)}>Archivieren</Button>
@@ -79,7 +84,14 @@
     {:else}
       <dl class="props">
         <dt>Eingeladen</dt>
-        <dd>{type.electorate === 'ASSEMBLY' ? 'Stimmberechtigte Mitglieder' : 'Vorstand'}</dd>
+        <dd>
+          {INVITEES_LABELS[type.invitees]}{#if type.invitees === 'CHOSEN' && (type.minInvitees || type.maxInvitees)}
+            ({type.minInvitees === type.maxInvitees
+              ? `genau ${type.minInvitees}`
+              : `${type.minInvitees ?? 1} bis ${type.maxInvitees ?? 'beliebig viele'}`}){/if}
+        </dd>
+        <dt>Stimmrecht</dt>
+        <dd>{VOTING_LABELS[type.voting]}</dd>
         <dt>Einladungsfrist</dt>
         <dd>{noticeText(type.noticeHours)} vor Beginn</dd>
         <dt>Beschlussfähig</dt>
@@ -104,7 +116,11 @@
             <li>
               <span>{noticeText(step.offsetHours)} {STEP_ANCHOR_TEXT[step.anchor]}</span>
               <span>{step.system ? SYSTEM_STEP_LABELS[step.system] : step.title}</span>
-              <span class="muted small">{ACTION_KIND_LABELS[step.action]} an {AUDIENCE_LABELS[step.audience]}</span>
+              <span class="muted small"
+                >{ACTION_KIND_LABELS[step.action]} an {step.audience === 'OFFICE' && step.office
+                  ? boardSettings.label(step.office)
+                  : AUDIENCE_LABELS[step.audience]}</span
+              >
             </li>
           {/each}
         </ul>

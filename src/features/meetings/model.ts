@@ -25,19 +25,23 @@ export const STATUS_TONES: Readonly<Record<MeetingStatus, Hue>> = {
   CANCELLED: 'red',
 };
 
-/** server: MeetingsApi.Quorum — of the electorate present: at least half, more than half, at least three quarters. */
-export type Quorum = 'AT_LEAST_HALF' | 'MORE_THAN_HALF' | 'AT_LEAST_THREE_QUARTERS';
+/** server: MeetingsApi.Quorum — of the electorate present: at least half, more than half, at least three quarters, all. */
+export type Quorum = 'AT_LEAST_HALF' | 'MORE_THAN_HALF' | 'AT_LEAST_THREE_QUARTERS' | 'ALL';
 export const QUORUM_LABELS: Readonly<Record<Quorum, string>> = {
   AT_LEAST_HALF: 'mindestens die Hälfte',
   MORE_THAN_HALF: 'mehr als die Hälfte',
   AT_LEAST_THREE_QUARTERS: 'mindestens drei Viertel',
+  ALL: 'alle',
 };
 
-/** server: MeetingsApi.StepAnchor — before the last day to invite (drafts), before the start (once invited), after the end. */
-export type StepAnchor = 'BEFORE_INVITE' | 'BEFORE_START' | 'AFTER_END';
+/**
+ * server: MeetingsApi.StepAnchor — before the last day to invite (drafts), before the start (once invited), after the end, after the
+ * meeting was created (until closed or cancelled).
+ */
+export type StepAnchor = 'BEFORE_INVITE' | 'BEFORE_START' | 'AFTER_END' | 'AFTER_CREATE';
 export type StepAction = 'NOTIFICATION' | 'TASK';
-/** BOARD: the board and who created the meeting; CONVENERS: holders of the convening offices. */
-export type StepAudience = 'ELECTORATE' | 'BOARD' | 'CONVENERS' | 'SECRETARY';
+/** BOARD: the board and who created the meeting; CONVENERS: holders of the convening offices; OFFICE: holders of the step's office. */
+export type StepAudience = 'ELECTORATE' | 'BOARD' | 'CONVENERS' | 'SECRETARY' | 'OFFICE';
 /** The server's own reminders: invitation due, meeting starts soon (texts by the server). */
 export type SystemStep = 'INVITE_REMINDER' | 'START_REMINDER';
 
@@ -53,6 +57,8 @@ export interface MeetingStep {
   title: string | null;
   body: string | null;
   system: SystemStep | null;
+  /** Only for audience OFFICE. */
+  office: string | null;
 }
 
 export const AUDIENCE_LABELS: Readonly<Record<StepAudience, string>> = {
@@ -60,6 +66,7 @@ export const AUDIENCE_LABELS: Readonly<Record<StepAudience, string>> = {
   BOARD: 'Vorstand und wer sie angelegt hat',
   CONVENERS: 'Wer einberuft',
   SECRETARY: 'Schriftführung',
+  OFFICE: 'Ein Amt',
 };
 export const ACTION_KIND_LABELS: Readonly<Record<StepAction, string>> = { NOTIFICATION: 'Benachrichtigung', TASK: 'Aufgabe' };
 export const SYSTEM_STEP_LABELS: Readonly<Record<SystemStep, string>> = {
@@ -71,6 +78,7 @@ export const STEP_ANCHOR_TEXT: Readonly<Record<StepAnchor, string>> = {
   BEFORE_INVITE: 'vor der Einladungsfrist',
   BEFORE_START: 'vor Beginn',
   AFTER_END: 'nach dem Ende',
+  AFTER_CREATE: 'nach dem Anlegen',
 };
 
 /** server: MeetingsApi.MeetingTypeDto. */
@@ -79,8 +87,10 @@ export interface MeetingType {
   label: string;
   /** After "Einladung zur": "ordentlichen Mitgliederversammlung". */
   invitationLabel: string;
-  /** Who is invited, votes and counts for the quorum. */
-  electorate: 'BOARD' | 'ASSEMBLY';
+  /** server: MeetingsApi.Invitees — who is invited. */
+  invitees: Invitees;
+  /** server: MeetingsApi.Voting — who of the invited votes and counts for the quorum. */
+  voting: Voting;
   noticeHours: number;
   quorum: Quorum;
   /** Not quorate at the hour → this many minutes later whoever is there decides. */
@@ -99,6 +109,9 @@ export interface MeetingType {
   videoUrl: string | null;
   /** Voters check themselves in while a meeting is open; off: who runs it enters presence. Missing on old data: on. */
   selfCheckIn?: boolean;
+  /** CHOSEN only: how many people (members and guests) a meeting invites at least and at most; checked at the invitation. */
+  minInvitees: number | null;
+  maxInvitees: number | null;
   /** Meetings of this type exist: it can be archived, not deleted. */
   inUse: boolean;
   steps: MeetingStep[];
@@ -106,7 +119,21 @@ export interface MeetingType {
 
 export type MeetingTypeInput = Omit<MeetingType, 'key' | 'inUse'>;
 
-export const isAssembly = (type: MeetingType | undefined): boolean => type?.electorate === 'ASSEMBLY';
+export type Invitees = 'BOARD' | 'VOTERS' | 'BOARD_AND_VOTERS' | 'CHOSEN';
+export const INVITEES_LABELS: Readonly<Record<Invitees, string>> = {
+  BOARD: 'Vorstand',
+  VOTERS: 'Stimmberechtigte Mitglieder',
+  BOARD_AND_VOTERS: 'Vorstand und Stimmberechtigte',
+  CHOSEN: 'Bestimmte Personen',
+};
+export type Voting = 'ALL_INVITED' | 'VOTERS_ONLY';
+export const VOTING_LABELS: Readonly<Record<Voting, string>> = {
+  ALL_INVITED: 'Alle Eingeladenen',
+  VOTERS_ONLY: 'Nur Stimmberechtigte',
+};
+
+/** server: MeetingType.invitesVoters — a general meeting: invites the members with a vote. */
+export const invitesVoters = (type: MeetingType | undefined): boolean => !!type && type.invitees !== 'BOARD';
 
 const HOUR = 3_600_000;
 
@@ -127,6 +154,7 @@ export function quorumReached(quorum: Quorum, count: number, total: number): boo
   if (!count || !total) return false;
   if (quorum === 'AT_LEAST_HALF') return count * 2 >= total;
   if (quorum === 'MORE_THAN_HALF') return count * 2 > total;
+  if (quorum === 'ALL') return count >= total;
   return count * 4 >= total * 3;
 }
 
@@ -153,6 +181,30 @@ export interface Person {
   memberId: string;
   name: string;
 }
+
+/** A guest from outside (no login): invited by e-mail; `email` only for who runs the meeting. */
+export interface Guest {
+  id: string;
+  name: string;
+  email: string | null;
+}
+
+/** server: MeetingsApi.Chosen — who a CHOSEN meeting invites, and the parties in dispute who may not be among them. */
+export interface Chosen {
+  members: Person[];
+  guests: Guest[];
+  parties: Person[];
+}
+
+/** server: InviteesBody; a guest without id is new. */
+export interface InviteesInput {
+  memberIds: string[];
+  guests: { id: string | null; name: string; email: string }[];
+  partyIds: string[];
+}
+
+/** server: MeetingType.ARBITRATION — the Schlichtungseinrichtung every club keeps: never archived or deleted, always CHOSEN. */
+export const ARBITRATION = 'SCHLICHTUNG';
 
 export interface Meeting {
   id: string;
@@ -191,6 +243,8 @@ export interface Meeting {
   canManage: boolean;
   /** Linked records (files, members, appointments, ...) with the title they had when linked. */
   links: LinkedRef[];
+  /** Types inviting CHOSEN people: who is invited and the parties; null otherwise. Guests appear in `electorate`/`present` by their id. */
+  chosen: Chosen | null;
 }
 
 export type MeetingSummary = Pick<Meeting, 'id' | 'kind' | 'title' | 'startsAt' | 'endsAt' | 'location' | 'status'>;

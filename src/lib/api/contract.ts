@@ -7,7 +7,7 @@ import type { DownloadLink, FileHits, FileList, FilePatch, FileSettings, FolderL
 import type { Item, ItemList, ItemUse, OwnItem, StockInput } from '../../features/inventory/model';
 import type { GeocodeResult, Location } from '../../features/locations/model';
 import type { AddressEntry, Mail, Mailbox, MailboxAdmin, MailPage, MailRef, MailSettings, MailSummary } from '../../features/mail/model';
-import type { CircularRules, Meeting, MeetingType, Person, Resolution } from '../../features/meetings/model';
+import type { CircularRules, InviteesInput, Meeting, MeetingType, Person, Resolution } from '../../features/meetings/model';
 import type {
   Board,
   BoardSettings,
@@ -68,9 +68,10 @@ export type Contract = [
   Satisfies<S['at.clubserver.mail.api.MailApi.MailRefDto'], MailRef>,
   Satisfies<S['at.clubserver.mail.api.MailApi.MailList'], MailPage>,
   Satisfies<S['at.clubserver.mail.api.MailApi.MailSettingsDto'], MailSettings>,
-  Satisfies<With<S['at.clubserver.meetings.api.MeetingsApi.MeetingTypeDto'], 'electorate', MeetingType['electorate']>, MeetingType>, // only BOARD/ASSEMBLY (MeetingType validates)
+  Satisfies<S['at.clubserver.meetings.api.MeetingsApi.MeetingTypeDto'], MeetingType>,
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.Person'], Person>,
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.MeetingDto'], Meeting>,
+  Satisfies<S['at.clubserver.gateway.rest.MeetingsController.InviteesBody'], InviteesInput>,
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.CircularRules'], CircularRules>,
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.ResolutionDto'], Resolution>,
   Satisfies<S['at.clubserver.members.api.MembersApi.OfficeDto'], Office>,

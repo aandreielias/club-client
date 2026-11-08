@@ -25,7 +25,10 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     key: 'ASSEMBLY',
     label: 'Ordentliche Mitgliederversammlung',
     invitationLabel: 'ordentlichen Mitgliederversammlung',
-    electorate: 'ASSEMBLY',
+    invitees: 'VOTERS',
+    voting: 'ALL_INVITED',
+    minInvitees: null,
+    maxInvitees: null,
     noticeHours: 336,
     quorum: 'AT_LEAST_HALF',
     graceMinutes: 30,
@@ -44,7 +47,10 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     key: 'EXTRA_ASSEMBLY',
     label: 'Außerordentliche Mitgliederversammlung',
     invitationLabel: 'außerordentlichen Mitgliederversammlung',
-    electorate: 'ASSEMBLY',
+    invitees: 'VOTERS',
+    voting: 'ALL_INVITED',
+    minInvitees: null,
+    maxInvitees: null,
     noticeHours: 336,
     quorum: 'AT_LEAST_HALF',
     graceMinutes: 30,
@@ -63,7 +69,10 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     key: 'BOARD',
     label: 'Ordentliche Vorstandssitzung',
     invitationLabel: 'ordentlichen Vorstandssitzung',
-    electorate: 'BOARD',
+    invitees: 'BOARD',
+    voting: 'ALL_INVITED',
+    minInvitees: null,
+    maxInvitees: null,
     noticeHours: 336,
     quorum: 'MORE_THAN_HALF',
     graceMinutes: null,
@@ -82,7 +91,10 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     key: 'EXTRA_BOARD',
     label: 'Außerordentliche Vorstandssitzung',
     invitationLabel: 'außerordentlichen Vorstandssitzung',
-    electorate: 'BOARD',
+    invitees: 'BOARD',
+    voting: 'ALL_INVITED',
+    minInvitees: null,
+    maxInvitees: null,
     noticeHours: 48,
     quorum: 'AT_LEAST_THREE_QUARTERS',
     graceMinutes: null,
@@ -101,7 +113,10 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     key: 'SIMPLE_BOARD',
     label: 'Einfache Vorstandssitzung',
     invitationLabel: 'einfachen Vorstandssitzung',
-    electorate: 'BOARD',
+    invitees: 'BOARD',
+    voting: 'ALL_INVITED',
+    minInvitees: null,
+    maxInvitees: null,
     noticeHours: 168,
     quorum: 'MORE_THAN_HALF',
     graceMinutes: null,
@@ -120,7 +135,10 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     key: 'CONSTITUENT_BOARD',
     label: 'Konstituierende Vorstandssitzung',
     invitationLabel: 'konstituierenden Vorstandssitzung',
-    electorate: 'BOARD',
+    invitees: 'BOARD',
+    voting: 'ALL_INVITED',
+    minInvitees: null,
+    maxInvitees: null,
     noticeHours: 336,
     quorum: 'MORE_THAN_HALF',
     graceMinutes: null,
@@ -149,6 +167,7 @@ export function defaultSteps(seeded: boolean): MeetingStep[] {
       title: null,
       body: null,
       system: 'INVITE_REMINDER',
+      office: null,
     },
     {
       id: id(),
@@ -159,6 +178,7 @@ export function defaultSteps(seeded: boolean): MeetingStep[] {
       title: null,
       body: null,
       system: 'START_REMINDER',
+      office: null,
     },
     ...(seeded
       ? [
@@ -171,12 +191,104 @@ export function defaultSteps(seeded: boolean): MeetingStep[] {
             title: 'Protokoll fertigstellen: {titel}',
             body: 'Das Protokoll der Sitzung vom {datum} fertigstellen und ablegen.',
             system: null,
+            office: null,
           } as const,
         ]
       : []),
   ];
 }
 for (const t of SEEDED_TYPES) t.steps = defaultSteps(true);
+
+/** server: V116__arbitration.sql — the Schlichtungseinrichtung: three chosen people, all present, deadlines from the Anrufung. */
+const step = (
+  anchor: MeetingStep['anchor'],
+  offsetHours: number,
+  action: MeetingStep['action'],
+  audience: MeetingStep['audience'],
+  office: string | null,
+  title: string | null,
+  body: string | null,
+  system: MeetingStep['system'] = null,
+): MeetingStep => ({ id: crypto.randomUUID(), anchor, offsetHours, action, audience, office, title, body, system });
+(SEEDED_TYPES as StoredType[]).push({
+  key: 'SCHLICHTUNG',
+  label: 'Schlichtungseinrichtung',
+  invitationLabel: 'Sitzung der Schlichtungseinrichtung',
+  invitees: 'CHOSEN',
+  voting: 'ALL_INVITED',
+  minInvitees: 3,
+  maxInvitees: 3,
+  noticeHours: 168,
+  quorum: 'ALL',
+  graceMinutes: null,
+  majorities: ['SIMPLE'],
+  conveners: ['AUDITOR', 'CHAIR', 'VICE_CHAIR'],
+  needsReason: false,
+  dueBy: null,
+  sort: 20,
+  archived: false,
+  online: false,
+  videoUrl: null,
+  selfCheckIn: false,
+  inUse: false,
+  steps: [
+    step(
+      'AFTER_CREATE',
+      0,
+      'TASK',
+      'CONVENERS',
+      null,
+      'Streitparteien zur Namhaftmachung auffordern: {titel}',
+      'Beide Streitparteien schriftlich auffordern, binnen 14 Tagen je ein Mitglied für die Schlichtungseinrichtung zu nennen.',
+    ),
+    step(
+      'AFTER_CREATE',
+      336,
+      'TASK',
+      'CONVENERS',
+      null,
+      'Namhaftmachung prüfen: {titel}',
+      'Haben beide Streitparteien ein Mitglied genannt? Sonst eine Nachfrist von 14 Tagen setzen.',
+    ),
+    step(
+      'AFTER_CREATE',
+      672,
+      'TASK',
+      'OFFICE',
+      'AUDITOR',
+      'Fehlende Namhaftmachung vornehmen: {titel}',
+      'Hat eine Streitpartei nach der Nachfrist niemanden genannt, nennen die Rechnungsprüfer das fehlende Mitglied.',
+    ),
+    step(
+      'AFTER_CREATE',
+      1008,
+      'TASK',
+      'OFFICE',
+      'AUDITOR',
+      'Vorsitz der Schlichtungseinrichtung: {titel}',
+      'Haben die beiden Mitglieder binnen 14 Tagen einen Vorsitz gewählt? Sonst bestimmen ihn die Rechnungsprüfer.',
+    ),
+    step(
+      'AFTER_CREATE',
+      4392,
+      'NOTIFICATION',
+      'CONVENERS',
+      null,
+      'Sechs Monate seit Anrufung: {titel}',
+      'Seit der Anrufung der Schlichtungseinrichtung sind sechs Monate vergangen; der ordentliche Rechtsweg steht offen.',
+    ),
+    step('BEFORE_START', 24, 'NOTIFICATION', 'ELECTORATE', null, null, null, 'START_REMINDER'),
+    step(
+      'AFTER_END',
+      168,
+      'TASK',
+      'CONVENERS',
+      null,
+      'Entscheidung schriftlich ausfertigen: {titel}',
+      'Die Entscheidung der Schlichtungseinrichtung vom {datum} schriftlich festhalten und den Streitparteien zustellen.',
+    ),
+  ],
+});
 
 export type StoredMeeting = Omit<
   Meeting,
@@ -191,6 +303,7 @@ export type StoredMeeting = Omit<
   | 'approvals'
   | 'chair'
   | 'secretary'
+  | 'chosen'
 > & {
   /** Voters marked Anwesend. */
   presence: Record<string, true>;
@@ -202,6 +315,12 @@ export type StoredMeeting = Omit<
   /** server: meetings_meeting.chair_id / secretary_id */
   chairId?: string | null;
   secretaryId?: string | null;
+  /** server: meetings_meeting.created_at (the Anrufung of an arbitration). */
+  createdAt?: string;
+  /** CHOSEN types (server: meetings_invitee, meetings_guest, meetings_party). */
+  invitees?: string[];
+  guests?: { id: string; name: string; email: string }[];
+  parties?: string[];
 };
 /** Counters hold what was voted, `ballots` only who voted (server: meetings_resolution, meetings_ballot). */
 export type StoredResolution = Pick<
@@ -310,6 +429,23 @@ export function seedMeetings(): StoredMeeting[] {
       videoUrl: 'https://meet.example.at/vorstand',
       status: 'INVITED',
       invitedAt: new Date().toISOString(),
+    },
+    {
+      ...base,
+      id: 'mt-schlichtung',
+      kind: 'SCHLICHTUNG',
+      title: 'Schlichtung: Hallenzeiten Damen / Herren',
+      agenda: '1. Anhörung der Streitparteien\n2. Entscheidung',
+      startsAt: at(35, 18),
+      endsAt: at(35, 20),
+      location: 'Vereinsheim',
+      status: 'DRAFT',
+      invitedAt: null,
+      createdAt: ago(3 * 24 * 60),
+      // One member and one guest named so far; the third is still missing (exactly three before the invitation).
+      invitees: ['ehren'],
+      guests: [{ id: 'guest-huber', name: 'Dr. Maria Huber', email: 'maria.huber@example.at' }],
+      parties: ['trainer', 'spielerin'],
     },
   ];
 }

@@ -25,6 +25,10 @@
     type Majority,
     type MeetingStep,
     type Quorum,
+    type Invitees,
+    type Voting,
+    INVITEES_LABELS,
+    VOTING_LABELS,
     type StepAnchor,
   } from './model';
 
@@ -49,10 +53,8 @@
   /** The step open in the dialog: an index into the form's steps, or a new one not yet added. */
   let open = $state<{ index: number | null; step: MeetingStep } | null>(null);
 
-  const ELECTORATES = [
-    { value: 'BOARD', label: 'Vorstand' },
-    { value: 'ASSEMBLY', label: 'Stimmberechtigte Mitglieder' },
-  ] as const;
+  const INVITEES = (Object.keys(INVITEES_LABELS) as Invitees[]).map((v) => ({ value: v, label: INVITEES_LABELS[v] }));
+  const VOTINGS = (Object.keys(VOTING_LABELS) as Voting[]).map((v) => ({ value: v, label: VOTING_LABELS[v] }));
   const UNITS = [
     { value: 'days', label: 'Tage' },
     { value: 'hours', label: 'Stunden' },
@@ -70,7 +72,7 @@
   // Functions the club uses (Einstellungen › Funktionen); one already chosen stays visible so it can be removed.
   const OFFICES = $derived(
     boardSettings.all
-      .filter((o) => o !== 'AUDITOR' && (boardSettings.enabled.includes(o) || form.conveners.includes(o)))
+      .filter((o) => boardSettings.enabled.includes(o) || form.conveners.includes(o))
       .map((o) => ({
         value: o,
         label: boardSettings.label(o),
@@ -124,13 +126,44 @@
         <input bind:value={form.invitationLabel} maxlength="120" required />
       </Field>
     </div>
-    <Field label="Eingeladen und stimmberechtigt" group>
-      <ChoiceGroup
-        name="type-electorate"
-        label="Eingeladen und stimmberechtigt"
-        options={ELECTORATES}
-        bind:value={() => form.electorate, (v) => v && (form.electorate = v)}
-      />
+    <Field label="Eingeladen" group>
+      <ChoiceGroup name="type-invitees" label="Eingeladen" options={INVITEES} bind:value={() => form.invitees, (v) => v && (form.invitees = v)} />
+    </Field>
+    {#if form.invitees === 'CHOSEN'}
+      <div class="nested">
+        <Field
+          label="Anzahl der Eingeladenen"
+          hint="Mitglieder und Gäste zusammen; leer: mindestens eine Person, kein Höchstwert."
+          error={form.error('invitees')}
+        >
+          <div class="row">
+            <input
+              type="number"
+              min="1"
+              max="50"
+              step="1"
+              class="short"
+              aria-label="Mindestens"
+              placeholder="mind."
+              bind:value={() => form.minInvitees ?? '', (v) => (form.minInvitees = v === '' || v == null ? null : Number(v))}
+            />
+            <span>bis</span>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              step="1"
+              class="short"
+              aria-label="Höchstens"
+              placeholder="höchst."
+              bind:value={() => form.maxInvitees ?? '', (v) => (form.maxInvitees = v === '' || v == null ? null : Number(v))}
+            />
+          </div>
+        </Field>
+      </div>
+    {/if}
+    <Field label="Stimmrecht" hint="Wer von den Eingeladenen abstimmt und für die Beschlussfähigkeit zählt." group>
+      <ChoiceGroup name="type-voting" label="Stimmrecht" options={VOTINGS} bind:value={() => form.voting, (v) => v && (form.voting = v)} />
     </Field>
   </fieldset>
 
@@ -217,7 +250,11 @@
           <button type="button" class="step" onclick={() => edit(i)} {@attach tooltip('Schritt öffnen')}>
             <span class="when">{noticeText(step.offsetHours)} {STEP_ANCHOR_TEXT[step.anchor]}</span>
             <span class="name">{stepName(step)}</span>
-            <span class="muted small">{ACTION_KIND_LABELS[step.action]} · {AUDIENCE_LABELS[step.audience]}</span>
+            <span class="muted small"
+              >{ACTION_KIND_LABELS[step.action]} · {step.audience === 'OFFICE' && step.office
+                ? boardSettings.label(step.office)
+                : AUDIENCE_LABELS[step.audience]}</span
+            >
           </button>
         </li>
       {/each}
@@ -225,6 +262,12 @@
     <div class="row">
       <Button size="sm" icon="add" onclick={() => add('BEFORE_START')}>Schritt davor</Button>
       <Button size="sm" icon="add" onclick={() => add('AFTER_END')}>Schritt danach</Button>
+      <Button
+        size="sm"
+        icon="add"
+        tooltip="Eine Frist ab dem Anlegen der Sitzung (etwa der Anrufung einer Schlichtung)"
+        onclick={() => add('AFTER_CREATE')}>Frist ab Anlegen</Button
+      >
     </div>
     <ErrorNote error={form.error('steps')} />
   </fieldset>

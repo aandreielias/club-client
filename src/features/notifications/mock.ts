@@ -35,6 +35,8 @@ export class MockNotifications {
   readonly inbox: MockTable<Record<string, Notification[]>>;
   /** memberId → stored preferences (missing kinds = all channels on) */
   readonly preferences = new MockTable<Record<string, Preference[]>>('notification-preferences', () => ({}));
+  /** server: notifications_external_mail — e-mails to guests from outside (no login), the mock's mail log. */
+  readonly external = new MockTable<{ email: string; name: string; title: string; body: string; at: string }[]>('external-mails', () => []);
 
   readonly #dateTime: Intl.DateTimeFormat;
 
@@ -279,10 +281,12 @@ export class MockNotifications {
           `${this.#dateTime.format(new Date(data.startsAt))}${where}.${video}${agenda}`,
           `/meetings/${data.meetingId}`,
         );
+        this.mailGuests(data.guests, `Einladung: ${data.title}`, `${this.#dateTime.format(new Date(data.startsAt))}${where}.${video}${agenda}`);
         break;
       }
       case 'meetings.meeting-notice':
         this.notify(data.recipients, 'MEETING', data.title, data.body, data.link);
+        this.mailGuests(data.guests, data.title, data.body);
         break;
       case 'meetings.meeting-cancelled':
         this.notify(
@@ -291,6 +295,11 @@ export class MockNotifications {
           `Abgesagt: ${data.title}`,
           `Die Sitzung am ${this.#dateTime.format(new Date(data.startsAt))} findet nicht statt.`,
           `/meetings/${data.meetingId}`,
+        );
+        this.mailGuests(
+          data.guests,
+          `Abgesagt: ${data.title}`,
+          `Die Sitzung am ${this.#dateTime.format(new Date(data.startsAt))} findet nicht statt.`,
         );
         break;
       case 'meetings.circular-opened':
@@ -321,6 +330,14 @@ export class MockNotifications {
         );
         break;
     }
+  }
+
+  /** server: NotificationHandlers.mailGuests — by e-mail only, they have no app. */
+  private mailGuests(guests: { name: string; email: string }[] | undefined, title: string, body: string): void {
+    if (!guests?.length) return;
+    const at = new Date().toISOString();
+    this.external.data.push(...guests.map((g) => ({ email: g.email, name: g.name, title, body, at })));
+    this.external.save();
   }
 
   private notify(

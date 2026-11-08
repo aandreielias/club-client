@@ -1,6 +1,7 @@
 /**
  * Reactive result of an async read. Only the latest `load` call may write, so a slow earlier
- * request can never overwrite newer data.
+ * request can never overwrite newer data. Every `load` resolves once the latest one has settled,
+ * so `await x.load(); x.value` always reads the fresh value.
  */
 export class Resource<T> {
   value = $state.raw<T | undefined>(undefined);
@@ -8,6 +9,7 @@ export class Resource<T> {
   loading = $state(false);
 
   #sequence = 0;
+  #latest: Promise<void> = Promise.resolve();
 
   constructor(private readonly loader: () => Promise<T>) {}
 
@@ -20,7 +22,14 @@ export class Resource<T> {
   }
 
   async load(): Promise<void> {
-    const sequence = ++this.#sequence;
+    let current = this.#run(++this.#sequence);
+    this.#latest = current;
+    await current;
+    // A newer load started meanwhile: wait for it instead of returning before the value is set.
+    while (this.#latest !== current) await (current = this.#latest);
+  }
+
+  async #run(sequence: number): Promise<void> {
     this.loading = true;
     this.error = null;
     try {

@@ -12,7 +12,13 @@ describe('MeetingTypeForm', () => {
     const assembly = type('ASSEMBLY');
     const form = new MeetingTypeForm(assembly);
     expect(form.noticeUnit).toBe('days');
-    expect(form.toInput()).toMatchObject({ label: assembly.label, noticeHours: assembly.noticeHours, dueBy: assembly.dueBy, electorate: 'ASSEMBLY' });
+    expect(form.toInput()).toMatchObject({
+      label: assembly.label,
+      noticeHours: assembly.noticeHours,
+      dueBy: assembly.dueBy,
+      invitees: 'VOTERS',
+      voting: 'ALL_INVITED',
+    });
     form.setNoticeHours(30);
     expect([form.notice, form.noticeUnit, form.noticeHours]).toEqual([30, 'hours', 30]);
     form.setNoticeHours(48);

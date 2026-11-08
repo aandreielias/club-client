@@ -6,7 +6,8 @@ import type { Hue } from '../../lib/types';
 export type FolderKind = 'DOCUMENTS' | 'PHOTOS';
 
 /** CLUB: all members. TEAM: the team, guardians of its members, admin and board. BOARD: admin and board. */
-export type FolderScope = 'CLUB' | 'TEAM' | 'BOARD' | 'ASSEMBLY';
+/** MEETING: a meeting's own folder (e.g. arbitration), seen by who sees the meeting. */
+export type FolderScope = 'CLUB' | 'TEAM' | 'BOARD' | 'ASSEMBLY' | 'MEETING';
 
 /** Folder colours: the hues of the tags. */
 export type FolderColor = 'GRAY' | 'BROWN' | 'ORANGE' | 'YELLOW' | 'GREEN' | 'BLUE' | 'PURPLE' | 'RED';
@@ -126,6 +127,8 @@ export const FOLDER_SCOPES: readonly { value: FolderScope; label: string; hint: 
     label: 'Stimmberechtigte',
     hint: 'Außerordentliche und Ehrenmitglieder, Vorstand und Admins (wie die Mitgliederversammlung).',
   },
+  // Made by the meetings module only (e.g. Schlichtungseinrichtung): never offered as a choice.
+  { value: 'MEETING', label: 'Sitzung', hint: 'Wer die Sitzung sieht: Eingeladene, wer einberuft, Admins.' },
 ];
 
 export const scopeLabel = (scope: FolderScope): string => FOLDER_SCOPES.find((s) => s.value === scope)?.label ?? scope;

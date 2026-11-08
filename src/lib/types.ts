@@ -160,6 +160,14 @@ export interface MemberList {
   wardIds: string[];
   /** Members linked as guardian. */
   guardianIds: string[];
+  /** Active members the viewer may not open, by name only (empty for admin/board). */
+  others: OtherMember[];
+}
+
+export interface OtherMember {
+  id: string;
+  firstName: string;
+  lastName: string;
 }
 
 export interface Team {

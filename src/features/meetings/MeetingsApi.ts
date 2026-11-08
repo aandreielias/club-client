@@ -15,6 +15,7 @@ import type {
   Resolution,
   ResolutionRules,
   VoteMode,
+  InviteesInput,
 } from './model';
 
 /** Typed access to the meetings endpoints. */
@@ -101,6 +102,11 @@ export class MeetingsApi {
   /** Vorsitz and Schriftführer:in among those present; null: nobody. */
   setRoles(id: string, chairId: string | null, secretaryId: string | null): Promise<Meeting> {
     return this.api.put<Meeting>(`${this.path(id)}/roles`, { chairId, secretaryId });
+  }
+
+  /** CHOSEN types: who is invited (members, guests from outside) and the parties in dispute; until the meeting opens. */
+  setInvitees(id: string, invitees: InviteesInput): Promise<Meeting> {
+    return this.api.put<Meeting>(`${this.path(id)}/invitees`, invitees);
   }
 
   approveProtocol(id: string): Promise<Meeting> {

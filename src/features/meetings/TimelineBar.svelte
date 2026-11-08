@@ -125,29 +125,32 @@
     <span class="label">Einladen bis<br /><span class="muted">{shortLabel(noticeHours)}</span></span>
   </button>
 
+  <!-- Deadlines from the creation have no fixed place around the meeting: they show only in the list. -->
   {#each steps as step, i (step.id ?? i)}
-    {@const hours = distance(step)}
-    <button
-      type="button"
-      class="marker"
-      class:task={step.action === 'TASK'}
-      class:selected={selected === i}
-      class:low={i % 2 === 1}
-      style:left="{left(hours, after(step))}%"
-      role="slider"
-      aria-label="{ACTION_KIND_LABELS[step.action]}: {name(step)}"
-      aria-valuemin={0}
-      aria-valuemax={8760}
-      aria-valuenow={step.offsetHours}
-      aria-valuetext="{shortLabel(hours)} {after(step) ? 'nach dem Ende' : 'vor Beginn'}"
-      onclick={() => (dragged ? (dragged = false) : onselect(i))}
-      onpointerdown={(e) => drag(e, after(step), (h) => place(i, h))}
-      onkeydown={(e) => key(e, hours, after(step), (h) => place(i, h))}
-      {@attach tooltip(`${name(step)}: öffnen, ziehen oder mit den Pfeiltasten verschieben`)}
-    >
-      <span class="dot"></span>
-      <span class="label">{name(step)}<br /><span class="muted">{shortLabel(hours)}</span></span>
-    </button>
+    {#if step.anchor !== 'AFTER_CREATE'}
+      {@const hours = distance(step)}
+      <button
+        type="button"
+        class="marker"
+        class:task={step.action === 'TASK'}
+        class:selected={selected === i}
+        class:low={i % 2 === 1}
+        style:left="{left(hours, after(step))}%"
+        role="slider"
+        aria-label="{ACTION_KIND_LABELS[step.action]}: {name(step)}"
+        aria-valuemin={0}
+        aria-valuemax={8760}
+        aria-valuenow={step.offsetHours}
+        aria-valuetext="{shortLabel(hours)} {after(step) ? 'nach dem Ende' : 'vor Beginn'}"
+        onclick={() => (dragged ? (dragged = false) : onselect(i))}
+        onpointerdown={(e) => drag(e, after(step), (h) => place(i, h))}
+        onkeydown={(e) => key(e, hours, after(step), (h) => place(i, h))}
+        {@attach tooltip(`${name(step)}: öffnen, ziehen oder mit den Pfeiltasten verschieben`)}
+      >
+        <span class="dot"></span>
+        <span class="label">{name(step)}<br /><span class="muted">{shortLabel(hours)}</span></span>
+      </button>
+    {/if}
   {/each}
 </div>
 

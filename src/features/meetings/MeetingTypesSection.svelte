@@ -3,7 +3,7 @@
   import { removeRecord, restoreRecord } from '../../lib/detail/removeRecord';
   import { Action } from '../../lib/state/Action.svelte';
   import SettingsList from '../../ui/SettingsList.svelte';
-  import { noticeText } from './model';
+  import { INVITEES_LABELS, noticeText } from './model';
   import { meetingTypes } from './services';
 
   /** Einstellungen › Sitzungsarten (admin/board): the club's meeting types; each opens in the window, the order is dragged. */
@@ -17,7 +17,7 @@
       label: t.label,
       archived: t.archived,
       inUse: t.inUse,
-      detail: `${t.electorate === 'ASSEMBLY' ? 'Mitglieder' : 'Vorstand'} · Frist ${noticeText(t.noticeHours)}${t.dueBy ? ' · jährlich' : ''}`,
+      detail: `${INVITEES_LABELS[t.invitees]} · Frist ${noticeText(t.noticeHours)}${t.dueBy ? ' · jährlich' : ''}`,
     })),
   );
 </script>

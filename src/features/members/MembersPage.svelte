@@ -12,6 +12,7 @@
   import MemberTable from './MemberTable.svelte';
 
   import Page from '../../ui/Page.svelte';
+  import { PRIVILEGED } from '../../lib/types';
   import { MEMBER_DEACTIVATED, MEMBER_INVITED } from './events';
   import { membersToCsv, parseMemberImport, runMemberImport, type ImportProblem } from './MemberCsv.svelte';
   import { teamsApi } from '../teams/services';
@@ -23,9 +24,11 @@
     { value: 'list', label: 'Liste' },
     { value: 'org', label: 'Organigramm' },
   ] as const;
-  const view = $derived(pane.query.get('view') === 'org' ? 'org' : 'list');
+  // The Organigramm is for coaches, admin and board (server: MemberHandlers.orgChart).
+  const orgAllowed = $derived(session.hasRole(...PRIVILEGED));
+  const view = $derived(orgAllowed && pane.query.get('view') === 'org' ? 'org' : 'list');
 
-  const list = new MemberListModel(membersApi, store);
+  const list = new MemberListModel(membersApi, store, policy.isManager);
   void list.load();
   useBus(bus, [MEMBER_INVITED, MEMBER_DEACTIVATED], () => void list.load());
 
@@ -97,12 +100,14 @@
 
 <Page title="Mitglieder">
   {#snippet actions()}
-    <ChoiceGroup
-      name="members-view"
-      label="Ansicht"
-      options={VIEWS}
-      bind:value={() => view, (v) => pane.updateQuery({ view: v === 'org' ? 'org' : null }, true)}
-    />
+    {#if orgAllowed}
+      <ChoiceGroup
+        name="members-view"
+        label="Ansicht"
+        options={VIEWS}
+        bind:value={() => view, (v) => pane.updateQuery({ view: v === 'org' ? 'org' : null }, true)}
+      />
+    {/if}
     {#if policy.canInvite() && view === 'list'}
       <Button icon="download" onclick={exportCsv} disabled={!list.rows.length}>Exportieren</Button>
       <Button icon="upload" onclick={() => fileInput?.click()} busy={importing}>Importieren</Button>

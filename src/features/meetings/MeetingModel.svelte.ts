@@ -2,7 +2,7 @@ import { Action } from '../../lib/state/Action.svelte';
 import { Resource } from '../../lib/state/Resource.svelte';
 import type { MeetingsApi } from './MeetingsApi';
 import type { RefKind } from '../../lib/records/refs';
-import type { AgendaItemInput, Meeting, MeetingPatch } from './model';
+import type { AgendaItemInput, InviteesInput, Meeting, MeetingPatch } from './model';
 
 /** One meeting and the writes of whoever runs it; every write answers with the whole meeting. */
 export class MeetingModel {
@@ -53,6 +53,10 @@ export class MeetingModel {
 
   setRoles(chairId: string | null, secretaryId: string | null): Promise<boolean> {
     return this.write(() => this.api.setRoles(this.id, chairId, secretaryId));
+  }
+
+  setInvitees(invitees: InviteesInput): Promise<boolean> {
+    return this.write(() => this.api.setInvitees(this.id, invitees));
   }
 
   approveProtocol(): Promise<boolean> {

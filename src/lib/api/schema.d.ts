@@ -325,6 +325,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/meetings/{id}/invitees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["invitees"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/meetings/{id}/agenda": {
         parameters: {
             query?: never;
@@ -3027,6 +3043,17 @@ export interface components {
             /** Format: date-time */
             at: string;
         };
+        "at.clubserver.meetings.api.MeetingsApi.Chosen": {
+            members: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"][];
+            guests: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Guest"][];
+            parties: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"][];
+        };
+        "at.clubserver.meetings.api.MeetingsApi.Guest": {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            email: string;
+        };
         "at.clubserver.meetings.api.MeetingsApi.MeetingDto": {
             /** Format: uuid */
             id: string;
@@ -3063,6 +3090,7 @@ export interface components {
             approvals: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Approval"][];
             chair: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"];
             secretary: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Person"];
+            chosen: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Chosen"];
         };
         "at.clubserver.gateway.rest.MeetingsController.PresenceManyBody": {
             memberIds: string[];
@@ -3070,6 +3098,17 @@ export interface components {
         };
         "at.clubserver.gateway.rest.MeetingsController.MeetingLinksBody": {
             refs: components["schemas"]["at.clubserver.platform.RecordRefs.RefInput"][];
+        };
+        "at.clubserver.gateway.rest.MeetingsController.InviteesBody": {
+            memberIds: string[];
+            guests: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.GuestInput"][];
+            partyIds: string[];
+        };
+        "at.clubserver.meetings.api.MeetingsApi.GuestInput": {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            email: string;
         };
         "at.clubserver.gateway.rest.MeetingsController.AgendaBody": {
             items: components["schemas"]["at.clubserver.gateway.rest.MeetingsController.AgendaItemBody"][];
@@ -3095,11 +3134,13 @@ export interface components {
             label: string;
             invitationLabel: string;
             /** @enum {string} */
-            electorate: "ASSEMBLY" | "BOARD" | "CLUB";
+            invitees: "BOARD" | "VOTERS" | "BOARD_AND_VOTERS" | "CHOSEN";
+            /** @enum {string} */
+            voting: "ALL_INVITED" | "VOTERS_ONLY";
             /** Format: int32 */
             noticeHours: number;
             /** @enum {string} */
-            quorum: "AT_LEAST_HALF" | "MORE_THAN_HALF" | "AT_LEAST_THREE_QUARTERS";
+            quorum: "AT_LEAST_HALF" | "MORE_THAN_HALF" | "AT_LEAST_THREE_QUARTERS" | "ALL";
             /** Format: int32 */
             graceMinutes: number;
             majorities: ("SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS")[];
@@ -3113,33 +3154,40 @@ export interface components {
             videoUrl: string;
             steps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.StepDto"][];
             selfCheckIn: boolean;
+            /** Format: int32 */
+            minInvitees: number;
+            /** Format: int32 */
+            maxInvitees: number;
         };
         "at.clubserver.meetings.api.MeetingsApi.StepDto": {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            anchor: "BEFORE_INVITE" | "BEFORE_START" | "AFTER_END";
+            anchor: "BEFORE_INVITE" | "BEFORE_START" | "AFTER_END" | "AFTER_CREATE";
             /** Format: int32 */
             offsetHours: number;
             /** @enum {string} */
             action: "NOTIFICATION" | "TASK";
             /** @enum {string} */
-            audience: "ELECTORATE" | "BOARD" | "CONVENERS" | "SECRETARY";
+            audience: "ELECTORATE" | "BOARD" | "CONVENERS" | "SECRETARY" | "OFFICE";
             title: string;
             body: string;
             /** @enum {string} */
             system: "INVITE_REMINDER" | "START_REMINDER";
+            office: string;
         };
         "at.clubserver.meetings.api.MeetingsApi.MeetingTypeDto": {
             key: string;
             label: string;
             invitationLabel: string;
             /** @enum {string} */
-            electorate: "ASSEMBLY" | "BOARD" | "CLUB";
+            invitees: "BOARD" | "VOTERS" | "BOARD_AND_VOTERS" | "CHOSEN";
+            /** @enum {string} */
+            voting: "ALL_INVITED" | "VOTERS_ONLY";
             /** Format: int32 */
             noticeHours: number;
             /** @enum {string} */
-            quorum: "AT_LEAST_HALF" | "MORE_THAN_HALF" | "AT_LEAST_THREE_QUARTERS";
+            quorum: "AT_LEAST_HALF" | "MORE_THAN_HALF" | "AT_LEAST_THREE_QUARTERS" | "ALL";
             /** Format: int32 */
             graceMinutes: number;
             majorities: ("SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS")[];
@@ -3152,6 +3200,10 @@ export interface components {
             online: boolean;
             videoUrl: string;
             selfCheckIn: boolean;
+            /** Format: int32 */
+            minInvitees: number;
+            /** Format: int32 */
+            maxInvitees: number;
             inUse: boolean;
             steps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.StepDto"][];
         };
@@ -3162,7 +3214,7 @@ export interface components {
             /** Format: int32 */
             minHours: number;
             /** @enum {string} */
-            quorum: "AT_LEAST_HALF" | "MORE_THAN_HALF" | "AT_LEAST_THREE_QUARTERS";
+            quorum: "AT_LEAST_HALF" | "MORE_THAN_HALF" | "AT_LEAST_THREE_QUARTERS" | "ALL";
         };
         "at.clubserver.meetings.api.MeetingsApi.ResolutionRules": {
             circular: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.CircularRules"];
@@ -3818,7 +3870,7 @@ export interface components {
             /** @enum {string} */
             kind: "DOCUMENTS" | "PHOTOS";
             /** @enum {string} */
-            scope: "CLUB" | "TEAM" | "BOARD" | "ASSEMBLY";
+            scope: "CLUB" | "TEAM" | "BOARD" | "ASSEMBLY" | "MEETING";
             teamIds: string[];
             membersCanUpload: boolean;
         };
@@ -3831,7 +3883,7 @@ export interface components {
             /** @enum {string} */
             kind: "DOCUMENTS" | "PHOTOS";
             /** @enum {string} */
-            scope: "CLUB" | "TEAM" | "BOARD" | "ASSEMBLY";
+            scope: "CLUB" | "TEAM" | "BOARD" | "ASSEMBLY" | "MEETING";
             teamIds: string[];
             membersCanUpload: boolean;
             /** @enum {string} */
@@ -4062,7 +4114,7 @@ export interface components {
         "at.clubserver.gateway.rest.FilesController.FolderPatch": {
             name: string;
             /** @enum {string} */
-            scope: "CLUB" | "TEAM" | "BOARD" | "ASSEMBLY";
+            scope: "CLUB" | "TEAM" | "BOARD" | "ASSEMBLY" | "MEETING";
             teamIds: string[];
             /** @enum {string} */
             color: "GRAY" | "BROWN" | "ORANGE" | "YELLOW" | "GREEN" | "BLUE" | "PURPLE" | "RED";
@@ -4228,6 +4280,13 @@ export interface components {
             minorIds: string[];
             wardIds: string[];
             guardianIds: string[];
+            others: components["schemas"]["at.clubserver.members.api.MembersApi.OtherMember"][];
+        };
+        "at.clubserver.members.api.MembersApi.OtherMember": {
+            /** Format: uuid */
+            id: string;
+            firstName: string;
+            lastName: string;
         };
         "at.clubserver.members.api.MembersApi.GuardianList": {
             items: components["schemas"]["at.clubserver.members.api.MembersApi.GuardianRef"][];
@@ -5146,6 +5205,32 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["at.clubserver.gateway.rest.MeetingsController.MeetingLinksBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.MeetingDto"];
+                };
+            };
+        };
+    };
+    invitees: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.MeetingsController.InviteesBody"];
             };
         };
         responses: {

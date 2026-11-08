@@ -397,8 +397,7 @@ export class MockDirectory {
   }
 
   list(viewer: Member): MemberList {
-    this.requirePrivileged(viewer, PRIVILEGED);
-    // Coaches: the active members whose profile they may open.
+    // Others: the active members whose profile they may open in full, the rest by name only.
     const board = this.hasRole(viewer, ADMIN_BOARD);
     const listed = this.members.data.filter((m) => board || (m.active && this.mayOpen(viewer, m.id)));
     const ids = new Set(listed.map((m) => m.id));
@@ -413,6 +412,12 @@ export class MockDirectory {
         (id) => ids.has(id) && this.members.data.some((m) => m.id === id && m.active),
       ),
       guardianIds: links.filter(([g, minors]) => ids.has(g) && minors.length).map(([g]) => g),
+      others: board
+        ? []
+        : this.members.data
+            .filter((m) => m.active && !ids.has(m.id) && !guestOnly(m.roles))
+            .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName))
+            .map(({ id, firstName, lastName }) => ({ id, firstName, lastName })),
     };
   }
 

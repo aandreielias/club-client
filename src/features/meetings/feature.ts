@@ -1,6 +1,6 @@
 import { ADMIN_BOARD } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
-import { isAssembly } from './model';
+import { invitesVoters } from './model';
 import { meetingTypes, resolutionRules } from './services';
 import MeetingCreateView from './MeetingCreateView.svelte';
 import MeetingsPage from './MeetingsPage.svelte';
@@ -35,7 +35,7 @@ export const meetingsFeature: Feature = {
     MEETING: (item) => {
       const type = meetingTypes.get(item.detail ?? '');
       if (!type) return {}; // types not loaded yet: the category's own label, never a wrong one
-      const assembly = isAssembly(type);
+      const assembly = invitesVoters(type);
       return { hue: assembly ? 'blue' : 'purple', label: assembly ? 'Mitgliederversammlung' : 'Vorstandssitzung' };
     },
   },

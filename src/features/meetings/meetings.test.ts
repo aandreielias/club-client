@@ -450,3 +450,87 @@ describe('isUpcoming', () => {
     expect(isUpcoming(m('2026-11-05T00:00:00Z', 'DRAFT'), now)).toBe(false);
   });
 });
+
+describe('Schlichtungseinrichtung (chosen invitees)', () => {
+  const arbitration = () =>
+    meetings.create(member('vorstand'), { kind: 'SCHLICHTUNG', title: 'Schlichtung Test', startsAt: inDays(20), endsAt: inDays(20.1) });
+  const guest = { id: null, name: 'Dr. Eva Gast', email: 'eva@example.at' };
+
+  it('invites exactly the chosen three, never a party; the board only sees it when invited', async () => {
+    const { notifications } = await import('../notifications/mock');
+    const m = arbitration();
+    expect(() => meetings.get(member('beisitz'), m.id)).toThrow(expect.objectContaining({ code: 'meeting.not-found' }));
+    expect(meetings.get(member('pruefer'), m.id).canManage).toBe(true); // Rechnungsprüfer convene
+    expect(() => meetings.setInvitees(member('vorstand'), m.id, { memberIds: ['ehren', 'trainer'], guests: [], partyIds: ['trainer'] })).toThrow(
+      expect.objectContaining({ code: 'meeting.invitee-is-party' }),
+    );
+    expect(() => meetings.setInvitees(member('vorstand'), m.id, { memberIds: [], guests: [{ ...guest, email: 'kein-mail' }], partyIds: [] })).toThrow(
+      expect.objectContaining({ code: 'meeting.invitees-invalid' }),
+    );
+    meetings.setInvitees(member('vorstand'), m.id, { memberIds: ['ehren', 'beisitz'], guests: [], partyIds: ['trainer'] });
+    expect(() => meetings.invite(member('vorstand'), m.id)).toThrow(expect.objectContaining({ code: 'meeting.invitees-count' }));
+    const set = meetings.setInvitees(member('vorstand'), m.id, { memberIds: ['ehren', 'beisitz'], guests: [guest], partyIds: ['trainer'] });
+    expect(set.chosen?.guests[0]).toMatchObject({ name: 'Dr. Eva Gast', email: 'eva@example.at' });
+
+    expect(() => meetings.get(member('beisitz'), m.id)).toThrow(expect.objectContaining({ code: 'meeting.not-found' })); // still a draft
+    meetings.invite(member('vorstand'), m.id);
+    expect(notifications.external.data.some((x) => x.email === 'eva@example.at')).toBe(true);
+    expect(meetings.get(member('beisitz'), m.id).chosen?.guests[0].email).toBeNull(); // invited, does not run it
+    expect(() => meetings.get(member('schrift'), m.id)).toThrow(expect.objectContaining({ code: 'meeting.not-found' }));
+    expect(() => meetings.get(member('trainer'), m.id)).toThrow(expect.objectContaining({ code: 'meeting.not-found' }));
+  });
+
+  it('decides only with all present, by show of hands while guests vote', () => {
+    const m = arbitration();
+    const set = meetings.setInvitees(member('vorstand'), m.id, { memberIds: ['ehren', 'beisitz'], guests: [guest], partyIds: ['spielerin'] });
+    const guestId = set.chosen!.guests[0].id;
+    meetings.invite(member('vorstand'), m.id);
+    meetings.setPresence(member('vorstand'), m.id, 'ehren', true);
+    expect(meetings.setPresence(member('vorstand'), m.id, 'beisitz', true).quorate).toBe(false); // 2 of 3
+    const all = meetings.setPresence(member('vorstand'), m.id, guestId, true);
+    expect(all.quorate).toBe(true);
+    expect(all.present.map((p) => p.name)).toContain('Dr. Eva Gast');
+    expect(() => meetings.setRoles(member('vorstand'), m.id, { chairId: guestId, secretaryId: null })).toThrow(
+      expect.objectContaining({ code: 'meeting.role-not-present' }),
+    );
+    meetings.open(member('vorstand'), m.id);
+    expect(() => meetings.setInvitees(member('vorstand'), m.id, { memberIds: [], guests: [], partyIds: [] })).toThrow(
+      expect.objectContaining({ code: 'meeting.invitees-fixed' }),
+    );
+    const r = meetings.createResolution(member('vorstand'), m.id, { title: 'Spruch' });
+    expect(() => meetings.openResolution(member('vorstand'), r.id, 'APP')).toThrow(expect.objectContaining({ code: 'resolution.vote-by-hand' }));
+    expect(meetings.openResolution(member('vorstand'), r.id, 'HAND').status).toBe('OPEN');
+  });
+
+  it('keeps the type: never archived or deleted, steps to an office need one the club has', () => {
+    const t = meetings.listTypes().items.find((x) => x.key === 'SCHLICHTUNG')!;
+    expect([t.minInvitees, t.maxInvitees, t.quorum]).toEqual([3, 3, 'ALL']);
+    expect(() => meetings.saveType(member('vorstand'), t.key, { ...t, archived: true })).toThrow(
+      expect.objectContaining({ code: 'meeting-type.fixed' }),
+    );
+    expect(() => meetings.saveType(member('vorstand'), t.key, { ...t, invitees: 'BOARD' })).toThrow(
+      expect.objectContaining({ code: 'meeting-type.fixed' }),
+    );
+    expect(() => meetings.deleteType(member('vorstand'), t.key)).toThrow(expect.objectContaining({ code: 'meeting-type.fixed' }));
+    expect(() => meetings.saveType(member('vorstand'), t.key, { ...t, minInvitees: 4 })).toThrow(
+      expect.objectContaining({ code: 'meeting-type.invitees-invalid' }),
+    );
+    const office = t.steps.find((s) => s.audience === 'OFFICE')!;
+    expect(office.office).toBe('AUDITOR');
+    expect(() =>
+      meetings.saveType(member('vorstand'), t.key, { ...t, steps: t.steps.map((s) => (s === office ? { ...s, office: null } : s)) }),
+    ).toThrow(expect.objectContaining({ code: 'meeting-step.invalid' }));
+  });
+
+  it('keeps its documents in a folder only who sees the meeting sees', async () => {
+    const { files } = await import('../files/mock');
+    const m = arbitration();
+    const doc = await meetings.generateInvitation(member('vorstand'), m.id);
+    const folderId = doc.links[0].parentId!;
+    const folder = files.listFolders(member('vorstand')).find((f) => f.id === folderId)!;
+    expect(folder.scope).toBe('MEETING');
+    expect(files.listFolders(member('vorstand')).find((f) => f.id === folder.parentId)?.name).toBe('Schlichtungseinrichtung');
+    expect(files.listFolders(member('beisitz')).some((f) => f.id === folderId)).toBe(false);
+    expect(files.listFolders(member('pruefer')).some((f) => f.id === folderId)).toBe(true);
+  });
+});

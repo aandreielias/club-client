@@ -4,6 +4,7 @@
   import Dialog from '../../ui/Dialog.svelte';
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
+  import { boardSettings } from '../members/services';
   import {
     ACTION_KIND_LABELS,
     AUDIENCE_LABELS,
@@ -51,12 +52,15 @@
     { value: 'BEFORE_INVITE', label: 'vor der Einladungsfrist', hint: 'solange die Sitzung nicht eingeladen ist' },
     { value: 'BEFORE_START', label: 'vor Beginn', hint: 'sobald eingeladen ist' },
     { value: 'AFTER_END', label: 'nach dem Ende', hint: 'wenn die Sitzung vorbei ist' },
+    { value: 'AFTER_CREATE', label: 'nach dem Anlegen', hint: 'ab dem Anlegen der Sitzung (etwa der Anrufung), bis sie endet' },
   ] as const satisfies readonly { value: StepAnchor; label: string; hint: string }[];
   const UNITS = [
     { value: 'days', label: 'Tage' },
     { value: 'hours', label: 'Stunden' },
   ] as const;
   const AUDIENCES = (Object.keys(AUDIENCE_LABELS) as StepAudience[]).map((a) => ({ value: a, label: AUDIENCE_LABELS[a] }));
+  const OFFICES = $derived(boardSettings.enabled.map((o) => ({ value: o, label: boardSettings.label(o) })));
+  const officeError = $derived(submitted && draft?.audience === 'OFFICE' && !draft.office ? 'Ein Amt wählen.' : undefined);
   const STEP_ACTIONS = (Object.keys(ACTION_KIND_LABELS) as StepAction[]).map((a) => ({ value: a, label: ACTION_KIND_LABELS[a] }));
   const PLACEHOLDERS = [
     { value: '{titel}', hint: 'Titel der Sitzung' },
@@ -84,8 +88,8 @@
   function apply(event: SubmitEvent) {
     event.preventDefault();
     submitted = true;
-    if (!draft || titleError) return;
-    onapply({ ...draft, offsetHours: fromAmount(amount, unit) });
+    if (!draft || titleError || officeError) return;
+    onapply({ ...draft, offsetHours: fromAmount(amount, unit), office: draft.audience === 'OFFICE' ? draft.office : null });
   }
 </script>
 
@@ -114,6 +118,15 @@
       <Field label={draft.action === 'TASK' ? 'Zuständig' : 'Empfänger'}>
         <Select bind:value={() => draft!.audience, (v) => v && (draft!.audience = v)} options={AUDIENCES} aria-label="Empfänger" />
       </Field>
+      {#if draft.audience === 'OFFICE'}
+        <Field label="Amt" hint="Alle, die es gerade innehaben; unbesetzt: der Vorstand." error={officeError}>
+          <Select
+            bind:value={() => draft!.office ?? '', (v) => (draft!.office = v || null)}
+            options={[{ value: '', label: 'Amt wählen' }, ...OFFICES]}
+            aria-label="Amt"
+          />
+        </Field>
+      {/if}
       {#if !draft.system}
         <Field label="Titel" error={titleError}>
           <input bind:value={() => draft!.title ?? '', (v) => (draft!.title = v)} maxlength="150" required />

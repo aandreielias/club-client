@@ -30,13 +30,17 @@ describe('mock core', () => {
     expect(() => directory.requirePrivileged(player)).toThrow(expect.objectContaining({ code: 'access.denied' }));
   });
 
-  it('lists coaches only the members whose profile they may open', () => {
+  it('lists in full only the profiles one may open, the other active members by name', () => {
     const member = (id: string) => directory.members.data.find((m) => m.id === id)!;
     const ids = directory.list(member('trainer')).items.map((m) => m.id);
     expect(ids).toContain('trainer');
     expect(ids.every((id) => directory.members.data.some((m) => m.id === id && m.active))).toBe(true);
     expect(ids.length).toBeLessThan(directory.list(member('admin')).items.length);
-    expect(() => directory.list(member('spieler'))).toThrow(expect.objectContaining({ code: 'access.denied' }));
+    expect(directory.list(member('admin')).others).toEqual([]);
+    const player = directory.list(member('spieler'));
+    expect(player.items.map((m) => m.id)).toEqual(['spieler']);
+    expect(player.others.map((m) => m.id)).toContain('trainer');
+    expect(player.others[0]).not.toHaveProperty('email');
   });
 
   it('sees the teams of wards', () => {

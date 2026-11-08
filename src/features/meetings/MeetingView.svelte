@@ -21,9 +21,10 @@
   import { MeetingModel } from './MeetingModel.svelte';
   import AgendaView from './AgendaView.svelte';
   import MeetingLinks from './MeetingLinks.svelte';
+  import InviteesSection from './InviteesSection.svelte';
   import RecordLink from '../../ui/RecordLink.svelte';
   import { permissions } from '../../lib/container';
-  import { isAssembly, quorumText, STATUS_LABELS, STATUS_TONES, type Meeting } from './model';
+  import { invitesVoters, quorumText, STATUS_LABELS, STATUS_TONES, type Meeting } from './model';
   import { meetingsApi, meetingTypes } from './services';
 
   /** One meeting: date, Tagesordnung with its Beschlüsse (voted right there), invitation, presence with the quorum, protocol. Window and page. */
@@ -95,7 +96,11 @@
   const late = (m: Meeting) => m.latestInvite < new Date().toISOString();
 
   async function invite(m: Meeting) {
-    const who = isAssembly(meetingTypes.get(m.kind)) ? 'alle stimmberechtigten Mitglieder' : 'den Vorstand';
+    const who = m.chosen
+      ? 'die Eingeladenen (Gäste per E-Mail)'
+      : invitesVoters(meetingTypes.get(m.kind))
+        ? 'alle stimmberechtigten Mitglieder'
+        : 'den Vorstand';
     await view.confirm(
       {
         title: 'Einladung verschicken',
@@ -179,7 +184,7 @@
       {/snippet}
       {#snippet meta()}
         <Tag tone={STATUS_TONES[m.status]}>{STATUS_LABELS[m.status]}</Tag>
-        <Tag tone={isAssembly(meetingTypes.get(m.kind)) ? 'blue' : 'purple'}>{meetingTypes.label(m.kind)}</Tag>
+        <Tag tone={invitesVoters(meetingTypes.get(m.kind)) ? 'blue' : 'purple'}>{meetingTypes.label(m.kind)}</Tag>
       {/snippet}
 
       <dl class="props">
@@ -228,6 +233,10 @@
             >
           </div>
         {/if}
+      {/if}
+
+      {#if m.chosen}
+        <InviteesSection meeting={m} chosen={m.chosen} type={meetingTypes.get(m.kind)} {model} />
       {/if}
 
       <h2>Tagesordnung</h2>

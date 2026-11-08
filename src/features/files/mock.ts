@@ -50,12 +50,18 @@ const OFFICE: Readonly<Record<string, string>> = {
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 };
 
+/** server: MeetingsApi.FOLDER_RIGHTS — the meetings mock sets it (it imports this module): MEETING folders follow the meeting. */
+export const meetingFolderRights = {
+  of: (_member: Member): { visible: Set<string>; managed: Set<string> } => ({ visible: new Set(), managed: new Set() }),
+};
+
 /** server: FileHandlers.Viewer */
 class Viewer {
   readonly board: boolean;
   readonly voter: boolean;
   readonly teamIds: Set<string>;
   readonly coachTeamIds: Set<string>;
+  readonly meetingFolders: { visible: Set<string>; managed: Set<string> };
 
   constructor(
     readonly member: Member,
@@ -66,17 +72,21 @@ class Viewer {
     this.voter = member.voter;
     this.teamIds = new Set(Object.keys(own));
     this.coachTeamIds = new Set(Object.keys(own).filter((t) => coaches(own[t])));
+    this.meetingFolders = meetingFolderRights.of(member);
   }
 
   canSee(f: StoredFolder): boolean {
     if (f.scope === 'CLUB') return true;
     if (f.scope === 'TEAM') return this.board || f.teamIds.some((t) => this.teamIds.has(t));
     if (f.scope === 'ASSEMBLY') return this.board || this.voter;
+    // server: FileAccess — no board bypass, the meeting decides
+    if (f.scope === 'MEETING') return this.meetingFolders.visible.has(f.id);
     return this.board;
   }
 
   canManage(f: StoredFolder): boolean {
     // Coaches manage a team folder only when they coach every one of its teams; the system folder nobody.
+    if (f.scope === 'MEETING') return this.meetingFolders.managed.has(f.id);
     return !f.system && (this.board || (f.scope === 'TEAM' && f.teamIds.every((t) => this.coachTeamIds.has(t))));
   }
 }
@@ -174,6 +184,7 @@ export class MockFiles {
     let folder: StoredFolder;
     if (body.parentId) {
       const parent = this.visibleFolder(viewer, body.parentId);
+      if (parent.scope === 'MEETING') fail(403, 'access.denied'); // server: their subfolders come from the meetings
       if (this.depth(parent) >= limits.maxFolderDepth) fail(400, 'folder.too-deep');
       folder = {
         id: crypto.randomUUID(),
@@ -209,6 +220,25 @@ export class MockFiles {
     return this.toDto(folder, viewer);
   }
 
+  /** server: FilesApi.CREATE_MEETING_FOLDER — internal, the meetings module decides who may; no rights check here. */
+  createMeetingFolder(parentId: string | null, name: string): string {
+    if (parentId && !this.folders.data.some((f) => f.id === parentId && f.scope === 'MEETING')) fail(404, 'folder.not-found');
+    const folder: StoredFolder = {
+      id: crypto.randomUUID(),
+      parentId,
+      name: name.slice(0, limits.folderNameMaxLength),
+      kind: 'DOCUMENTS',
+      scope: 'MEETING',
+      teamIds: [],
+      membersCanUpload: false,
+      color: null,
+      coverFileId: null,
+    };
+    this.folders.data.push(folder);
+    this.folders.save();
+    return folder.id;
+  }
+
   /** server: FileHandlers.updateFolder */
   updateFolder(member: Member, id: string, body: Record<string, any>): Folder {
     const viewer = this.viewer(member);
@@ -228,6 +258,7 @@ export class MockFiles {
       scope = parent.scope;
       teamIds = [...parent.teamIds].sort();
     } else if (parentId && (scope !== folder.scope || teamIds.join() !== current.join())) fail(400, 'folder.scope-inherited');
+    if ((scope === 'MEETING') !== (folder.scope === 'MEETING')) fail(403, 'access.denied');
     const scopeChanged = scope !== folder.scope || teamIds.join() !== current.join();
     if ((scope === 'TEAM') !== teamIds.length > 0) fail(400, 'folder.team-scope-mismatch');
     let cover = body.clearCover ? null : (folder.coverFileId ?? null);
@@ -821,7 +852,9 @@ export class MockFiles {
           ? { roles: ['ADMIN', 'BOARD'] }
           : folder.scope === 'ASSEMBLY'
             ? { members: this.people.electorate('ASSEMBLY'), roles: ['ADMIN', 'BOARD'] }
-            : this.teamsAudience(folder.teamIds);
+            : folder.scope === 'MEETING'
+              ? { roles: ['ADMIN'] } // shortcut as on the server: others reload
+              : this.teamsAudience(folder.teamIds);
     mockServer.events.publish({ type: 'files.files-changed', data: { folderId: folder.id, fileId, change }, audience });
   }
 
