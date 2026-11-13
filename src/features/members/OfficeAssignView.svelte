@@ -3,6 +3,7 @@
   import { TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
+  import { sortName } from '../../lib/types';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import DateInput from '../../ui/DateInput.svelte';
   import Detail from '../../ui/Detail.svelte';
@@ -23,9 +24,7 @@
   void candidates.load();
   const officeOptions = $derived(boardSettings.enabled.map((kind) => ({ value: kind, label: boardSettings.label(kind) })));
   /** server: MembershipRules.eligible — only members whose membership allows an office. */
-  const memberOptions = $derived(
-    (candidates.value ?? []).filter((m) => m.eligible).map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` })),
-  );
+  const memberOptions = $derived((candidates.value ?? []).filter((m) => m.eligible).map((m) => ({ value: m.id, label: sortName(m) })));
 
   let memberId = $state('');
   let office = $state<OfficeKind | ''>('');

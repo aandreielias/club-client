@@ -3,7 +3,7 @@
   import { directory } from '../../lib/container';
   import type { Action } from '../../lib/state/Action.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
-  import { ROLE_LABELS, type Role } from '../../lib/types';
+  import { displayName, ROLE_LABELS, type Role } from '../../lib/types';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
@@ -37,13 +37,13 @@
     const member = members.value?.find((m) => m.id === id);
     const domain = settings.value?.domain;
     if (!member) return;
-    if (!form.name.trim()) form.name = `${member.firstName} ${member.lastName}`;
+    if (!form.name.trim()) form.name = displayName(member);
     if (!form.address.trim() && domain) form.address = `${personalLocal(member.firstName, member.lastName)}@${domain}`;
   }
   const memberOptions = $derived(
     (members.value ?? [])
       .filter((m) => m.active)
-      .map((m) => ({ value: m.id, label: `${m.firstName} ${m.lastName}` }))
+      .map((m) => ({ value: m.id, label: displayName(m) }))
       .sort((a, b) => a.label.localeCompare(b.label, 'de')),
   );
 </script>

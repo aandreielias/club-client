@@ -1,8 +1,7 @@
+import { DAY_MS } from '../../lib/time/ZonedClock';
 import { IcsWriter, type IcsEvent } from '../../lib/calendar/IcsWriter';
 import type { CalendarApi } from './CalendarApi';
 import { SEEDED_APPOINTMENT_TYPES, type Appointment } from './model';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface ExportLimits {
   /** server: largest range one list request may ask for. */

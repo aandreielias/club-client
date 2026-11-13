@@ -1,7 +1,7 @@
 import type { ApiClient } from '../http/ApiClient';
 import { ProblemError } from '../http/ProblemError';
 import type { SessionStore } from '../session/SessionStore.svelte';
-import type { Member, MemberList, Roster, RosterEntry, Team, TeamRole } from '../types';
+import { displayName, type Member, type MemberList, type Roster, type RosterEntry, type Team, type TeamRole } from '../types';
 
 /**
  * Shared lookup of teams, rosters and member names. Feature DTOs carry only ids, so pages resolve
@@ -95,7 +95,7 @@ export class TeamDirectory {
       .get<MemberList>('/api/v1/members')
       .then(({ items }) => {
         if (generation !== this.#generation) return [];
-        this.remember(items.map((m) => ({ memberId: m.id, name: `${m.firstName} ${m.lastName}` })));
+        this.remember(items.map((m) => ({ memberId: m.id, name: displayName(m) })));
         return items;
       })
       .catch((error) => {
@@ -108,7 +108,7 @@ export class TeamDirectory {
   /** Candidates for a team (its roster) or, for club-wide items, all active members. */
   async candidates(teamId: string | null): Promise<readonly Pick<RosterEntry, 'memberId' | 'name'>[]> {
     if (teamId) return (await this.roster(teamId))?.entries ?? [];
-    return (await this.allMembers()).filter((m) => m.active).map((m) => ({ memberId: m.id, name: `${m.firstName} ${m.lastName}` }));
+    return (await this.allMembers()).filter((m) => m.active).map((m) => ({ memberId: m.id, name: displayName(m) }));
   }
 
   nameOf(memberId: string, fallback = 'Mitglied'): string {
@@ -118,7 +118,7 @@ export class TeamDirectory {
   /** The member's name if any loaded source contains it, else null. */
   knownName(memberId: string): string | null {
     const me = this.session.me?.member;
-    if (me && me.id === memberId) return `${me.firstName} ${me.lastName}`;
+    if (me && me.id === memberId) return displayName(me);
     return this.#names[memberId] ?? this.session.me?.wardNames?.[memberId] ?? null;
   }
 

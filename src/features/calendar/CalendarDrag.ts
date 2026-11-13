@@ -46,7 +46,7 @@ export class CalendarDrag {
   /** Remembers where the entry was taken (tests call it directly). */
   grab(entry: CalendarEntry, spot: PointerSpot | null): void {
     const first = this.clock.localDate(entry.start);
-    this.#grabDays = spot && spot.day > first ? CalendarDrag.daysBetween(first, spot.day) : 0;
+    this.#grabDays = spot && spot.day > first ? ZonedClock.daysBetween(first, spot.day) : 0;
     const startMinutes = CalendarDrag.minutesOf(this.clock.toLocal(entry.start));
     this.#grabMinutes = spot?.minutes != null && spot.day === first ? Math.max(0, spot.minutes - startMinutes) : 0;
   }
@@ -137,10 +137,6 @@ export class CalendarDrag {
     const start = this.clock.toInstant(`${day}T${this.clock.toLocal(entry.start).slice(11)}`);
     if (Date.parse(start) >= Date.parse(entry.end)) return null;
     return start === entry.start ? null : { start, end: entry.end };
-  }
-
-  static daysBetween(from: LocalDate, to: LocalDate): number {
-    return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
   }
 
   private static minutesOf(local: string): number {

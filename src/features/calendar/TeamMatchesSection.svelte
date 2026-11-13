@@ -1,5 +1,6 @@
 <script lang="ts">
   import { bus, session } from '../../lib/container';
+  import { DAY_MS } from '../../lib/time/ZonedClock';
   import { WINDOW_OPEN } from '../../channels';
   import { Resource } from '../../lib/state/Resource.svelte';
   import { tooltip } from '../../ui/tooltip';
@@ -10,9 +11,7 @@
   let { teamId }: { teamId: string } = $props();
 
   // svelte-ignore state_referenced_locally
-  const matches = new Resource(() =>
-    calendarApi.teamMatches(teamId, new Date(Date.now() - 365 * 86_400_000).toISOString(), new Date().toISOString()),
-  );
+  const matches = new Resource(() => calendarApi.teamMatches(teamId, new Date(Date.now() - 365 * DAY_MS).toISOString(), new Date().toISOString()));
   void matches.load();
 </script>
 

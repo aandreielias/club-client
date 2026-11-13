@@ -148,7 +148,7 @@ export class AppointmentForm extends FormState<FormErrors> {
   /** Number of occurrences the series would create (1 without repetition). */
   occurrences(): number {
     if (!this.repeat || !this.repeatUntil || !this.start) return 1;
-    const days = (Date.parse(this.repeatUntil) - Date.parse(this.start.slice(0, 10))) / 86_400_000;
+    const days = ZonedClock.daysBetween(this.start.slice(0, 10), this.repeatUntil);
     return days < 0 ? 0 : Math.floor(days / (7 * this.intervalWeeks)) + 1;
   }
 

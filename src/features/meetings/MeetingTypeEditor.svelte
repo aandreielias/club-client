@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { bus } from '../../lib/container';
+  import { bus, session } from '../../lib/container';
   import { TOAST } from '../../channels';
   import type { Action } from '../../lib/state/Action.svelte';
   import { autofocus } from '../../ui/autofocus';
@@ -60,10 +60,7 @@
     { value: 'hours', label: 'Stunden' },
   ] as const;
   const QUORUMS = (Object.keys(QUORUM_LABELS) as Quorum[]).map((q) => ({ value: q, label: QUORUM_LABELS[q] }));
-  const MONTHS = Array.from({ length: 12 }, (_, i) => ({
-    value: String(i + 1),
-    label: new Intl.DateTimeFormat('de-AT', { month: 'long' }).format(new Date(2024, i, 1)),
-  }));
+  const MONTHS = session.format.monthNames().map((label, i) => ({ value: String(i + 1), label }));
   const MAJORITY_HINTS: Readonly<Record<Majority, string>> = {
     SIMPLE: 'Mehr Ja als Nein; Enthaltungen zählen nicht.',
     TWO_THIRDS: 'Mindestens doppelt so viele Ja wie Nein.',

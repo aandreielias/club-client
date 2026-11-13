@@ -2,7 +2,7 @@
   import { bus, directory } from '../../lib/container';
   import { TOAST } from '../../channels';
   import { Resource } from '../../lib/state/Resource.svelte';
-  import type { Member } from '../../lib/types';
+  import { sortName, type Member } from '../../lib/types';
   import type { GuardianRef } from './MembersApi';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
@@ -58,7 +58,7 @@
           placeholder="Bitte wählen"
           options={all
             .filter((m) => m.active && m.id !== member.id && !linked.value?.some((g) => g.memberId === m.id))
-            .map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` }))}
+            .map((m) => ({ value: m.id, label: sortName(m) }))}
         />
       </Field>
       <div><Button type="submit" busy={model.guardianAction.busy} disabled={!guardianId}>Zuordnen</Button></div>

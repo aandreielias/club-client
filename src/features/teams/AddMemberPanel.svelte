@@ -2,7 +2,7 @@
   import { bus, directory } from '../../lib/container';
   import { TOAST } from '../../channels';
   import { Resource } from '../../lib/state/Resource.svelte';
-  import { TEAM_ROLE_LABELS, type TeamRole } from '../../lib/types';
+  import { sortName, TEAM_ROLE_LABELS, type TeamRole } from '../../lib/types';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -34,11 +34,7 @@
     {@const candidates = all.filter((m) => m.active && !model.has(m.id))}
     <form class="add" onsubmit={submit}>
       <Field label="Mitglied">
-        <Select
-          bind:value={memberId}
-          placeholder="Bitte wählen"
-          options={candidates.map((m) => ({ value: m.id, label: `${m.lastName}, ${m.firstName}` }))}
-        />
+        <Select bind:value={memberId} placeholder="Bitte wählen" options={candidates.map((m) => ({ value: m.id, label: sortName(m) }))} />
       </Field>
       <Field label="Rolle im Team">
         <Select bind:value={role} options={Object.entries(TEAM_ROLE_LABELS).map(([value, label]) => ({ value, label }))} />

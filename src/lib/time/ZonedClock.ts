@@ -7,6 +7,9 @@ export type LocalDateTime = string;
  * Converts between UTC instants (API) and wall-clock time in one IANA zone (the club's), independent
  * of the browser's zone. DST gaps resolve to the later offset.
  */
+/** One day in milliseconds (instants; for calendar days use addDays/daysBetween). */
+export const DAY_MS = 86_400_000;
+
 export class ZonedClock {
   readonly #parts: Intl.DateTimeFormat;
 
@@ -50,6 +53,11 @@ export class ZonedClock {
   /** First instant of the given day in this zone. */
   startOfDay(date: LocalDate): string {
     return this.toInstant(`${date}T00:00`);
+  }
+
+  /** Calendar days from `from` to `to` (negative when `to` is earlier). */
+  static daysBetween(from: LocalDate, to: LocalDate): number {
+    return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS);
   }
 
   static addDays(date: LocalDate, days: number): LocalDate {

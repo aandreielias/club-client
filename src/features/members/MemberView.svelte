@@ -3,7 +3,7 @@
   import { backStack, bus, commands, session } from '../../lib/container';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
-  import { ROLE_LABELS, roleHue, type Member, type Role } from '../../lib/types';
+  import { displayName, ROLE_LABELS, roleHue, type Member, type Role } from '../../lib/types';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -30,7 +30,7 @@
 
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle);
-  view.title(() => model.member.value && `${model.member.value.firstName} ${model.member.value.lastName}`);
+  view.title(() => model.member.value && displayName(model.member.value));
 
   let editing = $state(false);
   backStack.while(
@@ -64,7 +64,7 @@
   async function reactivate(member: Member) {
     const request = {
       title: 'Mitglied reaktivieren',
-      message: `${member.firstName} ${member.lastName} kann sich wieder anmelden. Teams und Rollen bitte neu zuordnen.`,
+      message: `${displayName(member)} kann sich wieder anmelden. Teams und Rollen bitte neu zuordnen.`,
       confirmLabel: 'Reaktivieren',
     };
     await view.confirm(request, () => view.attempt(model.reactivateAction, () => model.reactivate()), 'Mitglied reaktiviert.');
@@ -73,7 +73,7 @@
   async function erase(member: Member) {
     const request = {
       title: 'Personendaten löschen (DSGVO)',
-      message: `Name, E-Mail, Telefon, Geburtsdatum und Login von ${member.firstName} ${member.lastName} werden endgültig gelöscht, ebenso Erziehungsberechtigte, Benachrichtigungen und Foto-Markierungen. Einträge wie Aufgaben oder Dateien bleiben, ohne Namen. Das lässt sich nicht rückgängig machen.`,
+      message: `Name, E-Mail, Telefon, Geburtsdatum und Login von ${displayName(member)} werden endgültig gelöscht, ebenso Erziehungsberechtigte, Benachrichtigungen und Foto-Markierungen. Einträge wie Aufgaben oder Dateien bleiben, ohne Namen. Das lässt sich nicht rückgängig machen.`,
       confirmLabel: 'Endgültig löschen',
       danger: true,
     };
@@ -89,7 +89,7 @@
   async function deactivate(member: Member) {
     const request = {
       title: 'Mitglied deaktivieren',
-      message: `${member.firstName} ${member.lastName} kann sich danach nicht mehr anmelden und wird aus allen Teams entfernt.`,
+      message: `${displayName(member)} kann sich danach nicht mehr anmelden und wird aus allen Teams entfernt.`,
       confirmLabel: 'Deaktivieren',
       danger: true,
     };

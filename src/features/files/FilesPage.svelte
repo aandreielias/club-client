@@ -3,7 +3,7 @@
   import { usePane } from '../../lib/split/usePane';
   import { settings } from '../../settings';
   import { APP_ERROR, CONFIRM, TOAST, WINDOW_OPEN } from '../../channels';
-  import { bus, commands, directory, pendingDeletes, permissions, preferences, session, store } from '../../lib/container';
+  import { bus, commands, directory, pendingDeletes, preferences, session, store } from '../../lib/container';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
@@ -48,9 +48,8 @@
   const contents = folderId ? new FolderContents(filesApi, fileLinks, folderId) : null;
   const list = new FolderItemListModel(tree, contents, folderId, fileTypes, () => session.format, directory, store);
   void list.load();
-  directory.loadRosters();
-  // Managers: every team's roster, so tagged people (photo filter, "Von") have names.
-  if (permissions.isManager) background(directory.loadTeams().then(() => directory.loadRosters(directory.teams.map((t) => t.id))));
+  // Every member's name (photo filter, "Von") and the own teams' rosters.
+  background(directory.loadRosters());
 
   useBus(bus, FILES_CHANGED, ({ data }) => {
     // Folder changes (name, colour, cover, visibility) also show in the parent's listing.

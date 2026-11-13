@@ -31,7 +31,7 @@
     windows,
   } from './lib/container';
   import PaneHost from './ui/PaneHost.svelte';
-  import { guestOnly } from './lib/types';
+  import { displayName, guestOnly } from './lib/types';
   import SplitDivider from './ui/SplitDivider.svelte';
   import Button from './ui/Button.svelte';
   import Centered from './ui/Centered.svelte';
@@ -139,7 +139,7 @@
     <Sidebar
       title={session.club.name}
       logo={session.club.assets.logo}
-      user="{session.member.firstName} {session.member.lastName}"
+      user={displayName(session.member)}
       items={app.navigation}
       current={router.path}
       connection={live.status}

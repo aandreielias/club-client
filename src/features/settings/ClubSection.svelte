@@ -30,10 +30,7 @@
   });
   const draft = new SettingsDraft<ClubForm>(formOf(session.club!));
 
-  const months = Array.from({ length: 12 }, (_, i) => ({
-    value: String(i + 1),
-    label: new Intl.DateTimeFormat(session.club!.locale, { month: 'long' }).format(new Date(2026, i, 1)),
-  }));
+  const months = session.format.monthNames().map((label, i) => ({ value: String(i + 1), label }));
 
   async function save(value: ClubForm): Promise<ClubForm> {
     await session.updateClub({ ...value, seasonStartMonth: Number(value.seasonStartMonth) });

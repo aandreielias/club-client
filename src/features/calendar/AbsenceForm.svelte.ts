@@ -1,3 +1,4 @@
+import { ZonedClock } from '../../lib/time/ZonedClock';
 import { settings } from '../../settings';
 import type { NewAbsence } from './model';
 
@@ -28,7 +29,7 @@ export class AbsenceForm {
 
   private validate(): string | null {
     if (!this.from || !this.to || this.to < this.from) return 'Das Ende darf nicht vor dem Beginn liegen.';
-    if ((Date.parse(this.to) - Date.parse(this.from)) / 86_400_000 >= 366) return 'Höchstens ein Jahr.';
+    if (ZonedClock.daysBetween(this.from, this.to) >= 366) return 'Höchstens ein Jahr.';
     if (this.reason.length > settings.calendar.reasonMaxLength) return `Grund mit höchstens ${settings.calendar.reasonMaxLength} Zeichen.`;
     return null;
   }

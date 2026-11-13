@@ -2,6 +2,7 @@
   import { backStack, bus, pendingDeletes, permissions, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
+  import { DAY_MS } from '../../lib/time/ZonedClock';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
@@ -26,7 +27,7 @@
   void location.load();
   const upcoming = new Resource(async () => {
     const from = new Date();
-    const to = new Date(from.getTime() + 60 * 86_400_000);
+    const to = new Date(from.getTime() + 60 * DAY_MS);
     return (await calendarApi.list(from.toISOString(), to.toISOString(), null)).filter((a) => a.locationId === id && !a.cancelled).slice(0, 8);
   });
   void upcoming.load();

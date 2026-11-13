@@ -27,6 +27,12 @@ export class Formatter {
   }
 
   /** e.g. "Oktober 2026" */
+  /** January … December in the club's language, for month pickers. */
+  monthNames(): string[] {
+    const name = new Intl.DateTimeFormat(this.locale, { timeZone: 'UTC', month: 'long' });
+    return Array.from({ length: 12 }, (_, i) => name.format(new Date(Date.UTC(2024, i, 1))));
+  }
+
   month(date: LocalDate): string {
     return this.#month.format(Formatter.utcDate(date));
   }

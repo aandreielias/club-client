@@ -9,6 +9,12 @@ export type Role = 'ADMIN' | 'BOARD' | 'COACH' | 'PLAYER' | 'PARENT' | 'VOLUNTEE
 /** Only GUEST (server: Actor.guestOnly). */
 export const guestOnly = (roles: readonly Role[]): boolean => roles.length === 1 && roles[0] === 'GUEST';
 
+/** "Vorname Nachname" (server: Member.displayName). */
+export const displayName = (m: { firstName: string; lastName: string }): string => `${m.firstName} ${m.lastName}`;
+
+/** "Nachname, Vorname", for pickers in last-name order. */
+export const sortName = (m: { firstName: string; lastName: string }): string => `${m.lastName}, ${m.firstName}`;
+
 /** ASSISTANT: co-coach, with the same rights in the team as COACH (server: TeamRole.coaches). */
 export type TeamRole = 'COACH' | 'ASSISTANT' | 'PLAYER';
 
