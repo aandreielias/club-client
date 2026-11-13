@@ -1,14 +1,9 @@
 import { FormState } from '../../lib/state/FormState.svelte';
 import { groupChoices, groupPhase } from './logic';
 import type { NewTournament, Tournament, TournamentFormat } from './model';
+import { settings } from '../../settings';
 
 export type TournamentField = 'name' | 'dates' | 'groups' | 'fields' | 'teams';
-
-/** server: Tournament.MAX_FIELDS */
-export const MAX_FIELDS = 16;
-/** server: TournamentHandlers.MAX_TEAMS and Team name length */
-const MAX_TEAMS = 64;
-const MAX_TEAM_NAME = 80;
 
 /**
  * A new or edited tournament: name, days, place, groups, fields, format, sets to win and team size; validation mirrors
@@ -120,20 +115,22 @@ export class TournamentForm extends FormState<Partial<Record<TournamentField, st
   }
 
   protected validate(): Partial<Record<TournamentField, string>> {
+    const max = settings.tournaments;
     const errors: Partial<Record<TournamentField, string>> = {};
     const name = this.name.trim();
-    if (!name || name.length > 120) errors.name = 'Name mit 1 bis 120 Zeichen angeben.';
+    if (!name || name.length > max.nameMaxLength) errors.name = `Name mit 1 bis ${max.nameMaxLength} Zeichen angeben.`;
     if (!this.startsOn || !this.endsOn || this.endsOn < this.startsOn) errors.dates = 'Das Ende darf nicht vor dem Beginn liegen.';
-    if (this.qualifiers < 2 || this.qualifiers > 32) errors.groups = 'Insgesamt 2 bis 32 Teams in der KO-Runde.';
+    if (this.qualifiers < 2 || this.qualifiers > max.maxQualifiers) errors.groups = `Insgesamt 2 bis ${max.maxQualifiers} Teams in der KO-Runde.`;
     else if (this.settingsEditable && !this.groupOptions.includes(this.groupCount)) {
       errors.groups = `Für ${this.groupCount} Gruppen reichen ${this.teamCount} Teams nicht.`;
     }
     const names = this.teamNames;
     const duplicate = names.find((name, i) => names.findIndex((other) => other.toLowerCase() === name.toLowerCase()) !== i);
-    if (names.length > MAX_TEAMS) errors.teams = `Höchstens ${MAX_TEAMS} Teams.`;
-    else if (names.some((name) => name.length > MAX_TEAM_NAME)) errors.teams = `Teamnamen mit höchstens ${MAX_TEAM_NAME} Zeichen.`;
+    if (names.length > max.maxTeams) errors.teams = `Höchstens ${max.maxTeams} Teams.`;
+    else if (names.some((name) => name.length > max.teamNameMaxLength)) errors.teams = `Teamnamen mit höchstens ${max.teamNameMaxLength} Zeichen.`;
     else if (duplicate) errors.teams = `„${duplicate}“ steht zweimal in der Liste.`;
-    if (!Number.isInteger(this.fieldCount) || this.fieldCount < 1 || this.fieldCount > MAX_FIELDS) errors.fields = `1 bis ${MAX_FIELDS} Felder.`;
+    if (!Number.isInteger(this.fieldCount) || this.fieldCount < 1 || this.fieldCount > max.maxFields)
+      errors.fields = `1 bis ${max.maxFields} Felder.`;
     return errors;
   }
 }

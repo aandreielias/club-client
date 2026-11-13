@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import Button from '../../ui/Button.svelte';
   import DateInput from '../../ui/DateInput.svelte';
   import Select from '../../ui/Select.svelte';
   import MemberChips from './MemberChips.svelte';
-  import { emptyRow, MAX_ITEMS, type AgendaRow } from './agenda';
+  import { emptyRow, type AgendaRow } from './agenda';
   import { MAJORITY_LABELS, type Majority, type Person } from './model';
 
   /**
@@ -40,7 +41,7 @@
             <span class="number">{i + 1}.</span>
             <input
               bind:value={row.title}
-              maxlength="200"
+              maxlength={settings.meetings.agenda.titleMaxLength}
               placeholder={row.beschluss ? 'Titel des Beschlusses' : 'Punkt der Tagesordnung'}
               aria-label="Punkt {i + 1}"
             />
@@ -65,7 +66,7 @@
               <textarea
                 bind:value={row.text}
                 rows="3"
-                maxlength="4000"
+                maxlength={settings.meetings.agenda.motionTextMaxLength}
                 placeholder="Antragstext: Was wird beschlossen?"
                 aria-label="Antragstext zu Punkt {i + 1}"></textarea>
               <div class="grid-2">
@@ -83,7 +84,12 @@
               </div>
               <MemberChips bind:value={row.assigneeIds} {candidates} label="Umsetzung durch" placeholder="Umsetzung durch (sonst Vorstand)" />
             {/if}
-            <input bind:value={row.note} maxlength="1000" placeholder="Anmerkung (optional)" aria-label="Anmerkung zu Punkt {i + 1}" />
+            <input
+              bind:value={row.note}
+              maxlength={settings.meetings.agenda.noteMaxLength}
+              placeholder="Anmerkung (optional)"
+              aria-label="Anmerkung zu Punkt {i + 1}"
+            />
           </div>
         </li>
       {/each}
@@ -92,8 +98,8 @@
     <p class="muted small">Noch keine Punkte. Beschlüsse hier eintragen: sie stehen in der Einladung.</p>
   {/if}
   <div class="row">
-    <Button size="sm" icon="add" disabled={rows.length >= MAX_ITEMS} onclick={() => add(false)}>Punkt</Button>
-    <Button size="sm" icon="add" disabled={rows.length >= MAX_ITEMS} onclick={() => add(true)}>Beschluss</Button>
+    <Button size="sm" icon="add" disabled={rows.length >= settings.meetings.agenda.maxItems} onclick={() => add(false)}>Punkt</Button>
+    <Button size="sm" icon="add" disabled={rows.length >= settings.meetings.agenda.maxItems} onclick={() => add(true)}>Beschluss</Button>
   </div>
 </div>
 

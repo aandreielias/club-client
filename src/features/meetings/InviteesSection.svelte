@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { Resource } from '../../lib/state/Resource.svelte';
   import { permissions } from '../../lib/container';
   import Button from '../../ui/Button.svelte';
@@ -66,9 +67,25 @@
             {#if guest.id}
               <span>{guest.name} <span class="muted small">{guest.email}</span></span>
             {:else}
-              <input bind:value={guest.firstName} maxlength="100" placeholder="Vorname" aria-label="Vorname des Gasts" />
-              <input bind:value={guest.lastName} maxlength="100" placeholder="Nachname" aria-label="Nachname des Gasts" />
-              <input type="email" bind:value={guest.email} maxlength="200" placeholder="E-Mail" aria-label="E-Mail des Gasts" />
+              <input
+                bind:value={guest.firstName}
+                maxlength={settings.meetings.guestNameMaxLength}
+                placeholder="Vorname"
+                aria-label="Vorname des Gasts"
+              />
+              <input
+                bind:value={guest.lastName}
+                maxlength={settings.meetings.guestNameMaxLength}
+                placeholder="Nachname"
+                aria-label="Nachname des Gasts"
+              />
+              <input
+                type="email"
+                bind:value={guest.email}
+                maxlength={settings.meetings.guestEmailMaxLength}
+                placeholder="E-Mail"
+                aria-label="E-Mail des Gasts"
+              />
             {/if}
             <Button size="sm" variant="ghost" icon="delete" tooltip="Gast entfernen" onclick={() => guests.splice(i, 1)} />
           </div>

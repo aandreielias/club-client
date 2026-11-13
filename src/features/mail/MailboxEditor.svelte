@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings as limits } from '../../settings';
   import EditorForm from '../../ui/EditorForm.svelte';
   import { directory } from '../../lib/container';
   import type { Action } from '../../lib/state/Action.svelte';
@@ -74,6 +75,6 @@
     <input type="email" autocomplete="off" bind:value={form.address} required />
   </Field>
   <Field label="Name" hint="Erscheint als Absender, etwa „Vorstand“ oder der Name des Mitglieds." error={form.error('name')}>
-    <input bind:value={form.name} maxlength="100" required />
+    <input bind:value={form.name} maxlength={limits.mail.mailboxNameMaxLength} required />
   </Field>
 </EditorForm>

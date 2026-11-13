@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import Field from '../../ui/Field.svelte';
 
   /**
@@ -16,7 +17,7 @@
 
 <div class="stack">
   <Field label="Ort (optional)">
-    <input bind:value={location} maxlength="200" />
+    <input bind:value={location} maxlength={settings.meetings.locationMaxLength} />
   </Field>
   {#if online}
     <Field
@@ -24,7 +25,13 @@
       hint={standing ? `Leer lassen für den ständigen Link: ${standing}` : 'Diese Sitzungsart ist online: der Link geht mit der Einladung hinaus.'}
       {error}
     >
-      <input type="url" bind:value={videoUrl} maxlength="500" placeholder={standing ?? 'https://'} required={!standing} />
+      <input
+        type="url"
+        bind:value={videoUrl}
+        maxlength={settings.meetings.videoUrlMaxLength}
+        placeholder={standing ?? 'https://'}
+        required={!standing}
+      />
     </Field>
   {/if}
 </div>

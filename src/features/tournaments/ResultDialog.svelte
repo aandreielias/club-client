@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { session } from '../../lib/container';
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
@@ -86,9 +87,21 @@
         <span></span>
         {#each sets as _, i (i)}
           <span class="muted label">Satz {i + 1}</span>
-          <input type="number" min="0" max="99" bind:value={sets[i].home} aria-label="Satz {i + 1}, Punkte {model.teamName(match.homeId)}" />
+          <input
+            type="number"
+            min="0"
+            max={settings.tournaments.maxSetPoints}
+            bind:value={sets[i].home}
+            aria-label="Satz {i + 1}, Punkte {model.teamName(match.homeId)}"
+          />
           <span class="muted" aria-hidden="true">:</span>
-          <input type="number" min="0" max="99" bind:value={sets[i].away} aria-label="Satz {i + 1}, Punkte {model.teamName(match.awayId)}" />
+          <input
+            type="number"
+            min="0"
+            max={settings.tournaments.maxSetPoints}
+            bind:value={sets[i].away}
+            aria-label="Satz {i + 1}, Punkte {model.teamName(match.awayId)}"
+          />
           <Button size="sm" variant="ghost" icon="close" tooltip="Satz entfernen" onclick={() => (sets = sets.filter((_, k) => k !== i))} />
         {/each}
       </div>
@@ -103,7 +116,7 @@
     {/if}
     <div class="grid-2">
       <Field label="Anpfiff (optional)"><DateTimeInput bind:value={start} /></Field>
-      <Field label="Feld (optional)"><input bind:value={field} maxlength="40" placeholder="z. B. Feld 1" /></Field>
+      <Field label="Feld (optional)"><input bind:value={field} maxlength={settings.tournaments.fieldMaxLength} placeholder="z. B. Feld 1" /></Field>
     </div>
     <ErrorNote error={model.action.error} />
     <div class="row">

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import Button from '../../ui/Button.svelte';
   import Dialog from '../../ui/Dialog.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -28,7 +29,7 @@
   <div class="stack">
     <p>„{appointment.title}“ wird abgesagt. Das Team und die Erziehungsberechtigten werden benachrichtigt.</p>
     <Field label="Grund (optional)" hint="Steht in der Benachrichtigung.">
-      <input bind:value={reason} maxlength="300" />
+      <input bind:value={reason} maxlength={settings.calendar.reasonMaxLength} />
     </Field>
     {#if appointment.seriesId}
       <label class="check">

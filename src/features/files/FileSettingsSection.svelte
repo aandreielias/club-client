@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { Action } from '../../lib/state/Action.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -27,7 +28,14 @@
     onsave={save}
   >
     <Field label="Je Mitglied" hint="In GB, 0,1 bis 100">
-      <input type="number" min="0.1" max="100" step="0.1" bind:value={draft.value.quotaGb} class="short" />
+      <input
+        type="number"
+        min={settings.files.quotaMinGb}
+        max={settings.files.quotaMaxGb}
+        step="0.1"
+        bind:value={draft.value.quotaGb}
+        class="short"
+      />
     </Field>
   </SettingsForm>
 </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { session } from '../../lib/container';
   import { Action } from '../../lib/state/Action.svelte';
   import type { RosterEntry, Team } from '../../lib/types';
@@ -74,23 +75,23 @@
   <form class="stack" onsubmit={submit}>
     {#if kind === 'player'}
       <div class="grid-2">
-        <Field label="Nummer" hint="0 bis 99">
-          <input type="number" min="0" max="99" bind:value={jersey} class="short" />
+        <Field label="Nummer" hint="0 bis {settings.teams.maxJersey}">
+          <input type="number" min="0" max={settings.teams.maxJersey} bind:value={jersey} class="short" />
         </Field>
         <Field label="Position">
-          <input bind:value={position} maxlength="40" placeholder="z.B. Zuspiel" />
+          <input bind:value={position} maxlength={settings.teams.positionMaxLength} placeholder="z.B. Zuspiel" />
         </Field>
       </div>
       <label class="check"><input type="checkbox" bind:checked={captain} /> Kapitän:in (ersetzt die bisherige)</label>
     {:else if kind === 'season'}
       <p>„{team.name}“ mit allen Mitgliedern, Nummern und Positionen für eine neue Saison anlegen. Das alte Team bleibt; archiviere es danach.</p>
       <Field label="Saison" hint="Etwa 2027/28">
-        <input bind:value={season} maxlength="7" required />
+        <input bind:value={season} maxlength={settings.teams.seasonMaxLength} required />
       </Field>
     {:else}
       <p>Vorstand und Admins bekommen deine Anfrage und nehmen die Person auf. Trainer:innen fügen selbst niemanden hinzu.</p>
       <Field label="Wer?" hint="Name, und wie die Person erreichbar ist.">
-        <textarea bind:value={note} rows="3" maxlength="500" required></textarea>
+        <textarea bind:value={note} rows="3" maxlength={settings.teams.playerRequestMaxLength} required></textarea>
       </Field>
     {/if}
     <ErrorNote error={action.error} />

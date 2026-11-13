@@ -1,4 +1,5 @@
 import type { AgendaItemInput, Majority, Meeting, Resolution } from './model';
+import { settings } from '../../settings';
 
 /**
  * One row of the Tagesordnung being edited: a plain item, or a Beschluss with its motion (text, majority, who carries it out, by when).
@@ -18,7 +19,6 @@ export interface AgendaRow {
   implementDue: string;
 }
 
-export const MAX_ITEMS = 50;
 let nextKey = 1;
 
 export function emptyRow(beschluss = false): AgendaRow {
@@ -72,10 +72,12 @@ export function toInputs(rows: readonly AgendaRow[]): AgendaItemInput[] {
 
 /** server: MeetingHandlers.checkedItems and Resolution — the first problem, or null. */
 export function agendaError(rows: readonly AgendaRow[]): string | null {
-  if (rows.length > MAX_ITEMS) return `Höchstens ${MAX_ITEMS} Punkte.`;
-  if (rows.some((r) => !r.title.trim() || r.title.trim().length > 200)) return 'Jeder Punkt braucht einen Titel (bis 200 Zeichen).';
-  if (rows.some((r) => r.note.length > 1000)) return 'Anmerkungen höchstens 1000 Zeichen.';
-  if (rows.some((r) => r.beschluss && r.text.length > 4000)) return 'Antragstexte höchstens 4000 Zeichen.';
-  if (rows.some((r) => r.assigneeIds.length > 30)) return 'Höchstens 30 Verantwortliche je Beschluss.';
+  const max = settings.meetings.agenda;
+  if (rows.length > max.maxItems) return `Höchstens ${max.maxItems} Punkte.`;
+  if (rows.some((r) => !r.title.trim() || r.title.trim().length > max.titleMaxLength))
+    return `Jeder Punkt braucht einen Titel (bis ${max.titleMaxLength} Zeichen).`;
+  if (rows.some((r) => r.note.length > max.noteMaxLength)) return `Anmerkungen höchstens ${max.noteMaxLength} Zeichen.`;
+  if (rows.some((r) => r.beschluss && r.text.length > max.motionTextMaxLength)) return `Antragstexte höchstens ${max.motionTextMaxLength} Zeichen.`;
+  if (rows.some((r) => r.assigneeIds.length > max.maxAssignees)) return `Höchstens ${max.maxAssignees} Verantwortliche je Beschluss.`;
   return null;
 }

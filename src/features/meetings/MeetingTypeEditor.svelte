@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { bus, session } from '../../lib/container';
   import { TOAST } from '../../channels';
   import type { Action } from '../../lib/state/Action.svelte';
@@ -120,10 +121,10 @@
     <legend>Allgemein</legend>
     <div class="grid-2">
       <Field label="Bezeichnung" error={form.error('label')}>
-        <input bind:value={form.label} maxlength="80" required />
+        <input bind:value={form.label} maxlength={settings.meetings.type.labelMaxLength} required />
       </Field>
       <Field label="In der Einladung" hint="„Einladung zur …“, z. B. ordentlichen Mitgliederversammlung" error={form.error('invitationLabel')}>
-        <input bind:value={form.invitationLabel} maxlength="120" required />
+        <input bind:value={form.invitationLabel} maxlength={settings.meetings.type.invitationLabelMaxLength} required />
       </Field>
     </div>
     <Field label="Eingeladen" group>
@@ -140,7 +141,7 @@
             <input
               type="number"
               min="1"
-              max="50"
+              max={settings.meetings.type.maxInvitees}
               step="1"
               class="short"
               aria-label="Mindestens"
@@ -151,7 +152,7 @@
             <input
               type="number"
               min="1"
-              max="50"
+              max={settings.meetings.type.maxInvitees}
               step="1"
               class="short"
               aria-label="Höchstens"
@@ -206,7 +207,7 @@
         <input
           type="number"
           min="1"
-          max="1440"
+          max={settings.meetings.type.maxGraceMinutes}
           step="1"
           class="short"
           bind:value={() => form.grace ?? '', (v) => (form.grace = v === '' || v == null ? null : Number(v))}
@@ -289,7 +290,7 @@
           hint="Etwa der feste Videoraum des Vorstands; einzelne Sitzungen können einen eigenen haben. Ohne ständigen Link braucht jede Sitzung einen."
           error={form.error('videoUrl')}
         >
-          <input type="url" bind:value={form.videoUrl} maxlength="500" placeholder="https://" />
+          <input type="url" bind:value={form.videoUrl} maxlength={settings.meetings.videoUrlMaxLength} placeholder="https://" />
         </Field>
       </div>
     {/if}

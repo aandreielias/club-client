@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import Field from '../../ui/Field.svelte';
   import DateInput from '../../ui/DateInput.svelte';
@@ -6,7 +7,7 @@
   import type { Location } from '../locations/model';
   import { locationsApi } from '../locations/services';
   import { FORMAT_LABELS, type TournamentFormat } from './model';
-  import { MAX_FIELDS, type TournamentForm } from './TournamentForm.svelte';
+  import { type TournamentForm } from './TournamentForm.svelte';
 
   /** The fields of a new or edited tournament; group settings, fields and format lock after the draw. */
   let { form }: { form: TournamentForm } = $props();
@@ -32,7 +33,9 @@
   );
 </script>
 
-<Field label="Name" error={form.error('name')}><input bind:value={form.name} maxlength="120" placeholder="z. B. Herbstcup 2026" required /></Field>
+<Field label="Name" error={form.error('name')}
+  ><input bind:value={form.name} maxlength={settings.tournaments.nameMaxLength} placeholder="z. B. Herbstcup 2026" required /></Field
+>
 <div class="grid-2">
   <Field label="Von" error={form.error('dates')}><DateInput bind:value={form.startsOn} required /></Field>
   <Field label="Bis"><DateInput bind:value={form.endsOn} min={form.startsOn} required /></Field>
@@ -59,7 +62,7 @@
 <fieldset class="stack" disabled={!form.settingsEditable}>
   <div class="grid-2">
     <Field label="Spielfelder" error={form.error('fields')} hint={fieldHint}>
-      <Select bind:value={() => String(form.fieldCount), (v) => (form.fieldCount = Number(v))} options={numbers(1, MAX_FIELDS)} />
+      <Select bind:value={() => String(form.fieldCount), (v) => (form.fieldCount = Number(v))} options={numbers(1, settings.tournaments.maxFields)} />
     </Field>
     <Field label="Gruppen" error={form.error('groups')} hint={groupHint}>
       <Select

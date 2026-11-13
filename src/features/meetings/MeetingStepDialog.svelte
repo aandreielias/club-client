@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import Dialog from '../../ui/Dialog.svelte';
@@ -135,7 +136,7 @@
       {/if}
       <Field label="Zeitpunkt" hint={ANCHORS.find((a) => a.value === draft!.anchor)?.hint}>
         <div class="row when">
-          <input type="number" min="0" max="8760" step="1" bind:value={amount} class="short" aria-label="Abstand" />
+          <input type="number" min="0" max={settings.meetings.step.maxOffsetHours} step="1" bind:value={amount} class="short" aria-label="Abstand" />
           <Select bind:value={unit} options={UNITS} aria-label="Einheit" />
           {#if draft.system}
             <span>{ANCHORS.find((a) => a.value === draft!.anchor)?.label}</span>
@@ -167,10 +168,14 @@
       {/if}
       {#if !draft.system}
         <Field label="Titel" error={titleError}>
-          <input bind:value={() => draft!.title ?? '', (v) => (draft!.title = v)} maxlength="150" required />
+          <input bind:value={() => draft!.title ?? '', (v) => (draft!.title = v)} maxlength={settings.meetings.step.titleMaxLength} required />
         </Field>
         <Field label="Text (optional)">
-          <textarea rows="3" maxlength="1000" bind:this={text} bind:value={() => draft!.body ?? '', (v) => (draft!.body = v)}></textarea>
+          <textarea
+            rows="3"
+            maxlength={settings.meetings.step.bodyMaxLength}
+            bind:this={text}
+            bind:value={() => draft!.body ?? '', (v) => (draft!.body = v)}></textarea>
         </Field>
         <div class="row placeholders">
           <span class="muted small">Einsetzen:</span>

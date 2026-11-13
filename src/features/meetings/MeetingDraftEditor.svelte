@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { session } from '../../lib/container';
   import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import EditorForm from '../../ui/EditorForm.svelte';
@@ -21,11 +22,11 @@
 
 <EditorForm action={model.action} submitLabel="Speichern" validate={form} onsubmit={submit} oncancel={onclose}>
   <Field label="Titel" error={form.error('title')}>
-    <input bind:value={form.title} maxlength="120" required />
+    <input bind:value={form.title} maxlength={settings.meetings.titleMaxLength} required />
   </Field>
   {#if form.type?.needsReason}
     <Field label="Grund der Dringlichkeit" hint="Steht in der Einladung." error={form.error('urgency')}>
-      <textarea bind:value={form.urgency} rows="2" maxlength="1000"></textarea>
+      <textarea bind:value={form.urgency} rows="2" maxlength={settings.meetings.urgencyMaxLength}></textarea>
     </Field>
   {/if}
   <div class="grid-2">

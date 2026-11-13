@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { bus, session } from '../../lib/container';
   import { TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
@@ -58,7 +59,7 @@
       {#if replying}
         <EditorForm action={send} submitLabel="Senden" onsubmit={reply} oncancel={() => (replying = false)}>
           <Field label="Antwort an {message.senderName ?? 'den Absender'}">
-            <textarea bind:value={answer} rows="4" maxlength="1000" required></textarea>
+            <textarea bind:value={answer} rows="4" maxlength={settings.notifications.message.bodyMaxLength} required></textarea>
           </Field>
         </EditorForm>
       {:else}

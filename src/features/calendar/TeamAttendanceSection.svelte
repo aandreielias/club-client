@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { bus, permissions, session, store } from '../../lib/container';
   import { TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
@@ -74,7 +75,7 @@
         <Field label="Bis"><DateInput bind:value={rangeTo} min={rangeFrom} /></Field>
       </div>
       <Field label="Grund (optional)" hint="Etwa Ferien oder Halle gesperrt.">
-        <input bind:value={reason} maxlength="300" />
+        <input bind:value={reason} maxlength={settings.calendar.reasonMaxLength} />
       </Field>
       <ErrorNote error={cancelRange.error} />
       <div class="row">

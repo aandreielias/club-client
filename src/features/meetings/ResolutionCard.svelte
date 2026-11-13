@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { bus, pendingDeletes, session } from '../../lib/container';
   import { CONFIRM, TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
@@ -151,8 +152,10 @@
   <header>
     {#if editing}
       <EditorForm action={saving} submitLabel="Speichern" onsubmit={saveDraft} oncancel={() => (editing = false)}>
-        <Field label="Antrag"><input bind:value={editTitle} maxlength="200" required /></Field>
-        <Field label="Text (optional)"><textarea bind:value={editText} rows="3" maxlength="4000"></textarea></Field>
+        <Field label="Antrag"><input bind:value={editTitle} maxlength={settings.meetings.agenda.titleMaxLength} required /></Field>
+        <Field label="Text (optional)"
+          ><textarea bind:value={editText} rows="3" maxlength={settings.meetings.agenda.motionTextMaxLength}></textarea></Field
+        >
       </EditorForm>
     {:else if showTitle}
       <strong>{r.title}</strong>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import MeetingDetailsEditor from './MeetingDetailsEditor.svelte';
   import MeetingDraftEditor from './MeetingDraftEditor.svelte';
   import AgendaEditor from './AgendaEditor.svelte';
@@ -350,7 +351,7 @@
           {#if m.status === 'CLOSED'}<p class="muted small">
               Die Sitzung ist beendet; das Protokoll lässt sich fertigschreiben und dann abschließen.
             </p>{/if}
-          <textarea bind:value={protocol} rows="10" maxlength="20000" aria-label="Protokoll"></textarea>
+          <textarea bind:value={protocol} rows="10" maxlength={settings.meetings.protocolMaxLength} aria-label="Protokoll"></textarea>
           <div class="row">
             <Button busy={model.action.busy} disabled={protocol === (m.protocol ?? '')} onclick={saveProtocol}>Protokoll speichern</Button>
             {#if m.status === 'CLOSED'}<Button variant="primary" busy={model.action.busy} onclick={finalizeProtocol}>Protokoll abschließen</Button

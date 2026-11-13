@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import EditorForm from '../../ui/EditorForm.svelte';
   import type { Action } from '../../lib/state/Action.svelte';
   import type { Hue } from '../../lib/types';
@@ -49,7 +50,7 @@
 <EditorForm {action} {submitLabel} {oncancel} {onsubmit} validate={check}>
   <div class="grid-2">
     <Field label="Bezeichnung" error={submitted && !form.label.trim() ? 'Bezeichnung mit 1 bis 40 Zeichen angeben.' : null}>
-      <input bind:value={form.label} maxlength="40" required />
+      <input bind:value={form.label} maxlength={settings.calendar.typeLabelMaxLength} required />
     </Field>
     <Field group label="Farbe" hint="So steht die Terminart im Kalender.">
       <ColorSwatches label="Farbe" options={HUE_OPTIONS} bind:value={form.hue} />
@@ -61,7 +62,7 @@
     <input
       type="number"
       min="1"
-      max="336"
+      max={settings.calendar.maxRemindHours}
       class="short"
       placeholder="nie"
       bind:value={() => form.remindHours ?? '', (v) => (form.remindHours = v === '' || v == null ? null : Math.round(Number(v)))}

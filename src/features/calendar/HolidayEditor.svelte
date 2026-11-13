@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import type { Action } from '../../lib/state/Action.svelte';
   import DateInput from '../../ui/DateInput.svelte';
   import EditorForm from '../../ui/EditorForm.svelte';
@@ -32,7 +33,7 @@
 
 <EditorForm {action} {submitLabel} {oncancel} {onsubmit} validate={check}>
   <Field label="Name" error={check.submitted && !form.name.trim() ? 'Name mit 1 bis 80 Zeichen angeben.' : undefined}>
-    <input bind:value={form.name} maxlength="80" placeholder="Herbstferien" required />
+    <input bind:value={form.name} maxlength={settings.calendar.holidayNameMaxLength} placeholder="Herbstferien" required />
   </Field>
   <div class="grid-2">
     <Field label="Von"><DateInput bind:value={form.from} /></Field>

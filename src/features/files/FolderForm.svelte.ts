@@ -3,7 +3,6 @@ import { settings } from '../../settings';
 import type { Folder, FolderKind, FolderScope, NewFolder } from './model';
 
 /** server: FilesController teamIds @Size(max = 20) */
-const MAX_FOLDER_TEAMS = 20;
 
 export type FolderFormErrors = Partial<Record<'name' | 'team', string>>;
 
@@ -14,7 +13,7 @@ export function folderErrors(name: string, needsTeam: boolean, teamIds: readonly
   const trimmed = name.trim();
   if (!trimmed || trimmed.length > max) errors.name = `Name mit 1 bis ${max} Zeichen angeben.`;
   if (needsTeam && !teamIds.length) errors.team = 'Mindestens ein Team auswählen.';
-  if (teamIds.length > MAX_FOLDER_TEAMS) errors.team = `Höchstens ${MAX_FOLDER_TEAMS} Teams.`;
+  if (teamIds.length > settings.files.maxFolderTeams) errors.team = `Höchstens ${settings.files.maxFolderTeams} Teams.`;
   return errors;
 }
 

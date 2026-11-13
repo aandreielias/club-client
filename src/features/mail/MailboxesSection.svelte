@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { bus } from '../../lib/container';
   import { removeRecord } from '../../lib/detail/removeRecord';
   import { Action } from '../../lib/state/Action.svelte';
@@ -77,7 +78,7 @@
           <Select bind:value={draft.value.personalFor} options={PERSONAL_FOR} />
         </Field>
         <Field label="Empfänger pro Tag" hint="So viele Empfänger darf ein Mitglied an einem Tag anschreiben (Schutz vor Spam).">
-          <input type="number" min="1" max="10000" bind:value={draft.value.dailyLimit} class="short" />
+          <input type="number" min="1" max={settings.mail.maxDailyLimit} bind:value={draft.value.dailyLimit} class="short" />
         </Field>
       </div>
     {/if}

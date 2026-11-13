@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { bus } from '../../lib/container';
   import { TOAST } from '../../channels';
   import { Action } from '../../lib/state/Action.svelte';
@@ -67,7 +68,7 @@
     <EditorForm action={save} submitLabel="Speichern" onsubmit={submit} oncancel={() => (editing = false)}>
       {#if isMatch}
         <div class="grid-2">
-          <Field label="Gegner"><input bind:value={opponent} maxlength="80" /></Field>
+          <Field label="Gegner"><input bind:value={opponent} maxlength={settings.calendar.opponentMaxLength} /></Field>
           <Field label="Spielort" group><ChoiceGroup name="home" label="Spielort" options={PLACES} bind:value={home} /></Field>
         </div>
         <Field label="Sätze" hint="Unsere Punkte zuerst, etwa 25:20." error={invalidSet ? 'Sätze im Format 25:20 angeben.' : undefined}>
@@ -80,7 +81,7 @@
         </Field>
       {/if}
       <Field label={isMatch ? 'Notizen' : 'Inhalt'} hint={isMatch ? undefined : 'Übungen, Schwerpunkte, was mitzubringen ist.'}>
-        <textarea bind:value={content} rows="4" maxlength="4000"></textarea>
+        <textarea bind:value={content} rows="4" maxlength={settings.calendar.trainingPlanMaxLength}></textarea>
       </Field>
     </EditorForm>
   {:else}

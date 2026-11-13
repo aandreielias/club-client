@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { bus, session } from '../../lib/container';
   import { CreateController } from '../../lib/detail/CreateController.svelte';
   import { ZonedClock } from '../../lib/time/ZonedClock';
@@ -69,10 +70,10 @@
 <Detail title="Neuer Umlaufbeschluss">
   <EditorForm action={create.save} submitLabel="An den Vorstand schicken" validate={check} onsubmit={submit} oncancel={() => handle.close()}>
     <Field label="Antrag" error={submitted && !title.trim() ? 'Antrag angeben.' : null}>
-      <input bind:value={title} maxlength="200" required />
+      <input bind:value={title} maxlength={settings.meetings.agenda.titleMaxLength} required />
     </Field>
     <Field label="Begründung (optional)">
-      <textarea bind:value={text} rows="4" maxlength="4000"></textarea>
+      <textarea bind:value={text} rows="4" maxlength={settings.meetings.agenda.motionTextMaxLength}></textarea>
     </Field>
     <Field
       label="Abstimmen bis"

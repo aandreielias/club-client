@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { bus } from '../../lib/container';
   import { TOAST } from '../../channels';
   import Button from '../../ui/Button.svelte';
@@ -46,10 +47,10 @@
     </Field>
     <div class="grid-2">
       <Field label="Vorname" error={submitted && !firstName.trim() ? 'Vorname angeben.' : null}
-        ><input bind:value={firstName} maxlength="100" /></Field
+        ><input bind:value={firstName} maxlength={settings.tournaments.guestNameMaxLength} /></Field
       >
       <Field label="Nachname" error={submitted && !lastName.trim() ? 'Nachname angeben.' : null}
-        ><input bind:value={lastName} maxlength="100" /></Field
+        ><input bind:value={lastName} maxlength={settings.tournaments.guestNameMaxLength} /></Field
       >
     </div>
     <ErrorNote error={model.action.error} />

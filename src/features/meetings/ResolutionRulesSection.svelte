@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { Action } from '../../lib/state/Action.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
   import Field from '../../ui/Field.svelte';
@@ -34,7 +35,7 @@
   >
     <div class="grid-2">
       <Field label="Abstimmen mindestens" hint="Stunden ab dem Öffnen (1 bis 720)">
-        <input type="number" min="1" max="720" bind:value={draft.value.minHours} class="short" />
+        <input type="number" min="1" max={settings.meetings.maxCircularMinHours} bind:value={draft.value.minHours} class="short" />
       </Field>
       <Field label="Gültig, wenn teilnehmen">
         <Select bind:value={draft.value.quorum} options={QUORUMS} aria-label="Nötige Beteiligung" />

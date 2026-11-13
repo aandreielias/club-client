@@ -76,10 +76,10 @@
     </div>
     <div class="grid-2">
       <Field label="Dein Vorname" error={error('firstName')}>
-        <input bind:value={firstName} maxlength="80" autocomplete="given-name" required />
+        <input bind:value={firstName} maxlength={settings.members.nameMaxLength} autocomplete="given-name" required />
       </Field>
       <Field label="Dein Nachname" error={error('lastName')}>
-        <input bind:value={lastName} maxlength="80" autocomplete="family-name" required />
+        <input bind:value={lastName} maxlength={settings.members.nameMaxLength} autocomplete="family-name" required />
       </Field>
     </div>
     <ErrorNote error={save.error} />

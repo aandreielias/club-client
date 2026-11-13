@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { Action } from '../../lib/state/Action.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
   import type { TaskSettings } from './model';
@@ -22,7 +23,7 @@
     onsave={(value) => tasksApi.saveSettings(value)}
   >
     <Field label="Erinnern vor der Fälligkeit" hint="Stunden, 1 bis 336 (zwei Wochen)">
-      <input type="number" min="1" max="336" bind:value={draft.value.remindHours} class="short" />
+      <input type="number" min="1" max={settings.tasks.maxRemindHours} bind:value={draft.value.remindHours} class="short" />
     </Field>
   </SettingsForm>
 </div>

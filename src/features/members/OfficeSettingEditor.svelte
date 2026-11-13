@@ -1,10 +1,11 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import EditorForm from '../../ui/EditorForm.svelte';
   import type { Action } from '../../lib/state/Action.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import Field from '../../ui/Field.svelte';
   import OptionList from '../../ui/OptionList.svelte';
-  import { OFFICE_LIMITS, type OfficeSettingForm } from './OfficeSettingForm.svelte';
+  import { type OfficeSettingForm } from './OfficeSettingForm.svelte';
   import { boardSettings } from './services';
 
   /** Form of one office: its name, whether the club fills it, how many hold it, the term and the offices one person may hold with it. */
@@ -36,7 +37,7 @@
 
 <EditorForm {action} {submitLabel} {oncancel} {onsubmit} validate={form}>
   <Field label="Bezeichnung" hint="So heißt die Funktion überall in der App und in Einladungen." error={form.error('label')}>
-    <input bind:value={form.label} maxlength={OFFICE_LIMITS.label} required />
+    <input bind:value={form.label} maxlength={settings.members.office.labelMaxLength} required />
   </Field>
   {#if !form.isNew}
     <Field
@@ -68,13 +69,13 @@
   {#if form.enabled}
     <div class="grid-2">
       <Field label="Personen mindestens" hint="Weniger zeigt einen Hinweis auf der Vorstandsseite." error={form.error('holders')}>
-        <input type="number" min="0" max={OFFICE_LIMITS.holders} bind:value={form.minHolders} class="short" />
+        <input type="number" min="0" max={settings.members.office.maxHolders} bind:value={form.minHolders} class="short" />
       </Field>
       <Field label="Personen höchstens" hint="Leer: beliebig viele.">
         <input
           type="number"
           min="1"
-          max={OFFICE_LIMITS.holders}
+          max={settings.members.office.maxHolders}
           placeholder="beliebig"
           class="short"
           bind:value={() => form.maxHolders ?? '', (v) => (form.maxHolders = v === '' || v == null ? null : Math.round(Number(v)))}
@@ -82,7 +83,7 @@
       </Field>
     </div>
     <Field label="Funktionsperiode" hint="Jahre" error={form.error('termYears')}>
-      <input type="number" min="1" max={OFFICE_LIMITS.termYears} bind:value={form.termYears} class="short" />
+      <input type="number" min="1" max={settings.members.office.maxTermYears} bind:value={form.termYears} class="short" />
     </Field>
     {#if !form.isNew}
       <Field group label="Zugleich mit" hint="Funktionen, die eine Person zusätzlich innehaben darf. Gilt in beide Richtungen.">

@@ -321,6 +321,7 @@ export const settings = {
     linkMaxLength: 200,
     /** server: ClubController (letters, digits, space, dot, slash, hyphen). */
     registerNumberPattern: '^[A-Za-z0-9 ./-]{1,20}$',
+    registerNumberMaxLength: 20,
   },
 
   /** server: members module */
@@ -336,6 +337,10 @@ export const settings = {
     earliestBirthDate: '1900-01-01',
     /** server: ChangeRequest.NOTE_MAX */
     changeNoteMaxLength: 500,
+    kindLabelMaxLength: 40,
+    /** server: BoardRules (office settings and board-wide settings) */
+    office: { labelMaxLength: 40, maxHolders: 20, maxTermYears: 10 },
+    board: { maxMinSize: 20, maxCooptWeeks: 52, maxTermWarningDays: 365, maxByElectionDays: 365 },
   },
 
   /** server: teams module (Team) */
@@ -343,6 +348,38 @@ export const settings = {
     nameMaxLength: 80,
     /** Season format, e.g. 2026/27. */
     seasonPattern: '^\\d{4}/\\d{2}$',
+    seasonMaxLength: 7,
+    maxJersey: 99,
+    positionMaxLength: 40,
+    playerRequestMaxLength: 500,
+  },
+
+  /** server: meetings module (Meeting, MeetingType, MeetingStep, Agenda, Resolution) */
+  meetings: {
+    titleMaxLength: 120,
+    urgencyMaxLength: 1000,
+    locationMaxLength: 200,
+    videoUrlMaxLength: 500,
+    protocolMaxLength: 20_000,
+    guestNameMaxLength: 100,
+    guestEmailMaxLength: 200,
+    type: { labelMaxLength: 80, invitationLabelMaxLength: 120, maxInvitees: 50, maxGraceMinutes: 1440 },
+    step: { titleMaxLength: 150, bodyMaxLength: 1000, maxOffsetHours: 8760 },
+    agenda: { maxItems: 50, titleMaxLength: 200, noteMaxLength: 1000, motionTextMaxLength: 4000, maxAssignees: 30 },
+    /** Circular votes: longest minimum deadline admins may set. */
+    maxCircularMinHours: 720,
+  },
+
+  /** server: tournaments module (Tournament, TournamentHandlers) */
+  tournaments: {
+    nameMaxLength: 120,
+    teamNameMaxLength: 80,
+    maxTeams: 64,
+    maxFields: 16,
+    maxQualifiers: 32,
+    guestNameMaxLength: 100,
+    fieldMaxLength: 40,
+    maxSetPoints: 99,
   },
 
   calendar: {
@@ -374,6 +411,11 @@ export const settings = {
     /** Car seen from above next to each ride (CarSeats); height follows the number of seats. */
     rideGraphic: { width: 84 },
     rideNoteMaxLength: 200,
+    holidayNameMaxLength: 80,
+    typeLabelMaxLength: 40,
+    maxRemindHours: 336,
+    opponentMaxLength: 80,
+    trainingPlanMaxLength: 4000,
   },
 
   /** How long returning to a page waits for its list to load before restoring the scroll position. */
@@ -396,7 +438,18 @@ export const settings = {
   },
 
   /** Einstellungen › Erscheinungsbild: typing pause before the e-mail preview is rendered again. */
-  brand: { mailPreviewDebounceMs: 400 },
+  brand: {
+    mailPreviewDebounceMs: 400,
+    /** server: Brand and MailSample */
+    appNameMaxLength: 30,
+    maxRadiusSmall: 12,
+    maxRadiusLarge: 24,
+    mailGreetingMaxLength: 100,
+    mailSignOffMaxLength: 200,
+    mailFooterMaxLength: 500,
+    sampleSubjectMaxLength: 200,
+    sampleTextMaxLength: 2000,
+  },
 
   /** Choices offered under Einstellungen > Darstellung; the first entry of each is the default. */
   appearance: {
@@ -444,6 +497,8 @@ export const settings = {
     bodyMaxLength: 200_000,
     /** Records linked in the text and attached, together (server: MailRefs.MAX). */
     maxRefs: 20,
+    mailboxNameMaxLength: 100,
+    maxDailyLimit: 10_000,
     /** Hits per kind in the "Verknüpfen" search. */
     /** A draft is saved this long after the last change while writing. */
     draftDelayMs: 1500,
@@ -490,6 +545,10 @@ export const settings = {
     maxFolderDepth: 5,
     folderNameMaxLength: 100,
     maxTags: 50,
+    maxFolderTeams: 20,
+    /** Upload quota per member in GB (server: files_setting, 100 MB to 100 GB). */
+    quotaMinGb: 0.1,
+    quotaMaxGb: 100,
     /** Download links live 5 minutes on the server; reuse them until this long before expiry. */
     linkReuseMarginMs: 30_000,
     /** File pickers offer these; the server checks the real type by content. */
@@ -513,6 +572,7 @@ export const settings = {
     maxChecklistItems: 50,
     checklistItemMaxLength: 200,
     commentMaxLength: 2000,
+    maxRemindHours: 336,
   },
 
   inventory: {

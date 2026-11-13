@@ -85,16 +85,16 @@
   </label>
   <div class="grid-2">
     <Field label="Ecken klein (px)" hint="Felder, Knöpfe; 0 bis 12">
-      <input type="number" bind:value={draft.value.radiusSmall} min="0" max="12" step="1" />
+      <input type="number" bind:value={draft.value.radiusSmall} min="0" max={settings.brand.maxRadiusSmall} step="1" />
     </Field>
     <Field label="Ecken groß (px)" hint="Karten, Fenster; 0 bis 24">
-      <input type="number" bind:value={draft.value.radiusLarge} min="0" max="24" step="1" />
+      <input type="number" bind:value={draft.value.radiusLarge} min="0" max={settings.brand.maxRadiusLarge} step="1" />
     </Field>
   </div>
 
   <h3>Browser</h3>
   <Field label="App-Name" hint="Im Browser-Tab; leer = Vereinsname">
-    <input bind:value={draft.value.appName} maxlength="30" />
+    <input bind:value={draft.value.appName} maxlength={settings.brand.appNameMaxLength} />
   </Field>
 
   <div class="row between">

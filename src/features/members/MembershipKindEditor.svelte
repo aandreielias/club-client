@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import EditorForm from '../../ui/EditorForm.svelte';
   import type { Action } from '../../lib/state/Action.svelte';
   import Field from '../../ui/Field.svelte';
@@ -34,7 +35,7 @@
 
 <EditorForm {action} {submitLabel} {oncancel} {onsubmit} validate={check}>
   <Field label="Bezeichnung" error={submitted && !form.label.trim() ? 'Bezeichnung mit 1 bis 40 Zeichen angeben.' : null}>
-    <input bind:value={form.label} maxlength="40" required />
+    <input bind:value={form.label} maxlength={settings.members.kindLabelMaxLength} required />
   </Field>
   <label class="check"><input type="checkbox" bind:checked={form.votes} /> Stimmrecht in der Mitgliederversammlung</label>
   <label class="check"><input type="checkbox" bind:checked={form.eligible} /> Kann in eine Funktion gewählt werden</label>

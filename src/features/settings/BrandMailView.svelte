@@ -61,19 +61,19 @@
     <input value={session.member.email ?? ''} readonly />
   </Field>
   <Field label="Betreff" hint="Beispiel zum Ausprobieren, wird nicht gespeichert">
-    <input bind:value={subject} maxlength="200" />
+    <input bind:value={subject} maxlength={settings.brand.sampleSubjectMaxLength} />
   </Field>
   <Field label="Anrede" hint="{'{vorname}'} wird zum Vornamen; leer = „Hallo Vorname,“">
-    <input bind:value={draft.value.mailGreeting} maxlength="100" placeholder="Hallo {'{vorname}'}," />
+    <input bind:value={draft.value.mailGreeting} maxlength={settings.brand.mailGreetingMaxLength} placeholder="Hallo {'{vorname}'}," />
   </Field>
   <Field label="Text" hint="Beispiel zum Ausprobieren, wird nicht gespeichert; Benachrichtigungen sind reiner Text">
-    <textarea bind:value={text} maxlength="2000" rows="5"></textarea>
+    <textarea bind:value={text} maxlength={settings.brand.sampleTextMaxLength} rows="5"></textarea>
   </Field>
   <Field label="Grußformel" hint="Darunter steht der Vereinsname; leer = „Viele Grüße“">
-    <input bind:value={draft.value.mailSignOff} maxlength="200" placeholder="Viele Grüße" />
+    <input bind:value={draft.value.mailSignOff} maxlength={settings.brand.mailSignOffMaxLength} placeholder="Viele Grüße" />
   </Field>
   <Field label="Fußzeile" hint="Z. B. Adresse oder Registernummer; bis 500 Zeichen">
-    <textarea bind:value={draft.value.mailFooter} maxlength="500" rows="3"></textarea>
+    <textarea bind:value={draft.value.mailFooter} maxlength={settings.brand.mailFooterMaxLength} rows="3"></textarea>
   </Field>
 
   <h3>So kommt sie an</h3>

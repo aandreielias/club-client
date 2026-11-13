@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { Action } from '../../lib/state/Action.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
   import Field from '../../ui/Field.svelte';
@@ -66,16 +67,16 @@
   <SettingsForm title="Vorstand" intro="Regeln für den ganzen Vorstand; Hinweise erscheinen auf der Vorstandsseite." {draft} onsave={saveRules}>
     <div class="grid-2">
       <Field label="Mindestens Personen im Vorstand">
-        <input type="number" min="1" max="20" bind:value={draft.value.minBoardSize} class="short" />
+        <input type="number" min="1" max={settings.members.board.maxMinSize} bind:value={draft.value.minBoardSize} class="short" />
       </Field>
       <Field label="Kooptieren nach Rücktritt" hint="Wochen; 0 = gleich Nachwahl">
-        <input type="number" min="0" max="52" bind:value={draft.value.cooptWeeks} class="short" />
+        <input type="number" min="0" max={settings.members.board.maxCooptWeeks} bind:value={draft.value.cooptWeeks} class="short" />
       </Field>
       <Field label="Erinnern vor Ende der Periode" hint="Tage">
-        <input type="number" min="1" max="365" bind:value={draft.value.termWarningDays} class="short" />
+        <input type="number" min="1" max={settings.members.board.maxTermWarningDays} bind:value={draft.value.termWarningDays} class="short" />
       </Field>
       <Field label="Frist für die Nachwahl" hint="Tage, ab Ende der Kooptierung">
-        <input type="number" min="1" max="365" bind:value={draft.value.byElectionDays} class="short" />
+        <input type="number" min="1" max={settings.members.board.maxByElectionDays} bind:value={draft.value.byElectionDays} class="short" />
       </Field>
     </div>
     <label class="check"

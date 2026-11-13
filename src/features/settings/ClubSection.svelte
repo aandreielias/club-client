@@ -58,7 +58,7 @@
     </Field>
     <div class="grid-2">
       <Field label="Registernummer" hint="Nummer im Vereinsregister">
-        <input bind:value={draft.value.registerNumber} maxlength="20" pattern={limits.registerNumberPattern} />
+        <input bind:value={draft.value.registerNumber} maxlength={limits.registerNumberMaxLength} pattern={limits.registerNumberPattern} />
       </Field>
       <Field label="Saison beginnt im">
         <Select bind:value={draft.value.seasonStartMonth} options={months} aria-label="Saison beginnt im" />

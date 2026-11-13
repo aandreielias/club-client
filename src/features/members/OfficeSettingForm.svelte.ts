@@ -1,11 +1,10 @@
 import { FormState } from '../../lib/state/FormState.svelte';
 import { SEEDED_OFFICES, type BoardSettings, type OfficeDuty, type OfficeInput, type OfficeKind, type OfficeSetting } from './MembersApi';
+import { settings } from '../../settings';
 
 type Errors = Partial<Record<'label' | 'holders' | 'termYears', string>>;
 
 /** server: BoardRules — limits of one office's setting. */
-export const OFFICE_LIMITS = { label: 40, holders: 20, termYears: 10 } as const;
-
 /** Offices one person may hold together with `office`; a pair counts for both. */
 export function partnersOf(settings: BoardSettings, office: OfficeKind): OfficeKind[] {
   return settings.combinations.flatMap((p) => (p.a === office ? [p.b] : p.b === office ? [p.a] : []));
@@ -92,16 +91,17 @@ export class OfficeSettingForm extends FormState<Errors> {
   }
 
   protected validate(): Errors {
+    const limit = settings.members.office;
     const errors: Errors = {};
     const label = this.label.trim();
-    if (!label || label.length > OFFICE_LIMITS.label) errors.label = `Bezeichnung mit 1 bis ${OFFICE_LIMITS.label} Zeichen angeben.`;
+    if (!label || label.length > limit.labelMaxLength) errors.label = `Bezeichnung mit 1 bis ${limit.labelMaxLength} Zeichen angeben.`;
     const { minHolders: min, maxHolders: max } = this;
-    if (!Number.isInteger(min) || min < 0 || min > OFFICE_LIMITS.holders) errors.holders = `Mindestens 0 bis ${OFFICE_LIMITS.holders}.`;
-    else if (max != null && (!Number.isInteger(max) || max < 1 || max > OFFICE_LIMITS.holders || max < min)) {
-      errors.holders = `Höchstens 1 bis ${OFFICE_LIMITS.holders} und nicht weniger als mindestens, oder leer.`;
+    if (!Number.isInteger(min) || min < 0 || min > limit.maxHolders) errors.holders = `Mindestens 0 bis ${limit.maxHolders}.`;
+    else if (max != null && (!Number.isInteger(max) || max < 1 || max > limit.maxHolders || max < min)) {
+      errors.holders = `Höchstens 1 bis ${limit.maxHolders} und nicht weniger als mindestens, oder leer.`;
     }
-    if (!Number.isInteger(this.termYears) || this.termYears < 1 || this.termYears > OFFICE_LIMITS.termYears) {
-      errors.termYears = `1 bis ${OFFICE_LIMITS.termYears} Jahre.`;
+    if (!Number.isInteger(this.termYears) || this.termYears < 1 || this.termYears > limit.maxTermYears) {
+      errors.termYears = `1 bis ${limit.maxTermYears} Jahre.`;
     }
     return errors;
   }

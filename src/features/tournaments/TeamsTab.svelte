@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { untrack } from 'svelte';
   import { bus, permissions, session } from '../../lib/container';
   import { TOAST } from '../../channels';
@@ -60,7 +61,7 @@
     {#each lines as line, i (line.key)}
       <li>
         <span class="muted index">{i + 1}</span>
-        <input bind:value={line.name} maxlength="80" placeholder="Teamname" aria-label="Team {i + 1}" />
+        <input bind:value={line.name} maxlength={settings.tournaments.teamNameMaxLength} placeholder="Teamname" aria-label="Team {i + 1}" />
         <Select bind:value={line.clubTeamId} options={clubTeams} aria-label="Eigenes Team, Zeile {i + 1}" />
         <Button size="sm" variant="ghost" icon="close" tooltip="Team entfernen" onclick={() => (lines = lines.filter((l) => l.key !== line.key))} />
       </li>

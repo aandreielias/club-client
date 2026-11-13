@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { Action } from '../../lib/state/Action.svelte';
   import EditorForm from '../../ui/EditorForm.svelte';
   import Field from '../../ui/Field.svelte';
@@ -19,7 +20,7 @@
 
 <EditorForm {action} submitLabel="Anlegen" oncancel={() => onclose(false)} onsubmit={submit}>
   <Field label="Titel">
-    <input bind:value={title} maxlength="200" required />
+    <input bind:value={title} maxlength={settings.meetings.agenda.titleMaxLength} required />
   </Field>
   <Field label="Antrag (optional)">
     <textarea bind:value={text} rows="4"></textarea>
