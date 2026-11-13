@@ -203,7 +203,11 @@ export interface Me {
   wardIds: string[];
   /** Names of the minors, also for members who may not open member profiles. */
   wardNames: Record<string, string>;
+  /** Guests only: the areas they were invited to, the first one first (server: Me.guestAreas). */
+  guestAreas: GuestArea[];
 }
+
+export type GuestArea = 'TOURNAMENTS' | 'MEETINGS';
 
 /** server: AuditLog.AuditEntry */
 export interface AuditEntry {

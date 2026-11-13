@@ -6,7 +6,7 @@ import type { LinkResolver } from '../lib/router/LinkResolver';
 import type { NavCatalog } from '../lib/navigation/NavCatalog';
 import { NavLayout } from '../lib/navigation/NavLayout';
 import type { WindowService } from '../lib/window/WindowService.svelte';
-import type { Role } from '../lib/types';
+import type { GuestArea, Role } from '../lib/types';
 import type { Feature, FeatureRoute } from './Feature';
 import type { IconName } from '../icons';
 
@@ -41,9 +41,11 @@ export class FeatureRegistry {
     this.routes = features.flatMap((f) => f.routes);
   }
 
-  /** Routes the member may open; tournament guests only those marked `guest`. */
-  allowed(hasRole: (...roles: readonly Role[]) => boolean, guest = false): FeatureRoute[] {
-    return this.routes.filter((r) => (guest ? !!r.guest : !r.roles || hasRole(...r.roles)));
+  /** Routes the member may open; guests (`guestAreas` not null) only those marked `guest` for all or one of their areas. */
+  allowed(hasRole: (...roles: readonly Role[]) => boolean, guestAreas: readonly GuestArea[] | null = null): FeatureRoute[] {
+    return this.routes.filter((r) =>
+      guestAreas ? r.guest === true || (!!r.guest && guestAreas.includes(r.guest)) : !r.roles || hasRole(...r.roles),
+    );
   }
 
   /** Sidebar rows; main rows follow the user's `order` (row keys) and are grouped, footer entries come last. */

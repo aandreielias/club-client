@@ -3,7 +3,7 @@ import { ApiClient } from '../../lib/http/ApiClient';
 import { directory } from '../../lib/mock/core';
 import { SessionStore } from '../../lib/session/SessionStore.svelte';
 import { ZonedClock } from '../../lib/time/ZonedClock';
-import type { Member, Role } from '../../lib/types';
+import type { GuestArea, Member, Role } from '../../lib/types';
 import { MeetingForm } from './MeetingForm.svelte';
 import { isUpcoming } from './MeetingListModel.svelte';
 import type { MeetingSummary } from './model';
@@ -22,7 +22,7 @@ const inDays = (days: number) => new Date(Date.now() + days * DAY).toISOString()
 
 function policyFor(roles: Role[]): MeetingPolicy {
   const session = new SessionStore(new ApiClient({ send: vi.fn(), upload: vi.fn(), url: (p) => p }));
-  session.me = { member: { ...member('spielerin'), roles }, teams: [], missing: [], wardIds: [], wardNames: {} };
+  session.me = { member: { ...member('spielerin'), roles }, teams: [], missing: [], wardIds: [], wardNames: {}, guestAreas: [] };
   return new MeetingPolicy(session);
 }
 
@@ -481,6 +481,16 @@ describe('Schlichtungseinrichtung (chosen invitees)', () => {
     meetings.invite(member('vorstand'), m.id);
     expect(notifications.inbox.data[account.id]?.some((n) => n.kind === 'MEETING')).toBe(true);
     expect(meetings.list(account, null, null).items.map((x) => x.id)).toEqual([m.id]); // the guest sees only their meeting
+    // server: Me.guestAreas — a meeting guest sees Sitzungen only, a tournament guest Turniere only
+    const areas = (email: string) => (mockServer.handle('GET', '/api/v1/me', null, email) as { guestAreas: string[] }).guestAreas;
+    expect(areas('eva@example.at')).toEqual(['MEETINGS']);
+    expect(areas('gast@example.at')).toEqual(['TOURNAMENTS']);
+    expect(areas('vorstand@example.at')).toEqual([]);
+    const { features } = await import('../index');
+    const paths = (a: GuestArea[]) => features.allowed(() => false, a).map((r) => r.path);
+    expect(paths(['MEETINGS'])).toContain('/meetings');
+    expect(paths(['MEETINGS'])).not.toContain('/tournaments');
+    expect(paths(['TOURNAMENTS'])).not.toContain('/meetings');
     expect(meetings.get(member('beisitz'), m.id).chosen?.guests[0].email).toBeNull(); // invited, does not run it
     expect(() => meetings.get(member('schrift'), m.id)).toThrow(expect.objectContaining({ code: 'meeting.not-found' }));
     expect(() => meetings.get(member('trainer'), m.id)).toThrow(expect.objectContaining({ code: 'meeting.not-found' }));

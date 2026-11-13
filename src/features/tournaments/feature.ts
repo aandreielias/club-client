@@ -10,9 +10,9 @@ export const tournamentsFeature: Feature = {
   id: 'tournaments',
   home: { id: 'tournaments', label: 'Turniere', component: TournamentsHome },
   routes: [
-    // Every member reads tournaments; guests too (their own only, server: TournamentHandlers.visible).
-    { path: '/tournaments', component: TournamentsPage, nav: 'Turniere', icon: 'trophy', guest: true },
-    detailRoute('/tournaments/:id', TournamentView, { href: '/tournaments', label: 'Turniere' }, { guest: true }),
+    // Every member reads tournaments; tournament guests too (their own only, server: TournamentHandlers.visible).
+    { path: '/tournaments', component: TournamentsPage, nav: 'Turniere', icon: 'trophy', guest: 'TOURNAMENTS' },
+    detailRoute('/tournaments/:id', TournamentView, { href: '/tournaments', label: 'Turniere' }, { guest: 'TOURNAMENTS' }),
   ],
   windows: {
     tournament: { component: TournamentView, page: (id) => `/tournaments/${encodeURIComponent(id)}` },

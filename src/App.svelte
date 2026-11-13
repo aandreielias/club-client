@@ -103,9 +103,10 @@
     if (club) untrack(() => theme.setBrand(club.brand, club.assets));
   });
 
-  // Tournament guests have no start page: they land on their tournament list (which opens their tournament).
+  // Guests have no start page: they land on the area they were invited to first (their tournament or meeting list).
   $effect(() => {
-    if (app.screen === 'shell' && !app.page && guestOnly(session.member.roles)) untrack(() => router.replace('/tournaments'));
+    if (app.screen === 'shell' && !app.page && guestOnly(session.member.roles))
+      untrack(() => router.replace(session.me?.guestAreas[0] === 'MEETINGS' ? '/meetings' : '/tournaments'));
   });
 
   // Only the screen decides; whatever startSession reads must not restart it.

@@ -8,6 +8,7 @@ import {
   guestOnly,
   type AuditEntry,
   type Club,
+  type GuestArea,
   type ClubEdit,
   type Member,
   type MemberList,
@@ -1048,6 +1049,7 @@ mockServer
       missing: directory.missing(member),
       wardIds: directory.wardsOf(member.id),
       wardNames: Object.fromEntries(directory.wardsOf(member.id).map((id) => [id, directory.name(id) ?? ''])),
+      guestAreas: guestOnly(member.roles) ? guestAreas(req.email) : [],
     };
   })
   // Own profile also works before onboarding is complete (birth date step).
@@ -1064,3 +1066,9 @@ mockServer
   .on('GET', '/api/v1/teams/:id/roster', (req) => directory.roster(directory.actor(req), req.params.id))
   .on('GET', '/api/v1/members', (req) => directory.list(directory.actor(req)))
   .on('GET', '/api/v1/members/names', (req) => (directory.actor(req), directory.allNames()));
+
+/** server: MembersController.guestAreas — asks both modules like the gateway does; tournaments first (a meeting guest's e-mail is taken). */
+function guestAreas(email: string | null): GuestArea[] {
+  const has = (path: string) => ((mockServer.handle('GET', path, null, email) as { items: unknown[] }).items ?? []).length > 0;
+  return [...(has('/api/v1/tournaments') ? (['TOURNAMENTS'] as const) : []), ...(has('/api/v1/meetings') ? (['MEETINGS'] as const) : [])];
+}

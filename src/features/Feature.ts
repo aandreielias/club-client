@@ -6,7 +6,7 @@ import type { CalendarCategory } from '../lib/calendar/categories';
 import type { LinkRule } from '../lib/router/LinkResolver';
 import type { WindowContent } from '../lib/window/WindowService.svelte';
 import type { RouteParams } from '../lib/router/Router.svelte';
-import type { Role } from '../lib/types';
+import type { GuestArea, Role } from '../lib/types';
 import type { IconName } from '../icons';
 import type { HomeSection } from '../lib/home/HomeSections';
 
@@ -29,8 +29,8 @@ export interface FeatureRoute {
   roles?: readonly Role[];
   /** Shown at the bottom of the sidebar (above "Abmelden") instead of in the reorderable main list. */
   navFooter?: boolean;
-  /** Also for tournament guests, who otherwise see no route (server: ActorArgumentResolver.allowsGuest). */
-  guest?: boolean;
+  /** Also for guests, who otherwise see no route (server: ActorArgumentResolver.allowsGuest): all of them, or those invited to the area. */
+  guest?: true | GuestArea;
   /** Count shown next to the sidebar label (e.g. unread items); read reactively. */
   badge?: () => number;
   /** Set by {@link detailRoute}: the record view the page shows. */

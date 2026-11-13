@@ -4364,6 +4364,7 @@ export interface components {
             wardNames: {
                 [key: string]: string;
             };
+            guestAreas: ("TOURNAMENTS" | "MEETINGS")[];
         };
         "at.clubserver.attendance.api.AttendanceApi.OpenAnswer": {
             /** Format: uuid */

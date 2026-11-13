@@ -78,7 +78,9 @@ export class AppController {
   constructor(private readonly deps: AppDependencies) {
     const { features, session, router } = deps;
     this.screen = $derived.by(() => this.computeScreen());
-    this.allowedRoutes = $derived(features.allowed((...roles) => session.hasRole(...roles), guestOnly(session.me?.member.roles ?? [])));
+    this.allowedRoutes = $derived(
+      features.allowed((...roles) => session.hasRole(...roles), guestOnly(session.me?.member.roles ?? []) ? (session.me?.guestAreas ?? []) : null),
+    );
     this.navigation = $derived(features.navigation(this.allowedRoutes, deps.preferences.values.navOrder));
     this.page = $derived.by(() => this.resolve(router.path));
     this.splitPage = $derived.by(() => (deps.split.isOpen ? this.resolve(deps.splitPane.path) : null));
