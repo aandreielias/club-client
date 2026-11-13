@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { bus, commands, permissions, session, store } from '../../lib/container';
-  import { WINDOW_OPEN } from '../../channels';
+  import { commands, session, store } from '../../lib/container';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -19,11 +18,8 @@
     if (items) list.set(items);
   });
 
-  const compose = () => bus.publish(WINDOW_OPEN, { kind: 'message-new', id: '-' });
-
   useCommands(commands, {
     'notifications.readAll': { run: () => void center.markAllRead(), when: () => center.unread > 0 },
-    'page.new': { run: compose, when: () => permissions.isPrivileged },
   });
 </script>
 
@@ -31,7 +27,6 @@
   {#snippet actions()}
     <LinkButton href="#/settings/notifications" tooltip="Festlegen, worüber und wie du benachrichtigt wirst">Einstellungen</LinkButton>
     <Button busy={center.markAllAction.busy} disabled={center.unread === 0} onclick={() => center.markAllRead()}>Alle als gelesen markieren</Button>
-    {#if permissions.isPrivileged}<Button variant="primary" icon="send" onclick={compose}>Nachricht senden</Button>{/if}
   {/snippet}
 
   <ErrorNote error={center.markAllAction.error} />

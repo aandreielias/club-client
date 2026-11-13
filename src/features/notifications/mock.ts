@@ -4,11 +4,7 @@ import { personalData, directory, MockDirectory } from '../../lib/mock/core';
 import type { MockEvent } from '../../lib/mock/MockEventBus';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
-import { isImportant, type MessageRef, type Notification, type NotificationKind, type Preference, type RefKind } from './model';
-import { PRIVILEGED, type Member, coaches } from '../../lib/types';
-import { settings } from '../../settings';
-import { resolveRef } from '../../lib/mock/recordRefs';
-import { meetings } from '../meetings/mock';
+import { isImportant, type Notification, type NotificationKind, type Preference } from './model';
 import { CHANGE_FIELD_LABELS, type ChangeField } from '../members/MembersApi';
 
 const fail = MockServer.fail;
@@ -17,7 +13,6 @@ const KINDS: readonly NotificationKind[] = [
   'TASK_DUE',
   'APPOINTMENT_CANCELLED',
   'CHANGE_DECIDED',
-  'MESSAGE',
   'ITEM_REMINDER',
   'MEETING',
   'MAIL',
@@ -28,7 +23,6 @@ const KINDS: readonly NotificationKind[] = [
   'TEAM',
 ];
 const MAX_LISTED = 100;
-const limits = settings.notifications.message;
 
 export class MockNotifications {
   /** memberId → inbox, newest first */
@@ -82,74 +76,6 @@ export class MockNotifications {
     return this.effective(memberId);
   }
 
-  /** server: MessageHandlers.send; `preview` only counts. */
-  send(viewer: Member, body: Record<string, any>, preview: boolean): { recipients: number } {
-    let recipients: string[];
-    if (body.replyTo) {
-      // server: MessageHandlers.senderOf — anyone answers the sender of a message in their inbox
-      const received = this.list(viewer.id, false).items.find((n) => n.id === body.replyTo);
-      const sender = received?.senderId;
-      if (!sender || sender === viewer.id || !this.people.name(sender)) fail(404, 'message.not-found');
-      recipients = [sender!];
-    } else {
-      if (preview) this.people.requireRole(viewer, PRIVILEGED);
-      else this.people.requirePrivileged(viewer, PRIVILEGED);
-      recipients = this.recipients(viewer, body);
-    }
-    if (preview) return { recipients: recipients.length };
-    const title = typeof body.title === 'string' ? body.title.trim() : '';
-    const text = typeof body.body === 'string' ? body.body.trim() : '';
-    if (!title || title.length > limits.titleMaxLength) fail(400, 'message.title-invalid');
-    if (text.length > limits.bodyMaxLength) fail(400, 'message.body-too-long');
-    if (!recipients.length) fail(400, 'message.recipients-missing');
-    const inputs: { kind: RefKind; id: string }[] = Array.isArray(body.refs) ? body.refs : [];
-    if (inputs.length > limits.maxRefs) fail(400, 'message.too-many-refs');
-    const refs = inputs.map((ref) => this.ref(viewer, ref));
-    this.notify(recipients, 'MESSAGE', title, text.replace(/\n{3,}/g, '\n\n'), null, {
-      senderId: viewer.id,
-      senderName: `${viewer.firstName} ${viewer.lastName}`,
-      refs,
-    });
-    return { recipients: recipients.length };
-  }
-
-  private recipients(viewer: Member, body: Record<string, any>): string[] {
-    const manager = this.people.isManager(viewer);
-    const teamIds: string[] = body.teamIds ?? [];
-    const memberIds: string[] = body.memberIds ?? [];
-    if (teamIds.length + memberIds.length > limits.maxTargets) fail(400, 'message.too-many-targets');
-    const recipients = new Set<string>();
-    if (body.everyone) {
-      if (!manager) fail(403, 'access.denied');
-      this.people.audienceIds({ everyone: true }).forEach((id) => recipients.add(id));
-    } else {
-      const coached = Object.entries(this.people.teamRoles(viewer.id))
-        .filter(([, role]) => coaches(role))
-        .map(([team]) => team);
-      for (const teamId of teamIds) {
-        if (!manager && !coached.includes(teamId)) fail(403, 'access.denied');
-        this.people.teamMembers(teamId).forEach((id) => recipients.add(id));
-      }
-      if (!manager && !memberIds.every((id) => coached.some((team) => this.people.teamMembers(team).includes(id)))) fail(403, 'access.denied');
-      if (memberIds.some((id) => !this.people.activeIds().includes(id))) fail(400, 'message.member-unknown');
-      memberIds.forEach((id) => recipients.add(id));
-    }
-    if (body.includeGuardians !== false) this.people.guardiansOf([...recipients]).forEach((id) => recipients.add(id));
-    recipients.delete(viewer.id);
-    return [...recipients];
-  }
-
-  /** The record as the sender sees it (server: platform.RecordRefs). */
-  private ref(viewer: Member, ref: { kind: RefKind; id: string }): MessageRef {
-    return resolveRef(viewer, ref, 'message', (id) => {
-      try {
-        return meetings.get(viewer, id).title;
-      } catch {
-        return null;
-      }
-    });
-  }
-
   /** server: NotificationHandlers.on* */
   private onEvent(event: MockEvent): void {
     const data = event.data as Record<string, any>;
@@ -158,9 +84,6 @@ export class MockNotifications {
         // server: NotificationRepository.deleteMember
         delete this.inbox.data[data.memberId];
         delete this.preferences.data[data.memberId];
-        for (const entry of Object.values(this.inbox.data).flat()) {
-          for (const ref of entry.refs) if (ref.kind === 'MEMBER' && ref.id === data.memberId) ref.title = MockDirectory.ERASED_NAME;
-        }
         this.inbox.save();
         this.preferences.save();
         break;
@@ -323,14 +246,7 @@ export class MockNotifications {
     }
   }
 
-  private notify(
-    recipients: readonly string[],
-    kind: NotificationKind,
-    title: string,
-    body: string,
-    link: string | null,
-    message: Pick<Notification, 'senderId' | 'senderName' | 'refs'> = { senderId: null, senderName: null, refs: [] },
-  ): void {
+  private notify(recipients: readonly string[], kind: NotificationKind, title: string, body: string, link: string | null): void {
     const unique = [...new Set(recipients)];
     for (const memberId of unique) {
       const notification: Notification = {
@@ -341,7 +257,6 @@ export class MockNotifications {
         link,
         createdAt: new Date().toISOString(),
         readAt: null,
-        ...message,
       };
       (this.inbox.data[memberId] ??= []).unshift(notification);
       mockServer.events.publish({
@@ -363,9 +278,6 @@ export class MockNotifications {
       link,
       createdAt: at(hoursAgo),
       readAt: read ? at(hoursAgo - 1) : null,
-      senderId: null,
-      senderName: null,
-      refs: [],
     });
     return {
       spielerin: [
@@ -401,6 +313,4 @@ mockServer
     return notifications.markRead(me(req), req.params.id);
   })
   .on('GET', '/api/v1/me/notification-preferences', (req) => ({ items: notifications.effective(me(req)) }))
-  .on('POST', '/api/v1/notifications/messages', (req) => notifications.send(directory.actor(req), req.body ?? {}, false))
-  .on('POST', '/api/v1/notifications/messages/preview', (req) => notifications.send(directory.actor(req), req.body ?? {}, true))
   .on('PUT', '/api/v1/me/notification-preferences', (req) => ({ items: notifications.setPreferences(me(req), req.body?.items) }));

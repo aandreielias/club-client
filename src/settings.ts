@@ -523,8 +523,6 @@ export const settings = {
   notifications: {
     /** Show a toast when a new notification arrives live. */
     toastOnArrival: true,
-    /** server: MessageHandlers / MessagesController */
-    message: { titleMaxLength: 150, bodyMaxLength: 1000, maxRefs: 10, maxTargets: 200, previewDebounceMs: 250 },
   },
 
   files: {
@@ -594,7 +592,7 @@ export const settings = {
     maxQueryLength: 100,
     /** Hits per kind (appointments, tasks, ...); the server allows up to 25. */
     perKind: 8,
-    /** Hits per kind when picking records to link (messages, mails). */
+    /** Hits per kind when picking records to link (mails). */
     pickerPerKind: 5,
     /** Typing pause before the results update. */
     debounceMs: 250,

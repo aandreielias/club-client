@@ -965,38 +965,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/notifications/messages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["send"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/notifications/messages/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["preview"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/membership-kinds": {
         parameters: {
             query?: never;
@@ -1422,7 +1390,7 @@ export interface paths {
         };
         get: operations["list_6"];
         put?: never;
-        post: operations["send_1"];
+        post: operations["send"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3232,7 +3200,7 @@ export interface components {
         };
         "at.clubserver.notifications.api.NotificationsApi.Preference": {
             /** @enum {string} */
-            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM";
+            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "CHANGE_DECIDED" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM";
             push: boolean;
             email: boolean;
         };
@@ -3700,21 +3668,6 @@ export interface components {
             no: number;
             /** Format: int32 */
             abstain: number;
-        };
-        "at.clubserver.gateway.rest.MessagesController.MessageBody": {
-            title: string;
-            body: string;
-            everyone: boolean;
-            teamIds: string[];
-            memberIds: string[];
-            includeGuardians: boolean;
-            refs: components["schemas"]["at.clubserver.platform.RecordRefs.RefInput"][];
-            /** Format: uuid */
-            replyTo: string;
-        };
-        "at.clubserver.notifications.api.NotificationsApi.MessageSent": {
-            /** Format: int32 */
-            recipients: number;
         };
         "at.clubserver.gateway.rest.MembersController.InviteBody": {
             /** Format: email */
@@ -4387,7 +4340,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "CHANGE_DECIDED" | "MESSAGE" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM";
+            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "CHANGE_DECIDED" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM";
             title: string;
             body: string;
             link: string;
@@ -4395,10 +4348,6 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             readAt: string;
-            /** Format: uuid */
-            senderId: string;
-            senderName: string;
-            refs: components["schemas"]["at.clubserver.platform.RecordRefs.RefDto"][];
         };
         "at.clubserver.notifications.api.NotificationsApi.NotificationList": {
             items: components["schemas"]["at.clubserver.notifications.api.NotificationsApi.NotificationDto"][];
@@ -6648,54 +6597,6 @@ export interface operations {
             };
         };
     };
-    send: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["at.clubserver.gateway.rest.MessagesController.MessageBody"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.notifications.api.NotificationsApi.MessageSent"];
-                };
-            };
-        };
-    };
-    preview: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["at.clubserver.gateway.rest.MessagesController.MessageBody"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["at.clubserver.notifications.api.NotificationsApi.MessageSent"];
-                };
-            };
-        };
-    };
     membershipKinds: {
         parameters: {
             query?: never;
@@ -7488,7 +7389,7 @@ export interface operations {
             };
         };
     };
-    send_1: {
+    send: {
         parameters: {
             query?: never;
             header?: never;

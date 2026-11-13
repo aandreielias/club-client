@@ -67,7 +67,6 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   'Mitgliedschaft speichern': { text: 'Art, Ehrenmitgliedschaft und Eintrittsdatum speichern' },
   'Funktion vergeben': { text: 'Funktion im Vorstand oder in der Rechnungsprüfung eintragen' },
   Beenden: { text: 'Funktion ab heute beenden' },
-  'Nachricht senden': { text: 'Nachricht an Mitglieder, Teams oder alle schreiben', command: 'page.new' },
   Senden: { text: 'Nachricht verschicken', command: 'form.submit' },
   'Neues Konto': { text: 'Konto aus einem Aufnahmeantrag anlegen; die Person bekommt eine Einladung per E-Mail' },
   Exportieren: { text: 'Die angezeigte Liste als CSV-Datei (Excel) herunterladen' },

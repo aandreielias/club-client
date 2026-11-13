@@ -1,7 +1,4 @@
 import type { Feature } from '../Feature';
-import { PRIVILEGED } from '../../lib/types';
-import MessageComposeView from './MessageComposeView.svelte';
-import MessageView from './MessageView.svelte';
 import { NOTIFICATION_MESSAGES } from './messages';
 import NotificationsPage from './NotificationsPage.svelte';
 import NotificationsHome from './NotificationsHome.svelte';
@@ -19,10 +16,6 @@ export const notificationsFeature: Feature = {
       guest: true,
     },
   ],
-  windows: {
-    message: { component: MessageView },
-    'message-new': { component: MessageComposeView, roles: PRIVILEGED },
-  },
   messages: NOTIFICATION_MESSAGES,
   start: () => notificationCenter.start(),
   home: { id: 'notifications', label: 'Benachrichtigungen', component: NotificationsHome, defaultShown: true },
