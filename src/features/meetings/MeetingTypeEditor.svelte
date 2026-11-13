@@ -20,8 +20,8 @@
     MAJORITY_LABELS,
     noticeText,
     QUORUM_LABELS,
-    STEP_ANCHOR_TEXT,
-    SYSTEM_STEP_LABELS,
+    stepAnchorText,
+    stepName,
     type Majority,
     type MeetingStep,
     type Quorum,
@@ -80,8 +80,6 @@
   );
   const MAJORITIES = (Object.keys(MAJORITY_LABELS) as Majority[]).map((m) => ({ value: m, label: MAJORITY_LABELS[m], hint: MAJORITY_HINTS[m] }));
 
-  const stepName = (step: MeetingStep) => (step.system ? SYSTEM_STEP_LABELS[step.system] : step.title || 'Ohne Titel');
-
   function edit(index: number) {
     open = { index, step: form.steps[index] };
   }
@@ -101,6 +99,11 @@
     const index = open?.index;
     open = null;
     if (index == null) return;
+    const followers = form.steps.filter((s) => s.anchor === 'AFTER_STEP' && s.after === form.steps[index].id);
+    if (followers.length) {
+      bus.publish(TOAST, { text: `Erst „${stepName(followers[0])}“ ändern: Dieser Schritt folgt darauf.` });
+      return;
+    }
     const [step] = form.steps.splice(index, 1);
     bus.publish(TOAST, {
       text: `„${stepName(step)}“ entfernt.`,
@@ -248,7 +251,7 @@
       {#each form.steps as step, i (step.id ?? `neu-${i}`)}
         <li>
           <button type="button" class="step" onclick={() => edit(i)} {@attach tooltip('Schritt öffnen')}>
-            <span class="when">{noticeText(step.offsetHours)} {STEP_ANCHOR_TEXT[step.anchor]}</span>
+            <span class="when">{noticeText(step.offsetHours)} {stepAnchorText(step, form.steps)}</span>
             <span class="name">{stepName(step)}</span>
             <span class="muted small"
               >{ACTION_KIND_LABELS[step.action]} · {step.audience === 'OFFICE' && step.office
@@ -267,6 +270,12 @@
         icon="add"
         tooltip="Eine Frist ab dem Anlegen der Sitzung (etwa der Anrufung einer Schlichtung)"
         onclick={() => add('AFTER_CREATE')}>Frist ab Anlegen</Button
+      >
+      <Button
+        size="sm"
+        icon="add"
+        tooltip="Eine Zeit nach dem Abschluss eines anderen Schritts: die Aufgabe erledigt, die Benachrichtigung versandt"
+        onclick={() => add('AFTER_STEP')}>Folgeschritt</Button
       >
     </div>
     <ErrorNote error={form.error('steps')} />
@@ -298,7 +307,14 @@
   </div>
 </form>
 
-<MeetingStepDialog step={open?.step ?? null} isNew={open?.index == null} onapply={apply} onremove={remove} onclose={() => (open = null)} />
+<MeetingStepDialog
+  step={open?.step ?? null}
+  steps={form.steps}
+  isNew={open?.index == null}
+  onapply={apply}
+  onremove={remove}
+  onclose={() => (open = null)}
+/>
 
 <style>
   .editor {

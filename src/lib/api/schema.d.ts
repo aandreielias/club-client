@@ -3164,7 +3164,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            anchor: "BEFORE_INVITE" | "BEFORE_START" | "AFTER_END" | "AFTER_CREATE";
+            anchor: "BEFORE_INVITE" | "BEFORE_START" | "AFTER_END" | "AFTER_CREATE" | "AFTER_STEP";
             /** Format: int32 */
             offsetHours: number;
             /** @enum {string} */
@@ -3176,6 +3176,8 @@ export interface components {
             /** @enum {string} */
             system: "INVITE_REMINDER" | "START_REMINDER";
             office: string;
+            /** Format: uuid */
+            after: string;
         };
         "at.clubserver.meetings.api.MeetingsApi.MeetingTypeDto": {
             key: string;

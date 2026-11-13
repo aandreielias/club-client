@@ -12,14 +12,13 @@
   import { MeetingTypeForm } from './MeetingTypeForm.svelte';
   import {
     ACTION_KIND_LABELS,
-    ARBITRATION,
     AUDIENCE_LABELS,
     INVITEES_LABELS,
     MAJORITY_LABELS,
     majorities,
     noticeText,
     quorumText,
-    STEP_ANCHOR_TEXT,
+    stepAnchorText,
     SYSTEM_STEP_LABELS,
     VOTING_LABELS,
   } from './model';
@@ -65,9 +64,7 @@
     {#snippet actions()}
       {#if !edit.form && policy.canEditTypes()}
         <Button icon="edit" onclick={() => edit.edit(new MeetingTypeForm(type))}>Bearbeiten</Button>
-        {#if type.key === ARBITRATION}
-          <!-- server: meeting-type.fixed — the Schlichtungseinrichtung stays. -->
-        {:else if type.archived}
+        {#if type.archived}
           <Button tooltip="Wieder für neue Sitzungen anbieten" onclick={() => setArchived(false)}>Wiederherstellen</Button>
         {:else if type.inUse}
           <Button tooltip="Für neue Sitzungen nicht mehr anbieten; bestehende behalten sie" onclick={() => setArchived(true)}>Archivieren</Button>
@@ -114,7 +111,7 @@
         <ul class="rows steps">
           {#each type.steps as step (step.id)}
             <li>
-              <span>{noticeText(step.offsetHours)} {STEP_ANCHOR_TEXT[step.anchor]}</span>
+              <span>{noticeText(step.offsetHours)} {stepAnchorText(step, type.steps)}</span>
               <span>{step.system ? SYSTEM_STEP_LABELS[step.system] : step.title}</span>
               <span class="muted small"
                 >{ACTION_KIND_LABELS[step.action]} an {step.audience === 'OFFICE' && step.office

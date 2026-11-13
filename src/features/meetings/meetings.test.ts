@@ -518,16 +518,21 @@ describe('Schlichtungseinrichtung (chosen invitees)', () => {
     expect(meetings.vote(member(guestId), r.id, 'YES').voted).toBe(true);
   });
 
-  it('keeps the type: never archived or deleted, steps to an office need one the club has', () => {
+  it('is an ordinary type whose steps follow each other; steps to an office need one the club has', () => {
     const t = meetings.listTypes().items.find((x) => x.key === 'SCHLICHTUNG')!;
     expect([t.minInvitees, t.maxInvitees, t.quorum]).toEqual([3, 3, 'ALL']);
-    expect(() => meetings.saveType(member('vorstand'), t.key, { ...t, archived: true })).toThrow(
-      expect.objectContaining({ code: 'meeting-type.fixed' }),
+    expect(meetings.saveType(member('vorstand'), t.key, { ...t, archived: true }).archived).toBe(true);
+    meetings.saveType(member('vorstand'), t.key, { ...t, archived: false });
+    const [request, check] = t.steps;
+    expect([check.anchor, check.offsetHours, check.after]).toEqual(['AFTER_STEP', 336, request.id]);
+    const circle = t.steps.map((s) => (s === request ? { ...s, anchor: 'AFTER_STEP' as const, after: check.id } : s));
+    expect(() => meetings.saveType(member('vorstand'), t.key, { ...t, steps: circle })).toThrow(
+      expect.objectContaining({ code: 'meeting-step.after-invalid' }),
     );
-    expect(() => meetings.saveType(member('vorstand'), t.key, { ...t, invitees: 'BOARD' })).toThrow(
-      expect.objectContaining({ code: 'meeting-type.fixed' }),
+    const orphan = t.steps.filter((s) => s !== request);
+    expect(() => meetings.saveType(member('vorstand'), t.key, { ...t, steps: orphan })).toThrow(
+      expect.objectContaining({ code: 'meeting-step.after-invalid' }),
     );
-    expect(() => meetings.deleteType(member('vorstand'), t.key)).toThrow(expect.objectContaining({ code: 'meeting-type.fixed' }));
     expect(() => meetings.saveType(member('vorstand'), t.key, { ...t, minInvitees: 4 })).toThrow(
       expect.objectContaining({ code: 'meeting-type.invitees-invalid' }),
     );

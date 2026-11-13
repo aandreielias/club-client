@@ -36,9 +36,9 @@ export const QUORUM_LABELS: Readonly<Record<Quorum, string>> = {
 
 /**
  * server: MeetingsApi.StepAnchor — before the last day to invite (drafts), before the start (once invited), after the end, after the
- * meeting was created (until closed or cancelled).
+ * meeting was created (until closed or cancelled), after another step was done (its task finished, its notification sent).
  */
-export type StepAnchor = 'BEFORE_INVITE' | 'BEFORE_START' | 'AFTER_END' | 'AFTER_CREATE';
+export type StepAnchor = 'BEFORE_INVITE' | 'BEFORE_START' | 'AFTER_END' | 'AFTER_CREATE' | 'AFTER_STEP';
 export type StepAction = 'NOTIFICATION' | 'TASK';
 /** BOARD: the board and who created the meeting; CONVENERS: holders of the convening offices; OFFICE: holders of the step's office. */
 export type StepAudience = 'ELECTORATE' | 'BOARD' | 'CONVENERS' | 'SECRETARY' | 'OFFICE';
@@ -47,7 +47,7 @@ export type SystemStep = 'INVITE_REMINDER' | 'START_REMINDER';
 
 /** server: MeetingsApi.StepDto — a notification or task a set time around each meeting of the type. */
 export interface MeetingStep {
-  /** null until saved. */
+  /** null until saved; new steps get one here, so another step can follow them before saving. */
   id: string | null;
   anchor: StepAnchor;
   offsetHours: number;
@@ -59,6 +59,8 @@ export interface MeetingStep {
   system: SystemStep | null;
   /** Only for audience OFFICE. */
   office: string | null;
+  /** AFTER_STEP: the id of the step this one follows. */
+  after: string | null;
 }
 
 export const AUDIENCE_LABELS: Readonly<Record<StepAudience, string>> = {
@@ -79,7 +81,16 @@ export const STEP_ANCHOR_TEXT: Readonly<Record<StepAnchor, string>> = {
   BEFORE_START: 'vor Beginn',
   AFTER_END: 'nach dem Ende',
   AFTER_CREATE: 'nach dem Anlegen',
+  AFTER_STEP: 'nach Abschluss von',
 };
+
+export const stepName = (step: MeetingStep): string => (step.system ? SYSTEM_STEP_LABELS[step.system] : step.title || 'Ohne Titel');
+
+/** "nach dem Ende", or for a step after another "nach Abschluss von „Auffordern: {titel}“". */
+export function stepAnchorText(step: MeetingStep, steps: readonly MeetingStep[]): string {
+  const previous = step.anchor === 'AFTER_STEP' ? steps.find((s) => s.id === step.after) : undefined;
+  return previous ? `${STEP_ANCHOR_TEXT.AFTER_STEP} „${stepName(previous)}“` : STEP_ANCHOR_TEXT[step.anchor];
+}
 
 /** server: MeetingsApi.MeetingTypeDto. */
 export interface MeetingType {
@@ -210,9 +221,6 @@ export interface InviteesInput {
   guests: GuestInput[];
   partyIds: string[];
 }
-
-/** server: MeetingType.ARBITRATION — the Schlichtungseinrichtung every club keeps: never archived or deleted, always CHOSEN. */
-export const ARBITRATION = 'SCHLICHTUNG';
 
 export interface Meeting {
   id: string;

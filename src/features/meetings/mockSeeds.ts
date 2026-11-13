@@ -168,6 +168,7 @@ export function defaultSteps(seeded: boolean): MeetingStep[] {
       body: null,
       system: 'INVITE_REMINDER',
       office: null,
+      after: null,
     },
     {
       id: id(),
@@ -179,6 +180,7 @@ export function defaultSteps(seeded: boolean): MeetingStep[] {
       body: null,
       system: 'START_REMINDER',
       office: null,
+      after: null,
     },
     ...(seeded
       ? [
@@ -192,6 +194,7 @@ export function defaultSteps(seeded: boolean): MeetingStep[] {
             body: 'Das Protokoll der Sitzung vom {datum} fertigstellen und ablegen.',
             system: null,
             office: null,
+            after: null,
           } as const,
         ]
       : []),
@@ -199,7 +202,7 @@ export function defaultSteps(seeded: boolean): MeetingStep[] {
 }
 for (const t of SEEDED_TYPES) t.steps = defaultSteps(true);
 
-/** server: V116__arbitration.sql — the Schlichtungseinrichtung: three chosen people, all present, deadlines from the Anrufung. */
+/** server: V116__arbitration.sql — the Schlichtungseinrichtung: three chosen people, all present, deadlines from the Anrufung (V121: chained). */
 const step = (
   anchor: MeetingStep['anchor'],
   offsetHours: number,
@@ -209,7 +212,40 @@ const step = (
   title: string | null,
   body: string | null,
   system: MeetingStep['system'] = null,
-): MeetingStep => ({ id: crypto.randomUUID(), anchor, offsetHours, action, audience, office, title, body, system });
+  after: string | null = null,
+): MeetingStep => ({ id: crypto.randomUUID(), anchor, offsetHours, action, audience, office, title, body, system, after });
+// server: V121 — the arbitration steps follow each other, 14 days after the previous one was done
+const request = step(
+  'AFTER_CREATE',
+  0,
+  'TASK',
+  'CONVENERS',
+  null,
+  'Streitparteien zur Namhaftmachung auffordern: {titel}',
+  'Beide Streitparteien schriftlich auffordern, binnen 14 Tagen je ein Mitglied für die Schlichtungseinrichtung zu nennen.',
+);
+const check = step(
+  'AFTER_STEP',
+  336,
+  'TASK',
+  'CONVENERS',
+  null,
+  'Namhaftmachung prüfen: {titel}',
+  'Haben beide Streitparteien ein Mitglied genannt? Sonst eine Nachfrist von 14 Tagen setzen.',
+  null,
+  request.id,
+);
+const nominate = step(
+  'AFTER_STEP',
+  336,
+  'TASK',
+  'OFFICE',
+  'AUDITOR',
+  'Fehlende Namhaftmachung vornehmen: {titel}',
+  'Hat eine Streitpartei nach der Nachfrist niemanden genannt, nennen die Rechnungsprüfer das fehlende Mitglied.',
+  null,
+  check.id,
+);
 (SEEDED_TYPES as StoredType[]).push({
   key: 'SCHLICHTUNG',
   label: 'Schlichtungseinrichtung',
@@ -232,41 +268,19 @@ const step = (
   selfCheckIn: false,
   inUse: false,
   steps: [
+    request,
+    check,
+    nominate,
     step(
-      'AFTER_CREATE',
-      0,
-      'TASK',
-      'CONVENERS',
-      null,
-      'Streitparteien zur Namhaftmachung auffordern: {titel}',
-      'Beide Streitparteien schriftlich auffordern, binnen 14 Tagen je ein Mitglied für die Schlichtungseinrichtung zu nennen.',
-    ),
-    step(
-      'AFTER_CREATE',
+      'AFTER_STEP',
       336,
-      'TASK',
-      'CONVENERS',
-      null,
-      'Namhaftmachung prüfen: {titel}',
-      'Haben beide Streitparteien ein Mitglied genannt? Sonst eine Nachfrist von 14 Tagen setzen.',
-    ),
-    step(
-      'AFTER_CREATE',
-      672,
-      'TASK',
-      'OFFICE',
-      'AUDITOR',
-      'Fehlende Namhaftmachung vornehmen: {titel}',
-      'Hat eine Streitpartei nach der Nachfrist niemanden genannt, nennen die Rechnungsprüfer das fehlende Mitglied.',
-    ),
-    step(
-      'AFTER_CREATE',
-      1008,
       'TASK',
       'OFFICE',
       'AUDITOR',
       'Vorsitz der Schlichtungseinrichtung: {titel}',
       'Haben die beiden Mitglieder binnen 14 Tagen einen Vorsitz gewählt? Sonst bestimmen ihn die Rechnungsprüfer.',
+      null,
+      nominate.id,
     ),
     step(
       'AFTER_CREATE',

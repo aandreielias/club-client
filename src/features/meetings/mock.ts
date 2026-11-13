@@ -22,7 +22,6 @@ import {
   type StoredType,
 } from './mockSeeds';
 import {
-  ARBITRATION,
   invitesVoters,
   quorumReached,
   SEEDED_CIRCULAR,
@@ -54,7 +53,7 @@ import {
 const fail = MockServer.fail;
 const DAY = 86_400_000;
 
-const ANCHORS: readonly StepAnchor[] = ['BEFORE_INVITE', 'BEFORE_START', 'AFTER_END', 'AFTER_CREATE'];
+const ANCHORS: readonly StepAnchor[] = ['BEFORE_INVITE', 'BEFORE_START', 'AFTER_END', 'AFTER_CREATE', 'AFTER_STEP'];
 const AUDIENCES: readonly StepAudience[] = ['ELECTORATE', 'BOARD', 'CONVENERS', 'SECRETARY', 'OFFICE'];
 
 /** server: MeetingStep record and MeetingTypeHandlers.steps. */
@@ -62,7 +61,7 @@ function checkedSteps(value: unknown): MeetingStep[] {
   if (value == null) return defaultSteps(false);
   if (!Array.isArray(value) || value.length > 30) return fail(400, 'meeting-step.too-many');
   const systems = new Set<string>();
-  return value.map((s: Record<string, any>) => {
+  const steps = value.map((s: Record<string, any>): MeetingStep => {
     if (!ANCHORS.includes(s.anchor) || !AUDIENCES.includes(s.audience) || (s.action !== 'NOTIFICATION' && s.action !== 'TASK'))
       fail(400, 'meeting-step.invalid');
     if (!Number.isInteger(s.offsetHours) || s.offsetHours < 0 || s.offsetHours > 8760) fail(400, 'meeting-step.offset-invalid');
@@ -70,13 +69,15 @@ function checkedSteps(value: unknown): MeetingStep[] {
     const office = s.audience === 'OFFICE' ? s.office : null;
     if ((s.audience === 'OFFICE') !== !!s.office) fail(400, 'meeting-step.invalid');
     if (office && !directory.boardSettings.data.offices.some((o) => o.office === office)) fail(400, 'meeting-step.invalid');
+    const id: string = s.id ?? crypto.randomUUID();
+    if ((s.anchor === 'AFTER_STEP') !== !!s.after || s.after === id) fail(400, 'meeting-step.after-invalid');
     if (s.system) {
       if (systems.has(s.system)) fail(400, 'meeting-step.invalid');
       systems.add(s.system);
       const own = s.system === 'INVITE_REMINDER' ? 'BEFORE_INVITE' : 'BEFORE_START';
       if (s.anchor !== own || s.action !== 'NOTIFICATION') fail(400, 'meeting-step.system-fixed');
       return {
-        id: s.id ?? crypto.randomUUID(),
+        id,
         anchor: s.anchor,
         offsetHours: s.offsetHours,
         action: s.action,
@@ -85,11 +86,12 @@ function checkedSteps(value: unknown): MeetingStep[] {
         body: null,
         system: s.system,
         office: null,
+        after: null,
       };
     }
     const title = text(s.title, 150, 'meeting-step.title-invalid') ?? fail(400, 'meeting-step.title-invalid');
     return {
-      id: s.id ?? crypto.randomUUID(),
+      id,
       anchor: s.anchor,
       offsetHours: s.offsetHours,
       action: s.action,
@@ -98,8 +100,19 @@ function checkedSteps(value: unknown): MeetingStep[] {
       body: text(s.body, 1000, 'meeting-step.title-invalid'),
       system: null,
       office,
+      after: s.anchor === 'AFTER_STEP' ? s.after : null,
     };
   });
+  // server: MeetingTypeHandlers.steps — a step follows one of the same type, and no chain runs in a circle
+  const previous = new Map(steps.map((s) => [s.id, s.after]));
+  for (const s of steps) {
+    let at = s.after;
+    for (let hops = 0; at != null; hops++) {
+      if (!previous.has(at) || hops >= steps.length) fail(400, 'meeting-step.after-invalid');
+      at = previous.get(at) ?? null;
+    }
+  }
+  return steps;
 }
 
 const QUORUMS: readonly Quorum[] = ['AT_LEAST_HALF', 'MORE_THAN_HALF', 'AT_LEAST_THREE_QUARTERS', 'ALL'];
@@ -1264,8 +1277,6 @@ export class MockMeetings {
     const minInvitees = chosen ? bound(body.minInvitees) : null;
     const maxInvitees = chosen ? bound(body.maxInvitees) : null;
     if (minInvitees != null && maxInvitees != null && minInvitees > maxInvitees) fail(400, 'meeting-type.invitees-invalid');
-    // server: the Schlichtungseinrichtung stays and keeps inviting chosen people
-    if (key === ARBITRATION && (body.archived || !chosen)) fail(409, 'meeting-type.fixed');
     const before = this.types.data.find((t) => t.key === key);
     if (before && (before.invitees === 'CHOSEN') !== chosen && this.meetings.data.some((m) => m.kind === key))
       fail(409, 'meeting-type.invitees-in-use');
@@ -1303,7 +1314,6 @@ export class MockMeetings {
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const index = this.types.data.findIndex((t) => t.key === key);
     if (index < 0) fail(404, 'meeting-type.not-found');
-    if (key === ARBITRATION) fail(409, 'meeting-type.fixed');
     if (this.meetings.data.some((m) => m.kind === key)) fail(409, 'meeting-type.in-use');
     this.types.data.splice(index, 1);
     this.typesChanged();

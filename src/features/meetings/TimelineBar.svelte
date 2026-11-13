@@ -125,9 +125,9 @@
     <span class="label">Einladen bis<br /><span class="muted">{shortLabel(noticeHours)}</span></span>
   </button>
 
-  <!-- Deadlines from the creation have no fixed place around the meeting: they show only in the list. -->
+  <!-- Deadlines from the creation or after another step have no fixed place around the meeting: they show only in the list. -->
   {#each steps as step, i (step.id ?? i)}
-    {#if step.anchor !== 'AFTER_CREATE'}
+    {#if step.anchor !== 'AFTER_CREATE' && step.anchor !== 'AFTER_STEP'}
       {@const hours = distance(step)}
       <button
         type="button"

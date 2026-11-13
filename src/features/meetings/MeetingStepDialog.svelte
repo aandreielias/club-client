@@ -8,6 +8,7 @@
   import {
     ACTION_KIND_LABELS,
     AUDIENCE_LABELS,
+    stepName,
     SYSTEM_STEP_LABELS,
     type MeetingStep,
     type StepAction,
@@ -22,6 +23,7 @@
    */
   let {
     step,
+    steps,
     isNew,
     onapply,
     onremove,
@@ -29,6 +31,8 @@
   }: {
     /** The step to edit; null closes the dialog. */
     step: MeetingStep | null;
+    /** All steps of the type, to pick the one a step follows. */
+    steps: readonly MeetingStep[];
     isNew: boolean;
     onapply: (step: MeetingStep) => void;
     onremove: () => void;
@@ -53,6 +57,11 @@
     { value: 'BEFORE_START', label: 'vor Beginn', hint: 'sobald eingeladen ist' },
     { value: 'AFTER_END', label: 'nach dem Ende', hint: 'wenn die Sitzung vorbei ist' },
     { value: 'AFTER_CREATE', label: 'nach dem Anlegen', hint: 'ab dem Anlegen der Sitzung (etwa der Anrufung), bis sie endet' },
+    {
+      value: 'AFTER_STEP',
+      label: 'nach Abschluss von',
+      hint: 'sobald der gewählte Schritt erledigt ist (Aufgabe erledigt, Benachrichtigung versandt); eine Aufgabe kommt dann gleich, fällig nach dem Abstand',
+    },
   ] as const satisfies readonly { value: StepAnchor; label: string; hint: string }[];
   const UNITS = [
     { value: 'days', label: 'Tage' },
@@ -66,6 +75,21 @@
     { value: '{titel}', hint: 'Titel der Sitzung' },
     { value: '{datum}', hint: 'Beginn der Sitzung' },
   ];
+
+  /** Steps this one may follow: saved or new ones with an id, never itself or one that (through others) follows it. */
+  const PREVIOUS = $derived.by(() => {
+    if (!draft) return [];
+    const own = draft.id;
+    const followsOwn = (s: MeetingStep): boolean => {
+      for (let at: MeetingStep | undefined = s, hops = 0; at && hops <= steps.length; hops++) {
+        if (at.id === own) return true;
+        at = at.anchor === 'AFTER_STEP' ? steps.find((x) => x.id === at!.after) : undefined;
+      }
+      return false;
+    };
+    return steps.filter((s) => s.id && !followsOwn(s)).map((s) => ({ value: s.id!, label: stepName(s) }));
+  });
+  const afterError = $derived(submitted && draft?.anchor === 'AFTER_STEP' && !draft.after ? 'Einen Schritt wählen.' : undefined);
 
   const titleError = $derived(
     submitted && draft && !draft.system && (!draft.title?.trim() || draft.title.trim().length > 150)
@@ -88,8 +112,13 @@
   function apply(event: SubmitEvent) {
     event.preventDefault();
     submitted = true;
-    if (!draft || titleError || officeError) return;
-    onapply({ ...draft, offsetHours: fromAmount(amount, unit), office: draft.audience === 'OFFICE' ? draft.office : null });
+    if (!draft || titleError || officeError || afterError) return;
+    onapply({
+      ...draft,
+      offsetHours: fromAmount(amount, unit),
+      office: draft.audience === 'OFFICE' ? draft.office : null,
+      after: draft.anchor === 'AFTER_STEP' ? draft.after : null,
+    });
   }
 </script>
 
@@ -115,6 +144,15 @@
           {/if}
         </div>
       </Field>
+      {#if draft.anchor === 'AFTER_STEP'}
+        <Field label="Folgt auf" error={afterError}>
+          <Select
+            bind:value={() => draft!.after ?? '', (v) => (draft!.after = v || null)}
+            options={[{ value: '', label: 'Schritt wählen' }, ...PREVIOUS]}
+            aria-label="Folgt auf"
+          />
+        </Field>
+      {/if}
       <Field label={draft.action === 'TASK' ? 'Zuständig' : 'Empfänger'}>
         <Select bind:value={() => draft!.audience, (v) => v && (draft!.audience = v)} options={AUDIENCES} aria-label="Empfänger" />
       </Field>

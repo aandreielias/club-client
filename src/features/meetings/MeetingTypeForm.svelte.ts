@@ -56,6 +56,7 @@ export class MeetingTypeForm extends FormState<Errors> {
       body: null,
       system: 'INVITE_REMINDER',
       office: null,
+      after: null,
     },
     {
       id: null,
@@ -67,6 +68,7 @@ export class MeetingTypeForm extends FormState<Errors> {
       body: null,
       system: 'START_REMINDER',
       office: null,
+      after: null,
     },
   ]);
 
@@ -104,16 +106,25 @@ export class MeetingTypeForm extends FormState<Errors> {
 
   /** A new task on that side, not yet added (the step dialog adds it). */
   newStep(anchor: StepAnchor): MeetingStep {
+    const titles: Record<StepAnchor, string> = {
+      BEFORE_INVITE: 'Vorbereiten: {titel}',
+      BEFORE_START: 'Vorbereiten: {titel}',
+      AFTER_END: 'Nachbereiten: {titel}',
+      AFTER_CREATE: 'Frist: {titel}',
+      AFTER_STEP: 'Nächster Schritt: {titel}',
+    };
     return {
-      id: null,
+      // An id now, so another new step can follow this one before saving.
+      id: crypto.randomUUID(),
       anchor,
-      offsetHours: anchor === 'AFTER_END' || anchor === 'AFTER_CREATE' ? 168 : 72,
+      offsetHours: anchor === 'AFTER_END' || anchor === 'AFTER_CREATE' ? 168 : anchor === 'AFTER_STEP' ? 48 : 72,
       action: 'TASK',
       audience: 'BOARD',
-      title: anchor === 'AFTER_END' ? 'Nachbereiten: {titel}' : anchor === 'AFTER_CREATE' ? 'Frist: {titel}' : 'Vorbereiten: {titel}',
+      title: titles[anchor],
       body: null,
       system: null,
       office: null,
+      after: null,
     };
   }
 
