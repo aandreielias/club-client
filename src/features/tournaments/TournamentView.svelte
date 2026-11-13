@@ -25,6 +25,7 @@
   import GroupsTab from './GroupsTab.svelte';
   import { FORMAT_LABELS, matchPlace, STATUS_LABELS, STATUS_TONES, type Tournament } from './model';
   import TeamsTab from './TeamsTab.svelte';
+  import { Lookup } from '../../lib/state/Lookup.svelte';
   import { locationsApi } from '../locations/services';
   import EditorForm from '../../ui/EditorForm.svelte';
   import TournamentFields from './TournamentFields.svelte';
@@ -53,18 +54,10 @@
   ];
 
   /** The linked place's name; a place the member cannot open keeps the generic label. */
-  let placeName = $state<string | null>(null);
-  const locationId = $derived(model.tournament.value?.locationId); // a reload of the same place fetches nothing
-  $effect(() => {
-    placeName = null;
-    let current = true; // an older answer must not replace the name of a newer link
-    if (locationId)
-      locationsApi.get(locationId).then(
-        (p) => current && (placeName = p.name),
-        () => {},
-      );
-    return () => (current = false);
-  });
+  const place = new Lookup(
+    () => model.tournament.value?.locationId,
+    (locationId) => locationsApi.get(locationId),
+  );
 
   view.title(() => model.tournament.value?.name);
   view.watch(TOURNAMENT_CHANGED, (data) => data.tournamentId === id, {
@@ -153,7 +146,7 @@
           <dd>{days(t)}</dd>
           {#if t.locationId}
             <dt>Ort</dt>
-            <dd><RecordLink kind="location" id={t.locationId}>{placeName ?? 'Ort öffnen'}</RecordLink></dd>
+            <dd><RecordLink kind="location" id={t.locationId}>{place.value?.name ?? 'Ort öffnen'}</RecordLink></dd>
           {/if}
           <dt>Modus</dt>
           <dd>

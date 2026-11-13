@@ -20,7 +20,7 @@
   import MapButtons from '../../ui/MapButtons.svelte';
   import RecordLink from '../../ui/RecordLink.svelte';
   import Tag from '../../ui/Tag.svelte';
-  import type { Location } from '../locations/model';
+  import { Lookup } from '../../lib/state/Lookup.svelte';
   import { locationsApi } from '../locations/services';
   import AppointmentEditor from './AppointmentEditor.svelte';
   import { AppointmentDetailModel } from './AppointmentDetailModel.svelte';
@@ -42,18 +42,11 @@
   const detail = new AppointmentDetailModel(calendarApi, id, session.member.id);
 
   /** The linked place, for its address and map pin; free-text locations have none. */
-  let place = $state<Location | null>(null);
-  const locationId = $derived(detail.appointment.value?.locationId); // a reload of the same place fetches nothing
-  $effect(() => {
-    place = null;
-    let current = true; // an older answer must not replace the place of a newer link
-    if (locationId)
-      locationsApi.get(locationId).then(
-        (p) => current && (place = p),
-        () => {},
-      );
-    return () => (current = false);
-  });
+  const linked = new Lookup(
+    () => detail.appointment.value?.locationId,
+    (locationId) => locationsApi.get(locationId),
+  );
+  const place = $derived(linked.value);
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle);
   const edit = new EditSession<AppointmentForm>(bus, backStack);
