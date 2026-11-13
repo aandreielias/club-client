@@ -98,7 +98,6 @@ export class SessionStore {
     this.setClub(await this.api.put<Club>('/api/v1/club/brand', brand));
   }
 
-  /** Back to the server's default look; the logos (setting files) stay. */
   /** A sample notification e-mail in a draft of the brand (admin/board). */
   mailPreview(sample: MailSample): Promise<MailPreview> {
     return this.api.post('/api/v1/club/brand/mail-preview', sample);

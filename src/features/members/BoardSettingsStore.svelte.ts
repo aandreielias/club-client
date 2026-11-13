@@ -3,7 +3,7 @@ import { liveEvent } from '../../lib/live/LiveUpdates.svelte';
 import { LiveStore } from '../../lib/state/LiveStore.svelte';
 import { OFFICE_LABELS, SEEDED_OFFICES, type BoardSettings, type MembersApi, type OfficeKind, type OfficeSetting } from './MembersApi';
 
-export const BOARD_SETTINGS_CHANGED = liveEvent<Record<string, never>>('members.board-settings-changed');
+const BOARD_SETTINGS_CHANGED = liveEvent<Record<string, never>>('members.board-settings-changed');
 
 /** The club's office names and rules (server: members_office_setting); null until loaded. */
 export class BoardSettingsStore extends LiveStore<BoardSettings | null> {

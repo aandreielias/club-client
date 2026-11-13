@@ -7,9 +7,14 @@ export class MailboxesStore {
 
   constructor(private readonly api: MailApi) {}
 
+  #sequence = 0;
+
+  /** Only the newest load sets the list: an older answer arriving late never overwrites a newer one. */
   async load(): Promise<readonly MailboxAdmin[]> {
-    this.items = await this.api.allMailboxes();
-    return this.items;
+    const sequence = ++this.#sequence;
+    const items = await this.api.allMailboxes();
+    if (sequence === this.#sequence) this.items = items;
+    return items;
   }
 
   get(id: string): MailboxAdmin | undefined {

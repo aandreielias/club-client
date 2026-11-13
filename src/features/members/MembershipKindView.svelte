@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { backStack, bus, session } from '../../lib/container';
+  import { backStack, bus, permissions } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
-  import { ADMIN_BOARD } from '../../lib/types';
   import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Button from '../../ui/Button.svelte';
@@ -54,7 +53,7 @@
       {#if kind.archived}<Tag tone="gray">Archiviert</Tag>{/if}
     {/snippet}
     {#snippet actions()}
-      {#if !edit.form && session.hasRole(...ADMIN_BOARD)}
+      {#if !edit.form && permissions.isManager}
         <Button
           icon="edit"
           onclick={() => edit.edit({ label: kind.label, votes: kind.votes, eligible: kind.eligible, sort: kind.sort, archived: kind.archived })}

@@ -1,5 +1,5 @@
 /** One cell of a semicolon CSV; leading = + - @ would run as a formula in Excel (CSV injection), so they get a quote mark. */
-export function csvCell(value: string): string {
+function csvCell(value: string): string {
   const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
   return /[";\n\r]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
 }

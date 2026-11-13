@@ -3,7 +3,7 @@ import { settings } from '../../settings';
 import type { Folder, FolderKind, FolderScope, NewFolder } from './model';
 
 /** server: FilesController teamIds @Size(max = 20) */
-export const MAX_FOLDER_TEAMS = 20;
+const MAX_FOLDER_TEAMS = 20;
 
 export type FolderFormErrors = Partial<Record<'name' | 'team', string>>;
 

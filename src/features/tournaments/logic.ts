@@ -146,7 +146,7 @@ export function seeds(rankedGroups: readonly (readonly string[])[], advance: num
   return out;
 }
 
-export const bracketSize = (qualifiers: number): number => {
+const bracketSize = (qualifiers: number): number => {
   let size = 2;
   while (size < qualifiers) size *= 2;
   return size;
@@ -201,7 +201,7 @@ export function fieldPlan<M extends { id: string; round: number; slot: number; g
 }
 
 /** Group sizes when `teams` are dealt evenly into `groups`. */
-export const groupSizes = (teams: number, groups: number): number[] =>
+const groupSizes = (teams: number, groups: number): number[] =>
   Array.from({ length: groups }, (_, g) => Math.floor(teams / groups) + (g < teams % groups ? 1 : 0));
 
 /** Group matches (everyone against everyone) and the fewest waves they need on `fields`. */

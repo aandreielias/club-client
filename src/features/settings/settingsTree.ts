@@ -45,7 +45,7 @@ export interface SettingsGroup {
   subgroups: readonly { label: string; tabs: readonly SettingsTab[] }[];
 }
 
-export const SETTINGS_TREE: readonly SettingsGroup[] = [
+const SETTINGS_TREE: readonly SettingsGroup[] = [
   {
     id: 'personal',
     label: 'Persönlich',

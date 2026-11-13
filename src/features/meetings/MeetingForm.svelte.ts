@@ -7,7 +7,7 @@ export type MeetingField = 'title' | 'items' | 'urgency' | 'start' | 'end' | 'vi
 type Errors = Partial<Record<MeetingField, string>>;
 
 /** server: MeetingType.videoFor — a meeting of an online kind needs a https link, its own or the kind's standing one. */
-export function videoError(online: boolean, videoUrl: string, standing: string | null = null): string | undefined {
+function videoError(online: boolean, videoUrl: string, standing: string | null = null): string | undefined {
   const video = videoUrl.trim();
   if (!online) return undefined;
   if (!video) return standing ? undefined : 'Link zur Videokonferenz angeben.';

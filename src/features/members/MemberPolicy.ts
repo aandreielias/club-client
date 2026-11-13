@@ -57,7 +57,6 @@ export class MemberPolicy {
     return this.isAdmin && member.active;
   }
 
-  /** Never oneself; admins only by admins. */
   /** server: Member.isErased (no roles, no login, inactive); an erased record never comes back. */
   isErased(member: Member): boolean {
     return !member.active && member.roles.length === 0;
@@ -72,6 +71,7 @@ export class MemberPolicy {
     return this.isAdmin && !member.active && !this.isErased(member);
   }
 
+  /** Never oneself; admins only by admins. */
   canDeactivate(member: Member): boolean {
     return this.isManager && member.active && !this.isSelf(member) && (this.isAdmin || !member.roles.includes('ADMIN'));
   }

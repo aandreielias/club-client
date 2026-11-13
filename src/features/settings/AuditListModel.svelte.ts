@@ -5,10 +5,10 @@ import type { LocalStore } from '../../lib/storage/LocalStore';
 import type { Formatter } from '../../lib/time/Formatter';
 import type { AuditEntry } from '../../lib/types';
 
-export const AUDIT_KINDS: Readonly<Record<AuditKind, string>> = { READ: 'Angesehen', WRITE: 'Geändert', EXPORT: 'Datenexport' };
+const AUDIT_KINDS: Readonly<Record<AuditKind, string>> = { READ: 'Angesehen', WRITE: 'Geändert', EXPORT: 'Datenexport' };
 
 /** API areas (first path segment) and how the Protokoll names them. */
-export const AUDIT_AREAS: Readonly<Record<string, string>> = {
+const AUDIT_AREAS: Readonly<Record<string, string>> = {
   members: 'Mitglieder',
   'membership-kinds': 'Mitgliedsarten',
   board: 'Vorstand',
@@ -44,7 +44,7 @@ function kindOf(e: AuditEntry): AuditKind {
   return e.method === 'GET' || e.method === 'HEAD' ? 'READ' : 'WRITE';
 }
 
-export function areaOf(e: AuditEntry): string {
+function areaOf(e: AuditEntry): string {
   return e.route.split('/')[3] ?? '';
 }
 
@@ -86,7 +86,7 @@ export function auditWhat(e: AuditEntry, nameOf: (memberId: string) => string | 
   return parts.join(' › ') || 'Liste';
 }
 
-export function auditAction(e: AuditEntry): string {
+function auditAction(e: AuditEntry): string {
   return kindOf(e) === 'EXPORT' ? 'Daten exportiert' : (ACTIONS[e.method] ?? e.method);
 }
 

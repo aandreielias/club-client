@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { backStack, bus, session } from '../../lib/container';
+  import { backStack, bus, permissions } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
-  import { ADMIN_BOARD } from '../../lib/types';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
@@ -62,7 +61,7 @@
       {#if !office.enabled}<Tag tone="gray">Nicht besetzt</Tag>{/if}
     {/snippet}
     {#snippet actions()}
-      {#if !edit.form && session.hasRole(...ADMIN_BOARD) && boardSettings.value}
+      {#if !edit.form && permissions.isManager && boardSettings.value}
         <Button icon="edit" onclick={() => edit.edit(new OfficeSettingForm(boardSettings.value!, office.office))}>Bearbeiten</Button>
         {#if !SEEDED_OFFICES.includes(office.office)}
           <Button variant="danger" icon="delete" busy={deleteAction.busy} onclick={() => remove(office.label)}>Löschen</Button>

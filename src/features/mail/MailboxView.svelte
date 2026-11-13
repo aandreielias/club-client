@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { backStack, bus, session } from '../../lib/container';
+  import { backStack, bus, permissions } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
-  import { ADMIN_BOARD, ROLE_LABELS } from '../../lib/types';
+  import { ROLE_LABELS } from '../../lib/types';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
@@ -52,7 +52,7 @@
 {#if mailbox}
   <Detail title={edit.form ? 'Postfach bearbeiten' : mailbox.address}>
     {#snippet actions()}
-      {#if !edit.form && session.hasRole(...ADMIN_BOARD)}
+      {#if !edit.form && permissions.isManager}
         <Button icon="edit" onclick={() => edit.edit(MailboxForm.edit(mailbox))}>Bearbeiten</Button>
         <Button variant="danger" icon="delete" tooltip="Postfach aus der App entfernen" onclick={() => remove(mailbox.address)}>Löschen</Button>
       {/if}

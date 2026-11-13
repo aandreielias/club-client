@@ -16,7 +16,7 @@ const DAY = 86_400_000;
 
 /** `inUse` is computed when listed. */
 export type StoredType = MeetingType;
-export const BOARD_OFFICES: OfficeKind[] = ['CHAIR', 'VICE_CHAIR', 'TREASURER', 'SECRETARY', 'BOARD_MEMBER'];
+const BOARD_OFFICES: OfficeKind[] = ['CHAIR', 'VICE_CHAIR', 'TREASURER', 'SECRETARY', 'BOARD_MEMBER'];
 const CHAIRS: OfficeKind[] = ['CHAIR', 'VICE_CHAIR'];
 export const ALL_MAJORITIES: Majority[] = ['SIMPLE', 'TWO_THIRDS', 'THREE_QUARTERS'];
 /** server: V51__meeting_types.sql — the seeded kinds. */

@@ -4,7 +4,7 @@ import { CatalogStore } from '../../lib/state/CatalogStore.svelte';
 import type { Member, MembershipType } from '../../lib/types';
 import { SEEDED_MEMBERSHIP_KINDS, type MembersApi, type MembershipKind, type MembershipKindInput } from './MembersApi';
 
-export const MEMBERSHIP_KINDS_CHANGED = liveEvent<Record<string, never>>('members.membership-kinds-changed');
+const MEMBERSHIP_KINDS_CHANGED = liveEvent<Record<string, never>>('members.membership-kinds-changed');
 
 /** 'NONE' = no club member (e.g. parents). */
 export type MembershipChoice = MembershipType | 'NONE';

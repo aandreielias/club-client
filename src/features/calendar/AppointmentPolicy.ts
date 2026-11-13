@@ -40,7 +40,7 @@ export class AppointmentPolicy extends PlanningPolicy {
 
   /** Coaches of the team, admin and board: remind, mark presence, see the team's statistics (server: AttendanceHandlers.requireRunsTeam). */
   runsTeam(appointment: Appointment): boolean {
-    return this.permissions.isManager || (appointment.teamId !== null && this.permissions.canManage(appointment.teamId));
+    return this.permissions.canManage(appointment.teamId);
   }
 
   /** Taken back by who may edit it (server: CalendarHandlers.restore). */
