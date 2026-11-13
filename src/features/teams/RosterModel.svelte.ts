@@ -44,7 +44,7 @@ export class RosterModel {
     if (!updated) return false;
     this.roster.set(updated);
     // Other pages resolve names and team roles from the cached roster.
-    this.directory.forgetRoster(this.teamId);
+    this.directory.storeRoster(updated);
     return true;
   }
 }

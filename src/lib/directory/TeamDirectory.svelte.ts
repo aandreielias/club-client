@@ -151,6 +151,19 @@ export class TeamDirectory {
     this.#teamsLoad = null;
   }
 
+  /** Keeps a roster the caller already has (e.g. the answer of a roster write). */
+  storeRoster(roster: Roster): void {
+    this.#rosters[roster.team.id] = roster;
+    this.#pendingRosters.set(roster.team.id, Promise.resolve(roster));
+    this.remember(roster.entries);
+  }
+
+  /** Forgets the member list and names (a member was invited or deactivated) so the next lookup reloads them. */
+  forgetMembers(): void {
+    this.#membersLoad = null;
+    this.#namesLoad = null;
+  }
+
   /** Drops one cached roster (e.g. after a membership change) so the next lookup reloads it. */
   forgetRoster(teamId: string): void {
     this.#pendingRosters.delete(teamId);

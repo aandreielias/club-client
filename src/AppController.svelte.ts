@@ -14,6 +14,7 @@ import { SHORTCUTS, type CommandId } from './shortcuts';
 import type { EventBus } from './lib/bus';
 import type { BackStack } from './lib/navigation/BackStack.svelte';
 import { APP_ERROR, NAVIGATE, WINDOW_CLOSE, WINDOW_OPEN } from './channels';
+import { MEMBER_DEACTIVATED, MEMBER_INVITED } from './features/members/events';
 import { MEMBERSHIP_CHANGED } from './features/teams/events';
 import { CLUB_CHANGED } from './lib/session/events';
 import { Router, type RouteParams } from './lib/router/Router.svelte';
@@ -144,6 +145,8 @@ export class AppController {
         directory.forgetRoster(data.teamId);
         if (data.memberId === session.me?.member.id) void session.loadMe();
       }).unsubscribe,
+      bus.subscribe(MEMBER_INVITED, () => directory.forgetMembers()).unsubscribe,
+      bus.subscribe(MEMBER_DEACTIVATED, () => directory.forgetMembers()).unsubscribe,
       bus.subscribe(CLUB_CHANGED, ({ data }) => session.setClub(data.club)).unsubscribe,
       detachKeyboard,
       removeCommands,

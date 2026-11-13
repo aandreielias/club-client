@@ -54,6 +54,7 @@ export class CatalogStore<K extends string, T extends CatalogItem<K>, I> extends
   /** New order from a dragged list (see saveOrder), then reloads. */
   async reorder(keys: readonly string[]): Promise<void> {
     await saveOrder(keys, this.value, (item, sort) => this.writes.save(item.key, { ...CatalogStore.input<I>(item), sort }));
+    // Once after all writes; the live events of each write may not arrive (socket down).
     await this.load();
   }
 

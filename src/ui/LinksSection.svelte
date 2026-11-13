@@ -22,9 +22,12 @@
    */
   let { model, editable }: { model: LinksModel; editable: boolean } = $props();
 
-  // Renamed or deleted items and files show up without a reload.
-  useBus(bus, [ITEM_CHANGED, FILES_CHANGED], () => {
-    if (!model.editing && !model.save.busy) void model.load();
+  // Renamed or deleted items and files show up without a reload; changes to other items and files fetch nothing.
+  const reload = () => !model.editing && !model.save.busy && void model.load();
+  useBus(bus, ITEM_CHANGED, ({ data }) => model.links.value?.needs.some((n) => n.itemId === data.itemId) && reload());
+  useBus(bus, FILES_CHANGED, ({ data }) => {
+    const files = model.links.value?.files ?? [];
+    if (files.some((f) => (data.fileId ? f.id === data.fileId : f.folderId === data.folderId))) reload();
   });
 
   async function download(file: FileRef) {
