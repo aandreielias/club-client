@@ -44,6 +44,7 @@ export const MEETING_MESSAGES: MessageCatalog = {
   'meeting-type.notice-invalid': 'Die Einladungsfrist liegt zwischen 0 Stunden und einem Jahr.',
   'meeting-type.quorum-invalid': 'Die Beschlussfähigkeit wählen.',
   'meeting-type.grace-invalid': 'Die Wartezeit liegt zwischen 1 und 1440 Minuten.',
+  'meeting-type.invitees-in-use': 'Es gibt Sitzungen dieser Art. Ob sie gewählte Personen einlädt, bleibt deshalb wie es ist.',
   'meeting-type.invitees-invalid': 'Mindest- und Höchstzahl der Eingeladenen liegen zwischen 1 und 50, die Mindestzahl nicht über der Höchstzahl.',
   'meeting-type.majorities-missing': 'Mindestens eine Mehrheit wählen.',
   'meeting-type.conveners-invalid': 'Mindestens eine Funktion des Vorstands beruft ein.',

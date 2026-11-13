@@ -154,6 +154,7 @@
   "meeting-type.grace-invalid",
   "meeting-type.in-use",
   "meeting-type.invitation-label-invalid",
+  "meeting-type.invitees-in-use",
   "meeting-type.invitees-invalid",
   "meeting-type.key-invalid",
   "meeting-type.label-invalid",

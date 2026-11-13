@@ -1271,6 +1271,9 @@ export class MockMeetings {
     if (minInvitees != null && maxInvitees != null && minInvitees > maxInvitees) fail(400, 'meeting-type.invitees-invalid');
     // server: the Schlichtungseinrichtung stays and keeps inviting chosen people
     if (key === ARBITRATION && (body.archived || !chosen)) fail(409, 'meeting-type.fixed');
+    const before = this.types.data.find((t) => t.key === key);
+    if (before && (before.invitees === 'CHOSEN') !== chosen && this.meetings.data.some((m) => m.kind === key))
+      fail(409, 'meeting-type.invitees-in-use');
     const type: StoredType = {
       key: key ?? generatedKey('TYPE'),
       label,
@@ -1376,9 +1379,10 @@ export class MockMeetings {
     return meeting && this.maySee(viewer, meeting) ? meeting : fail(404, 'meeting.not-found');
   }
 
-  /** server: MeetingAccess.mayManage — conveners (admins always), the secretary's office, and the meeting's picked Vorsitz. */
+  /** server: MeetingAccess.mayManage — conveners (admins always), the secretary's office (not for chosen people), and the picked Vorsitz. */
   private runs(viewer: Member, m: StoredMeeting): boolean {
-    return this.mayConvene(viewer, m.kind) || this.offices(viewer).includes('SECRETARY') || m.chairId === viewer.id;
+    const chosen = this.types.data.find((t) => t.key === m.kind)?.invitees === 'CHOSEN';
+    return this.mayConvene(viewer, m.kind) || (!chosen && this.offices(viewer).includes('SECRETARY')) || m.chairId === viewer.id;
   }
 
   private managed(viewer: Member, id: string): StoredMeeting {
