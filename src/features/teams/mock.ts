@@ -119,6 +119,8 @@ export class MockTeams {
 
   /** server: TeamHandlers.requestPlayer — to admin and board. */
   requestPlayer(viewer: Member, teamId: string, body: Record<string, any>): void {
+    // server: TeamHandlers.requestPlayer - admin and board add players themselves.
+    if (this.people.hasRole(viewer, ADMIN_BOARD)) fail(403, 'access.denied');
     const team = this.people.teams.data.find((t) => t.id === teamId) ?? fail(404, 'team.not-found');
     if (!coaches(this.people.teamRoles(viewer.id)[teamId])) fail(404, 'team.not-found');
     const note = typeof body.note === 'string' && body.note.trim() ? body.note.trim() : null;
