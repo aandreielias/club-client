@@ -182,7 +182,7 @@ export interface Person {
   name: string;
 }
 
-/** A guest from outside (no login): invited by e-mail; `email` only for who runs the meeting. */
+/** A guest from outside with a guest account (sees only their meetings); `email` only for who runs the meeting. */
 export interface Guest {
   id: string;
   name: string;
@@ -196,10 +196,18 @@ export interface Chosen {
   parties: Person[];
 }
 
-/** server: InviteesBody; a guest without id is new. */
+/** A guest to keep (`id`; names and e-mail stay) or a new guest account (`id` null). */
+export interface GuestInput {
+  id: string | null;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+/** server: InviteesBody */
 export interface InviteesInput {
   memberIds: string[];
-  guests: { id: string | null; name: string; email: string }[];
+  guests: GuestInput[];
   partyIds: string[];
 }
 

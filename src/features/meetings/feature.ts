@@ -17,8 +17,9 @@ export const meetingsFeature: Feature = {
   id: 'meetings',
   routes: [
     // Voters (extraordinary and honorary members) see general meetings, the board its own meetings too (server: MeetingAccess.maySee).
-    { path: '/meetings', component: MeetingsPage, nav: 'Sitzungen', icon: 'meetings' },
-    detailRoute('/meetings/:id', MeetingView, { href: '/meetings', label: 'Sitzungen' }),
+    // Guests of a chosen meeting too (their own only, server: @GuestAllowed + MeetingAccess.maySee).
+    { path: '/meetings', component: MeetingsPage, nav: 'Sitzungen', icon: 'meetings', guest: true },
+    detailRoute('/meetings/:id', MeetingView, { href: '/meetings', label: 'Sitzungen' }, { guest: true }),
     { path: '/resolutions', component: ResolutionsPage, nav: 'Beschlüsse', icon: 'resolutions' },
     detailRoute('/resolutions/:id', ResolutionView, { href: '/resolutions', label: 'Beschlüsse' }),
     detailRoute('/meeting-types/:key', MeetingTypeView, { href: '/settings/meeting-types', label: 'Sitzungsarten' }, { roles: ADMIN_BOARD }),

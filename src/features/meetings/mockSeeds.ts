@@ -317,9 +317,9 @@ export type StoredMeeting = Omit<
   secretaryId?: string | null;
   /** server: meetings_meeting.created_at (the Anrufung of an arbitration). */
   createdAt?: string;
-  /** CHOSEN types (server: meetings_invitee, meetings_guest, meetings_party). */
+  /** CHOSEN types (server: meetings_invitee, its `guest` flag, meetings_party); `invitees` includes the guests' accounts. */
   invitees?: string[];
-  guests?: { id: string; name: string; email: string }[];
+  guests?: string[];
   parties?: string[];
 };
 /** Counters hold what was voted, `ballots` only who voted (server: meetings_resolution, meetings_ballot). */
@@ -443,8 +443,8 @@ export function seedMeetings(): StoredMeeting[] {
       invitedAt: null,
       createdAt: ago(3 * 24 * 60),
       // One member and one guest named so far; the third is still missing (exactly three before the invitation).
-      invitees: ['ehren'],
-      guests: [{ id: 'guest-huber', name: 'Dr. Maria Huber', email: 'maria.huber@example.at' }],
+      invitees: ['ehren', 'gast-huber'],
+      guests: ['gast-huber'],
       parties: ['trainer', 'spielerin'],
     },
   ];

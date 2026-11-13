@@ -7,10 +7,10 @@
   import MemberChips from './MemberChips.svelte';
   import type { MeetingModel } from './MeetingModel.svelte';
   import { activePeople } from './people';
-  import type { Chosen, Meeting, MeetingType } from './model';
+  import type { Chosen, GuestInput, Meeting, MeetingType } from './model';
 
   /**
-   * Who a meeting of a CHOSEN type invites: members, guests from outside (name and e-mail, invited by mail) and the parties in dispute,
+   * Who a meeting of a CHOSEN type invites: members, guests from outside (a guest account by e-mail) and the parties in dispute,
    * who never see it (server: setInvitees). Who runs it changes them until it opens.
    */
   let { meeting, chosen, type, model }: { meeting: Meeting; chosen: Chosen; type: MeetingType | undefined; model: MeetingModel } = $props();
@@ -19,7 +19,8 @@
   let editing = $state(false);
   let memberIds = $state<string[]>([]);
   let partyIds = $state<string[]>([]);
-  let guests = $state<{ id: string | null; name: string; email: string }[]>([]);
+  /** Kept guests show their name; new ones are typed in. */
+  let guests = $state<(GuestInput & { name?: string })[]>([]);
 
   const editable = $derived(meeting.canManage && (meeting.status === 'DRAFT' || meeting.status === 'INVITED'));
   const count = $derived(chosen.members.length + chosen.guests.length);
@@ -35,13 +36,15 @@
     void people.load();
     memberIds = chosen.members.map((p) => p.memberId);
     partyIds = chosen.parties.map((p) => p.memberId);
-    guests = chosen.guests.map((g) => ({ id: g.id, name: g.name, email: g.email ?? '' }));
+    guests = chosen.guests.map((g) => ({ id: g.id, name: g.name, firstName: '', lastName: '', email: g.email ?? '' }));
     editing = true;
   }
 
   async function save(event: SubmitEvent) {
     event.preventDefault();
-    const given = guests.map((g) => ({ ...g, name: g.name.trim(), email: g.email.trim() })).filter((g) => g.name || g.email);
+    const given = guests
+      .map(({ id, firstName, lastName, email }) => ({ id, firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim() }))
+      .filter((g) => g.id || g.firstName || g.lastName || g.email);
     if (await model.setInvitees({ memberIds, partyIds, guests: given })) editing = false;
   }
 </script>
@@ -56,16 +59,23 @@
       label="Eingeladene Mitglieder"
       placeholder="Mitglied einladen"
     />
-    <Field label="Gäste von außerhalb" hint="Bekommen Einladung und Änderungen per E-Mail; stimmen per Handzeichen ab." group>
+    <Field label="Gäste von außerhalb" hint="Bekommen einen Gastzugang, sehen nur diese Sitzung und stimmen in der App ab." group>
       <div class="stack">
         {#each guests as guest, i (guest.id ?? `neu-${i}`)}
           <div class="row">
-            <input bind:value={guest.name} maxlength="100" placeholder="Name" aria-label="Name des Gasts" />
-            <input type="email" bind:value={guest.email} maxlength="200" placeholder="E-Mail" aria-label="E-Mail des Gasts" />
+            {#if guest.id}
+              <span>{guest.name} <span class="muted small">{guest.email}</span></span>
+            {:else}
+              <input bind:value={guest.firstName} maxlength="100" placeholder="Vorname" aria-label="Vorname des Gasts" />
+              <input bind:value={guest.lastName} maxlength="100" placeholder="Nachname" aria-label="Nachname des Gasts" />
+              <input type="email" bind:value={guest.email} maxlength="200" placeholder="E-Mail" aria-label="E-Mail des Gasts" />
+            {/if}
             <Button size="sm" variant="ghost" icon="delete" tooltip="Gast entfernen" onclick={() => guests.splice(i, 1)} />
           </div>
         {/each}
-        <div><Button size="sm" icon="add" onclick={() => guests.push({ id: null, name: '', email: '' })}>Gast hinzufügen</Button></div>
+        <div>
+          <Button size="sm" icon="add" onclick={() => guests.push({ id: null, firstName: '', lastName: '', email: '' })}>Gast hinzufügen</Button>
+        </div>
       </div>
     </Field>
     <MemberChips

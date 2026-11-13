@@ -188,6 +188,7 @@ export class MockDirectory {
       seedMember('gast', 'Gerd', 'Gast', ['GUEST'], null), // Herbstcup (group phase running)
       seedMember('gast-sommer', 'Sven', 'Sommer', ['GUEST'], null), // Sommerturnier (finished)
       seedMember('gast-fruehling', 'Frieda', 'Frühling', ['GUEST'], null), // Frühlingscup (groups done, no knockout yet)
+      seedMember('gast-huber', 'Maria', 'Huber', ['GUEST'], null), // guest of the Schlichtung
     ];
   }
 
@@ -433,8 +434,17 @@ export class MockDirectory {
   /** server: ActorArgumentResolver.allowsGuest - deny by default. */
   static allowsGuest(request: MockRequest): boolean {
     const path = request.path ?? '';
+    const get = request.method === 'GET';
     return (
-      (request.method === 'GET' && (path === '/api/v1/me' || path === '/api/v1/tournaments' || path.startsWith('/api/v1/tournaments/'))) ||
+      (get && (path === '/api/v1/me' || path === '/api/v1/tournaments' || path.startsWith('/api/v1/tournaments/'))) ||
+      // meeting guests: their meetings, check-in and votes
+      (get &&
+        (path === '/api/v1/meetings' ||
+          path === '/api/v1/meetings/types' ||
+          /^\/api\/v1\/meetings\/(?!resolution-rules$)[^/]+(\/resolutions)?$/.test(path))) ||
+      (get && /^\/api\/v1\/resolutions\/(?!all$)[^/]+$/.test(path)) ||
+      (request.method === 'PUT' && /^\/api\/v1\/meetings\/[^/]+\/presence\/me$/.test(path)) ||
+      (request.method === 'POST' && /^\/api\/v1\/resolutions\/[^/]+\/vote$/.test(path)) ||
       path.startsWith('/api/v1/me/notifications') ||
       path.startsWith('/api/v1/me/notification-preferences')
     );
@@ -535,6 +545,19 @@ export class MockDirectory {
     // server: the application needs the private e-mail (the login) and the birth date; tournament guests no birth date
     if (!body.email) fail(400, 'member.email-required');
     if (!body.birthDate && !guestOnly(roles)) fail(400, 'member.birth-date-required');
+    return this.add(roles, body, viewer);
+  }
+
+  /** server: MembersApi.INVITE_GUEST (internal) — a GUEST account for a meeting; an active guest-only one with the e-mail is reused. */
+  inviteGuest(body: { email: unknown; firstName: unknown; lastName: unknown }): Member {
+    if (!body.email) fail(400, 'member.email-required');
+    const existing = this.members.data.find((m) => m.email === MockDirectory.email(body.email));
+    if (existing) return existing.active && guestOnly(existing.roles) ? existing : fail(409, 'member.email-taken');
+    return this.add(['GUEST'], body);
+  }
+
+  /** `viewer` links the guardian (invitations only). */
+  private add(roles: Role[], body: Record<string, any>, viewer: Member | null = null): Member {
     const email = MockDirectory.email(body.email);
     if (this.members.data.some((m) => m.email === email)) fail(409, 'member.email-taken');
     const member: Member = {
@@ -564,7 +587,7 @@ export class MockDirectory {
     if (body.guardianId != null && !this.members.data.some((m) => m.id === body.guardianId && m.active)) fail(404, 'member.not-found');
     this.members.data.push(member);
     this.saveMembers();
-    if (body.guardianId != null) this.linkGuardian(viewer, member.id, body.guardianId);
+    if (viewer && body.guardianId != null) this.linkGuardian(viewer, member.id, body.guardianId);
     mockServer.events.publish({ type: 'members.member-invited', data: { memberId: member.id }, audience: { roles: ADMIN_BOARD } });
     return member;
   }

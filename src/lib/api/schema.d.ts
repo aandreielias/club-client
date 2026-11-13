@@ -3107,7 +3107,8 @@ export interface components {
         "at.clubserver.meetings.api.MeetingsApi.GuestInput": {
             /** Format: uuid */
             id: string;
-            name: string;
+            firstName: string;
+            lastName: string;
             email: string;
         };
         "at.clubserver.gateway.rest.MeetingsController.AgendaBody": {

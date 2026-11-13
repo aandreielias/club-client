@@ -21,8 +21,6 @@
     (resolutions.value ?? []).filter((r) => !pendingDeletes.isHidden(r.id) && !meeting.agendaItems.some((i) => i.resolutionId === r.id)),
   );
 
-  // Guests of a chosen meeting are in the electorate by their id when they vote.
-  const byHandOnly = $derived(!!meeting.chosen?.guests.some((g) => meeting.electorate.some((p) => p.memberId === g.id)));
   const replace = (updated: Resolution) => resolutions.set((resolutions.value ?? []).map((r) => (r.id === updated.id ? updated : r)));
 </script>
 
@@ -40,7 +38,7 @@
             {#if item.note}<p class="muted small note">{item.note}</p>{/if}
             {#if r}
               <div class="card">
-                <ResolutionCard resolution={r} meetingOpen={meeting.status === 'OPEN'} {byHandOnly} onchanged={replace} />
+                <ResolutionCard resolution={r} meetingOpen={meeting.status === 'OPEN'} onchanged={replace} />
               </div>
             {/if}
           </li>
@@ -51,7 +49,7 @@
     {#if meeting.agendaItems.length}<h3>Weitere Beschlüsse</h3>{/if}
     <div class="stack">
       {#each unlisted as r (r.id)}
-        <ResolutionCard resolution={r} meetingOpen={meeting.status === 'OPEN'} {byHandOnly} onchanged={replace} />
+        <ResolutionCard resolution={r} meetingOpen={meeting.status === 'OPEN'} onchanged={replace} />
       {/each}
     </div>
   {/if}

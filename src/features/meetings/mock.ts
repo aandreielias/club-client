@@ -131,6 +131,12 @@ export class MockMeetings {
     mockServer.events.subscribe((event) => {
       const data = event.data as Record<string, any>;
       if (event.type === 'members.member-erased') {
+        // server: MeetingRepository.dropMember
+        for (const m of this.meetings.data) {
+          m.invitees = m.invitees?.filter((id) => id !== data.memberId);
+          m.guests = m.guests?.filter((id) => id !== data.memberId);
+          m.parties = m.parties?.filter((id) => id !== data.memberId);
+        }
         // server: MeetingRepository.renameMemberLinks
         for (const record of [...this.meetings.data, ...this.resolutions.data]) {
           for (const link of record.links ?? []) if (link.kind === 'MEMBER' && link.id === data.memberId) link.title = MockDirectory.ERASED_NAME;
@@ -387,8 +393,7 @@ export class MockMeetings {
     const meeting = this.managed(viewer, id);
     if (meeting.status !== 'DRAFT') fail(409, 'meeting.already-invited');
     if (new Date().toISOString() > latestInvite(this.type(meeting.kind), meeting.startsAt)) fail(409, 'meeting.notice-too-short');
-    if (this.type(meeting.kind).invitees === 'CHOSEN')
-      this.requireInviteeCount(meeting, (meeting.invitees ?? []).length + (meeting.guests ?? []).length);
+    if (this.type(meeting.kind).invitees === 'CHOSEN') this.requireInviteeCount(meeting, (meeting.invitees ?? []).length);
     meeting.status = 'INVITED';
     meeting.invitedAt = new Date().toISOString();
     this.changed(meeting, 'INVITED');
@@ -397,7 +402,6 @@ export class MockMeetings {
       data: {
         meetingId: meeting.id,
         recipients: this.invited(meeting),
-        guests: meeting.guests ?? [],
         kind: meeting.kind,
         title: meeting.title,
         items: this.invitedItems(meeting),
@@ -428,7 +432,6 @@ export class MockMeetings {
       `Sitzung eröffnet: ${meeting.title}`,
       video ? `Online dabei: ${video}` : 'Die Sitzung hat begonnen.',
       `/meetings/${id}`,
-      meeting.guests,
     );
     return this.dto(viewer, meeting);
   }
@@ -439,13 +442,7 @@ export class MockMeetings {
     if (this.resolutions.data.some((r) => r.meetingId === id && r.status === 'OPEN')) fail(409, 'meeting.votes-open');
     const text = typeof protocol === 'string' ? protocol.trim() || null : null;
     Object.assign(meeting, { status: 'CLOSED', closedAt: new Date().toISOString(), protocol: text ?? meeting.protocol, protocolFinalAt: null });
-    this.notice(
-      this.meetingInvited(meeting),
-      `Sitzung beendet: ${meeting.title}`,
-      'Beschlüsse und Protokoll sind in der App.',
-      `/meetings/${id}`,
-      meeting.guests,
-    );
+    this.notice(this.meetingInvited(meeting), `Sitzung beendet: ${meeting.title}`, 'Beschlüsse und Protokoll sind in der App.', `/meetings/${id}`);
     this.changed(meeting, 'CLOSED');
     return this.dto(viewer, meeting);
   }
@@ -473,7 +470,6 @@ export class MockMeetings {
         recipients: this.meetingInvited(meeting),
         title: meeting.title,
         startsAt: meeting.startsAt,
-        guests: meeting.guests ?? [],
       },
     });
     return this.dto(viewer, meeting);
@@ -492,21 +488,15 @@ export class MockMeetings {
     return this.dto(viewer, meeting);
   }
 
-  /** server: MeetingsApi.MEETING_NOTICE; guests of a chosen meeting by e-mail. */
-  private notice(recipients: readonly string[], title: string, body: string, link: string, guests: StoredMeeting['guests'] = []): void {
-    mockServer.events.publish({ type: 'meetings.meeting-notice', data: { recipients, title, body, link, guests } });
+  /** server: MeetingsApi.MEETING_NOTICE */
+  private notice(recipients: readonly string[], title: string, body: string, link: string): void {
+    mockServer.events.publish({ type: 'meetings.meeting-notice', data: { recipients, title, body, link } });
   }
 
   /** server: MeetingHandlers.noticeChanges — after the invitation the electorate hears of changes. */
   private noticeChange(meeting: StoredMeeting, what: string[]): void {
     if (meeting.status !== 'INVITED' && meeting.status !== 'OPEN') return;
-    this.notice(
-      this.meetingInvited(meeting),
-      `Geändert: ${meeting.title}`,
-      `Geändert: ${what.join(', ')}.`,
-      `/meetings/${meeting.id}`,
-      meeting.guests,
-    );
+    this.notice(this.meetingInvited(meeting), `Geändert: ${meeting.title}`, `Geändert: ${what.join(', ')}.`, `/meetings/${meeting.id}`);
   }
 
   setPresenceMany(viewer: Member, id: string, memberIds: unknown, present: unknown): Meeting {
@@ -557,7 +547,8 @@ export class MockMeetings {
     if (meeting.status === 'DRAFT' || meeting.status === 'CANCELLED' || this.protocolFinalAt(meeting)) fail(409, 'meeting.roles-fixed');
     const chair = (body.chairId as string | null) ?? null;
     const secretary = (body.secretaryId as string | null) ?? null;
-    const guest = (id: string | null) => !!id && (meeting.guests ?? []).some((g) => g.id === id);
+    // server: guests take no role
+    const guest = (id: string | null) => !!id && (meeting.guests ?? []).includes(id);
     if ((chair && (!meeting.presence[chair] || guest(chair))) || (secretary && (!meeting.presence[secretary] || guest(secretary))))
       fail(400, 'meeting.role-not-present');
     if (chair && chair === secretary) fail(400, 'meeting.roles-same');
@@ -566,7 +557,7 @@ export class MockMeetings {
     return this.dto(viewer, meeting);
   }
 
-  /** server: MeetingHandlers.setInvitees — members, guests and parties of a chosen meeting until it opens; newcomers get the invitation. */
+  /** server: MeetingHandlers.setInvitees — members, guests (GUEST accounts) and parties until it opens; newcomers get the invitation, removed ones the cancellation. */
   setInvitees(viewer: Member, id: string, body: Record<string, any>): Meeting {
     const meeting = this.managed(viewer, id);
     if (this.type(meeting.kind).invitees !== 'CHOSEN') fail(409, 'meeting.invitees-not-chosen');
@@ -575,29 +566,31 @@ export class MockMeetings {
       Array.isArray(v) && v.every((x) => typeof x === 'string') ? [...new Set(v as string[])] : fail(400, 'meeting.invitees-invalid');
     const memberIds = ids(body.memberIds ?? []);
     const partyIds = ids(body.partyIds ?? []);
-    if ([...memberIds, ...partyIds].some((m) => !this.people.members.data.some((x) => x.id === m))) fail(400, 'meeting.invitees-invalid');
+    if ([...memberIds, ...partyIds].some((m) => !this.people.name(m))) fail(400, 'meeting.invitees-invalid');
     if (memberIds.some((m) => partyIds.includes(m))) fail(409, 'meeting.invitee-is-party');
     if (!Array.isArray(body.guests)) fail(400, 'meeting.invitees-invalid');
-    const guests = (body.guests as Record<string, unknown>[]).map((g) => {
-      const name = typeof g.name === 'string' ? g.name.trim() : '';
-      const email = typeof g.email === 'string' ? g.email.trim() : '';
-      if (!name || name.length > 100 || /[\r\n]/.test(name)) fail(400, 'meeting.invitees-invalid');
-      if (email.length > 200 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) fail(400, 'meeting.invitees-invalid');
-      if (g.id != null && !(meeting.guests ?? []).some((k) => k.id === g.id)) fail(400, 'meeting.invitees-invalid');
-      return { id: (g.id as string | null) ?? crypto.randomUUID(), name, email };
-    });
-    if (meeting.status === 'INVITED') this.requireInviteeCount(meeting, memberIds.length + guests.length);
-    const newMembers = memberIds.filter((m) => !(meeting.invitees ?? []).includes(m));
-    const newGuests = guests.filter((g) => !(meeting.guests ?? []).some((k) => k.id === g.id));
-    Object.assign(meeting, { invitees: memberIds, guests, parties: partyIds });
+    const given = body.guests as Record<string, unknown>[];
+    if (given.some((g) => g.id != null && !(meeting.guests ?? []).includes(g.id as string))) fail(400, 'meeting.invitees-invalid');
+    const invited = meeting.status === 'INVITED';
+    if (invited) this.requireInviteeCount(meeting, memberIds.length + given.length);
+    // server: MembersApi.INVITE_GUEST — new guests get their account first
+    const guestIds = given.map(
+      (g) => (g.id as string | null) ?? this.people.inviteGuest({ email: g.email, firstName: g.firstName, lastName: g.lastName }).id,
+    );
+    if (new Set(guestIds).size !== guestIds.length || guestIds.some((g) => memberIds.includes(g))) fail(400, 'meeting.invitees-invalid');
+    if (guestIds.some((g) => partyIds.includes(g))) fail(409, 'meeting.invitee-is-party');
+    const before = meeting.invitees ?? [];
+    const now = [...memberIds, ...guestIds];
+    Object.assign(meeting, { invitees: now, guests: guestIds, parties: partyIds });
     this.changed(meeting, 'UPDATED');
-    if (meeting.status === 'INVITED' && (newMembers.length || newGuests.length))
+    const added = now.filter((m) => !before.includes(m));
+    const dropped = before.filter((m) => !now.includes(m));
+    if (invited && added.length)
       mockServer.events.publish({
         type: 'meetings.meeting-invited',
         data: {
           meetingId: meeting.id,
-          recipients: newMembers,
-          guests: newGuests,
+          recipients: added,
           kind: meeting.kind,
           title: meeting.title,
           items: this.invitedItems(meeting),
@@ -605,6 +598,11 @@ export class MockMeetings {
           location: meeting.location,
           videoUrl: meeting.videoUrl,
         },
+      });
+    if (invited && dropped.length)
+      mockServer.events.publish({
+        type: 'meetings.meeting-cancelled',
+        data: { meetingId: meeting.id, recipients: dropped, title: meeting.title, startsAt: meeting.startsAt },
       });
     return this.dto(viewer, meeting);
   }
@@ -649,7 +647,7 @@ export class MockMeetings {
         Schriftführer: meeting.secretaryId ? this.name(meeting.secretaryId) : null,
         Anwesend:
           Object.keys(meeting.presence)
-            .map((m) => meeting.guests?.find((g) => g.id === m)?.name ?? this.name(m))
+            .map((m) => this.name(m))
             .join(', ') || null,
         Beschlussfähig: this.quorate(meeting, this.meetingVoters(meeting)) ? 'ja' : 'nein',
         Agenda: meeting.agenda?.replaceAll('\n', '; ') ?? null,
@@ -898,9 +896,6 @@ export class MockMeetings {
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null;
     if (meeting && mode !== 'HAND' && mode !== 'APP') fail(400, 'resolution.vote-mode-missing');
     if (meeting && meeting.status !== 'OPEN') fail(409, 'resolution.meeting-not-open');
-    // server: guests vote by show of hands only
-    if (meeting && mode === 'APP' && (meeting.guests ?? []).some((g) => this.meetingVoters(meeting).includes(g.id)))
-      fail(409, 'resolution.vote-by-hand');
     if (meeting && !this.quorate(meeting, this.meetingVoters(meeting))) fail(409, 'resolution.not-quorate');
     if (!meeting && Date.parse(r.deadline!) < Date.now() + this.circular.data.minHours * 3_600_000) fail(400, 'resolution.deadline-too-short');
     const voters = this.voters(r);
@@ -1216,7 +1211,7 @@ export class MockMeetings {
   private electorate(m: StoredMeeting): string[] {
     const invited = this.invited(m);
     const type = this.type(m.kind);
-    if (type.voting === 'ALL_INVITED') return type.invitees === 'CHOSEN' ? [...invited, ...(m.guests ?? []).map((g) => g.id)] : invited;
+    if (type.voting === 'ALL_INVITED') return invited;
     const withVote = new Set(this.people.electorate('ASSEMBLY'));
     return invited.filter((id) => withVote.has(id));
   }
@@ -1417,7 +1412,7 @@ export class MockMeetings {
     const voters = this.meetingVoters(m);
     const name = (id: string) => {
       const p = this.people.members.data.find((x) => x.id === id);
-      return p ? `${p.firstName} ${p.lastName}` : (m.guests?.find((g) => g.id === id)?.name ?? '–');
+      return p ? `${p.firstName} ${p.lastName}` : '–';
     };
     const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
     const type = this.type(m.kind);
@@ -1443,8 +1438,13 @@ export class MockMeetings {
       chosen:
         type.invitees === 'CHOSEN'
           ? {
-              members: (invitees ?? []).map((id) => ({ memberId: id, name: name(id) })).sort(byName),
-              guests: (guests ?? []).map((g) => ({ id: g.id, name: g.name, email: runs ? g.email : null })),
+              members: (invitees ?? [])
+                .filter((id) => !(guests ?? []).includes(id))
+                .map((id) => ({ memberId: id, name: name(id) }))
+                .sort(byName),
+              guests: (guests ?? [])
+                .map((id) => ({ id, name: name(id), email: runs ? (this.people.members.data.find((x) => x.id === id)?.email ?? null) : null }))
+                .sort(byName),
               parties: (parties ?? []).map((id) => ({ memberId: id, name: name(id) })).sort(byName),
             }
           : null,
