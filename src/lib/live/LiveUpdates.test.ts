@@ -110,6 +110,22 @@ describe('LiveUpdates', () => {
     expect(sockets).toHaveLength(1);
   });
 
+  it('retries later when asked to, unless stopped meanwhile (logout)', async () => {
+    const { live, sockets, onForbidden } = setup();
+    live.start();
+    await flush();
+    sockets[0].drop(CLOSE_CODES.forbidden);
+    onForbidden.mock.calls[0][0]();
+    await vi.advanceTimersByTimeAsync(options.reconnectMaxMs);
+    expect(sockets).toHaveLength(2);
+
+    sockets[1].drop(CLOSE_CODES.forbidden);
+    onForbidden.mock.calls[1][0]();
+    live.stop();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(sockets).toHaveLength(2);
+  });
+
   it('sends a fresh token before the current one expires', async () => {
     const { live, sockets } = setup();
     live.start();

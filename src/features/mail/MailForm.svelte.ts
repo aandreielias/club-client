@@ -1,5 +1,6 @@
 import { RefList } from '../../lib/records/RefList.svelte';
 import { FormState } from '../../lib/state/FormState.svelte';
+import type { Formatter } from '../../lib/time/Formatter';
 import { settings } from '../../settings';
 import { draftForEditor } from './mailText';
 import type { DraftInput, Mail, MailRef, Mailbox, OutgoingMail } from './model';
@@ -48,7 +49,8 @@ export class MailForm extends FormState<Partial<Record<MailField, string>>> {
     return form;
   }
 
-  static reply(mail: Mail, mailbox: Mailbox | undefined, all = false): MailForm {
+  /** `format`: the club's, so the quoted time is in the club's zone. */
+  static reply(mail: Mail, mailbox: Mailbox | undefined, format: Formatter, all = false): MailForm {
     const form = new MailForm();
     form.mailboxId = mailbox?.id ?? '';
     form.to = [mail.from];
@@ -58,18 +60,18 @@ export class MailForm extends FormState<Partial<Record<MailField, string>>> {
       form.showCc = form.cc.length > 0;
     }
     form.subject = MailForm.prefixed('AW', mail.subject);
-    const quote = `<p>Am ${MailForm.when(mail)} schrieb ${escape(mail.fromName)} &lt;${escape(mail.from)}&gt;:</p><blockquote>${MailForm.content(mail)}</blockquote>`;
+    const quote = `<p>Am ${format.dateTime(mail.sentAt)} schrieb ${escape(mail.fromName)} &lt;${escape(mail.from)}&gt;:</p><blockquote>${MailForm.content(mail)}</blockquote>`;
     form.start(mailbox, quote);
     return form;
   }
 
-  static forward(mail: Mail, mailbox: Mailbox | undefined): MailForm {
+  static forward(mail: Mail, mailbox: Mailbox | undefined, format: Formatter): MailForm {
     const form = new MailForm();
     form.mailboxId = mailbox?.id ?? '';
     form.subject = MailForm.prefixed('WG', mail.subject);
     const header =
       `<p>---------- Weitergeleitete Nachricht ----------<br>Von: ${escape(mail.fromName)} &lt;${escape(mail.from)}&gt;<br>` +
-      `Gesendet: ${MailForm.when(mail)}<br>Betreff: ${escape(mail.subject)}<br>An: ${escape(mail.to.join(', '))}</p>`;
+      `Gesendet: ${format.dateTime(mail.sentAt)}<br>Betreff: ${escape(mail.subject)}<br>An: ${escape(mail.to.join(', '))}</p>`;
     form.start(mailbox, header + MailForm.content(mail));
     return form;
   }
@@ -160,10 +162,6 @@ export class MailForm extends FormState<Partial<Record<MailField, string>>> {
 
   private static content(mail: Mail): string {
     return mail.html ?? textToHtml(mail.body);
-  }
-
-  private static when(mail: Mail): string {
-    return new Date(mail.sentAt).toLocaleString('de-AT', { dateStyle: 'medium', timeStyle: 'short' });
   }
 
   private static prefixed(prefix: string, subject: string): string {

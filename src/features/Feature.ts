@@ -55,6 +55,6 @@ export interface Feature {
   readonly calendar?: Partial<Record<CalendarCategory, CalendarStyle>>;
   /** Sections this feature offers for the start page. */
   readonly home?: HomeSection | readonly HomeSection[];
-  /** Runs while a member is signed in with a complete profile; returns its cleanup. */
-  readonly start?: () => (() => void) | void;
+  /** Runs while a member is signed in with a complete profile; returns its cleanup. `guest`: a guest-only session, start only what guests may load. */
+  readonly start?: (guest: boolean) => (() => void) | void;
 }

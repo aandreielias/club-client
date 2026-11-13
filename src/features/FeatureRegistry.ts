@@ -117,8 +117,8 @@ export class FeatureRegistry {
   }
 
   /** Starts every feature's session work; the returned function stops all of it. */
-  start(): () => void {
-    const stops = this.features.map((f) => f.start?.()).filter((stop): stop is () => void => typeof stop === 'function');
+  start(guest: boolean): () => void {
+    const stops = this.features.map((f) => f.start?.(guest)).filter((stop): stop is () => void => typeof stop === 'function');
     return () => stops.forEach((stop) => stop());
   }
 }

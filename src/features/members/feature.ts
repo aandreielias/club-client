@@ -39,7 +39,8 @@ export const membersFeature: Feature = {
     'office-assign': { component: OfficeAssignView, canOpen: () => memberPolicy.canManageOffices() },
   },
   messages: MEMBER_MESSAGES,
-  start: () => {
+  start: (guest) => {
+    if (guest) return;
     const stops = [boardSettings.start(), membershipKinds.start()];
     return () => stops.forEach((stop) => stop());
   },

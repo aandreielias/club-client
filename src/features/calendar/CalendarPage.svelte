@@ -24,16 +24,16 @@
   import { TASK_CHANGED } from '../tasks/events';
   import { MEETING_CHANGED, RESOLUTION_CHANGED } from '../meetings/events';
   import { TOURNAMENT_CHANGED } from '../tournaments/events';
-  import { APPOINTMENTS_CHANGED } from './events';
+  import { ABSENCES_CHANGED, APPOINTMENTS_CHANGED, RESPONSE_CHANGED } from './events';
   import FeedDialog from './FeedDialog.svelte';
   import MonthView from './MonthView.svelte';
   import { appointmentPolicy as policy, calendarExport } from './services';
   import WeekView from './WeekView.svelte';
 
-  // Every live event that can touch the calendar (appointments, task due dates, meetings, votes, tournaments) reloads it.
+  // Every event that can touch the calendar (appointments, answers, absences, task due dates, meetings, votes, tournaments) reloads it.
   // Its own pane of the split view, or the main page.
   const pane = usePane();
-  const RELOAD_ON = [APPOINTMENTS_CHANGED, TASK_CHANGED, MEETING_CHANGED, RESOLUTION_CHANGED, TOURNAMENT_CHANGED];
+  const RELOAD_ON = [APPOINTMENTS_CHANGED, RESPONSE_CHANGED, ABSENCES_CHANGED, TASK_CHANGED, MEETING_CHANGED, RESOLUTION_CHANGED, TOURNAMENT_CHANGED];
 
   const model = new CalendarModel(calendarSources, session.clock, store, {
     view: (pane.query.get('view') as CalendarView | null) ?? preferences.values.calendarView,

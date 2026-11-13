@@ -54,8 +54,8 @@
 
   /** The linked place's name; a place the member cannot open keeps the generic label. */
   let placeName = $state<string | null>(null);
+  const locationId = $derived(model.tournament.value?.locationId); // a reload of the same place fetches nothing
   $effect(() => {
-    const locationId = model.tournament.value?.locationId;
     placeName = null;
     let current = true; // an older answer must not replace the name of a newer link
     if (locationId)

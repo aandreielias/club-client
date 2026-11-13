@@ -87,8 +87,12 @@
   async function openAssign() {
     const teams = new Set(picked.map((t) => t.teamId));
     const team = teams.size === 1 ? [...teams][0] : null;
-    await directory.loadRosters();
-    people = await directory.candidates(team);
+    try {
+      await directory.loadRosters();
+      people = await directory.candidates(team);
+    } catch (error) {
+      return bus.publish(APP_ERROR, error);
+    }
     assignee = '';
     assigning = true;
   }

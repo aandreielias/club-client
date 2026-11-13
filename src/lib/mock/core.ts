@@ -405,7 +405,7 @@ export class MockDirectory {
     const ids = new Set(listed.map((m) => m.id));
     const items = [...listed].sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName)).map((m) => ({ ...m }));
     const today = this.clock.today();
-    const adultBornBy = `${Number(today.slice(0, 4)) - 18}${today.slice(4)}`;
+    const adultBornBy = `${Number(today.slice(0, 4)) - this.boardSettings.data.guardianUntilAge}${today.slice(4)}`;
     const links = Object.entries(this.wards.data).filter(([g]) => this.members.data.some((m) => m.id === g && m.active));
     return {
       items,

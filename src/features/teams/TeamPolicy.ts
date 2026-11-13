@@ -40,6 +40,6 @@ export class TeamPolicy {
 
   /** Member profiles open for admin/board, the team's coaches and the member themself (server: requireMaySee). */
   canOpenProfile(teamId: string, entry: RosterEntry): boolean {
-    return this.permissions.isManager || this.permissions.isCoachOf(teamId) || entry.memberId === this.session.member.id;
+    return this.permissions.isCoachOf(teamId) || this.permissions.canSeeMember(entry.memberId);
   }
 }

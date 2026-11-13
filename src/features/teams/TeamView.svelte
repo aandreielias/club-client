@@ -81,7 +81,7 @@
     const role = bulkRole;
     if (!role) return;
     for (const entry of picked)
-      if (entry.teamRole !== role && !(await view.attempt(model.assignAction, () => model.assign(entry.memberId, role)))) break;
+      if (entry.teamRole !== role && !(await view.attempt(model.assignAction, () => model.assign(entry.memberId, role)))) return;
     view.notify('Rollen geändert.');
     stopSelecting();
   }

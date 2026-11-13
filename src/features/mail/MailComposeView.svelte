@@ -59,8 +59,8 @@
     if (mode === 'draft') {
       const refs = await mailApi.resolveRefs(refCodes(original.html ?? original.body));
       form = MailForm.fromDraft(original, mailboxId, new Map(refs.map((r) => [r.code, r])));
-    } else if (mode === 'forward') form = MailForm.forward(original, boxOf(mailboxId));
-    else form = MailForm.reply(original, boxOf(mailboxId), mode === 'reply-all');
+    } else if (mode === 'forward') form = MailForm.forward(original, boxOf(mailboxId), session.format);
+    else form = MailForm.reply(original, boxOf(mailboxId), session.format, mode === 'reply-all');
   });
 
   $effect(() => handle.setTitle(title));

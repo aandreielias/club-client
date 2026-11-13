@@ -130,15 +130,16 @@ export class AppController {
   startSession(): () => void {
     const { live, features, session, directory, keyboard, bus } = this.deps;
     live.start();
-    // Own teams' rosters: names and which profiles a coach may open (links, windows by URL).
-    background(directory.loadRosters());
+    const guest = guestOnly(session.member.roles);
+    // Own teams' rosters: names and which profiles a coach may open (links, windows by URL). Guests have none.
+    if (!guest) background(directory.loadRosters());
     const detachKeyboard = keyboard.attach();
     const removeCommands = this.registerGlobalCommands();
     const wake = () => document.visibilityState === 'visible' && live.wake();
     addEventListener('online', wake);
     document.addEventListener('visibilitychange', wake);
     const stops = [
-      features.start(),
+      features.start(guest),
       bus.subscribe(MEMBERSHIP_CHANGED, ({ data }) => {
         directory.forgetRoster(data.teamId);
         if (data.memberId === session.me?.member.id) void session.loadMe();

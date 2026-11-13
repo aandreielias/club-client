@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { MailForm, textToHtml } from './MailForm.svelte';
 import type { Mail, Mailbox } from './model';
+import { Formatter } from '../../lib/time/Formatter';
+
+const format = new Formatter('de-AT', 'Europe/Vienna');
 
 const received: Mail = {
   id: 'm1',
@@ -33,23 +36,23 @@ describe('MailForm', () => {
   });
 
   it('prefills a reply with the sender, AW: and the quoted text', () => {
-    const form = MailForm.reply(received, box(null));
+    const form = MailForm.reply(received, box(null), format);
     expect(form.mailboxId).toBe('box');
     expect(form.to).toEqual(['anna@club.at']);
     expect(form.cc).toEqual([]);
     expect(form.subject).toBe('AW: Training');
     expect(form.html).toContain('schrieb Anna &lt;anna@club.at&gt;:</p><blockquote><p>Zeile 1<br>Zeile 2</p></blockquote>');
-    expect(MailForm.reply({ ...received, subject: 'aw: Training' }, box(null)).subject).toBe('aw: Training');
+    expect(MailForm.reply({ ...received, subject: 'aw: Training' }, box(null), format).subject).toBe('aw: Training');
   });
 
   it('reply to all copies the others, not the own address', () => {
-    const form = MailForm.reply(received, box(null), true);
+    const form = MailForm.reply(received, box(null), format, true);
     expect(form.cc).toEqual(['bob@club.at', 'carl@club.at']);
     expect(form.showCc).toBe(true);
   });
 
   it('forwards with WG: and the original, without recipients', () => {
-    const form = MailForm.forward({ ...received, html: '<p><b>Formatiert</b></p>' }, box(null));
+    const form = MailForm.forward({ ...received, html: '<p><b>Formatiert</b></p>' }, box(null), format);
     expect(form.to).toEqual([]);
     expect(form.subject).toBe('WG: Training');
     expect(form.html).toContain('Weitergeleitete Nachricht');
@@ -57,7 +60,7 @@ describe('MailForm', () => {
   });
 
   it('swaps the signature with the sender while the text is untouched', () => {
-    const form = MailForm.reply(received, box('<p>Alt</p>'));
+    const form = MailForm.reply(received, box('<p>Alt</p>'), format);
     form.chooseMailbox(box('<p>Neu</p>', 'other'));
     expect(form.mailboxId).toBe('other');
     expect(form.html).toMatch(/^<p><\/p><p>-- <\/p><p>Neu<\/p><p>Am /);

@@ -23,7 +23,7 @@ export const tasksFeature: Feature = {
     FOLLOW_UP: (item) => ({ hue: item.inactive ? 'green' : 'brown', label: 'Fällig (aus Sitzung)' }),
   },
   messages: TASK_MESSAGES,
-  start: () => dueReminders.start(),
+  start: (guest) => (guest ? undefined : dueReminders.start()),
   home: { id: 'tasks', label: 'Meine Aufgaben', component: TasksHome },
   links: [{ server: '/tasks/:id', to: ({ id }) => ({ window: { kind: 'task', id } }) }],
 };

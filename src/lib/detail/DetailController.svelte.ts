@@ -64,7 +64,8 @@ export class DetailController {
   /** Runs a model write and reports its error (kept in `action`) as an error toast when it fails. */
   async attempt(action: Action, write: () => Promise<boolean>): Promise<boolean> {
     const ok = await write();
-    if (!ok) this.bus.publish(APP_ERROR, action.error);
+    // false without an error: another write of the same action was still running.
+    if (!ok && action.error !== null) this.bus.publish(APP_ERROR, action.error);
     return ok;
   }
 

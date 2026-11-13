@@ -43,6 +43,17 @@ describe('DetailController', () => {
     expect(errors).toEqual([failure]);
   });
 
+  it('reports nothing when the write was skipped because another one was running', async () => {
+    const { view, errors } = setup(true);
+    const action = new Action();
+    let finish = () => {};
+    const first = action.run(() => new Promise<void>((resolve) => (finish = resolve)));
+    expect(await view.attempt(action, () => action.run(async () => {}))).toBe(false);
+    expect(errors).toEqual([]);
+    finish();
+    await first;
+  });
+
   it('leaves through the window handle only once', () => {
     const { view, close } = setup(true);
     view.leave();

@@ -40,8 +40,9 @@ export const meetingsFeature: Feature = {
       return { hue: assembly ? 'blue' : 'purple', label: assembly ? 'Mitgliederversammlung' : 'Vorstandssitzung' };
     },
   },
-  start: () => {
-    const stops = [meetingTypes.start(), resolutionRules.start()];
+  start: (guest) => {
+    // Guests read meeting types (their meeting's), not the board's circular-vote rules.
+    const stops = guest ? [meetingTypes.start()] : [meetingTypes.start(), resolutionRules.start()];
     return () => stops.forEach((stop) => stop());
   },
   home: [{ id: 'meetings', label: 'Sitzungen', component: MeetingsHome }],

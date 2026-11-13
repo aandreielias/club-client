@@ -41,7 +41,7 @@ export const calendarFeature: Feature = {
     'holiday-new': { component: HolidayCreateView, roles: ADMIN_BOARD },
     'absence-new': { component: AbsenceCreateView },
   },
-  start: () => appointmentTypes.start(),
+  start: (guest) => (guest ? undefined : appointmentTypes.start()),
   calendar: {
     // The reason comes only for who may see it (self, guardians, coaches, admin, board).
     ABSENCE: (item) => ({ title: item.detail ? `${item.title} – ${item.detail}` : item.title, label: 'Abwesend' }),

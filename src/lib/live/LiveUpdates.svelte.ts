@@ -48,8 +48,8 @@ export class LiveUpdates {
     private readonly token: TokenSource,
     private readonly options: LiveOptions,
     private readonly bus: EventBus,
-    /** Called when the server refuses the member (deactivated): the session is over. */
-    private readonly onForbidden: () => void = () => {},
+    /** Called when the server refuses the member (deactivated); `retryLater` starts again after a while unless stopped or started meanwhile. */
+    private readonly onForbidden: (retryLater: () => void) => void = () => {},
   ) {}
 
   get running(): boolean {
@@ -147,7 +147,11 @@ export class LiveUpdates {
     clearTimeout(this.#reauthTimer);
     if (code === CLOSE_CODES.forbidden) {
       this.stop();
-      this.onForbidden();
+      const stopped = this.#generation;
+      this.onForbidden(() => {
+        if (stopped !== this.#generation) return;
+        this.#reconnectTimer = setTimeout(() => stopped === this.#generation && this.start(), this.options.reconnectMaxMs);
+      });
       return;
     }
     // 4401 (token expired) and network drops: a new connection fetches a fresh token.

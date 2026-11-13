@@ -171,10 +171,9 @@ reportErrors(bus, errors);
 const openSocket: SocketFactory =
   runtime.apiMode === 'http' ? webSocketFactory(runtime.apiUrl, settings.live.path) : async () => (await import('./mock')).createMockSocket();
 
-export const live = new LiveUpdates(openSocket, auth.token, settings.live, bus, () => {
+export const live = new LiveUpdates(openSocket, auth.token, settings.live, bus, (retryLater) => {
   // 4403: the server says access ended. Confirm with /me before ending the session; if /me still works
   // (e.g. birth date still missing), try live updates again later, never in a tight loop.
-  const retryLater = () => setTimeout(() => live.start(), settings.live.reconnectMaxMs);
   api.get('/api/v1/me').then(retryLater, (error) => {
     if (!(error instanceof ProblemError) || (error.status !== 401 && error.status !== 403)) return void retryLater();
     bus.publish(TOAST, { text: 'Dein Zugang ist nicht mehr aktiv.', tone: 'error' });

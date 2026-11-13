@@ -2,6 +2,7 @@
   import { TOAST } from '../../channels';
   import { bus, session } from '../../lib/container';
   import { Action } from '../../lib/state/Action.svelte';
+  import { Resource } from '../../lib/state/Resource.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
   import { settings } from '../../settings';
   import Button from '../../ui/Button.svelte';
@@ -28,12 +29,14 @@
   }
 
   // The mail follows the draft a moment after typing stops; a refused draft keeps the last preview.
-  let mail = $state('');
-  const preview = new Action();
+  // The newest draft's answer wins, also while an older request is still running.
+  let shown = sample();
+  const preview = new Resource(async () => (await session.mailPreview(shown)).html);
   $effect(() => {
     const current = sample();
     const timer = setTimeout(() => {
-      void preview.run(async () => (mail = (await session.mailPreview(current)).html));
+      shown = current;
+      void preview.load();
     }, settings.brand.mailPreviewDebounceMs);
     return () => clearTimeout(timer);
   });
@@ -74,7 +77,7 @@
   </Field>
 
   <h3>So kommt sie an</h3>
-  <iframe class="mail" title="Vorschau der E-Mail" sandbox="" srcdoc={mail}></iframe>
+  <iframe class="mail" title="Vorschau der E-Mail" sandbox="" srcdoc={preview.value ?? ''}></iframe>
   <div class="row">
     <Button busy={testMail.busy} tooltip="Diese Beispiel-E-Mail an deine eigene Adresse senden" onclick={sendTestMail}>Testmail senden</Button>
     <ErrorNote error={testMail.error ?? preview.error} />

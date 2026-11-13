@@ -30,5 +30,5 @@ export const mailFeature: Feature = {
     'mailbox-new': { component: MailboxCreateView, roles: ADMIN_BOARD },
   },
   messages: MAIL_MESSAGES,
-  start: () => mailCenter.start(),
+  start: (guest) => (guest ? undefined : mailCenter.start()),
 };

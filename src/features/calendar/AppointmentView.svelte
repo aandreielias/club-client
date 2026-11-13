@@ -43,8 +43,8 @@
 
   /** The linked place, for its address and map pin; free-text locations have none. */
   let place = $state<Location | null>(null);
+  const locationId = $derived(detail.appointment.value?.locationId); // a reload of the same place fetches nothing
   $effect(() => {
-    const locationId = detail.appointment.value?.locationId;
     place = null;
     let current = true; // an older answer must not replace the place of a newer link
     if (locationId)
