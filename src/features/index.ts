@@ -4,6 +4,7 @@ import { calendarFeature } from './calendar/feature';
 import { FeatureRegistry } from './FeatureRegistry';
 import { NavLayout } from '../lib/navigation/NavLayout';
 import { filesFeature } from './files/feature';
+import { financeFeature } from './finance/feature';
 import { homeFeature } from './home/feature';
 import { inventoryFeature } from './inventory/feature';
 import { locationsFeature } from './locations/feature';
@@ -24,7 +25,7 @@ const navLayout = new NavLayout(
     { id: 'verein', label: 'Verein', icon: 'club', paths: ['/teams', '/members', '/board', '/meetings', '/resolutions', '/locations'] },
     { id: 'ablage', label: 'Ablage', icon: 'archive', paths: ['/files', '/inventory'] },
   ],
-  ['/', '/notifications', '/mail', '/tasks', '/calendar', 'group:events', 'group:verein', 'group:ablage', '/activity'],
+  ['/', '/notifications', '/mail', '/tasks', '/calendar', 'group:events', 'group:verein', 'group:ablage', '/finance', '/activity'],
 );
 
 /**
@@ -38,6 +39,7 @@ export const features = new FeatureRegistry(
     tasksFeature,
     filesFeature,
     inventoryFeature,
+    financeFeature,
     locationsFeature,
     tournamentsFeature,
     meetingsFeature,

@@ -83,9 +83,9 @@
         <dt>Eingeladen</dt>
         <dd>
           {INVITEES_LABELS[type.invitees]}{#if type.invitees === 'CHOSEN' && (type.minInvitees || type.maxInvitees)}
-            ({type.minInvitees === type.maxInvitees
-              ? `genau ${type.minInvitees}`
-              : `${type.minInvitees ?? 1} bis ${type.maxInvitees ?? 'beliebig viele'}`}){/if}
+            {type.minInvitees === type.maxInvitees
+              ? ` (genau ${type.minInvitees})`
+              : ` (${type.minInvitees ?? 1} bis ${type.maxInvitees ?? 'beliebig viele'})`}{/if}
         </dd>
         <dt>Stimmrecht</dt>
         <dd>{VOTING_LABELS[type.voting]}</dd>
@@ -114,7 +114,7 @@
               <span>{noticeText(step.offsetHours)} {stepAnchorText(step, type.steps)}</span>
               <span>{step.system ? SYSTEM_STEP_LABELS[step.system] : step.title}</span>
               <span class="muted small"
-                >{ACTION_KIND_LABELS[step.action]} an {step.audience === 'OFFICE' && step.office
+                >{ACTION_KIND_LABELS[step.action]}: {step.audience === 'OFFICE' && step.office
                   ? boardSettings.label(step.office)
                   : AUDIENCE_LABELS[step.audience]}</span
               >

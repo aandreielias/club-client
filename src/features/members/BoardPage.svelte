@@ -42,16 +42,16 @@
     {#each offices as o (o.id)}
       <li>
         <span class="function">{boardSettings.label(o.office)}</span>
-        <span
+        <span class="holder"
           ><RecordLink kind="member" id={o.memberId} allowed={permissions.canSeeMember(o.memberId)}>{o.name}</RecordLink>{#if o.coopted}
             <Tag tone="orange">Kooptiert</Tag>{/if}</span
         >
-        <span class="muted small"
+        <span class="term muted small"
           >{session.format.date(o.startsOn)} bis {session.format.date(o.termEndsOn)}{#if o.startsOn > today}
             <Tag>Beginnt später</Tag>{/if}</span
         >
         {#if policy.canManageOffices()}
-          <Button size="sm" variant="ghost" busy={model.endAction.busy} onclick={() => end(o)}>Beenden</Button>
+          <span class="end"><Button size="sm" busy={model.endAction.busy} onclick={() => end(o)}>Beenden</Button></span>
         {/if}
       </li>
     {:else}
@@ -114,7 +114,24 @@
   .warnings .danger {
     color: var(--color-danger);
   }
+  /* Phones: function, holder and term stacked, the button on the right. */
   :global([data-layout='compact']) .offices li {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'function end' 'holder end' 'term end';
+    gap: 0 var(--space-md);
+    padding: var(--space-xs) 0;
+  }
+  :global([data-layout='compact']) .function {
+    grid-area: function;
+  }
+  :global([data-layout='compact']) .holder {
+    grid-area: holder;
+  }
+  :global([data-layout='compact']) .term {
+    grid-area: term;
+  }
+  :global([data-layout='compact']) .end {
+    grid-area: end;
+    align-self: center;
   }
 </style>

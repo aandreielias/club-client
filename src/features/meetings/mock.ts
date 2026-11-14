@@ -1062,7 +1062,8 @@ export class MockMeetings {
     Object.assign(r, { status: 'CLOSED', closedAt: new Date().toISOString(), result });
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null;
     if (result === 'PASSED') this.passed(r, meeting);
-    if (!meeting) {
+    if (meeting) this.addToProtocol(r, meeting);
+    else {
       tasks.deadlineDone(`deadline-circular-${r.id}`);
       const word = result === 'PASSED' ? 'angenommen' : result === 'FAILED' ? 'abgelehnt' : 'ohne ausreichende Beteiligung';
       this.notice(
@@ -1074,6 +1075,20 @@ export class MockMeetings {
     }
     this.resolutionChanged(r, 'CLOSED');
     return r;
+  }
+
+  /** server: ResolutionHandlers.addToProtocol — a closed meeting vote is written once into a protocol still being written. */
+  private addToProtocol(r: StoredResolution, m: StoredMeeting): void {
+    const word = r.result === 'PASSED' ? 'angenommen' : r.result === 'FAILED' ? 'abgelehnt' : 'ohne ausreichende Beteiligung';
+    const majority = r.majority === 'SIMPLE' ? 'einfache Mehrheit' : r.majority === 'TWO_THIRDS' ? 'Zweidrittelmehrheit' : 'Dreiviertelmehrheit';
+    const counts = `Ja ${r.yes + (r.analogYes ?? 0)}, Nein ${r.no + (r.analogNo ?? 0)}, Enthaltung ${r.abstain + (r.analogAbstain ?? 0)}`;
+    const line =
+      `Beschluss: ${r.title} – ${word} (${counts}; ${majority}, ${r.voteMode === 'HAND' ? 'Handzeichen' : 'in der App'})` +
+      (r.text ? `\nAntrag: ${r.text}` : '');
+    const protocol = m.protocol ? `${m.protocol}\n\n${line}` : line;
+    if ((m.status !== 'OPEN' && m.status !== 'CLOSED') || this.protocolFinalAt(m) || protocol.length > 20000) return;
+    m.protocol = protocol;
+    this.changed(m, 'UPDATED');
   }
 
   /** server: ResolutionTasks.passed — the task "<Titel> umsetzen" for the named active members, else the board. */

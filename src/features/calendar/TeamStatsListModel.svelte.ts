@@ -32,7 +32,7 @@ export class TeamStatsListModel extends ListModel<MemberStats> {
           { key: 'no', label: 'Absagen', value: (m) => m.no, width: '7rem', align: 'end' },
           {
             key: 'present',
-            label: 'Da',
+            label: 'Anwesend',
             value: (m) => (m.marked ? m.present / m.marked : null),
             format: (m) => (m.marked ? `${m.present} von ${m.marked} (${percent(m.present, m.marked)})` : '–'),
             width: '11rem',

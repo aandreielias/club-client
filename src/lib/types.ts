@@ -65,6 +65,8 @@ export interface Club {
   country: string;
   timeZone: string;
   locale: string;
+  /** ISO 4217 code of the Buchhaltung's amounts (club.yml only). */
+  currency: string;
   website: string | null;
   contactEmail: string | null;
   address: string | null;
@@ -211,7 +213,12 @@ export interface Me {
   wardNames: Record<string, string>;
   /** Guests only: the areas they were invited to, the first one first (server: Me.guestAreas). */
   guestAreas: GuestArea[];
+  /** What the member does in the Buchhaltung, by office and role (server: Me.financeAccess). */
+  financeAccess: FinanceLevel;
 }
+
+/** server: MembersApi.FinanceLevel — NONE, read, read and confirm the audit, keep the books. */
+export type FinanceLevel = 'NONE' | 'READ' | 'AUDIT' | 'WRITE';
 
 export type GuestArea = 'TOURNAMENTS' | 'MEETINGS';
 

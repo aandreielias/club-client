@@ -16,7 +16,7 @@ export class MockTransport implements Transport {
     // JSON round trip like the real wire: no shared references, no Svelte proxies in the tables.
     const wire = body === undefined || body instanceof FormData ? body : JSON.parse(JSON.stringify(body));
     const result = await this.server.handle(method, path, wire, DevAuthProvider.emailFromToken(await this.token()));
-    return result === undefined ? undefined : structuredClone(result);
+    return result === undefined || result instanceof Blob ? result : structuredClone(result);
   }
 
   async upload(path: string, form: FormData, onProgress?: ProgressListener): Promise<unknown> {

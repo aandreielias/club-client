@@ -2,6 +2,8 @@
   import { settings } from '../../settings';
   import { bus, permissions, session, store } from '../../lib/container';
   import { TOAST } from '../../channels';
+  import { BrowserFile } from '../../lib/files/BrowserFile';
+  import { csvText } from '../../lib/files/csv';
   import { Action } from '../../lib/state/Action.svelte';
   import { ZonedClock } from '../../lib/time/ZonedClock';
   import Button from '../../ui/Button.svelte';
@@ -29,6 +31,13 @@
     void to;
     if (from && to && from <= to) void stats.load();
   });
+
+  /** The table as shown (sort included) as a CSV file. */
+  function exportCsv() {
+    const columns = stats.columns;
+    const rows = [columns.map((c) => c.label), ...stats.rows.map((m) => columns.map((c) => stats.display(m, c)))];
+    BrowserFile.save(new Blob([csvText(rows)], { type: 'text/csv;charset=utf-8' }), `anwesenheit-${from}-${to}.csv`);
+  }
 
   let rangeOpen = $state(false);
   let rangeFrom = $state(today);
@@ -59,12 +68,15 @@
       {#if stats.data.value}
         <p class="muted small">
           {stats.appointments}
-          {stats.appointments === 1 ? 'Termin' : 'Termine'}. „Da“ zählt die Termine, bei denen die Anwesenheit eingetragen wurde.
+          {stats.appointments === 1 ? 'Termin' : 'Termine'}. „Anwesend“ zählt die Termine, bei denen die Anwesenheit eingetragen wurde.
         </p>
       {/if}
       <DataTable model={stats} rowKey={(m) => m.memberId} toolbar={false} emptyText="Keine Mitglieder im Team." />
     {/if}
-    <div><Button onclick={() => (rangeOpen = true)}>Zeitraum absagen</Button></div>
+    <div class="row">
+      {#if stats.rows.length}<Button icon="download" tooltip="Die Tabelle als CSV-Datei, etwa für Excel" onclick={exportCsv}>CSV</Button>{/if}
+      <Button onclick={() => (rangeOpen = true)}>Zeitraum absagen</Button>
+    </div>
   </section>
 
   <Dialog open={rangeOpen} title="Zeitraum absagen" onclose={() => (rangeOpen = false)}>

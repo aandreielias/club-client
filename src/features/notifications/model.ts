@@ -12,7 +12,8 @@ export type NotificationKind =
   | 'MAIL'
   | 'APPOINTMENT_CHANGED'
   | 'ATTENDANCE'
-  | 'RIDE';
+  | 'RIDE'
+  | 'FEE';
 
 export interface Notification {
   id: string;
@@ -68,6 +69,7 @@ export const NOTIFICATION_KINDS: readonly { value: NotificationKind; label: stri
   { value: 'CHANGE_DECIDED', label: 'Kontoänderungen', hint: 'Wenn der Vorstand über deine Änderungsanfrage entschieden hat.' },
   { value: 'TEAM', label: 'Teams', hint: 'Für Vorstand und Admins: wenn Trainer:innen jemanden ins Team aufnehmen möchten.' },
   { value: 'MAIL', label: 'Neue E-Mails', hint: 'Wenn in deinem Vereins-Postfach oder einem geteilten Postfach eine E-Mail ankommt.' },
+  { value: 'FEE', label: 'Mitgliedsbeiträge', hint: 'Erinnerung, wenn dein Beitrag oder der deiner Kinder überfällig ist.' },
   { value: 'MEETING', label: 'Sitzungen', hint: 'Einladungen, Umlaufbeschlüsse und Erinnerungen an Fristen. Werden immer gesendet.' },
 ];
 

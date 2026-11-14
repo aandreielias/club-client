@@ -11,7 +11,7 @@
   /** Linking records (message, meeting): search like the global search, picked records as removable chips. */
   let { form, label = 'Verknüpfen (optional)' }: { form: RefList; label?: string } = $props();
 
-  const LINKABLE: readonly HitKind[] = ['APPOINTMENT', 'TASK', 'ITEM', 'FILE', 'MEMBER', 'TEAM', 'LOCATION', 'TOURNAMENT', 'MEETING'];
+  const LINKABLE: readonly HitKind[] = ['APPOINTMENT', 'TASK', 'ITEM', 'FILE', 'MEMBER', 'TEAM', 'LOCATION', 'TOURNAMENT', 'MEETING', 'AUDIT'];
   let found = new Map<string, { kind: RefKind; id: string; title: string }>();
 
   async function search(query: string) {

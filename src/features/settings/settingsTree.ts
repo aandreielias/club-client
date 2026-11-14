@@ -21,6 +21,7 @@ export type SectionId =
   | 'files'
   | 'tasks'
   | 'mailboxes'
+  | 'finance'
   | 'audit';
 
 export interface SettingsTab {
@@ -80,7 +81,12 @@ const SETTINGS_TREE: readonly SettingsGroup[] = [
         tabs: [
           { id: 'club', label: 'Verein', icon: 'club', keywords: 'name adresse website kontakt zvr saison' },
           { id: 'brand', label: 'Erscheinungsbild', icon: 'brand', keywords: 'logo farben schrift marke favicon design aussehen ecken' },
-          { id: 'templates', label: 'Vorlagen', icon: 'document', keywords: 'einladung protokoll word dotx briefkopf platzhalter' },
+          {
+            id: 'templates',
+            label: 'Vorlagen',
+            icon: 'document',
+            keywords: 'einladung protokoll kassenprüfung bericht word dotx briefkopf platzhalter',
+          },
         ],
       },
       {
@@ -115,6 +121,10 @@ const SETTINGS_TREE: readonly SettingsGroup[] = [
           { id: 'tasks', label: 'Aufgaben', icon: 'tasks', keywords: 'erinnerung fällig frist vorlauf' },
           { id: 'files', label: 'Dateien', icon: 'files', keywords: 'speicherplatz upload kontingent quota gb' },
         ],
+      },
+      {
+        label: 'Buchhaltung',
+        tabs: [{ id: 'finance', label: 'Buchhaltung', icon: 'finance', keywords: 'konten kategorien kassa bank geld einnahmen ausgaben' }],
       },
       { label: 'E-Mail', tabs: [{ id: 'mailboxes', label: 'Postfächer', icon: 'mail', keywords: 'mail e-mail domain adresse limit signatur' }] },
       {

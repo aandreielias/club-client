@@ -1,5 +1,5 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
-import type { Member, MemberList, MembershipType, Role, Roster } from '../../lib/types';
+import type { FinanceLevel, Member, MemberList, MembershipType, Role, Roster } from '../../lib/types';
 
 /** The membership application: names, private e-mail (the login) and birth date; the rest is optional. */
 export interface Invitation {
@@ -106,6 +106,8 @@ export interface OfficeSetting {
   board: boolean;
   /** What it does in meetings: the chair's part, the secretary's, or none (fixed for the seeded chair and secretary). */
   duty: OfficeDuty;
+  /** What its holders do in the Buchhaltung (fixed for the seeded ones: treasurer WRITE, auditors AUDIT). */
+  finance: FinanceLevel;
 }
 
 export type OfficeDuty = 'NONE' | 'CHAIR' | 'SECRETARY';

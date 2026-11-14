@@ -42,7 +42,7 @@ const LINK_LIFETIME_MS = 5 * 60_000;
 const EICAR = 'EICAR-STANDARD-ANTIVIRUS-TEST-FILE';
 const SVG = 'image/svg+xml';
 const LOGO_SLOTS: readonly SettingSlot[] = ['LOGO', 'LOGO_SECONDARY', 'FAVICON', 'MAIL_LOGO'];
-const SLOTS: readonly SettingSlot[] = [...LOGO_SLOTS, 'INVITATION_TEMPLATE', 'PROTOCOL_TEMPLATE'];
+const SLOTS: readonly SettingSlot[] = [...LOGO_SLOTS, 'INVITATION_TEMPLATE', 'PROTOCOL_TEMPLATE', 'AUDIT_TEMPLATE'];
 const OFFICE: Readonly<Record<string, string>> = {
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   dotx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
@@ -709,14 +709,78 @@ export class MockFiles {
     return { slot: row.slot, file, sourceId: row.sourceId, sourceName: source?.name ?? null };
   }
 
-  private systemFolder(): StoredFolder {
-    let folder = this.folders.data.find((f) => f.system);
+  /** server: SystemFileHandlers.folder — a read-only BOARD folder by name, created on first use. */
+  private systemFolder(name = 'Einstellungen'): StoredFolder {
+    let folder = this.folders.data.find((f) => f.system && f.name === name);
     if (!folder) {
-      folder = { ...MockFiles.seedFolders().find((f) => f.system)!, id: crypto.randomUUID() };
+      folder = {
+        id: crypto.randomUUID(),
+        parentId: null,
+        name,
+        kind: 'DOCUMENTS',
+        scope: 'BOARD',
+        teamIds: [],
+        membersCanUpload: false,
+        color: null,
+        coverFileId: null,
+        system: true,
+      };
       this.folders.data.push(folder);
       this.folders.save();
     }
     return folder;
+  }
+
+  /** server: SystemFileHandlers.store — the caller checked its own rights; type check as for uploads. */
+  async storeSystemFile(member: Member, folderName: string, file: Blob): Promise<StoredFile> {
+    if (file.size > limits.maxUploadBytes) fail(413, 'request.too-large');
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const name = file instanceof File ? file.name : 'datei';
+    const detected = MockFiles.detect(bytes, name) ?? fail(400, 'file.type-not-allowed');
+    if (new TextDecoder().decode(bytes.subarray(0, 512)).includes(EICAR)) fail(400, 'file.infected');
+    const folder = this.systemFolder(folderName);
+    const stored: StoredFile = {
+      id: crypto.randomUUID(),
+      folderId: folder.id,
+      name: name.replace(/[^\p{L}\p{N} ._()-]/gu, '_'),
+      contentType: detected.contentType,
+      sizeBytes: file.size,
+      width: null,
+      height: null,
+      hasThumbnail: false,
+      uploadedBy: member.id,
+      taggedMemberIds: [],
+      createdAt: new Date().toISOString(),
+      version: null,
+      settingSource: false,
+    };
+    this.#blobs.set(stored.id, new Blob([bytes], { type: stored.contentType }));
+    this.files.data.push(stored);
+    this.files.save();
+    this.changed(folder, stored.id, 'UPLOADED');
+    return stored;
+  }
+
+  /** server: SystemFileHandlers.systemFile — only files of system folders other than "Einstellungen". */
+  private systemFile(fileId: string): StoredFile {
+    const file = this.files.data.find((f) => f.id === fileId);
+    const folder = file && this.folders.data.find((f) => f.id === file.folderId);
+    return file && folder?.system && folder.name !== 'Einstellungen' ? file : fail(404, 'file.not-found');
+  }
+
+  systemFileLink(fileId: string): DownloadLink {
+    const file = this.systemFile(fileId);
+    return { url: this.objectUrl(file), expiresAt: new Date(Date.now() + LINK_LIFETIME_MS).toISOString() };
+  }
+
+  deleteSystemFile(fileId: string): void {
+    const file = this.files.data.find((f) => f.id === fileId);
+    if (!file) return;
+    this.systemFile(fileId);
+    this.files.data.splice(this.files.data.indexOf(file), 1);
+    this.files.save();
+    this.#blobs.delete(file.id);
+    this.changed(this.folder(file.folderId), file.id, 'DELETED');
   }
 
   private static slot(slot: string): SettingSlot {

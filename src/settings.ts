@@ -573,6 +573,16 @@ export const settings = {
     maxRemindHours: 336,
   },
 
+  finance: {
+    /** server: finance module (Account, Category, Booking, FinanceHandlers) */
+    labelMaxLength: 60,
+    textMaxLength: 200,
+    noteMaxLength: 2000,
+    maxCents: 1_000_000_000,
+    maxRefs: 20,
+    maxReceipts: 10,
+    listCap: 2000,
+  },
   inventory: {
     /** server: inventory module (Item) */
     nameMaxLength: 100,

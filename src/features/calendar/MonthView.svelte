@@ -12,7 +12,10 @@
   import SpanBars from './SpanBars.svelte';
   import { appointmentPolicy as policy } from './services';
 
-  /** Six-week month grid starting Monday; empty space in a day creates an appointment there (managers, coaches). */
+  /**
+   * Six-week month grid starting Monday; empty space in a day creates an appointment there (managers, coaches). On phones the
+   * entries are dots and the tapped day's entries are listed below the grid.
+   */
   let hoverDay = $state<string | null>(null);
   let {
     model,
@@ -27,6 +30,8 @@
   } = $props();
 
   const max = settings.calendar.maxChipsPerDay;
+  let picked = $state<string | null>(null);
+  const shownDay = $derived(picked && model.inAnchorMonth(picked) ? picked : model.inAnchorMonth(model.today) ? model.today : model.anchor);
   const weekdays = $derived(model.days.slice(0, 7));
   const weeks = $derived(Array.from({ length: model.days.length / 7 }, (_, i) => model.days.slice(i * 7, i * 7 + 7)));
 
@@ -51,15 +56,18 @@
       {#each week as day (day)}
         {@const entries = model.singleOn(day)}
         {@const room = Math.max(max - bars.lanes, 1)}
-        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+        <!-- Tapping a day lists it on phones; keyboard users reach each entry directly. -->
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions, a11y_no_noninteractive_element_interactions -->
         <div
           class="cell"
           data-day={day}
           class:outside={!model.inAnchorMonth(day)}
           class:today={day === model.today}
+          class:picked={day === shownDay}
           class:creatable={policy.canCreate()}
           role="group"
           aria-label={session.format.dayHeading(day)}
+          onclick={() => (picked = day)}
           ondblclick={() => createAppointment(model, day)}
           {@attach menu(() => dayMenu(day))}
           class:drop-target={hoverDay === day}
@@ -101,6 +109,14 @@
     </div>
   {/each}
 </div>
+<section class="day-list" aria-label={session.format.dayHeading(shownDay)}>
+  <h3>{session.format.dayHeading(shownDay)}</h3>
+  {#each model.entriesOn(shownDay) as entry (entry.key)}
+    <EntryChip {entry} showTime={!entry.allDay} />
+  {:else}
+    <p class="muted small">Keine Einträge.</p>
+  {/each}
+</section>
 
 <style>
   .cell.drop-target {
@@ -219,11 +235,46 @@
   .more:hover {
     color: var(--color-text);
   }
-  :global([data-layout='compact']) .cell {
-    min-height: 4.5rem;
-    padding: 2px;
-  }
-  :global([data-layout='compact']) .entries :global(.time) {
+  .day-list {
     display: none;
+  }
+  /* Phones: a dot per entry (bars for several days hidden), the tapped day listed below. */
+  :global([data-layout='compact']) .cell {
+    min-height: 3.5rem;
+    padding: 2px;
+    cursor: pointer;
+  }
+  :global([data-layout='compact']) .picked {
+    box-shadow: inset 0 0 0 2px var(--color-accent);
+  }
+  :global([data-layout='compact']) .cells > :global(.bars),
+  :global([data-layout='compact']) .add,
+  :global([data-layout='compact']) .more {
+    display: none;
+  }
+  :global([data-layout='compact']) .entries {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 3px;
+    padding-top: 0;
+  }
+  :global([data-layout='compact']) .entries :global(.chip) {
+    width: 7px;
+    height: 7px;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--chip-text);
+    font-size: 0;
+    pointer-events: none;
+  }
+  :global([data-layout='compact']) .day-list {
+    display: grid;
+    gap: var(--space-xs);
+    margin-top: var(--space-md);
+  }
+  .day-list h3 {
+    margin: 0;
   }
 </style>

@@ -33,6 +33,7 @@ const me: Me = {
   wardIds: [],
   wardNames: {},
   guestAreas: [],
+  financeAccess: 'NONE',
 };
 
 const rosters: Record<string, Roster> = {

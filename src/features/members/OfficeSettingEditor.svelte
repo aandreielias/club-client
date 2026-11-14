@@ -22,6 +22,12 @@
     { value: 'CHAIR', label: 'Wie der Vorsitz (Protokoll freigeben)' },
     { value: 'SECRETARY', label: 'Wie die Schriftführung (Protokoll, Aufgaben)' },
   ] as const;
+  const FINANCE = [
+    { value: 'NONE', label: 'Kein Zugang' },
+    { value: 'READ', label: 'Lesen' },
+    { value: 'AUDIT', label: 'Lesen und prüfen' },
+    { value: 'WRITE', label: 'Buchen' },
+  ] as const;
   const BOARD = [
     { value: 'on', label: 'Gehört zum Vorstand' },
     { value: 'off', label: 'Außerhalb des Vorstands' },
@@ -64,6 +70,9 @@
     </Field>
     <Field group label="In Sitzungen" hint="Wer diese Funktion innehat, übernimmt diese Aufgaben in Sitzungen.">
       <ChoiceGroup name="office-duty" label="In Sitzungen" options={DUTIES} bind:value={form.duty} />
+    </Field>
+    <Field group label="Buchhaltung" hint="Was wer diese Funktion innehat in der Buchhaltung tun darf. Der Vorstand liest immer mit.">
+      <ChoiceGroup name="office-finance" label="Buchhaltung" options={FINANCE} bind:value={form.finance} />
     </Field>
   {/if}
   {#if form.enabled}

@@ -158,6 +158,11 @@
     opacity: 0;
     pointer-events: none;
   }
+  /* When the labels wrap (phones), each line fills the width instead of leaving a ragged end. */
+  .segmented:not(.icon-only) label {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
   .segmented:disabled label {
     opacity: 0.5;
     cursor: default;

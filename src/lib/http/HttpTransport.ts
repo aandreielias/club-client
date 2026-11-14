@@ -17,7 +17,9 @@ export class HttpTransport implements Transport {
     const response = await this.fetch(method, path, headers, body);
     let data: any;
     try {
-      data = response.headers.get('Content-Type')?.includes('json') ? await response.json() : undefined;
+      const type = response.headers.get('Content-Type');
+      // Files (exports) come as a Blob; a body without type (204) as nothing.
+      data = type?.includes('json') ? await response.json() : response.ok && type ? await response.blob() : undefined;
     } catch {
       // A broken body (proxy error page, cut connection) is a failure like any other, never a raw SyntaxError.
       if (response.ok) throw new ProblemError(502, 'internal', response.headers.get(HttpTransport.CORRELATION_HEADER));

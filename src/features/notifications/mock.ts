@@ -21,6 +21,7 @@ const KINDS: readonly NotificationKind[] = [
   'RIDE',
   'TASK_ACTIVITY',
   'TEAM',
+  'FEE',
 ];
 const MAX_LISTED = 100;
 
@@ -233,6 +234,9 @@ export class MockNotifications {
           data.subject,
           `/mail/${data.mailboxId}/${data.mailId}`,
         );
+        break;
+      case 'finance.fee-reminder':
+        this.notify(data.recipients, 'FEE', data.title, data.body, data.link);
         break;
       case 'members.change-decided':
         this.notify(

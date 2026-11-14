@@ -1,3 +1,4 @@
+import { session } from '../../lib/container';
 import { ADMIN_BOARD } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
 import { invitesVoters } from './model';
@@ -13,14 +14,17 @@ import ResolutionView from './ResolutionView.svelte';
 import ResolutionsPage from './ResolutionsPage.svelte';
 import { MEETING_MESSAGES } from './messages';
 
+/** Ordinary members only ever get empty lists: the areas show for voters and the board (links to a meeting still open its window). */
+const seesMeetings = () => !!session.me?.member.voter || session.hasRole(...ADMIN_BOARD);
+
 export const meetingsFeature: Feature = {
   id: 'meetings',
   routes: [
     // Voters (extraordinary and honorary members) see general meetings, the board its own meetings too (server: MeetingAccess.maySee).
     // Guests of a chosen meeting too (their own only, server: @GuestAllowed + MeetingAccess.maySee).
-    { path: '/meetings', component: MeetingsPage, nav: 'Sitzungen', icon: 'meetings', guest: 'MEETINGS' },
+    { path: '/meetings', component: MeetingsPage, nav: 'Sitzungen', icon: 'meetings', guest: 'MEETINGS', visible: seesMeetings },
     detailRoute('/meetings/:id', MeetingView, { href: '/meetings', label: 'Sitzungen' }, { guest: 'MEETINGS' }),
-    { path: '/resolutions', component: ResolutionsPage, nav: 'Beschlüsse', icon: 'resolutions' },
+    { path: '/resolutions', component: ResolutionsPage, nav: 'Beschlüsse', icon: 'resolutions', visible: seesMeetings },
     detailRoute('/resolutions/:id', ResolutionView, { href: '/resolutions', label: 'Beschlüsse' }),
     detailRoute('/meeting-types/:key', MeetingTypeView, { href: '/settings/meeting-types', label: 'Sitzungsarten' }, { roles: ADMIN_BOARD }),
   ],

@@ -27,6 +27,8 @@ export interface FeatureRoute {
   icon?: IconName;
   /** Only members with one of these roles see and open the route. */
   roles?: readonly Role[];
+  /** A further check beyond roles (e.g. an office's Buchhaltung level); read reactively. */
+  visible?: () => boolean;
   /** Shown at the bottom of the sidebar (above "Abmelden") instead of in the reorderable main list. */
   navFooter?: boolean;
   /** Also for guests, who otherwise see no route (server: ActorArgumentResolver.allowsGuest): all of them, or those invited to the area. */

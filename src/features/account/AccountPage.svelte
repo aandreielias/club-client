@@ -16,6 +16,7 @@
   import FamilySection from '../members/FamilySection.svelte';
   import { OwnChangeRequests } from './OwnChangeRequests.svelte';
   import HeldItemsSection from '../members/HeldItemsSection.svelte';
+  import MyFeesSection from '../finance/MyFeesSection.svelte';
   import { BrowserFile } from '../../lib/files/BrowserFile';
 
   const savePhone = new Action();
@@ -84,6 +85,7 @@
   <FamilySection memberId={member.id} firstName={member.firstName} self parent={member.roles.includes('PARENT')} />
 
   <HeldItemsSection memberId={member.id} title="Bei mir" note="Vor Terminen, die diese Sachen brauchen, bekommst du eine Erinnerung." />
+  <MyFeesSection history />
 
   <h2>Telefon</h2>
   <form class="stack narrow" onsubmit={submitPhone}>

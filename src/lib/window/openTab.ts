@@ -16,3 +16,16 @@ export async function openTab(url: Promise<string | null>): Promise<void> {
     throw error;
   }
 }
+
+/** A file through its short-lived link: presigned server links (own disposition) open in a tab, blob links (mock) download by name. */
+export async function downloadLink(url: Promise<string>, name: string): Promise<void> {
+  let blobUrl: string | null = null;
+  await openTab(url.then((u) => (u.startsWith('blob:') ? ((blobUrl = u), null) : u)));
+  if (!blobUrl) return;
+  const anchor = document.createElement('a');
+  anchor.href = blobUrl;
+  anchor.download = name;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+}

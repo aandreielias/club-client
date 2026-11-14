@@ -9,6 +9,7 @@ import MembershipSection from '../members/MembershipSection.svelte';
 import NotificationSettingsSection from '../notifications/NotificationSettingsSection.svelte';
 import HolidaysSection from '../calendar/HolidaysSection.svelte';
 import FileSettingsSection from '../files/FileSettingsSection.svelte';
+import FinanceSettingsSection from '../finance/FinanceSettingsSection.svelte';
 import TaskSettingsSection from '../tasks/TaskSettingsSection.svelte';
 import AppearanceSection from './AppearanceSection.svelte';
 import AuditSection from './AuditSection.svelte';
@@ -42,5 +43,6 @@ export const SETTINGS_SECTIONS: Record<SectionId, Component> = {
   files: FileSettingsSection,
   tasks: TaskSettingsSection,
   mailboxes: MailboxesSection,
+  finance: FinanceSettingsSection,
   audit: AuditSection,
 };

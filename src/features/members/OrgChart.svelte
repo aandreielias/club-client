@@ -6,7 +6,7 @@
   import Tag from '../../ui/Tag.svelte';
   import { MEMBERSHIP_CHANGED, TEAMS_CHANGED } from '../teams/events';
   import { MEMBER_DEACTIVATED, MEMBER_INVITED, OFFICES_CHANGED } from './events';
-  import { orgLayers, OrgChartModel, type OrgLabels } from './OrgChartModel.svelte';
+  import { NO_TEAM, orgLayers, OrgChartModel, type OrgLabels } from './OrgChartModel.svelte';
   import { boardSettings, memberPolicy, membershipKinds, membersApi } from './services';
 
   /**
@@ -43,8 +43,8 @@
             <div
               class="cell"
               class:wide={!layer.byTeam}
-              class:linked={layer.byTeam && layers[li - 1]?.byTeam}
-              class:feeds={layer.byTeam && layers[li + 1]?.byTeam}
+              class:linked={layer.byTeam && !!layers[li - 1]?.groups.find((g) => g.key === group.key)?.cards.length}
+              class:feeds={layer.byTeam && layers[li + 1]?.byTeam && group.cards.length > 0}
             >
               {#if group.title}<h3 class="team">
                   {group.title}{#if group.subtitle}<span class="muted">&nbsp;{group.subtitle}</span>{/if}
@@ -72,7 +72,8 @@
                     {/if}
                   </li>
                 {:else}
-                  <li class="muted small">{layer.byTeam ? 'Niemand' : 'Noch keine Funktionen eingetragen.'}</li>
+                  <!-- The shared "Ohne Team" column stays empty in the layer that has nobody outside a team. -->
+                  {#if group.key !== NO_TEAM}<li class="muted small">{layer.byTeam ? 'Niemand' : 'Noch keine Funktionen eingetragen.'}</li>{/if}
                 {/each}
               </ul>
             </div>

@@ -162,10 +162,6 @@
     flex: none;
     padding: 2px;
   }
-  .between {
-    justify-content: space-between;
-    align-items: center;
-  }
   .between h3 {
     margin: 0;
   }

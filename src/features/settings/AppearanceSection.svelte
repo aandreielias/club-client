@@ -30,24 +30,22 @@
     />
   </Field>
 
-  <div class="grid-2">
-    <Field label="Schriftgröße" group>
-      <ChoiceGroup
-        name="font-size"
-        label="Schriftgröße"
-        options={options(preferences.appearance.fontSizes)}
-        bind:value={() => preferences.values.fontSize, (v) => v && preferences.set('fontSize', v)}
-      />
-    </Field>
-    <Field label="Dichte" group>
-      <ChoiceGroup
-        name="density"
-        label="Dichte"
-        options={options(preferences.appearance.densities)}
-        bind:value={() => preferences.values.density, (v) => v && preferences.set('density', v)}
-      />
-    </Field>
-  </div>
+  <Field label="Schriftgröße" group>
+    <ChoiceGroup
+      name="font-size"
+      label="Schriftgröße"
+      options={options(preferences.appearance.fontSizes)}
+      bind:value={() => preferences.values.fontSize, (v) => v && preferences.set('fontSize', v)}
+    />
+  </Field>
+  <Field label="Dichte" group>
+    <ChoiceGroup
+      name="density"
+      label="Dichte"
+      options={options(preferences.appearance.densities)}
+      bind:value={() => preferences.values.density, (v) => v && preferences.set('density', v)}
+    />
+  </Field>
 
   <Field label="Fenster öffnen" group>
     <ChoiceGroup name="dock" label="Fenster öffnen" options={DOCKS} bind:value={() => windows.dock, (v) => v && windows.setDock(v)} />
@@ -58,5 +56,5 @@
     Animationen reduzieren
   </label>
 
-  <div><Button variant="ghost" onclick={() => preferences.reset()}>Darstellung zurücksetzen</Button></div>
+  <div><Button onclick={() => preferences.reset()}>Darstellung zurücksetzen</Button></div>
 </div>

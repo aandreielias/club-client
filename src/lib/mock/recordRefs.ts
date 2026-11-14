@@ -1,6 +1,7 @@
 // Mock of platform.RecordRefs: a linked record as the actor sees it, with its title.
 import { calendar } from '../../features/calendar/mock';
 import { files } from '../../features/files/mock';
+import { finance } from '../../features/finance/mock';
 import { inventory } from '../../features/inventory/mock';
 import { locations } from '../../features/locations/mock';
 import { tasks } from '../../features/tasks/mock';
@@ -48,6 +49,8 @@ export function resolveRef(
         return titled(locations.get(ref.id).name);
       case 'TOURNAMENT':
         return titled(tournaments.get(viewer, ref.id).name);
+      case 'AUDIT':
+        return titled(finance.audit(viewer, ref.id).title);
       case 'MEETING': {
         const title = meeting(ref.id);
         if (title) return titled(title);

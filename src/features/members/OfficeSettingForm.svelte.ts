@@ -1,6 +1,7 @@
 import { FormState } from '../../lib/state/FormState.svelte';
 import { SEEDED_OFFICES, type BoardSettings, type OfficeDuty, type OfficeInput, type OfficeKind, type OfficeSetting } from './MembersApi';
 import { settings } from '../../settings';
+import type { FinanceLevel } from '../../lib/types';
 
 type Errors = Partial<Record<'label' | 'holders' | 'termYears', string>>;
 
@@ -19,6 +20,7 @@ export class OfficeSettingForm extends FormState<Errors> {
   termYears = $state(3);
   board = $state(false);
   duty = $state<OfficeDuty>('NONE');
+  finance = $state<FinanceLevel>('NONE');
   partners = $state<OfficeKind[]>([]);
   /** '' for a new office (the server makes the key). */
   readonly office: OfficeKind;
@@ -39,6 +41,7 @@ export class OfficeSettingForm extends FormState<Errors> {
       this.termYears = setting.termYears;
       this.board = setting.board;
       this.duty = setting.duty ?? 'NONE';
+      this.finance = setting.finance ?? 'NONE';
     }
     this.partners = partnersOf(settings, office);
   }
@@ -65,6 +68,7 @@ export class OfficeSettingForm extends FormState<Errors> {
       maxHolders: this.maxHolders,
       termYears: this.termYears,
       duty: this.duty,
+      finance: this.finance,
     };
   }
 
@@ -79,6 +83,7 @@ export class OfficeSettingForm extends FormState<Errors> {
       termYears: this.termYears,
       board: this.board,
       duty: this.duty,
+      finance: this.finance,
     };
     return {
       ...settings,

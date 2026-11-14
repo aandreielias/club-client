@@ -44,7 +44,7 @@ export class FeatureRegistry {
   /** Routes the member may open; guests (`guestAreas` not null) only those marked `guest` for all or one of their areas. */
   allowed(hasRole: (...roles: readonly Role[]) => boolean, guestAreas: readonly GuestArea[] | null = null): FeatureRoute[] {
     return this.routes.filter((r) =>
-      guestAreas ? r.guest === true || (!!r.guest && guestAreas.includes(r.guest)) : !r.roles || hasRole(...r.roles),
+      guestAreas ? r.guest === true || (!!r.guest && guestAreas.includes(r.guest)) : (!r.roles || hasRole(...r.roles)) && (!r.visible || r.visible()),
     );
   }
 

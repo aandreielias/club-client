@@ -125,6 +125,9 @@
       {#snippet meta()}
         <Tag tone={STATUS_TONES[t.status]}>{STATUS_LABELS[t.status]}</Tag>
         <span class="muted">{days(t)}</span>
+        {#if t.status === 'GROUPS' && policy.canManage() && model.openGroupMatches}
+          <span class="muted small">KO-Runde nach {model.openGroupMatches} offenen Gruppenspielen</span>
+        {/if}
       {/snippet}
 
       <ErrorNote error={model.action.error} />

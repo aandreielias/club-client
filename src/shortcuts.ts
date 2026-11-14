@@ -43,6 +43,7 @@ export const SHORTCUTS = {
   'nav.tasks': { label: 'Zu den Aufgaben', group: 'Navigation', context: 'global', keys: 'g a', path: '/tasks' },
   'nav.files': { label: 'Zu den Dateien', group: 'Navigation', context: 'global', keys: 'g d', path: '/files' },
   'nav.inventory': { label: 'Zum Inventar', group: 'Navigation', context: 'global', keys: 'g i', path: '/inventory' },
+  'nav.finance': { label: 'Zur Buchhaltung', group: 'Navigation', context: 'global', keys: 'g f', path: '/finance' },
   'nav.locations': { label: 'Zu den Orten', group: 'Navigation', context: 'global', keys: 'g o', path: '/locations' },
   'nav.tournaments': { label: 'Zu den Turnieren', group: 'Navigation', context: 'global', keys: 'g r', path: '/tournaments' },
   'nav.teams': { label: 'Zu den Teams', group: 'Navigation', context: 'global', keys: 'g t', path: '/teams' },

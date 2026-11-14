@@ -52,6 +52,7 @@ describe('TaskPolicy', () => {
       wardIds: ['kid'],
       wardNames: { kid: 'Kind' },
       guestAreas: [],
+      financeAccess: 'NONE',
     };
     const policy = new TaskPolicy(session, new ClubPermissions(session, new TeamDirectory(api, session)));
     expect(policy.isAssigned(task(['kid']))).toBe(true);

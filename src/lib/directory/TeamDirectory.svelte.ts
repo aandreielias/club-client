@@ -1,7 +1,7 @@
 import type { ApiClient } from '../http/ApiClient';
 import { ProblemError } from '../http/ProblemError';
 import type { SessionStore } from '../session/SessionStore.svelte';
-import { displayName, type Member, type MemberList, type Roster, type RosterEntry, type Team, type TeamRole } from '../types';
+import { displayName, guestOnly, type Member, type MemberList, type Roster, type RosterEntry, type Team, type TeamRole } from '../types';
 
 /**
  * Shared lookup of teams, rosters and member names. Feature DTOs carry only ids, so pages resolve
@@ -105,10 +105,10 @@ export class TeamDirectory {
     return this.#membersLoad;
   }
 
-  /** Candidates for a team (its roster) or, for club-wide items, all active members. */
+  /** Candidates for a team (its roster) or, for club-wide items, all active members (no guests). */
   async candidates(teamId: string | null): Promise<readonly Pick<RosterEntry, 'memberId' | 'name'>[]> {
     if (teamId) return (await this.roster(teamId))?.entries ?? [];
-    return (await this.allMembers()).filter((m) => m.active).map((m) => ({ memberId: m.id, name: displayName(m) }));
+    return (await this.allMembers()).filter((m) => m.active && !guestOnly(m.roles)).map((m) => ({ memberId: m.id, name: displayName(m) }));
   }
 
   nameOf(memberId: string, fallback = 'Mitglied'): string {

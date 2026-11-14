@@ -501,6 +501,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/finance/invoices/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["invoice"];
+        put: operations["updateInvoice"];
+        post?: never;
+        delete: operations["deleteInvoice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/fees/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["feeSettings"];
+        put: operations["saveFeeSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/fees/rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["feeRates"];
+        put: operations["saveFeeRates"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/fees/charges/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["charge"];
+        put: operations["adjustCharge"];
+        post?: never;
+        delete: operations["deleteCharge"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/categories/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateCategory"];
+        post?: never;
+        delete: operations["deleteCategory"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/budget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["budget"];
+        put: operations["saveBudget"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/bookings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["booking"];
+        put: operations["update_1"];
+        post?: never;
+        delete: operations["delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/accounts/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateAccount"];
+        post?: never;
+        delete: operations["deleteAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/files/{id}/tags": {
         parameters: {
             query?: never;
@@ -557,7 +685,7 @@ export interface paths {
             cookie?: never;
         };
         get: operations["club"];
-        put: operations["update_1"];
+        put: operations["update_2"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1509,6 +1637,198 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/finance/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["transfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["invoices"];
+        put?: never;
+        post: operations["createInvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/invoices/{id}/pay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["payInvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/fees/charges/{id}/reminder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["remindCharge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/fees/charges/{id}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["payCharge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/fees/charges/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["generateCharges"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["categories"];
+        put?: never;
+        post: operations["createCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["bookings"];
+        put?: never;
+        post: operations["create_7"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/bookings/{id}/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reverse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/bookings/{id}/receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["addReceipt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/audits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["audits"];
+        put?: never;
+        post: operations["confirmAudit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["accounts"];
+        put?: never;
+        post: operations["createAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/files/{id}/versions": {
         parameters: {
             query?: never;
@@ -1646,7 +1966,7 @@ export interface paths {
         };
         get: operations["list_9"];
         put?: never;
-        post: operations["create_7"];
+        post: operations["create_8"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1759,10 +2079,10 @@ export interface paths {
         get: operations["get"];
         put?: never;
         post?: never;
-        delete: operations["delete"];
+        delete: operations["delete_1"];
         options?: never;
         head?: never;
-        patch: operations["update_2"];
+        patch: operations["update_3"];
         trace?: never;
     };
     "/api/v1/teams/{teamId}": {
@@ -1775,10 +2095,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["delete_1"];
+        delete: operations["delete_2"];
         options?: never;
         head?: never;
-        patch: operations["update_3"];
+        patch: operations["update_4"];
         trace?: never;
     };
     "/api/v1/tasks/{id}": {
@@ -1791,10 +2111,10 @@ export interface paths {
         get: operations["get_1"];
         put?: never;
         post?: never;
-        delete: operations["delete_2"];
+        delete: operations["delete_3"];
         options?: never;
         head?: never;
-        patch: operations["update_4"];
+        patch: operations["update_5"];
         trace?: never;
     };
     "/api/v1/resolutions/{id}": {
@@ -1807,10 +2127,10 @@ export interface paths {
         get: operations["get_2"];
         put?: never;
         post?: never;
-        delete: operations["delete_3"];
+        delete: operations["delete_4"];
         options?: never;
         head?: never;
-        patch: operations["update_5"];
+        patch: operations["update_6"];
         trace?: never;
     };
     "/api/v1/members/{id}": {
@@ -1839,10 +2159,10 @@ export interface paths {
         get: operations["get_4"];
         put?: never;
         post?: never;
-        delete: operations["delete_4"];
+        delete: operations["delete_5"];
         options?: never;
         head?: never;
-        patch: operations["update_6"];
+        patch: operations["update_7"];
         trace?: never;
     };
     "/api/v1/me/notifications/{id}": {
@@ -1871,10 +2191,10 @@ export interface paths {
         get: operations["get_5"];
         put?: never;
         post?: never;
-        delete: operations["delete_5"];
+        delete: operations["delete_6"];
         options?: never;
         head?: never;
-        patch: operations["update_7"];
+        patch: operations["update_8"];
         trace?: never;
     };
     "/api/v1/locations/{id}": {
@@ -1887,10 +2207,10 @@ export interface paths {
         get: operations["get_6"];
         put?: never;
         post?: never;
-        delete: operations["delete_6"];
+        delete: operations["delete_7"];
         options?: never;
         head?: never;
-        patch: operations["update_8"];
+        patch: operations["update_9"];
         trace?: never;
     };
     "/api/v1/inventory/{id}": {
@@ -1903,10 +2223,10 @@ export interface paths {
         get: operations["get_7"];
         put?: never;
         post?: never;
-        delete: operations["delete_7"];
+        delete: operations["delete_8"];
         options?: never;
         head?: never;
-        patch: operations["update_9"];
+        patch: operations["update_10"];
         trace?: never;
     };
     "/api/v1/folders/{id}": {
@@ -1935,7 +2255,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["delete_8"];
+        delete: operations["delete_9"];
         options?: never;
         head?: never;
         patch: operations["updateFile"];
@@ -1951,10 +2271,10 @@ export interface paths {
         get: operations["get_8"];
         put?: never;
         post?: never;
-        delete: operations["delete_9"];
+        delete: operations["delete_10"];
         options?: never;
         head?: never;
-        patch: operations["update_10"];
+        patch: operations["update_11"];
         trace?: never;
     };
     "/ical/{token}.ics": {
@@ -2197,6 +2517,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/fees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["myFees"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/export": {
         parameters: {
             query?: never;
@@ -2317,6 +2653,102 @@ export interface paths {
             cookie?: never;
         };
         get: operations["held"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/fees/members/{memberId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["memberCharges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/fees/charges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["charges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/bookings/{id}/receipts/{fileId}/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["receiptLink"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/bookings/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["export_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/audits/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["audit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/audits/{id}/report/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auditReport"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2543,7 +2975,23 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["delete_10"];
+        delete: operations["delete_11"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/bookings/{id}/receipts/{fileId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["removeReceipt"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2746,7 +3194,7 @@ export interface components {
         };
         "at.clubserver.tasks.api.TasksApi.Source": {
             /** @enum {string} */
-            kind: "CHANGE_REQUEST" | "RESOLUTION" | "MEETING_REMINDER";
+            kind: "CHANGE_REQUEST" | "RESOLUTION" | "MEETING_REMINDER" | "FINANCE_INVOICE";
             /** Format: uuid */
             id: string;
         };
@@ -2859,7 +3307,7 @@ export interface components {
         };
         "at.clubserver.platform.RecordRefs.RefInput": {
             /** @enum {string} */
-            kind: "TASK" | "APPOINTMENT" | "ITEM" | "FILE" | "MEMBER" | "TEAM" | "LOCATION" | "TOURNAMENT" | "MEETING";
+            kind: "TASK" | "APPOINTMENT" | "ITEM" | "FILE" | "MEMBER" | "TEAM" | "LOCATION" | "TOURNAMENT" | "MEETING" | "AUDIT";
             /** Format: uuid */
             id: string;
         };
@@ -2923,7 +3371,7 @@ export interface components {
         };
         "at.clubserver.platform.RecordRefs.RefDto": {
             /** @enum {string} */
-            kind: "TASK" | "APPOINTMENT" | "ITEM" | "FILE" | "MEMBER" | "TEAM" | "LOCATION" | "TOURNAMENT" | "MEETING";
+            kind: "TASK" | "APPOINTMENT" | "ITEM" | "FILE" | "MEMBER" | "TEAM" | "LOCATION" | "TOURNAMENT" | "MEETING" | "AUDIT";
             /** Format: uuid */
             id: string;
             title: string;
@@ -3200,7 +3648,7 @@ export interface components {
         };
         "at.clubserver.notifications.api.NotificationsApi.Preference": {
             /** @enum {string} */
-            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "CHANGE_DECIDED" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM";
+            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "CHANGE_DECIDED" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM" | "FEE";
             push: boolean;
             email: boolean;
         };
@@ -3305,6 +3753,200 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        "at.clubserver.gateway.rest.FinanceController.InvoiceBody": {
+            counterparty: string;
+            text: string;
+            /** Format: int64 */
+            amountCents: number;
+            /** Format: date */
+            dueOn: string;
+            category: string;
+            note: string;
+        };
+        "at.clubserver.finance.api.FinanceApi.InvoiceDto": {
+            /** Format: uuid */
+            id: string;
+            counterparty: string;
+            text: string;
+            /** Format: int64 */
+            amountCents: number;
+            /** Format: date */
+            dueOn: string;
+            category: string;
+            note: string;
+            /** Format: uuid */
+            bookingId: string;
+            /** Format: uuid */
+            taskId: string;
+            /** Format: uuid */
+            createdBy: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        "at.clubserver.finance.api.FinanceApi.FeeSettings": {
+            category: string;
+            /** Format: int32 */
+            dueDays: number;
+            /** Format: int32 */
+            remindDays: number;
+            instructions: string;
+            holder: string;
+            iban: string;
+            bic: string;
+        };
+        "at.clubserver.finance.api.FinanceApi.FeeRate": {
+            kind: string;
+            /** Format: int64 */
+            cents: number;
+            /** Format: int64 */
+            minorCents: number;
+        };
+        "at.clubserver.gateway.rest.FinanceController.FeeRatesBody": {
+            items: components["schemas"]["at.clubserver.finance.api.FinanceApi.FeeRate"][];
+        };
+        "at.clubserver.finance.api.FinanceApi.FeeRates": {
+            /** Format: int32 */
+            season: number;
+            items: components["schemas"]["at.clubserver.finance.api.FinanceApi.FeeRate"][];
+        };
+        "at.clubserver.gateway.rest.FinanceController.AdjustChargeBody": {
+            /** Format: int64 */
+            amountCents: number;
+            waived: boolean;
+            note: string;
+        };
+        "at.clubserver.finance.api.FinanceApi.ChargeDto": {
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            season: number;
+            /** Format: uuid */
+            memberId: string;
+            kind: string;
+            /** Format: int64 */
+            amountCents: number;
+            /** Format: int64 */
+            paidCents: number;
+            /** @enum {string} */
+            status: "OPEN" | "PARTIAL" | "PAID" | "WAIVED";
+            /** Format: date */
+            dueOn: string;
+            note: string;
+            payments: components["schemas"]["at.clubserver.finance.api.FinanceApi.FeePaymentDto"][];
+            payUrl: string;
+            bankQr: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        "at.clubserver.finance.api.FinanceApi.FeePaymentDto": {
+            /** Format: uuid */
+            bookingId: string;
+            /** Format: date */
+            paidOn: string;
+            /** Format: int64 */
+            amountCents: number;
+            reversed: boolean;
+        };
+        "at.clubserver.gateway.rest.FinanceController.CategoryBody": {
+            label: string;
+            /** @enum {string} */
+            direction: "IN" | "OUT";
+            /** Format: int32 */
+            sort: number;
+            archived: boolean;
+        };
+        "at.clubserver.finance.api.FinanceApi.CategoryDto": {
+            key: string;
+            label: string;
+            /** @enum {string} */
+            direction: "IN" | "OUT";
+            /** Format: int32 */
+            sort: number;
+            archived: boolean;
+            inUse: boolean;
+        };
+        "at.clubserver.finance.api.FinanceApi.BudgetInput": {
+            category: string;
+            /** Format: int64 */
+            plannedCents: number;
+        };
+        "at.clubserver.gateway.rest.FinanceController.BudgetBody": {
+            items: components["schemas"]["at.clubserver.finance.api.FinanceApi.BudgetInput"][];
+        };
+        "at.clubserver.finance.api.FinanceApi.Budget": {
+            /** Format: int32 */
+            season: number;
+            items: components["schemas"]["at.clubserver.finance.api.FinanceApi.BudgetLine"][];
+        };
+        "at.clubserver.finance.api.FinanceApi.BudgetLine": {
+            category: string;
+            /** Format: int64 */
+            plannedCents: number;
+            /** Format: int64 */
+            actualCents: number;
+        };
+        "at.clubserver.gateway.rest.FinanceController.BookingBody": {
+            /** Format: date */
+            bookedOn: string;
+            account: string;
+            category: string;
+            /** Format: int64 */
+            amountCents: number;
+            text: string;
+            note: string;
+            refs: components["schemas"]["at.clubserver.platform.RecordRefs.RefInput"][];
+        };
+        "at.clubserver.finance.api.FinanceApi.BookingDto": {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            bookedOn: string;
+            account: string;
+            category: string;
+            /** Format: int64 */
+            amountCents: number;
+            text: string;
+            note: string;
+            /** Format: uuid */
+            transferId: string;
+            transferAccount: string;
+            /** Format: uuid */
+            reversesId: string;
+            /** Format: uuid */
+            reversedBy: string;
+            refs: components["schemas"]["at.clubserver.platform.RecordRefs.RefDto"][];
+            receipts: components["schemas"]["at.clubserver.finance.api.FinanceApi.ReceiptDto"][];
+            /** Format: uuid */
+            createdBy: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            locked: boolean;
+        };
+        "at.clubserver.finance.api.FinanceApi.ReceiptDto": {
+            /** Format: uuid */
+            fileId: string;
+            name: string;
+        };
+        "at.clubserver.gateway.rest.FinanceController.AccountBody": {
+            label: string;
+            /** Format: int32 */
+            sort: number;
+            archived: boolean;
+        };
+        "at.clubserver.finance.api.FinanceApi.AccountDto": {
+            key: string;
+            label: string;
+            /** Format: int32 */
+            sort: number;
+            archived: boolean;
+            inUse: boolean;
+            /** Format: int64 */
+            balanceCents: number;
+        };
         "at.clubserver.gateway.rest.FilesController.TagsBody": {
             memberIds: string[];
         };
@@ -3344,7 +3986,7 @@ export interface components {
         };
         "at.clubserver.files.api.FilesApi.SettingFileDto": {
             /** @enum {string} */
-            slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE";
+            slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE" | "AUDIT_TEMPLATE";
             file: components["schemas"]["at.clubserver.files.api.FilesApi.FileDto"];
             /** Format: uuid */
             sourceId: string;
@@ -3396,6 +4038,7 @@ export interface components {
             country: string;
             timeZone: string;
             locale: string;
+            currency: string;
             website: string;
             contactEmail: string;
             address: string;
@@ -3506,6 +4149,8 @@ export interface components {
             board: boolean;
             /** @enum {string} */
             duty: "NONE" | "CHAIR" | "SECRETARY";
+            /** @enum {string} */
+            finance: "NONE" | "READ" | "AUDIT" | "WRITE";
         };
         "at.clubserver.gateway.rest.CalendarController.PresenceBody": {
             /** Format: uuid */
@@ -3850,6 +4495,54 @@ export interface components {
             canManage: boolean;
             system: boolean;
         };
+        "at.clubserver.gateway.rest.FinanceController.TransferBody": {
+            /** Format: date */
+            bookedOn: string;
+            from: string;
+            to: string;
+            /** Format: int64 */
+            amountCents: number;
+            text: string;
+            note: string;
+        };
+        "at.clubserver.gateway.rest.FinanceController.PayBody": {
+            account: string;
+            /** Format: date */
+            paidOn: string;
+        };
+        "at.clubserver.gateway.rest.FinanceController.FeePaymentBody": {
+            account: string;
+            /** Format: date */
+            paidOn: string;
+            /** Format: int64 */
+            amountCents: number;
+        };
+        "at.clubserver.finance.api.FinanceApi.ChargeList": {
+            items: components["schemas"]["at.clubserver.finance.api.FinanceApi.ChargeDto"][];
+        };
+        "at.clubserver.gateway.rest.FinanceController.ReverseBody": {
+            /** Format: date */
+            bookedOn: string;
+        };
+        "at.clubserver.gateway.rest.FinanceController.AuditBody": {
+            /** Format: date */
+            checkedUntil: string;
+            note: string;
+        };
+        "at.clubserver.finance.api.FinanceApi.AuditDto": {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            checkedUntil: string;
+            title: string;
+            note: string;
+            /** Format: uuid */
+            reportId: string;
+            /** Format: uuid */
+            createdBy: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
         "at.clubserver.notifications.api.NotificationsApi.MailSample": {
             brand: components["schemas"]["at.clubserver.platform.club.Brand"];
             subject: string;
@@ -3870,6 +4563,8 @@ export interface components {
             termYears: number;
             /** @enum {string} */
             duty: "NONE" | "CHAIR" | "SECRETARY";
+            /** @enum {string} */
+            finance: "NONE" | "READ" | "AUDIT" | "WRITE";
         };
         "at.clubserver.gateway.rest.MembersController.OfficeBody": {
             /** Format: uuid */
@@ -4191,7 +4886,7 @@ export interface components {
         };
         "at.clubserver.gateway.rest.SearchController.SearchHit": {
             /** @enum {string} */
-            kind: "APPOINTMENT" | "TASK" | "MEMBER" | "TEAM" | "ITEM" | "LOCATION" | "TOURNAMENT" | "MEETING" | "RESOLUTION" | "FOLDER" | "FILE" | "MAIL";
+            kind: "APPOINTMENT" | "TASK" | "MEMBER" | "TEAM" | "ITEM" | "LOCATION" | "TOURNAMENT" | "MEETING" | "RESOLUTION" | "FOLDER" | "FILE" | "MAIL" | "BOOKING" | "AUDIT" | "INVOICE";
             /** Format: uuid */
             id: string;
             title: string;
@@ -4320,6 +5015,8 @@ export interface components {
                 [key: string]: string;
             };
             guestAreas: ("TOURNAMENTS" | "MEETINGS")[];
+            /** @enum {string} */
+            financeAccess: "NONE" | "READ" | "AUDIT" | "WRITE";
         };
         "at.clubserver.attendance.api.AttendanceApi.OpenAnswer": {
             /** Format: uuid */
@@ -4340,7 +5037,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "CHANGE_DECIDED" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM";
+            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "CHANGE_DECIDED" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM" | "FEE";
             title: string;
             body: string;
             link: string;
@@ -4353,6 +5050,10 @@ export interface components {
             items: components["schemas"]["at.clubserver.notifications.api.NotificationsApi.NotificationDto"][];
             /** Format: int32 */
             unread: number;
+        };
+        "at.clubserver.finance.api.FinanceApi.MyFees": {
+            items: components["schemas"]["at.clubserver.finance.api.FinanceApi.ChargeDto"][];
+            instructions: string;
         };
         "at.clubserver.gateway.rest.PersonalDataController.Export": {
             /** Format: date-time */
@@ -4388,7 +5089,7 @@ export interface components {
             code: string;
             visible: boolean;
             /** @enum {string} */
-            kind: "TASK" | "APPOINTMENT" | "ITEM" | "FILE" | "MEMBER" | "TEAM" | "LOCATION" | "TOURNAMENT" | "MEETING";
+            kind: "TASK" | "APPOINTMENT" | "ITEM" | "FILE" | "MEMBER" | "TEAM" | "LOCATION" | "TOURNAMENT" | "MEETING" | "AUDIT";
             windowId: string;
             title: string;
         };
@@ -4462,6 +5163,31 @@ export interface components {
         "at.clubserver.files.api.FilesApi.FileList": {
             items: components["schemas"]["at.clubserver.files.api.FilesApi.FileDto"][];
         };
+        "at.clubserver.finance.api.FinanceApi.InvoiceList": {
+            items: components["schemas"]["at.clubserver.finance.api.FinanceApi.InvoiceDto"][];
+            truncated: boolean;
+        };
+        "at.clubserver.finance.api.FinanceApi.CategoryList": {
+            items: components["schemas"]["at.clubserver.finance.api.FinanceApi.CategoryDto"][];
+        };
+        "at.clubserver.finance.api.FinanceApi.BookingList": {
+            items: components["schemas"]["at.clubserver.finance.api.FinanceApi.BookingDto"][];
+            truncated: boolean;
+        };
+        "at.clubserver.files.api.FilesApi.DownloadLink": {
+            url: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        "at.clubserver.finance.api.FinanceApi.AuditList": {
+            items: components["schemas"]["at.clubserver.finance.api.FinanceApi.AuditDto"][];
+            mayConfirm: boolean;
+            /** Format: date */
+            checkedUntil: string;
+        };
+        "at.clubserver.finance.api.FinanceApi.AccountList": {
+            items: components["schemas"]["at.clubserver.finance.api.FinanceApi.AccountDto"][];
+        };
         "at.clubserver.files.api.FilesApi.FileHit": {
             /** Format: uuid */
             id: string;
@@ -4493,11 +5219,6 @@ export interface components {
         };
         "at.clubserver.files.api.FilesApi.VersionList": {
             items: components["schemas"]["at.clubserver.files.api.FilesApi.VersionDto"][];
-        };
-        "at.clubserver.files.api.FilesApi.DownloadLink": {
-            url: string;
-            /** Format: date-time */
-            expiresAt: string;
         };
         "at.clubserver.files.api.FilesApi.SettingFileList": {
             items: components["schemas"]["at.clubserver.files.api.FilesApi.SettingFileDto"][];
@@ -5549,6 +6270,442 @@ export interface operations {
             };
         };
     };
+    invoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.InvoiceDto"];
+                };
+            };
+        };
+    };
+    updateInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FinanceController.InvoiceBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.InvoiceDto"];
+                };
+            };
+        };
+    };
+    deleteInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    feeSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.FeeSettings"];
+                };
+            };
+        };
+    };
+    saveFeeSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.finance.api.FinanceApi.FeeSettings"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.FeeSettings"];
+                };
+            };
+        };
+    };
+    feeRates: {
+        parameters: {
+            query: {
+                season: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.FeeRates"];
+                };
+            };
+        };
+    };
+    saveFeeRates: {
+        parameters: {
+            query: {
+                season: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FinanceController.FeeRatesBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.FeeRates"];
+                };
+            };
+        };
+    };
+    charge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.ChargeDto"];
+                };
+            };
+        };
+    };
+    adjustCharge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FinanceController.AdjustChargeBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.ChargeDto"];
+                };
+            };
+        };
+    };
+    deleteCharge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FinanceController.CategoryBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.CategoryDto"];
+                };
+            };
+        };
+    };
+    deleteCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    budget: {
+        parameters: {
+            query: {
+                season: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.Budget"];
+                };
+            };
+        };
+    };
+    saveBudget: {
+        parameters: {
+            query: {
+                season: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FinanceController.BudgetBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.Budget"];
+                };
+            };
+        };
+    };
+    booking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.BookingDto"];
+                };
+            };
+        };
+    };
+    update_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FinanceController.BookingBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.BookingDto"];
+                };
+            };
+        };
+    };
+    delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FinanceController.AccountBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.AccountDto"];
+                };
+            };
+        };
+    };
+    deleteAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     tag: {
         parameters: {
             query?: never;
@@ -5624,7 +6781,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE";
+                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE" | "AUDIT_TEMPLATE";
             };
             cookie?: never;
         };
@@ -5650,7 +6807,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE";
+                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE" | "AUDIT_TEMPLATE";
             };
             cookie?: never;
         };
@@ -5679,7 +6836,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE";
+                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE" | "AUDIT_TEMPLATE";
             };
             cookie?: never;
         };
@@ -5714,7 +6871,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    update_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -7694,6 +8851,402 @@ export interface operations {
             };
         };
     };
+    transfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FinanceController.TransferBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.BookingDto"];
+                };
+            };
+        };
+    };
+    invoices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.InvoiceList"];
+                };
+            };
+        };
+    };
+    createInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FinanceController.InvoiceBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.InvoiceDto"];
+                };
+            };
+        };
+    };
+    payInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FinanceController.PayBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.InvoiceDto"];
+                };
+            };
+        };
+    };
+    remindCharge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    payCharge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FinanceController.FeePaymentBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.ChargeDto"];
+                };
+            };
+        };
+    };
+    generateCharges: {
+        parameters: {
+            query: {
+                season: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.ChargeList"];
+                };
+            };
+        };
+    };
+    categories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.CategoryList"];
+                };
+            };
+        };
+    };
+    createCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FinanceController.CategoryBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.CategoryDto"];
+                };
+            };
+        };
+    };
+    bookings: {
+        parameters: {
+            query: {
+                season: number;
+                account?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.BookingList"];
+                };
+            };
+        };
+    };
+    create_7: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FinanceController.BookingBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.BookingDto"];
+                };
+            };
+        };
+    };
+    reverse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FinanceController.ReverseBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.BookingDto"];
+                };
+            };
+        };
+    };
+    addReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.BookingDto"];
+                };
+            };
+        };
+    };
+    audits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.AuditList"];
+                };
+            };
+        };
+    };
+    confirmAudit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FinanceController.AuditBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.AuditDto"];
+                };
+            };
+        };
+    };
+    accounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.AccountList"];
+                };
+            };
+        };
+    };
+    createAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.FinanceController.AccountBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.AccountDto"];
+                };
+            };
+        };
+    };
     versions: {
         parameters: {
             query?: never;
@@ -8000,7 +9553,7 @@ export interface operations {
             };
         };
     };
-    create_7: {
+    create_8: {
         parameters: {
             query?: never;
             header?: never;
@@ -8216,7 +9769,7 @@ export interface operations {
             };
         };
     };
-    delete: {
+    delete_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -8236,7 +9789,7 @@ export interface operations {
             };
         };
     };
-    update_2: {
+    update_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -8262,7 +9815,7 @@ export interface operations {
             };
         };
     };
-    delete_1: {
+    delete_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -8282,7 +9835,7 @@ export interface operations {
             };
         };
     };
-    update_3: {
+    update_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -8330,7 +9883,7 @@ export interface operations {
             };
         };
     };
-    delete_2: {
+    delete_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -8350,7 +9903,7 @@ export interface operations {
             };
         };
     };
-    update_4: {
+    update_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -8398,7 +9951,7 @@ export interface operations {
             };
         };
     };
-    delete_3: {
+    delete_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -8418,7 +9971,7 @@ export interface operations {
             };
         };
     };
-    update_5: {
+    update_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -8514,7 +10067,7 @@ export interface operations {
             };
         };
     };
-    delete_4: {
+    delete_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -8534,7 +10087,7 @@ export interface operations {
             };
         };
     };
-    update_6: {
+    update_7: {
         parameters: {
             query?: never;
             header?: never;
@@ -8607,7 +10160,7 @@ export interface operations {
             };
         };
     };
-    delete_5: {
+    delete_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -8628,7 +10181,7 @@ export interface operations {
             };
         };
     };
-    update_7: {
+    update_8: {
         parameters: {
             query?: never;
             header?: never;
@@ -8675,7 +10228,7 @@ export interface operations {
             };
         };
     };
-    delete_6: {
+    delete_7: {
         parameters: {
             query?: never;
             header?: never;
@@ -8695,7 +10248,7 @@ export interface operations {
             };
         };
     };
-    update_8: {
+    update_9: {
         parameters: {
             query?: never;
             header?: never;
@@ -8743,7 +10296,7 @@ export interface operations {
             };
         };
     };
-    delete_7: {
+    delete_8: {
         parameters: {
             query?: never;
             header?: never;
@@ -8763,7 +10316,7 @@ export interface operations {
             };
         };
     };
-    update_9: {
+    update_10: {
         parameters: {
             query?: never;
             header?: never;
@@ -8835,7 +10388,7 @@ export interface operations {
             };
         };
     };
-    delete_8: {
+    delete_9: {
         parameters: {
             query?: never;
             header?: never;
@@ -8903,7 +10456,7 @@ export interface operations {
             };
         };
     };
-    delete_9: {
+    delete_10: {
         parameters: {
             query?: never;
             header?: never;
@@ -8923,7 +10476,7 @@ export interface operations {
             };
         };
     };
-    update_10: {
+    update_11: {
         parameters: {
             query?: never;
             header?: never;
@@ -9276,6 +10829,26 @@ export interface operations {
             };
         };
     };
+    myFees: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.MyFees"];
+                };
+            };
+        };
+    };
     export: {
         parameters: {
             query?: {
@@ -9443,6 +11016,140 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.inventory.api.InventoryApi.OwnItems"];
+                };
+            };
+        };
+    };
+    memberCharges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.ChargeList"];
+                };
+            };
+        };
+    };
+    charges: {
+        parameters: {
+            query: {
+                season: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.ChargeList"];
+                };
+            };
+        };
+    };
+    receiptLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                fileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.files.api.FilesApi.DownloadLink"];
+                };
+            };
+        };
+    };
+    export_1: {
+        parameters: {
+            query: {
+                season: number;
+                format?: "CSV" | "XLSX";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
+    audit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.AuditDto"];
+                };
+            };
+        };
+    };
+    auditReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.files.api.FilesApi.DownloadLink"];
                 };
             };
         };
@@ -9742,7 +11449,7 @@ export interface operations {
             };
         };
     };
-    delete_10: {
+    delete_11: {
         parameters: {
             query?: never;
             header?: never;
@@ -9759,6 +11466,29 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    removeReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                fileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.finance.api.FinanceApi.BookingDto"];
+                };
             };
         };
     };

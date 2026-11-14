@@ -11,6 +11,7 @@ const office = (o: OfficeKind, label: string) => ({
   termYears: 3,
   board: true,
   duty: 'NONE' as const,
+  finance: 'NONE' as const,
 });
 const settings = (): BoardSettings => ({
   offices: [office('CHAIR', 'Obfrau'), office('VICE_CHAIR', 'Stellvertretung'), office('TREASURER', 'Kassa'), office('SECRETARY', 'Schrift')],

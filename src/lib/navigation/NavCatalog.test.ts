@@ -79,6 +79,14 @@ describe('Sidebar groups', () => {
     expect(only.navigation(only.allowed(() => false))).toEqual([]);
   });
 
+  it('hides a route whose own check fails, whatever the roles', () => {
+    let open = false;
+    const only = new FeatureRegistry([{ id: 'x', routes: [{ path: '/finance', component: page, nav: 'Buchhaltung', visible: () => open }] }], layout);
+    expect(only.allowed(() => true)).toEqual([]);
+    open = true;
+    expect(only.allowed(() => false).map((r) => r.path)).toEqual(['/finance']);
+  });
+
   it('puts a group where an order saved before grouping had its first tab', () => {
     expect(registry.navigation(registry.routes, ['/locations', '/']).map((i) => i.key)).toEqual(['group:verein', '/', '/tasks', 'group:ablage']);
   });

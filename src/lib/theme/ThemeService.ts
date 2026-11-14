@@ -1,7 +1,7 @@
 import type { ColorScheme, Palette, Settings } from '../../settings';
 import type { LocalStore } from '../storage/LocalStore';
 import type { Brand, BrandAssets } from '../types';
-import { mix, readableOn, textOn } from './contrast';
+import { contrast, mix, readableOn, textOn } from './contrast';
 import { BRAND_FONTS } from './fonts';
 
 /** Runtime changes on top of the settings and the club brand (from the user's appearance preferences). */
@@ -107,7 +107,9 @@ export class ThemeService {
    */
   static branded(theme: Settings['theme'], brand: Brand): Settings['theme'] {
     const { light, dark } = theme.colors;
-    const darkAccent = readableOn(brand.primary, dark.background);
+    const onPage = readableOn(brand.primary, dark.background);
+    // A mid-light accent can leave neither white nor ink at 4.5:1 on buttons; then lighten until the ink reads on it.
+    const darkAccent = contrast(textOn(onPage, brand.text), onPage) >= 4.5 ? onPage : readableOn(brand.primary, brand.text);
     const heading = BRAND_FONTS[brand.headingFont];
     const px = (n: number) => `${n}px`;
     const [small, large] = [brand.radiusSmall, brand.radiusLarge];

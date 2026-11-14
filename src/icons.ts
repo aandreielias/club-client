@@ -30,7 +30,9 @@ import Inbox from '@lucide/svelte/icons/inbox';
 import ListChecks from '@lucide/svelte/icons/list-checks';
 import LogOut from '@lucide/svelte/icons/log-out';
 import Menu from '@lucide/svelte/icons/menu';
+import Ellipsis from '@lucide/svelte/icons/ellipsis';
 import Package from '@lucide/svelte/icons/package';
+import Wallet from '@lucide/svelte/icons/wallet';
 import PanelBottom from '@lucide/svelte/icons/panel-bottom';
 import PanelLeft from '@lucide/svelte/icons/panel-left';
 import PanelRight from '@lucide/svelte/icons/panel-right';
@@ -87,6 +89,7 @@ export const ICONS = {
   files: Folder,
   move: FolderInput,
   inventory: Package,
+  finance: Wallet,
   teams: Users,
   notifications: Bell,
   members: BookUser,
@@ -125,6 +128,7 @@ export const ICONS = {
   commands: Command,
   logout: LogOut,
   menu: Menu,
+  more: Ellipsis,
   add: Plus,
   edit: Pencil,
   delete: Trash,

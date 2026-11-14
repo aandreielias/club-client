@@ -124,7 +124,7 @@
   }
 
   function closedReason(appointment: Appointment): string {
-    if (appointment.cancelled) return 'Der Termin ist abgesagt.';
+    if (appointment.cancelled) return 'Antworten sind nicht mehr möglich.';
     if (policy.isPast(appointment)) return 'Der Termin hat schon begonnen.';
     return 'Nur Mitglieder des Teams können antworten.';
   }
@@ -162,8 +162,8 @@
           <AppointmentEditor form={edit.form} action={edit.save} submitLabel="Speichern" oncancel={() => edit.cancel()} onsubmit={submit} />
         </div>
       {:else}
-        {#if appointment.cancelled}
-          <p class="cancelled">Abgesagt{appointment.cancelReason ? `: ${appointment.cancelReason}` : '.'}</p>
+        {#if appointment.cancelled && appointment.cancelReason}
+          <p class="cancelled">Grund der Absage: {appointment.cancelReason}</p>
         {/if}
         <!-- Facts left, the small map right (below on phones) when the place has a map pin. -->
         <div class="top" class:with-map={place?.lat != null}>

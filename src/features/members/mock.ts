@@ -16,6 +16,8 @@ import {
   type OfficeSetting,
 } from './MembersApi';
 
+const FINANCE_LEVELS = ['NONE', 'READ', 'AUDIT', 'WRITE'];
+
 const plusYears = (date: string, years: number): string => `${Number(date.slice(0, 4)) + years}${date.slice(4)}`;
 
 /** server: MembershipHandlers — membership kinds, board settings and offices; the tables stay on the directory, which every mock reads. */
@@ -105,7 +107,13 @@ export class MockBoard {
   }
 
   /** server: BoardRules.validate(OfficeSetting) */
-  private static office(o: Record<string, any>, office: string, board: boolean, duty: OfficeSetting['duty'] = 'NONE'): OfficeSetting {
+  private static office(
+    o: Record<string, any>,
+    office: string,
+    board: boolean,
+    duty: OfficeSetting['duty'] = 'NONE',
+    finance: OfficeSetting['finance'] = 'NONE',
+  ): OfficeSetting {
     const int = (v: unknown, min: number, max: number) => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
     const label = typeof o.label === 'string' ? o.label.trim() : '';
     if (!label || label.length > 40) fail(400, 'board-settings.label-invalid');
@@ -114,14 +122,15 @@ export class MockBoard {
       fail(400, 'board-settings.holders-invalid');
     }
     if (!int(o.termYears, 1, 10)) fail(400, 'board-settings.term-invalid');
-    return { office, label, enabled: o.enabled !== false, minHolders: o.minHolders, maxHolders: max, termYears: o.termYears, board, duty };
+    return { office, label, enabled: o.enabled !== false, minHolders: o.minHolders, maxHolders: max, termYears: o.termYears, board, duty, finance };
   }
 
   /** server: MembershipHandlers.addOffice — key OFFICE_…, after the others, at most 40. */
   addOffice(viewer: Member, body: Record<string, any>): BoardSettings {
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const duty = ['CHAIR', 'SECRETARY'].includes(body.duty) ? body.duty : 'NONE';
-    const office = MockBoard.office({ ...body, enabled: true }, generatedKey('OFFICE'), !!body.board, duty);
+    const finance = FINANCE_LEVELS.includes(body.finance) ? body.finance : 'NONE';
+    const office = MockBoard.office({ ...body, enabled: true }, generatedKey('OFFICE'), !!body.board, duty, finance);
     if (this.people.boardSettings.data.offices.length >= 40) fail(409, 'board-settings.too-many-offices');
     this.people.boardSettings.data.offices.push(office);
     this.people.boardSettings.save();
@@ -157,7 +166,11 @@ export class MockBoard {
       const seededDuty = o.office === 'CHAIR' ? 'CHAIR' : o.office === 'SECRETARY' ? 'SECRETARY' : 'NONE';
       if (OFFICES.includes(o.office) && o.duty !== undefined && o.duty !== seededDuty) fail(400, 'board-settings.offices-invalid');
       const duty = OFFICES.includes(o.office) ? seededDuty : ['CHAIR', 'SECRETARY'].includes(o.duty) ? o.duty : 'NONE';
-      return MockBoard.office(o, o.office, OFFICES.includes(o.office) ? o.office !== 'AUDITOR' : !!o.board, duty);
+      // server: FinanceLevel.seeded — the treasurer keeps the books, the auditors check them
+      const seededFinance = o.office === 'TREASURER' ? 'WRITE' : o.office === 'AUDITOR' ? 'AUDIT' : 'NONE';
+      if (OFFICES.includes(o.office) && o.finance !== undefined && o.finance !== seededFinance) fail(400, 'board-settings.offices-invalid');
+      const finance = OFFICES.includes(o.office) ? seededFinance : FINANCE_LEVELS.includes(o.finance) ? o.finance : 'NONE';
+      return MockBoard.office(o, o.office, OFFICES.includes(o.office) ? o.office !== 'AUDITOR' : !!o.board, duty, finance);
     });
     const combinations: OfficePair[] = Array.isArray(body.combinations) ? body.combinations : fail(400, 'board-settings.combination-invalid');
     if (combinations.some((p) => !p || !keys.includes(p.a) || !keys.includes(p.b) || p.a === p.b)) {

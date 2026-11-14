@@ -49,7 +49,7 @@ const LOGIN_TAGS: Record<LoginState, OrgTag | null> = {
   NONE: { text: 'Kein Login' },
 };
 const RANK: Record<TeamRole, number> = { COACH: 0, ASSISTANT: 1, PLAYER: 2 };
-const NO_TEAM = 'none';
+export const NO_TEAM = 'none';
 
 /**
  * Layers by role (Admin, Vorstand, functions, Trainer:innen, Spieler:innen, Eltern, Helfer:innen, Gäste, without role). A member with

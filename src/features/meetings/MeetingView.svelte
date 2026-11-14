@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { settings } from '../../settings';
   import MeetingDetailsEditor from './MeetingDetailsEditor.svelte';
   import MeetingDraftEditor from './MeetingDraftEditor.svelte';
@@ -68,11 +69,13 @@
 
   let protocol = $state('');
   let protocolFor = $state<string | null>(null);
-  // The draft follows the saved protocol until the minute taker starts typing.
+  // The draft follows the saved protocol until the minute taker starts typing; a closed vote the server appended joins the typed draft.
   $effect(() => {
     const saved = model.meeting.value?.protocol ?? '';
     if (protocolFor !== saved) {
-      protocol = saved;
+      const before = untrack(() => protocol);
+      const typed = protocolFor !== null && before !== protocolFor;
+      protocol = typed && saved.startsWith(protocolFor!) ? before + saved.slice(protocolFor!.length) : saved;
       protocolFor = saved;
     }
   });

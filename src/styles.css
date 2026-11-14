@@ -425,6 +425,9 @@ input.short {
   align-items: center;
   min-height: var(--control-height);
   color: var(--color-text-muted);
+  /* long German labels (Erziehungsberechtigte) break instead of running into the value */
+  hyphens: auto;
+  overflow-wrap: anywhere;
 }
 .props dd {
   display: flex;
@@ -506,5 +509,39 @@ input.short {
   *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+}
+
+/* Printing a page or the open window: no app chrome, no buttons, dark text on paper (backgrounds don't print by default). */
+@media print {
+  #sidebar,
+  .toolbar,
+  .toasts,
+  .backdrop,
+  .controls,
+  button:not(.record-link, .link-button, .open, th button),
+  :root[data-window] .shell {
+    display: none !important;
+  }
+  html,
+  body,
+  .shell,
+  main,
+  .window,
+  .window .body {
+    position: static !important;
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    background: none !important;
+  }
+  * {
+    color: #000 !important;
+  }
+  a[href^='http']::after {
+    content: ' (' attr(href) ')';
   }
 }

@@ -1,7 +1,7 @@
 // Linked records of messages and meetings (server: platform.RecordRefs).
 
 /** Records that can be linked. */
-export type RefKind = 'TASK' | 'APPOINTMENT' | 'ITEM' | 'FILE' | 'MEMBER' | 'TEAM' | 'LOCATION' | 'TOURNAMENT' | 'MEETING';
+export type RefKind = 'TASK' | 'APPOINTMENT' | 'ITEM' | 'FILE' | 'MEMBER' | 'TEAM' | 'LOCATION' | 'TOURNAMENT' | 'MEETING' | 'AUDIT';
 
 /** A linked record with its title when it was linked; parentId: a file's folder. */
 export interface LinkedRef {
@@ -21,6 +21,7 @@ export const REF_ICONS = {
   LOCATION: 'location',
   TOURNAMENT: 'trophy',
   MEETING: 'meetings',
+  AUDIT: 'finance',
 } as const;
 
 /** Window that opens a linked record. */
@@ -39,4 +40,5 @@ export const DROPPABLE: Readonly<Record<string, RefKind>> = {
   location: 'LOCATION',
   tournament: 'TOURNAMENT',
   meeting: 'MEETING',
+  audit: 'AUDIT',
 };

@@ -16,9 +16,16 @@ export class RosterListModel extends ListModel<RosterEntry> {
         defaultSort: { key: 'role', dir: 'asc' },
         searchText: (e) => e.name,
         columns: [
-          { key: 'jersey', label: 'Nr.', value: (e) => e.jersey ?? null, format: (e) => (e.jersey == null ? '' : String(e.jersey)), width: '4rem' },
+          {
+            key: 'jersey',
+            label: 'Nr.',
+            value: (e) => e.jersey ?? null,
+            format: (e) => (e.jersey == null ? '' : String(e.jersey)),
+            width: '4rem',
+            hideWhenEmpty: true,
+          },
           { key: 'name', label: 'Name', value: (e) => e.name },
-          { key: 'position', label: 'Position', value: (e) => e.position ?? '', hideOnCompact: true, width: '10rem' },
+          { key: 'position', label: 'Position', value: (e) => e.position ?? '', hideOnCompact: true, hideWhenEmpty: true, width: '10rem' },
           {
             key: 'role',
             label: 'Rolle im Team',

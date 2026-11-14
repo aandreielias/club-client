@@ -6,7 +6,7 @@
   import DataTable from '../../ui/DataTable.svelte';
   import type { EmptyAction } from '../../ui/Empty.svelte';
   import Tag from '../../ui/Tag.svelte';
-  import type { MemberListModel } from './MemberListModel.svelte';
+  import type { MemberListModel, MemberRow } from './MemberListModel.svelte';
 
   /** Members as rows (members page, start page): roles and status as tags, opens in the window (name-only rows stay plain). */
   let {
@@ -14,7 +14,20 @@
     toolbar = true,
     limit,
     emptyAction,
-  }: { list: MemberListModel; toolbar?: boolean; limit?: number; emptyAction?: EmptyAction | null } = $props();
+    check,
+  }: {
+    list: MemberListModel;
+    toolbar?: boolean;
+    limit?: number;
+    emptyAction?: EmptyAction | null;
+    /** Selecting rows (bulk actions): a click toggles instead of opening. */
+    check?: {
+      checked: (m: MemberRow) => boolean;
+      toggle: (m: MemberRow) => void;
+      disabled?: (m: MemberRow) => boolean;
+      label: (m: MemberRow) => string;
+    };
+  } = $props();
 </script>
 
 <DataTable
@@ -24,7 +37,8 @@
   {emptyAction}
   rowKey={(m) => m.id}
   record={(m) => (m.nameOnly ? null : { kind: 'member', id: m.id, title: `${m.firstName} ${m.lastName}` })}
-  onopen={(m) => !m.nameOnly && bus.publish(WINDOW_OPEN, { kind: 'member', id: m.id })}
+  {check}
+  onopen={check ? undefined : (m) => !m.nameOnly && bus.publish(WINDOW_OPEN, { kind: 'member', id: m.id })}
   menu={(m) => (m.nameOnly ? [] : windowMenu(bus, windows, router, 'member', m.id))}
   selected={windows.current?.kind === 'member' ? windows.current.id : null}
   emptyText="Noch keine Mitglieder."

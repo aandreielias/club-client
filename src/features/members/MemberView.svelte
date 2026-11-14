@@ -13,6 +13,7 @@
   import FamilySection from './FamilySection.svelte';
   import GuardianLinker from './GuardianLinker.svelte';
   import HeldItemsSection from './HeldItemsSection.svelte';
+  import MyFeesSection from '../finance/MyFeesSection.svelte';
   import MembershipEditor from './MembershipEditor.svelte';
   import { MemberDetailModel } from './MemberDetailModel.svelte';
   import ProfileEditor from './ProfileEditor.svelte';
@@ -125,11 +126,14 @@
           <dd>{member.birthDate ? session.format.date(member.birthDate) : '–'}</dd>
           <dt>Foto-Einwilligung</dt>
           <dd>{member.photoConsent ? 'Ja' : 'Nein'}</dd>
-          <dt>Mitgliedschaft</dt>
-          <dd>{membershipKinds.text(member)}</dd>
-          {#if member.memberSince}
-            <dt>Mitglied seit</dt>
-            <dd>{session.format.date(member.memberSince)}</dd>
+          <!-- Who sets the membership sees it in the form below. -->
+          {#if !policy.canSetMembership(member)}
+            <dt>Mitgliedschaft</dt>
+            <dd>{membershipKinds.text(member)}</dd>
+            {#if member.memberSince}
+              <dt>Mitglied seit</dt>
+              <dd>{session.format.date(member.memberSince)}</dd>
+            {/if}
           {/if}
         </dl>
         {#key member.id}<FamilySection
@@ -139,6 +143,7 @@
             parent={member.roles.includes('PARENT')}
           />{/key}
         <HeldItemsSection memberId={member.id} />
+        {#key member.id}<MyFeesSection memberId={member.id} history />{/key}
       {/if}
 
       {#if policy.canSetMembership(member) && !editing}

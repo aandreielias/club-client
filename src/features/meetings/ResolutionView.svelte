@@ -5,6 +5,7 @@
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Detail from '../../ui/Detail.svelte';
+  import RecordLink from '../../ui/RecordLink.svelte';
   import { RESOLUTION_CHANGED } from './events';
   import ResolutionCard from './ResolutionCard.svelte';
   import { meetingsApi } from './services';
@@ -28,7 +29,9 @@
 <AsyncView resource={resolution}>
   {#snippet children(r)}
     <Detail title={r.title}>
-      {#snippet meta()}<span class="muted">{r.meetingId ? 'Beschluss' : 'Umlaufbeschluss'}</span>{/snippet}
+      {#snippet meta()}<span class="muted"
+          >{#if r.meetingId}Beschluss der <RecordLink kind="meeting" id={r.meetingId}>Sitzung</RecordLink>{:else}Umlaufbeschluss{/if}</span
+        >{/snippet}
       <ResolutionCard showTitle={false} resolution={r} onchanged={(updated) => resolution.set(updated)} ondeleted={() => view.leave()} />
     </Detail>
   {/snippet}

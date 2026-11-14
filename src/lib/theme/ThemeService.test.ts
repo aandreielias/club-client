@@ -70,6 +70,8 @@ describe('ThemeService brand', () => {
     });
     expect(branded.colors.dark.background).toBe(settings.theme.colors.dark.background);
     expect(contrast(branded.colors.dark.accent, settings.theme.colors.dark.background)).toBeGreaterThanOrEqual(4.5);
+    // button labels on the dark accent read too
+    expect(contrast(branded.colors.dark.onAccent, branded.colors.dark.accent)).toBeGreaterThanOrEqual(4.5);
   });
 
   it('sets the heading font, capitals and radii', () => {

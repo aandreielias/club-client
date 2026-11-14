@@ -4,6 +4,26 @@
 import type { components } from './schema';
 import type { Absence, AbsenceList, Appointment, AppointmentList, Attendance, Ride, RideList } from '../../features/calendar/model';
 import type { DownloadLink, FileHits, FileList, FilePatch, FileSettings, FolderList, FolderPatch, SettingFileList } from '../../features/files/model';
+import type {
+  Account,
+  Audit,
+  AuditList,
+  Booking,
+  BookingList,
+  Budget,
+  BudgetLine,
+  Category,
+  Charge,
+  ChargeList,
+  FeePayment,
+  FeeRate,
+  FeeRates,
+  FeeSettings,
+  Invoice,
+  InvoiceList,
+  MyFees,
+  Receipt,
+} from '../../features/finance/model';
 import type { Item, ItemList, ItemUse, OwnItem, StockInput } from '../../features/inventory/model';
 import type { GeocodeResult, Location } from '../../features/locations/model';
 import type { AddressEntry, Mail, Mailbox, MailboxAdmin, MailPage, MailRef, MailSettings, MailSummary } from '../../features/mail/model';
@@ -53,6 +73,24 @@ export type Contract = [
   Satisfies<S['at.clubserver.files.api.FilesApi.FileSettings'], FileSettings>,
   Satisfies<S['at.clubserver.files.api.FilesApi.FileHits'], FileHits>,
   Satisfies<S['at.clubserver.files.api.FilesApi.SettingFileList'], SettingFileList>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.AccountDto'], Account>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.CategoryDto'], Category>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.ReceiptDto'], Receipt>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.BookingDto'], Booking>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.BookingList'], BookingList>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.AuditDto'], Audit>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.AuditList'], AuditList>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.Budget'], Budget>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.BudgetLine'], BudgetLine>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.FeeSettings'], FeeSettings>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.FeeRate'], FeeRate>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.FeeRates'], FeeRates>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.FeePaymentDto'], FeePayment>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.ChargeDto'], Charge>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.ChargeList'], ChargeList>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.MyFees'], MyFees>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.InvoiceDto'], Invoice>,
+  Satisfies<S['at.clubserver.finance.api.FinanceApi.InvoiceList'], InvoiceList>,
   Satisfies<S['at.clubserver.inventory.api.InventoryApi.ItemDto'], Item>,
   Satisfies<S['at.clubserver.inventory.api.InventoryApi.ItemList'], ItemList>,
   Satisfies<S['at.clubserver.inventory.api.InventoryApi.ItemUse'], ItemUse>,

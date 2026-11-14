@@ -10,6 +10,7 @@ import {
   type Club,
   type GuestArea,
   type ClubEdit,
+  type FinanceLevel,
   type Member,
   type MemberList,
   type MembershipType,
@@ -99,12 +100,62 @@ export const OFFICES: readonly string[] = ['CHAIR', 'VICE_CHAIR', 'TREASURER', '
 /** server: V53__office_settings.sql — the seeded rules for the offices and the board. */
 const SEEDED_BOARD_SETTINGS: BoardSettings = {
   offices: [
-    { office: 'CHAIR', label: 'Vorsitz', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3, board: true, duty: 'CHAIR' },
-    { office: 'VICE_CHAIR', label: 'Stellvertretung', enabled: true, minHolders: 0, maxHolders: 1, termYears: 3, board: true, duty: 'NONE' },
-    { office: 'TREASURER', label: 'Kassier:in', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3, board: true, duty: 'NONE' },
-    { office: 'SECRETARY', label: 'Schriftführung', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3, board: true, duty: 'SECRETARY' },
-    { office: 'BOARD_MEMBER', label: 'Vorstandsmitglied', enabled: true, minHolders: 0, maxHolders: null, termYears: 3, board: true, duty: 'NONE' },
-    { office: 'AUDITOR', label: 'Rechnungsprüfung', enabled: true, minHolders: 2, maxHolders: 2, termYears: 3, board: false, duty: 'NONE' },
+    { office: 'CHAIR', label: 'Vorsitz', enabled: true, minHolders: 1, maxHolders: 1, termYears: 3, board: true, duty: 'CHAIR', finance: 'NONE' },
+    {
+      office: 'VICE_CHAIR',
+      label: 'Stellvertretung',
+      enabled: true,
+      minHolders: 0,
+      maxHolders: 1,
+      termYears: 3,
+      board: true,
+      duty: 'NONE',
+      finance: 'NONE',
+    },
+    {
+      office: 'TREASURER',
+      label: 'Kassier:in',
+      enabled: true,
+      minHolders: 1,
+      maxHolders: 1,
+      termYears: 3,
+      board: true,
+      duty: 'NONE',
+      finance: 'WRITE',
+    },
+    {
+      office: 'SECRETARY',
+      label: 'Schriftführung',
+      enabled: true,
+      minHolders: 1,
+      maxHolders: 1,
+      termYears: 3,
+      board: true,
+      duty: 'SECRETARY',
+      finance: 'NONE',
+    },
+    {
+      office: 'BOARD_MEMBER',
+      label: 'Vorstandsmitglied',
+      enabled: true,
+      minHolders: 0,
+      maxHolders: null,
+      termYears: 3,
+      board: true,
+      duty: 'NONE',
+      finance: 'NONE',
+    },
+    {
+      office: 'AUDITOR',
+      label: 'Rechnungsprüfung',
+      enabled: true,
+      minHolders: 2,
+      maxHolders: 2,
+      termYears: 3,
+      board: false,
+      duty: 'NONE',
+      finance: 'AUDIT',
+    },
   ],
   minBoardSize: 3,
   oddBoardSize: true,
@@ -129,6 +180,7 @@ export class MockDirectory {
     country: 'AT',
     timeZone: 'Europe/Vienna',
     locale: 'de-AT',
+    currency: 'EUR',
     website: null,
     contactEmail: null,
     address: null,
@@ -304,8 +356,8 @@ export class MockDirectory {
       .map(([guardian]) => guardian);
   }
 
-  /** server: JdbcMemberRepository.UNDER_AGE - guardian links count while the minor is younger than the club's guardian age. */
-  private underAge(memberId: string): boolean {
+  /** server: JdbcMemberRepository.UNDER_AGE - guardian links count while the minor is younger than the club's guardian age (missing birth date = minor). */
+  underAge(memberId: string): boolean {
     const birthDate = this.members.data.find((m) => m.id === memberId)?.birthDate;
     return !birthDate || this.age(birthDate) < this.boardSettings.data.guardianUntilAge;
   }
@@ -705,6 +757,16 @@ export class MockDirectory {
       .map((o) => o.office);
   }
 
+  /** server: FinanceAccess.level — the highest level of the offices held; admins keep the books, the board reads. */
+  financeLevel(member: Member): FinanceLevel {
+    if (guestOnly(member.roles)) return 'NONE';
+    const order: FinanceLevel[] = ['NONE', 'READ', 'AUDIT', 'WRITE'];
+    const held = this.officesOf(member.id);
+    const levels = this.boardSettings.data.offices.filter((o) => held.includes(o.office)).map((o) => o.finance);
+    const base: FinanceLevel = member.roles.includes('ADMIN') ? 'WRITE' : member.roles.includes('BOARD') ? 'READ' : 'NONE';
+    return [base, ...levels].reduce((a, b) => (order.indexOf(b) > order.indexOf(a) ? b : a));
+  }
+
   /** server: BoardSettings.isBoard — an office without a setting: all but the auditors. */
   isBoardOffice(office: string): boolean {
     return this.boardSettings.data.offices.find((o) => o.office === office)?.board ?? office !== 'AUDITOR';
@@ -972,9 +1034,12 @@ export const personalData = new Map<string, (memberId: string) => Record<string,
 /** server: platform_audit (gateway AuditLog), newest first */
 const auditLog = new MockTable<AuditEntry[]>('audit', () => []);
 
+/** server: AuditLog.PERSONAL_DATA and FINANCE_EXPORT, logged as EXPORT */
+const EXPORTS = ['/api/v1/me/export', '/api/v1/finance/bookings/export'];
+
 /** server: AuditLog.audited */
 function audited(member: Member, method: string, route: string): boolean {
-  if (route === '/api/v1/me/export') return true;
+  if (EXPORTS.includes(route)) return true;
   if (method === 'GET')
     return (
       directory.hasRole(member, ADMIN_BOARD) &&
@@ -1010,7 +1075,7 @@ mockServer
     const area = req.query.get('area');
     const actorId = req.query.get('actorId');
     if (area && !/^[a-z-]{1,40}$/.test(area)) fail(400, 'audit.area-invalid');
-    const kindOf = (e: AuditEntry) => (e.route === '/api/v1/me/export' ? 'EXPORT' : e.method === 'GET' ? 'READ' : 'WRITE');
+    const kindOf = (e: AuditEntry) => (EXPORTS.includes(e.route) ? 'EXPORT' : e.method === 'GET' ? 'READ' : 'WRITE');
     const limit = Math.min(Math.max(Number(req.query.get('limit') ?? 100), 1), 100);
     const items = auditLog.data
       .filter((e) => e.id < before && (!kind || kindOf(e) === kind) && (!actorId || e.actorId === actorId))
@@ -1050,6 +1115,7 @@ mockServer
       wardIds: directory.wardsOf(member.id),
       wardNames: Object.fromEntries(directory.wardsOf(member.id).map((id) => [id, directory.name(id) ?? ''])),
       guestAreas: guestOnly(member.roles) ? guestAreas(req.email) : [],
+      financeAccess: directory.financeLevel(member),
     };
   })
   // Own profile also works before onboarding is complete (birth date step).

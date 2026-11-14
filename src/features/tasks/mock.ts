@@ -111,13 +111,19 @@ export class MockTasks {
       this.assigned(task, []);
     } else if (event.type === 'members.change-decided') {
       this.finish('CHANGE_REQUEST', data.requestId);
-    } else if (event.type === 'meetings.resolution-passed') {
-      // server: SourcedTaskHandlers.onResolutionPassed — once per resolution
+    } else if (event.type === 'finance.invoice-paid') {
+      this.finish('FINANCE_INVOICE', data.invoiceId);
+    } else if (event.type === 'finance.invoice-dropped') {
+      this.deadlineDrop(data.invoiceId, 'FINANCE_INVOICE');
+    } else if (event.type === 'meetings.resolution-passed' || event.type === 'finance.invoice-opened') {
+      // server: SourcedTaskHandlers.createAssigned — once per resolution or invoice
+      const kind = event.type === 'finance.invoice-opened' ? 'FINANCE_INVOICE' : 'RESOLUTION';
+      const sourceId: string = data.resolutionId ?? data.invoiceId;
       const assignees = (data.assignees as string[])
         .filter((id) => this.people.members.data.some((m) => m.id === id && m.active))
         .sort()
         .slice(0, limits.maxAssignees);
-      if (!assignees.length || Object.values(this.sources.data).some((x) => x.kind === 'RESOLUTION' && x.id === data.resolutionId)) return;
+      if (!assignees.length || Object.values(this.sources.data).some((x) => x.kind === kind && x.id === sourceId)) return;
       const task: StoredTask = {
         id: crypto.randomUUID(),
         teamId: null,
@@ -134,7 +140,7 @@ export class MockTasks {
         repeatWeeks: null,
       };
       this.tasks.data.push(task);
-      this.sources.data[task.id] = { kind: 'RESOLUTION', id: data.resolutionId };
+      this.sources.data[task.id] = { kind, id: sourceId };
       this.tasks.save();
       this.sources.save();
       this.changed(task, 'CREATED');
@@ -190,7 +196,6 @@ export class MockTasks {
     this.changed(task, 'CREATED');
   }
 
-  /** server: REMINDER_DROPPED — the record behind an open deadline task is gone, so is the task. */
   /** server: SourcedTaskHandlers.onMemberErased - change-request tasks go (done ones too), the member leaves every task. */
   private onMemberErased(memberId: string, changeRequestIds: string[]): void {
     for (const [taskId, source] of Object.entries(this.sources.data)) {
@@ -208,8 +213,9 @@ export class MockTasks {
     for (const table of [this.tasks, this.sources, this.comments]) table.save();
   }
 
-  deadlineDrop(key: string): void {
-    const taskId = Object.entries(this.sources.data).find(([, s]) => s.kind === 'MEETING_REMINDER' && s.id === key)?.[0];
+  /** server: SourcedTaskHandlers.dropSourced — the record behind an open task is gone, so is the task. */
+  deadlineDrop(key: string, kind: TaskSource['kind'] = 'MEETING_REMINDER'): void {
+    const taskId = Object.entries(this.sources.data).find(([, s]) => s.kind === kind && s.id === key)?.[0];
     const index = this.tasks.data.findIndex((t) => t.id === taskId && t.status !== 'DONE');
     if (index < 0) return;
     const [task] = this.tasks.data.splice(index, 1);
@@ -222,6 +228,16 @@ export class MockTasks {
   /** server: REMINDER_DONE — the deadline is met. */
   deadlineDone(key: string): void {
     this.finish('MEETING_REMINDER', key);
+  }
+
+  /** server: TasksApi.MOVE_SOURCED — an open sourced task follows its record's due date. */
+  moveSourced(kind: TaskSource['kind'], sourceId: string, dueAt: string): void {
+    const taskId = Object.entries(this.sources.data).find(([, s]) => s.kind === kind && s.id === sourceId)?.[0];
+    const task = this.tasks.data.find((t) => t.id === taskId && t.status !== 'DONE');
+    if (!task || task.dueAt === dueAt) return;
+    task.dueAt = dueAt;
+    this.tasks.save();
+    this.changed(task, 'UPDATED');
   }
 
   /** server: TasksApi.SOURCED — source id → task and its state. */

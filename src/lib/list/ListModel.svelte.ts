@@ -21,6 +21,8 @@ export interface ListColumn<T> {
   sortable?: boolean;
   /** Dropped from the stacked phone layout. */
   hideOnCompact?: boolean;
+  /** Left out while no loaded row has a value (optional fields nobody filled in). */
+  hideWhenEmpty?: boolean;
 }
 
 export interface ListOption {
@@ -102,7 +104,8 @@ export class ListModel<T> {
   }
 
   get columns(): readonly ListColumn<T>[] {
-    return this.definition.columns;
+    const items = this.data.value ?? [];
+    return this.definition.columns.filter((c) => !c.hideWhenEmpty || items.some((item) => c.value(item) != null && c.value(item) !== ''));
   }
 
   get filterDefinitions(): readonly ListFilter<T>[] {
@@ -161,7 +164,7 @@ export class ListModel<T> {
   }
 
   column(key: string): ListColumn<T> | undefined {
-    return this.columns.find((c) => c.key === key);
+    return this.definition.columns.find((c) => c.key === key);
   }
 
   display(item: T, column: ListColumn<T>): string {

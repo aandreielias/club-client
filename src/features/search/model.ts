@@ -2,7 +2,22 @@ import { TASK_STATUS_LABELS } from '../../lib/types';
 // Mirror of the club-server search DTOs (gateway SearchController).
 
 export type HitKind =
-  'APPOINTMENT' | 'TASK' | 'MEMBER' | 'TEAM' | 'ITEM' | 'LOCATION' | 'TOURNAMENT' | 'MEETING' | 'RESOLUTION' | 'FOLDER' | 'FILE' | 'MAIL' | 'SETTING';
+  | 'APPOINTMENT'
+  | 'TASK'
+  | 'MEMBER'
+  | 'TEAM'
+  | 'ITEM'
+  | 'LOCATION'
+  | 'TOURNAMENT'
+  | 'MEETING'
+  | 'RESOLUTION'
+  | 'FOLDER'
+  | 'FILE'
+  | 'MAIL'
+  | 'BOOKING'
+  | 'AUDIT'
+  | 'INVOICE'
+  | 'SETTING';
 
 export interface SearchHit {
   kind: HitKind;
@@ -36,6 +51,9 @@ export const HIT_KINDS: readonly { value: HitKind; label: string }[] = [
   { value: 'FOLDER', label: 'Ordner' },
   { value: 'FILE', label: 'Datei' },
   { value: 'MAIL', label: 'E-Mail' },
+  { value: 'BOOKING', label: 'Buchung' },
+  { value: 'AUDIT', label: 'Kassenprüfung' },
+  { value: 'INVOICE', label: 'Rechnung' },
   { value: 'SETTING', label: 'Einstellung' },
 ];
 
@@ -74,6 +92,12 @@ export function hitTarget(hit: SearchHit): { window: { kind: string; id: string 
       return { path: `/files/${encodeURIComponent(hit.id)}` };
     case 'MAIL':
       return { window: { kind: 'mail', id: hit.windowId ?? '' } };
+    case 'BOOKING':
+      return { window: { kind: 'booking', id: hit.id } };
+    case 'AUDIT':
+      return { window: { kind: 'audit', id: hit.id } };
+    case 'INVOICE':
+      return { window: { kind: 'invoice', id: hit.id } };
     case 'SETTING':
       return { path: `/settings/${hit.id}` };
   }

@@ -16,6 +16,7 @@
   import MemberName from '../../ui/MemberName.svelte';
   import ChangeRequestSection from '../members/ChangeRequestSection.svelte';
   import ResolutionSourceSection from '../meetings/ResolutionSourceSection.svelte';
+  import InvoiceSourceSection from '../finance/InvoiceSourceSection.svelte';
   import Checklist from './Checklist.svelte';
   import Comments from './Comments.svelte';
   import DueField from './DueField.svelte';
@@ -133,6 +134,7 @@
 
         {#if task.source?.kind === 'CHANGE_REQUEST'}<ChangeRequestSection requestId={task.source.id} />{/if}
         {#if task.source?.kind === 'RESOLUTION'}<ResolutionSourceSection resolutionId={task.source.id} />{/if}
+        {#if task.source?.kind === 'FINANCE_INVOICE'}<InvoiceSourceSection invoiceId={task.source.id} />{/if}
 
         <LinksSection model={links} editable={policy.canManage(task)} />
 

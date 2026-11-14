@@ -6,7 +6,7 @@ import { LocalStore } from '../storage/LocalStore';
  * so a changed stored shape or seed needs no upgrade code: bump the version instead.
  */
 export class MockTable<T> {
-  static readonly VERSION = 11;
+  static readonly VERSION = 15;
   static readonly #store = new LocalStore(`${settings.storage.prefix}mock.`);
 
   static {

@@ -112,6 +112,16 @@
     text-align: center;
     font-variant-numeric: tabular-nums;
   }
+  /* Phones: the teams get the row, place and button go to the line below. */
+  :global([data-layout='compact']) .matches li {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+  :global([data-layout='compact']) .end {
+    grid-column: 1 / -1;
+    order: 2;
+    justify-content: center;
+    margin-top: calc(-1 * var(--space-xs));
+  }
   .result.open {
     color: var(--color-text-faint);
     font-weight: normal;

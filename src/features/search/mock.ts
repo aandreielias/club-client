@@ -2,6 +2,7 @@
 // through its own endpoint and filters by text, with the rules of the module's search.
 import { settings } from '../../settings';
 import { directory } from '../../lib/mock/core';
+import { finance } from '../finance/mock';
 import { mail } from '../mail/mock';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import type { HitKind, SearchHit } from './model';
@@ -117,6 +118,14 @@ mockServer.on('GET', '/api/v1/search', async (req) => {
         .map((f) => hit('FOLDER', f.id, f.name, null, null, f.parentId)),
       ...files.map((f) => hit('FILE', f.id, f.name, f.folderName, null, f.folderId)),
       ...mails.map((m) => hit('MAIL', m.mailboxId, m.subject, m.fromName, m.sentAt, null, `${m.mailboxId}:${m.mailId}`)),
+      // server: FinanceHandlers.search - no endpoint of its own; the account as detail
+      ...finance
+        .search(directory.actor(req), needle, limit)
+        .map((b) => hit('BOOKING', b.id, b.text, finance.accountList().find((a) => a.key === b.account)?.label ?? null, `${b.bookedOn}T00:00:00Z`)),
+      // server: InvoiceHandlers.search
+      ...finance.searchInvoices(directory.actor(req), needle, limit).map((i) => hit('INVOICE', i.id, i.text, i.counterparty, `${i.dueOn}T00:00:00Z`)),
+      // server: AuditHandlers.search
+      ...finance.searchAudits(directory.actor(req), needle, limit).map((a) => hit('AUDIT', a.id, a.title, null, `${a.checkedUntil}T00:00:00Z`)),
     ],
   };
 });

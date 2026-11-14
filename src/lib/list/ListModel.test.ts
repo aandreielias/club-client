@@ -38,6 +38,14 @@ function memoryStore(): LocalStore {
 }
 
 describe('ListModel', () => {
+  it('leaves out a hideWhenEmpty column while no row has a value', async () => {
+    const def = definition();
+    const columns = [...def.columns, { key: 'note', label: 'Notiz', value: () => null, hideWhenEmpty: true }];
+    const model = new ListModel({ ...def, columns: columns.map((c) => (c.key === 'size' ? { ...c, hideWhenEmpty: true } : c)) });
+    await model.data.load();
+    expect(model.columns.map((c) => c.key)).toEqual(['name', 'size']);
+  });
+
   it('sorts text with numeric awareness and puts empty values last', async () => {
     const list = new ListModel(definition());
     await list.load();

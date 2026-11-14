@@ -7,6 +7,7 @@
   import Button from '../../ui/Button.svelte';
   import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
   import { windowMenu } from '../../lib/window/windowMenu';
+  import { openMenuAt } from '../../ui/contextMenu';
   import DataTable from '../../ui/DataTable.svelte';
   import Detail from '../../ui/Detail.svelte';
   import Select from '../../ui/Select.svelte';
@@ -204,13 +205,21 @@
     {#if policy.canEdit() && model.roster.value}
       {@const team = model.roster.value.team}
       <Button icon="edit" disabled={edit.editing} onclick={() => startEdit(team.name, team.season)}>Bearbeiten</Button>
-      <Button onclick={() => (dialog = { kind: 'season' })}>Neue Saison</Button>
-      {#if team.archived}
-        <Button busy={archiveAction.busy} onclick={() => setArchived(false)}>Wiederherstellen</Button>
-      {:else}
-        <Button busy={archiveAction.busy} onclick={() => setArchived(true)}>Archivieren</Button>
-      {/if}
-      <Button variant="danger" icon="delete" busy={deleteAction.busy} onclick={() => deleteTeam(team.name)}>Löschen</Button>
+      <!-- Rarer team actions behind one button, so the header stays one line. -->
+      <Button
+        icon="more"
+        tooltip="Weitere Aktionen"
+        busy={archiveAction.busy || deleteAction.busy}
+        onclick={(e) =>
+          openMenuAt(e.currentTarget, [
+            { label: 'Neue Saison', run: () => (dialog = { kind: 'season' }) },
+            team.archived
+              ? { label: 'Wiederherstellen', icon: 'archive', run: () => setArchived(false) }
+              : { label: 'Archivieren', icon: 'archive', run: () => setArchived(true) },
+            { separator: true },
+            { label: 'Löschen', icon: 'delete', danger: true, run: () => deleteTeam(team.name) },
+          ])}
+      />
     {/if}
   {/snippet}
   {#snippet meta()}

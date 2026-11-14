@@ -9,6 +9,7 @@
   import { usePane } from '../../lib/split/usePane';
   import OrgChart from './OrgChart.svelte';
   import Dialog from '../../ui/Dialog.svelte';
+  import Select from '../../ui/Select.svelte';
   import MemberTable from './MemberTable.svelte';
 
   import Page from '../../ui/Page.svelte';
@@ -16,7 +17,7 @@
   import { MEMBER_DEACTIVATED, MEMBER_INVITED } from './events';
   import { membersToCsv, parseMemberImport, runMemberImport, type ImportProblem } from './MemberCsv.svelte';
   import { teamsApi } from '../teams/services';
-  import { MemberListModel } from './MemberListModel.svelte';
+  import { MemberListModel, type MemberRow } from './MemberListModel.svelte';
   import { boardSettings, memberPolicy as policy, membersApi, membershipKinds } from './services';
 
   const pane = usePane();
@@ -91,6 +92,67 @@
     }
   }
 
+  // Bulk actions (admin/board): pick rows, then copy addresses, add to a team or set the membership kind.
+  let selecting = $state(false);
+  let chosen = $state(new Set<string>());
+  let bulkTeam = $state('');
+  let bulkKind = $state('');
+  let bulkBusy = $state(false);
+  const selectable = (m: MemberRow) => !m.nameOnly && m.active;
+  const chosenRows = $derived(list.rows.filter((m) => chosen.has(m.id) && selectable(m)));
+  const toggle = (m: MemberRow) => {
+    const next = new Set(chosen);
+    if (!next.delete(m.id)) next.add(m.id);
+    chosen = next;
+  };
+  const stopSelecting = () => ((selecting = false), (chosen = new Set()));
+  const teamOptions = $derived(directory.teams.filter((t) => !t.archived).map((t) => ({ value: t.id, label: t.name })));
+  const kindOptions = $derived(membershipKinds.items.filter((k) => !k.archived).map((k) => ({ value: k.key, label: k.label })));
+
+  async function copyAddresses() {
+    const emails = chosenRows.flatMap((m) => (m.email ? [m.email] : []));
+    try {
+      await navigator.clipboard.writeText(emails.join('; '));
+      bus.publish(TOAST, { text: `${emails.length} E-Mail-Adressen kopiert, etwa für Bcc.` });
+    } catch {
+      bus.publish(TOAST, { text: 'Kopieren ist hier nicht möglich.', tone: 'error' });
+    }
+  }
+
+  /** One request per member, in order; stops at the first error and says how far it got. */
+  async function runBulk(confirm: string, each: (m: MemberRow) => Promise<unknown>, done: string) {
+    const rows = chosenRows;
+    if (!(await bus.request(CONFIRM, { title: 'Für Auswahl ausführen', message: confirm, confirmLabel: 'Ausführen' }))) return;
+    bulkBusy = true;
+    let count = 0;
+    try {
+      for (const m of rows) {
+        await each(m);
+        count++;
+      }
+      bus.publish(TOAST, { text: done });
+      stopSelecting();
+    } catch (e) {
+      bus.publish(TOAST, { text: `${count} von ${rows.length} erledigt. ${errors.text(e)}`, tone: 'error' });
+    } finally {
+      bulkBusy = false;
+      void list.load();
+    }
+  }
+
+  const addToTeam = () =>
+    runBulk(
+      `${chosenRows.length} Mitglieder als Spieler:innen in ${directory.teamName(bulkTeam)} aufnehmen? Wer schon im Team ist, wird Spieler:in.`,
+      (m) => teamsApi.setMember(bulkTeam, m.id, 'PLAYER'),
+      'Ins Team aufgenommen.',
+    );
+  const setKind = () =>
+    runBulk(
+      `${chosenRows.length} Mitglieder bekommen die Mitgliedsart „${membershipKinds.label(bulkKind)}“; ihre bisherige wird ersetzt.`,
+      (m) => membersApi.setMembership(m.id, { membershipTypes: [bulkKind], memberSince: m.memberSince }),
+      'Mitgliedsart gesetzt.',
+    );
+
   function picked(): void {
     const file = fileInput?.files?.[0];
     if (fileInput) fileInput.value = '';
@@ -108,7 +170,20 @@
         bind:value={() => view, (v) => pane.updateQuery({ view: v === 'org' ? 'org' : null }, true)}
       />
     {/if}
-    {#if policy.canInvite() && view === 'list'}
+    {#if selecting}
+      <span class="muted">{chosenRows.length} ausgewählt</span>
+      <Button onclick={() => (chosen = new Set(list.rows.filter(selectable).map((m) => m.id)))}>Alle</Button>
+      <Button disabled={!chosenRows.length} onclick={copyAddresses}>Adressen kopieren</Button>
+      <Select inline aria-label="Team" placeholder="Team …" value={bulkTeam} options={teamOptions} onchange={(v) => (bulkTeam = v)} />
+      <Button disabled={!chosenRows.length || !bulkTeam} busy={bulkBusy} onclick={addToTeam}>Ins Team</Button>
+      <Select inline aria-label="Mitgliedsart" placeholder="Mitgliedsart …" value={bulkKind} options={kindOptions} onchange={(v) => (bulkKind = v)} />
+      <Button disabled={!chosenRows.length || !bulkKind} busy={bulkBusy} onclick={setKind}>Mitgliedsart setzen</Button>
+      <Button variant="ghost" onclick={stopSelecting}>Fertig</Button>
+    {:else if policy.canInvite() && view === 'list'}
+      <Button
+        tooltip="Mehrere Mitglieder auswählen: Adressen kopieren, ins Team aufnehmen, Mitgliedsart setzen"
+        onclick={() => ((selecting = true), void directory.loadTeams(), void membershipKinds.load())}>Auswählen</Button
+      >
       <Button icon="download" onclick={exportCsv} disabled={!list.rows.length}>Exportieren</Button>
       <Button icon="upload" onclick={() => fileInput?.click()} busy={importing}>Importieren</Button>
       <input bind:this={fileInput} type="file" accept=".csv,text/csv" onchange={picked} hidden />
@@ -121,6 +196,9 @@
   {:else}
     <MemberTable
       {list}
+      check={selecting
+        ? { checked: (m) => chosen.has(m.id), toggle, disabled: (m) => !selectable(m), label: (m) => `${m.firstName} ${m.lastName} auswählen` }
+        : undefined}
       emptyAction={policy.canInvite()
         ? { label: 'Neues Konto', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'member-new', id: '-' }) }
         : null}
