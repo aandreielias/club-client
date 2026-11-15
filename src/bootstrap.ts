@@ -1,5 +1,5 @@
 import { features } from './features';
-import { calendarSources, errors, homeSections, links, navCatalog, preferences, theme, windows } from './lib/container';
+import { calendarSources, errors, homeSections, links, navCatalog, preferences, recordActions, theme, windows } from './lib/container';
 import { deepLink } from './lib/router/DeepLink';
 
 /** One-time setup before the first render. */
@@ -8,6 +8,7 @@ export function bootstrap(): void {
   features.registerMessages(errors);
   features.registerLinks(links);
   features.registerWindows(windows);
+  features.registerActions(recordActions);
   features.registerCalendarSources(calendarSources);
   features.registerHome(homeSections);
   features.registerNavigation(navCatalog);

@@ -23,9 +23,6 @@
 </script>
 
 <div class="stack">
-  <p class="muted small">
-    Welche Arten von Terminen es gibt, in welcher Farbe sie im Kalender stehen und ob Fahrgemeinschaften und Kabinen angeboten werden.
-  </p>
   <SettingsList
     {rows}
     kind="appointment-type"
@@ -39,9 +36,3 @@
     emptyText="Noch keine Terminarten."
   />
 </div>
-
-<style>
-  p {
-    margin: 0;
-  }
-</style>

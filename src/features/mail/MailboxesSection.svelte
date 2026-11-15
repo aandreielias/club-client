@@ -1,4 +1,5 @@
 <script lang="ts">
+  import InfoTip from '../../ui/InfoTip.svelte';
   import { settings } from '../../settings';
   import { bus } from '../../lib/container';
   import { removeRecord } from '../../lib/detail/removeRecord';
@@ -91,10 +92,11 @@
   {/if}
 
   <section class="stack">
-    <h2>Postfächer</h2>
-    <p class="muted small">
-      Persönliche Postfächer gehören einem Mitglied, geteilte (etwa vorstand@) allen mit einer Rolle. Die E-Mails selbst bleiben beim Mail-Anbieter.
-    </p>
+    <h2>
+      Postfächer&nbsp;<InfoTip
+        text="Persönliche Postfächer gehören einem Mitglied, geteilte (etwa vorstand@) allen mit einer Rolle. Die E-Mails selbst bleiben beim Mail-Anbieter."
+      />
+    </h2>
     <SettingsList
       {rows}
       kind="mailbox"

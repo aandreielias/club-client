@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { bus, calendarSources, directory, router, session, windows } from '../lib/container';
+  import { recordMenu } from './contextMenu';
+  import { bus, calendarSources, directory, session } from '../lib/container';
   import { NAVIGATE, WINDOW_OPEN } from '../channels';
   import { AgendaListModel } from '../lib/calendar/AgendaListModel.svelte';
-  import { windowMenu } from '../lib/window/windowMenu';
   import DataTable from './DataTable.svelte';
   import SectionHeading from './SectionHeading.svelte';
   import Tag from './Tag.svelte';
@@ -25,7 +25,7 @@
   rowKey={(e) => e.key}
   record={(e) => (e.window ? { ...e.window, title: e.title } : null)}
   onopen={(e) => (e.window ? bus.publish(WINDOW_OPEN, { kind: e.window.kind, id: e.window.id }) : e.path && bus.publish(NAVIGATE, { path: e.path }))}
-  menu={(e) => (e.window ? windowMenu(bus, windows, router, e.window.kind, e.window.id) : [])}
+  menu={(e) => (e.window ? recordMenu(e.window.kind, e.window.id) : [])}
   emptyText="In dieser Zeit steht nichts an."
 >
   {#snippet cell(entry, column)}

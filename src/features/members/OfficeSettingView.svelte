@@ -1,17 +1,19 @@
 <script lang="ts">
-  import { backStack, bus, permissions } from '../../lib/container';
+  import { backStack, bus, commands, permissions } from '../../lib/container';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { officeSettingActions } from './actions';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
-  import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import DetailSkeleton from '../../ui/DetailSkeleton.svelte';
   import Tag from '../../ui/Tag.svelte';
-  import { Action } from '../../lib/state/Action.svelte';
-  import { SEEDED_OFFICES, type OfficeKind } from './MembersApi';
+  import type { OfficeKind } from './MembersApi';
   import OfficeSettingEditor from './OfficeSettingEditor.svelte';
   import { OfficeSettingForm, partnersOf } from './OfficeSettingForm.svelte';
-  import { boardSettings, membersApi } from './services';
+  import { boardSettings } from './services';
 
   /** One office of the board settings; admin and board edit it. Window. */
   let { id, handle, onclosed }: { id: string; handle?: WindowHandle; onclosed?: () => void } = $props();
@@ -31,23 +33,18 @@
   view.title(() => office?.label);
   const partners = $derived(boardSettings.value ? partnersOf(boardSettings.value, id as OfficeKind).map((o) => boardSettings.label(o)) : []);
 
-  const deleteAction = new Action();
-
-  /** Only a club office nobody ever held and no Sitzungsart or decision names; others are switched off. */
-  async function remove(label: string) {
-    const request = {
-      title: 'Funktion löschen',
-      message: `„${label}“ wird gelöscht. Das geht nur, wenn sie nie vergeben war und keine Sitzungsart sie nennt; sonst stelle sie auf „Nicht besetzt“.`,
-      confirmLabel: 'Löschen',
-      danger: true,
-    };
-    const ok = await view.confirm(
-      request,
-      () => view.attempt(deleteAction, () => deleteAction.run(async () => (boardSettings.value = await membersApi.deleteOffice(id)))),
-      'Funktion gelöscht.',
-    );
-    if (ok) view.leave();
-  }
+  const act = useRecordActions(
+    commands,
+    officeSettingActions,
+    () => (edit.form ? null : office),
+    () => view.leave(),
+  );
+  useCommands(commands, {
+    'record.edit': {
+      run: () => office && boardSettings.value && edit.edit(new OfficeSettingForm(boardSettings.value, office.office)),
+      when: () => !edit.form && !!office && !!boardSettings.value && permissions.isManager,
+    },
+  });
 
   /** The rest of the board settings is sent as the server has it now. */
   async function submit() {
@@ -61,12 +58,7 @@
       {#if !office.enabled}<Tag tone="gray">Nicht besetzt</Tag>{/if}
     {/snippet}
     {#snippet actions()}
-      {#if !edit.form && permissions.isManager && boardSettings.value}
-        <Button icon="edit" onclick={() => edit.edit(new OfficeSettingForm(boardSettings.value!, office.office))}>Bearbeiten</Button>
-        {#if !SEEDED_OFFICES.includes(office.office)}
-          <Button variant="danger" icon="delete" busy={deleteAction.busy} onclick={() => remove(office.label)}>Löschen</Button>
-        {/if}
-      {/if}
+      <RecordActionButtons actions={act} />
     {/snippet}
 
     {#if edit.form}

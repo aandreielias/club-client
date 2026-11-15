@@ -1,9 +1,12 @@
 <script lang="ts">
-  import { backStack, bus, pendingDeletes, session } from '../../lib/container';
+  import { backStack, bus, commands, session } from '../../lib/container';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { holidayActions } from './actions';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
-  import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import DetailSkeleton from '../../ui/DetailSkeleton.svelte';
   import HolidayEditor from './HolidayEditor.svelte';
@@ -31,25 +34,27 @@
     await edit.submit((form) => stored.saved(() => calendarApi.saveHoliday(id, { ...form, name: form.name.trim() })), 'Ferien gespeichert.');
   }
 
-  function remove(name: string) {
-    // The prop is gone once the view closed, before the undo time ends: keep the id itself.
-    const target = id;
-    pendingDeletes.schedule({
-      ids: [target],
-      text: `„${name}“ gelöscht. Bestehende Termine bleiben.`,
-      commit: () => calendarApi.deleteHoliday(target).then(() => holidays.load()),
-    });
-    view.leave();
-  }
+  const act = useRecordActions(
+    commands,
+    holidayActions,
+    () => (edit.form ? null : holiday),
+    () => view.leave(),
+  );
+  useCommands(commands, {
+    'record.edit': {
+      run: () => holiday && edit.edit({ name: holiday.name, from: holiday.from, to: holiday.to }),
+      when: () => !edit.form && !!holiday,
+    },
+  });
 </script>
 
 {#if holiday}
-  <Detail title={edit.form ? 'Ferien bearbeiten' : holiday.name}>
+  <Detail
+    title={edit.form ? 'Ferien bearbeiten' : holiday.name}
+    hint="Neue wöchentliche Serien lassen diese Tage aus. Bestehende Termine sagst du im Kalender mit „Zeitraum absagen“ ab."
+  >
     {#snippet actions()}
-      {#if !edit.form}
-        <Button icon="edit" onclick={() => edit.edit({ name: holiday.name, from: holiday.from, to: holiday.to })}>Bearbeiten</Button>
-        <Button variant="danger" icon="delete" onclick={() => remove(holiday.name)}>Löschen</Button>
-      {/if}
+      <RecordActionButtons actions={act} />
     {/snippet}
 
     {#if edit.form}
@@ -63,7 +68,6 @@
         <dt>Bis</dt>
         <dd>{session.format.date(holiday.to)}</dd>
       </dl>
-      <p class="muted small">Neue wöchentliche Serien lassen diese Tage aus. Bestehende Termine sagst du im Kalender mit „Zeitraum absagen“ ab.</p>
     {/if}
   </Detail>
 {:else}
@@ -73,8 +77,5 @@
 <style>
   .editing {
     display: contents;
-  }
-  p {
-    margin: 0;
   }
 </style>

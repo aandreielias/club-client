@@ -8,8 +8,11 @@
   import { BrowserFile } from '../../lib/files/BrowserFile';
   import { csvText } from '../../lib/files/csv';
   import { Resource } from '../../lib/state/Resource.svelte';
-  import { bus, commands, pendingDeletes, session } from '../../lib/container';
+  import { bus, commands, session } from '../../lib/container';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { lateToInvite as late, meetingActions } from './actions';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
@@ -97,33 +100,17 @@
     await model.setRoles(chairId, secretaryId);
   }
   const presentVoters = (m: Meeting) => m.present.filter((p) => m.electorate.some((e) => e.memberId === p.memberId)).length;
-  const late = (m: Meeting) => m.latestInvite < new Date().toISOString();
 
-  async function invite(m: Meeting) {
-    const who = m.chosen
-      ? 'die Eingeladenen (Gäste per E-Mail)'
-      : invitesVoters(meetingTypes.get(m.kind))
-        ? 'alle stimmberechtigten Mitglieder'
-        : 'den Vorstand';
-    await view.confirm(
-      {
-        title: 'Einladung verschicken',
-        message: `Die Einladung mit Tagesordnung geht per E-Mail und App an ${who}. Danach steht der Termin fest.`,
-        confirmLabel: 'Einladen',
-      },
-      () => view.attempt(model.action, () => model.invite()),
-      'Einladung verschickt.',
-    );
-  }
-
+  const act = useRecordActions(
+    commands,
+    meetingActions,
+    () => (editingDraft ? null : model.meeting.value),
+    () => view.leave(),
+    () => model.load(),
+  );
   useCommands(commands, {
-    'meeting.invite': {
-      run: () => model.meeting.value && void invite(model.meeting.value),
-      when: () => {
-        const m = model.meeting.value;
-        return !!m && m.canManage && m.status === 'DRAFT' && !late(m) && !model.action.busy;
-      },
-    },
+    'record.edit': { run: () => (editingDraft = true), when: () => act.has('record.edit') },
+    'meeting.close': { run: () => void close(), when: () => act.has('meeting.close') && !model.action.busy },
   });
 
   async function close() {
@@ -139,32 +126,12 @@
     );
   }
 
-  async function cancel() {
-    await view.confirm(
-      {
-        title: 'Sitzung absagen',
-        message: 'Alle Eingeladenen erfahren, dass die Sitzung nicht stattfindet. Das lässt sich nicht rückgängig machen.',
-        confirmLabel: 'Absagen',
-        danger: true,
-      },
-      () => view.attempt(model.action, () => model.cancel()),
-      'Sitzung abgesagt.',
-    );
-  }
-
   async function finalizeProtocol() {
     await view.confirm(
       { title: 'Protokoll abschließen', message: 'Danach lässt sich das Protokoll nicht mehr ändern.', confirmLabel: 'Abschließen' },
       () => view.attempt(model.action, async () => (await model.saveProtocol(protocol)) && model.finalizeProtocol()),
       'Protokoll abgeschlossen.',
     );
-  }
-
-  function remove(title: string) {
-    // The prop is gone once the view closed, before the undo time ends: keep the id itself.
-    const target = id;
-    pendingDeletes.schedule({ ids: [target], text: `Entwurf „${title}“ gelöscht.`, commit: () => meetingsApi.delete(target) });
-    view.leave();
   }
 
   async function saveProtocol() {
@@ -176,15 +143,7 @@
   {#snippet children(m)}
     <Detail title={m.title}>
       {#snippet actions()}
-        {#if m.canManage && m.status === 'DRAFT'}
-          <Button variant="danger" icon="delete" onclick={() => remove(m.title)}>Löschen</Button>
-          <Button variant="primary" busy={model.action.busy} disabled={late(m)} onclick={() => invite(m)}>Einladen</Button>
-        {:else if m.canManage && m.status === 'INVITED'}
-          <Button variant="ghost" busy={model.action.busy} onclick={cancel}>Absagen</Button>
-          <Button variant="primary" busy={model.action.busy} onclick={() => view.attempt(model.action, () => model.open())}>Sitzung eröffnen</Button>
-        {:else if m.canManage && m.status === 'OPEN'}
-          <Button variant="primary" busy={model.action.busy} onclick={close}>Sitzung beenden</Button>
-        {/if}
+        <RecordActionButtons actions={act} />
       {/snippet}
       {#snippet meta()}
         <Tag tone={STATUS_TONES[m.status]}>{STATUS_LABELS[m.status]}</Tag>
@@ -219,12 +178,6 @@
       {#if m.canManage && m.status === 'DRAFT'}
         {#if editingDraft}
           <MeetingDraftEditor meeting={m} {model} onclose={() => (editingDraft = false)} />
-        {:else}
-          <div>
-            <Button size="sm" icon="edit" tooltip="Titel, Zeit und Dringlichkeit des Entwurfs ändern" onclick={() => (editingDraft = true)}
-              >Entwurf bearbeiten</Button
-            >
-          </div>
         {/if}
       {/if}
       {#if m.canManage && m.status !== 'CLOSED'}

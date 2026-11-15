@@ -1,3 +1,4 @@
+import { appointmentActions, appointmentTypeActions, holidayActions } from './actions';
 import CalendarHome from './CalendarHome.svelte';
 import OpenAnswersHome from './OpenAnswersHome.svelte';
 import { permissions } from '../../lib/container';
@@ -20,7 +21,7 @@ export const calendarFeature: Feature = {
   id: 'calendar',
   routes: [
     { path: '/calendar', component: CalendarPage, nav: 'Kalender', icon: 'calendar' },
-    { path: '/events', component: EventsPage, nav: 'Events', icon: 'events' },
+    { path: '/events', component: EventsPage, nav: 'Termine', icon: 'events' },
     { path: '/calendar/absences', component: AbsencesPage },
     detailRoute('/calendar/:id', AppointmentView, { href: '/calendar', label: 'Kalender' }),
     detailRoute(
@@ -41,6 +42,7 @@ export const calendarFeature: Feature = {
     'holiday-new': { component: HolidayCreateView, roles: ADMIN_BOARD },
     'absence-new': { component: AbsenceCreateView },
   },
+  actions: { appointment: appointmentActions, 'appointment-type': appointmentTypeActions, holiday: holidayActions },
   start: (guest) => (guest ? undefined : appointmentTypes.start()),
   calendar: {
     // The reason comes only for who may see it (self, guardians, coaches, admin, board).

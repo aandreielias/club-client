@@ -10,6 +10,7 @@
   import Empty from '../../ui/Empty.svelte';
   import LoadMore from '../../ui/LoadMore.svelte';
   import Page from '../../ui/Page.svelte';
+  import { recordMenu } from '../../ui/contextMenu';
   import Select from '../../ui/Select.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { MailListModel } from './MailListModel.svelte';
@@ -77,6 +78,12 @@
       model={list}
       rowKey={(m) => m.id}
       onopen={(m) => open(m.id)}
+      menu={list.folder === 'DRAFTS' || !list.mailboxId
+        ? undefined
+        : (m) =>
+            recordMenu('mail', `${list.mailboxId}:${m.id}`, {
+              record: { mailboxId: list.mailboxId, mail: { id: m.id, folder: list.folder, from: m.from, recipients: 0 } },
+            })}
       {selected}
       emptyText={list.folder === 'INBOX' ? 'Keine E-Mails im Posteingang.' : list.folder === 'DRAFTS' ? 'Keine Entwürfe.' : 'Dieser Ordner ist leer.'}
     >

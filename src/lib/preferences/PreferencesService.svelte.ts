@@ -18,6 +18,8 @@ export interface Preferences {
   navOrder: string[];
   /** Sidebar shows icons only. */
   sidebarCollapsed: boolean;
+  /** Keys of the sidebar and settings groups the user closed (others are open). */
+  navClosed: string[];
   /** One view for every folder; changing it in any folder changes it everywhere. */
   filesView: FilesViewPreference;
   /** Start page section ids in the user's order ([] = default) and sections switched on or off (others: their default). */
@@ -50,6 +52,7 @@ export class PreferencesService {
       calendarView: defaults.calendarView,
       navOrder: [],
       sidebarCollapsed: false,
+      navClosed: [],
       filesView: defaults.filesView,
       homeOrder: [],
       homeShown: {},
@@ -97,6 +100,7 @@ export class PreferencesService {
       calendarView: ['month', 'week'].includes(values.calendarView) ? values.calendarView : d.calendarView,
       navOrder: PreferencesService.strings(values.navOrder),
       sidebarCollapsed: values.sidebarCollapsed === true,
+      navClosed: PreferencesService.strings(values.navClosed),
       filesView: values.filesView === 'table' || values.filesView === 'gallery' ? values.filesView : d.filesView,
       homeOrder: PreferencesService.strings(values.homeOrder),
       homeShown: Object.fromEntries(

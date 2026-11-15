@@ -1,8 +1,9 @@
 <script lang="ts" generics="T extends string">
+  import InfoTip from './InfoTip.svelte';
   import { toggled } from './options';
 
   /**
-   * A multiple choice as a list of checkboxes, each with its name and a short explanation, in two columns on wide screens. Disabled
+   * A multiple choice as a list of checkboxes, each with its name and an ⓘ with a short explanation, in two columns on wide screens. Disabled
    * options keep their state (e.g. a choice that is always on). Replaces rows of toggle pills where the choices need explaining.
    */
   let {
@@ -19,23 +20,23 @@
 <fieldset class="options">
   <legend class="visually-hidden">{label}</legend>
   {#each options as option (option.value)}
-    <label class="option" class:on={value.includes(option.value)} class:disabled={option.disabled}>
-      <input
-        type="checkbox"
-        checked={value.includes(option.value)}
-        disabled={option.disabled}
-        onchange={() =>
-          (value = toggled(
-            value,
-            option.value,
-            options.map((o) => o.value),
-          ))}
-      />
-      <span class="text">
+    <div class="option" class:on={value.includes(option.value)} class:disabled={option.disabled}>
+      <label>
+        <input
+          type="checkbox"
+          checked={value.includes(option.value)}
+          disabled={option.disabled}
+          onchange={() =>
+            (value = toggled(
+              value,
+              option.value,
+              options.map((o) => o.value),
+            ))}
+        />
         <span class="name">{option.label}</span>
-        {#if option.hint}<span class="hint">{option.hint}</span>{/if}
-      </span>
-    </label>
+      </label>
+      {#if option.hint}<InfoTip text={option.hint} />{/if}
+    </div>
   {/each}
 </fieldset>
 
@@ -47,8 +48,8 @@
   }
   .option {
     display: flex;
-    align-items: flex-start;
-    gap: var(--space-sm);
+    align-items: center;
+    gap: var(--space-xs);
     padding: var(--space-sm);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
@@ -68,18 +69,14 @@
     cursor: default;
     opacity: 0.75;
   }
-  .option input {
-    margin-top: 2px;
-  }
-  .text {
-    display: grid;
-    gap: 2px;
+  label {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--space-sm);
+    cursor: inherit;
   }
   .name {
     font-weight: var(--font-weight-medium);
-  }
-  .hint {
-    color: var(--color-text-muted);
-    font-size: var(--font-size-small);
   }
 </style>

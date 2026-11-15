@@ -35,10 +35,17 @@ describe('Sidebar order', () => {
 describe('Sidebar groups', () => {
   const layout = new NavLayout(
     [
-      { id: 'verein', label: 'Verein', icon: 'teams', paths: ['/teams', '/members', '/locations'] },
-      { id: 'ablage', label: 'Ablage', icon: 'files', paths: ['/files', '/inventory'] },
+      '/',
+      '/tasks',
+      { id: 'ablage', label: 'Ablage', icon: 'files', children: ['/files', '/inventory'] },
+      {
+        id: 'verein',
+        label: 'Verein',
+        icon: 'teams',
+        children: ['/teams', { id: 'leute', label: 'Leute', icon: 'members', children: ['/members', '/locations'] }],
+      },
     ],
-    ['/', '/tasks', 'group:ablage', 'group:verein'],
+    { 'group:old': 'group:verein' },
   );
   const registry = new FeatureRegistry(
     [
@@ -59,12 +66,19 @@ describe('Sidebar groups', () => {
   );
   const member = registry.allowed(() => false);
 
-  it('collapses tabs into groups in the default order, with the tabs in group order and summed badges', () => {
+  it('nests tabs into groups in the tree order, with summed badges', () => {
     const items = registry.navigation(registry.routes);
     expect(items.map((i) => i.key)).toEqual(['/', '/tasks', 'group:ablage', 'group:verein']);
     const verein = items.find((i) => i.key === 'group:verein')!;
     expect(verein).toMatchObject({ label: 'Verein', path: '/teams', badge: 3 });
-    expect(verein.children!.map((c) => c.path)).toEqual(['/teams', '/members', '/locations']);
+    expect(verein.children!.map((c) => c.key)).toEqual(['/teams', 'group:leute']);
+    expect(verein.children![1]).toMatchObject({ label: 'Leute', path: '/members', badge: 1 });
+    expect(verein.children![1].children!.map((c) => c.path)).toEqual(['/members', '/locations']);
+  });
+
+  it('shows a subgroup with one visible tab as that tab', () => {
+    const verein = registry.navigation(member).find((i) => i.key === 'group:verein')!;
+    expect(verein.children!.map((c) => c.key)).toEqual(['/teams', '/locations']);
   });
 
   it('shows a group with one visible tab as that tab, and keeps its place', () => {
@@ -87,8 +101,9 @@ describe('Sidebar groups', () => {
     expect(only.allowed(() => false).map((r) => r.path)).toEqual(['/finance']);
   });
 
-  it('puts a group where an order saved before grouping had its first tab', () => {
+  it('puts a group where an order saved before grouping had its first tab, and maps old groups', () => {
     expect(registry.navigation(registry.routes, ['/locations', '/']).map((i) => i.key)).toEqual(['group:verein', '/', '/tasks', 'group:ablage']);
+    expect(registry.navigation(registry.routes, ['group:old']).map((i) => i.key)).toEqual(['group:verein', '/', '/tasks', 'group:ablage']);
   });
 
   it('offers groups once for reordering', () => {

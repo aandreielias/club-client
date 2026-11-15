@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { bus, commands, router, session, store, windows } from '../../lib/container';
+  import { recordMenu } from '../../ui/contextMenu';
+  import { bus, commands, session, store, windows } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
-  import { windowMenu } from '../../lib/window/windowMenu';
   import Button from '../../ui/Button.svelte';
   import DataTable from '../../ui/DataTable.svelte';
   import Page from '../../ui/Page.svelte';
@@ -37,7 +37,7 @@
     rowKey={(m) => m.id}
     record={(m) => ({ kind: 'meeting', id: m.id, title: m.title })}
     onopen={(m) => bus.publish(WINDOW_OPEN, { kind: 'meeting', id: m.id })}
-    menu={(m) => windowMenu(bus, windows, router, 'meeting', m.id)}
+    menu={(m) => recordMenu('meeting', m.id)}
     selected={windows.current?.kind === 'meeting' ? windows.current.id : null}
     emptyText="Keine Sitzungen. Mitgliederversammlungen sehen die stimmberechtigten Mitglieder, Vorstandssitzungen nur der Vorstand."
     emptyAction={policy.canCreate() ? { label: 'Neue Sitzung', icon: 'add', run: create } : null}

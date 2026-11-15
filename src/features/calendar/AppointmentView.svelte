@@ -3,6 +3,9 @@
   import { backStack, bus, commands, directory, linksApi, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { appointmentActions } from './actions';
   import { LinksModel } from '../../lib/links/LinksModel.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
@@ -92,24 +95,20 @@
     }
   }
 
-  async function restore() {
-    if (await view.attempt(detail.restoreAction, () => detail.restore())) view.notify('Absage zurückgenommen.');
-  }
-
-  async function remove(appointment: Appointment) {
-    const request = {
-      title: 'Termin löschen',
-      message: `„${appointment.title}“ wird endgültig gelöscht. Das geht nur, solange niemand geantwortet hat; sonst bitte absagen.`,
-      confirmLabel: 'Löschen',
-      danger: true,
-    };
-    if (await view.confirm(request, () => view.attempt(detail.deleteAction, () => detail.delete()), 'Termin gelöscht.')) handle?.close();
-  }
+  const act = useRecordActions(
+    commands,
+    appointmentActions,
+    () => (edit.editing ? null : detail.appointment.value),
+    () => view.leave(),
+  );
+  const editable = () => !edit.editing && !!detail.appointment.value && policy.canEdit(detail.appointment.value);
   useCommands(commands, {
-    'appointment.edit': {
+    'record.edit': {
       run: () => detail.appointment.value && edit.edit(AppointmentForm.edit(session.clock, detail.appointment.value, appointmentTypes)),
-      when: () => !edit.editing && !!detail.appointment.value && policy.canEdit(detail.appointment.value),
+      when: editable,
     },
+    'appointment.cancel': { run: () => (cancelOpen = true), when: editable },
+    'appointment.extend': { run: () => ((extendTo = ''), (extendOpen = true)), when: () => editable() && !!detail.appointment.value?.seriesId },
     'appointment.yes': { run: () => void answer('YES'), when: canAnswer },
     'appointment.maybe': { run: () => void answer('MAYBE'), when: canAnswer },
     'appointment.no': { run: () => void answer('NO'), when: canAnswer },
@@ -140,14 +139,7 @@
   {#snippet children(appointment)}
     <Detail title={edit.form ? 'Termin bearbeiten' : appointment.title}>
       {#snippet actions()}
-        {#if !edit.form && policy.canEdit(appointment)}
-          <Button icon="edit" onclick={() => edit.edit(AppointmentForm.edit(session.clock, appointment, appointmentTypes))}>Bearbeiten</Button>
-          <Button variant="danger" onclick={() => (cancelOpen = true)}>Absagen</Button>
-          <Button variant="danger" icon="delete" busy={detail.deleteAction.busy} onclick={() => remove(appointment)}>Löschen</Button>
-          {#if appointment.seriesId}<Button onclick={() => ((extendTo = ''), (extendOpen = true))}>Serie verlängern</Button>{/if}
-        {:else if !edit.form && policy.canRestore(appointment)}
-          <Button busy={detail.restoreAction.busy} onclick={restore}>Absage zurücknehmen</Button>
-        {/if}
+        <RecordActionButtons actions={act} />
       {/snippet}
       {#snippet meta()}
         {#if !edit.form}
@@ -231,9 +223,13 @@
         <ActivitySection kind="APPOINTMENT" id={appointment.id} />
 
         {#if policy.canEdit(appointment) && appointment.seriesId}
-          <Dialog open={extendOpen} title="Serie verlängern" onclose={() => (extendOpen = false)}>
+          <Dialog
+            open={extendOpen}
+            title="Serie verlängern"
+            hint="Die Serie geht im selben Rhythmus weiter, mit Zeit, Ort und Einstellungen des letzten Termins. Ferien werden ausgelassen."
+            onclose={() => (extendOpen = false)}
+          >
             <div class="stack">
-              <p>Die Serie geht im selben Rhythmus weiter, mit Zeit, Ort und Einstellungen des letzten Termins. Ferien werden ausgelassen.</p>
               <Field label="Bis einschließlich"><DateInput bind:value={extendTo} min={session.clock.today()} /></Field>
               <ErrorNote error={extendAction.error} />
               <div class="row">

@@ -104,7 +104,7 @@
         <Field label="Alle … Wochen" error={form.error('intervalWeeks')}>
           <input type="number" bind:value={form.intervalWeeks} min="1" max={limits.maxIntervalWeeks} step="1" />
         </Field>
-        <Field label="Bis einschließlich" error={form.error('repeatUntil')} hint={form.repeatUntil ? `${form.occurrences()} Termine` : undefined}>
+        <Field label="Bis einschließlich" error={form.error('repeatUntil')} note={form.repeatUntil ? `${form.occurrences()} Termine` : undefined}>
           <DateInput bind:value={form.repeatUntil} min={form.start.slice(0, 10)} />
         </Field>
       </div>

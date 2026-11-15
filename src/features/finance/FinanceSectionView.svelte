@@ -6,6 +6,7 @@
   import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
+  import { menu, recordMenu } from '../../ui/contextMenu';
   import { tooltip } from '../../ui/tooltip';
   import BudgetSection from './BudgetSection.svelte';
   import FeesSection from './FeesSection.svelte';
@@ -46,7 +47,7 @@
   <Detail title={FINANCE_SECTIONS.balances}>
     <ul class="rows">
       {#each shown as account (account.key)}
-        <li>
+        <li {@attach menu(() => recordMenu('finance-account', account.key))}>
           <button type="button" class="link-button" onclick={() => handle.open('finance-account', account.key)} {@attach tooltip('Konto öffnen')}
             >{account.label}</button
           >
@@ -69,7 +70,7 @@
     {#if open.length}
       <ul class="rows">
         {#each open as invoice (invoice.id)}
-          <li>
+          <li {@attach menu(() => recordMenu('invoice', invoice.id))}>
             <button type="button" class="link-button" onclick={() => handle.open('invoice', invoice.id)} {@attach tooltip('Rechnung öffnen')}
               >{invoice.counterparty}: {invoice.text}</button
             >
@@ -96,7 +97,7 @@
     {#if audits.value?.items.length}
       <ul class="rows">
         {#each audits.value.items as audit (audit.id)}
-          <li>
+          <li {@attach menu(() => recordMenu('audit', audit.id))}>
             <button type="button" class="link-button" onclick={() => handle.open('audit', audit.id)} {@attach tooltip('Prüfung und Bericht öffnen')}
               >{audit.title}</button
             >

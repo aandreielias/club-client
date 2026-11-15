@@ -58,11 +58,21 @@ export class CatalogStore<K extends string, T extends CatalogItem<K>, I> extends
     await this.load();
   }
 
+  readonly #deleted = new Set<string>();
+
+  /** Deleted from this tab: its open view closes without "gone elsewhere" (StoredRecord). */
+  deletedHere(key: string): boolean {
+    return this.#deleted.has(key);
+  }
+
   /** Delete, archive and reload one entry (removeRecord, restoreRecord). */
   ops(key: K): RemoveOps {
     const item = this.get(key)!;
     return {
-      delete: () => this.writes.delete(key),
+      delete: async () => {
+        await this.writes.delete(key);
+        this.#deleted.add(key);
+      },
       archive: (archived) => this.writes.save(key, { ...CatalogStore.input<I>(item), archived }),
       reload: () => this.load(),
     };

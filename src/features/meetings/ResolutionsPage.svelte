@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { bus, commands, router, session, store, windows } from '../../lib/container';
+  import { recordMenu } from '../../ui/contextMenu';
+  import { bus, commands, session, store, windows } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
-  import { windowMenu } from '../../lib/window/windowMenu';
   import Button from '../../ui/Button.svelte';
   import DataTable from '../../ui/DataTable.svelte';
   import Page from '../../ui/Page.svelte';
@@ -31,7 +31,7 @@
     rowKey={(r) => r.id}
     record={(r) => ({ kind: 'resolution', id: r.id, title: r.title })}
     onopen={(r) => bus.publish(WINDOW_OPEN, { kind: 'resolution', id: r.id })}
-    menu={(r) => windowMenu(bus, windows, router, 'resolution', r.id)}
+    menu={(r) => recordMenu('resolution', r.id)}
     selected={windows.current?.kind === 'resolution' ? windows.current.id : null}
     emptyText="Keine Beschlüsse."
     emptyAction={policy.canCreate() ? { label: 'Neuer Umlaufbeschluss', icon: 'add', run: create } : null}

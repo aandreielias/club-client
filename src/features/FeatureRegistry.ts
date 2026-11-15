@@ -5,7 +5,9 @@ import type { HomeSections } from '../lib/home/HomeSections';
 import type { LinkResolver } from '../lib/router/LinkResolver';
 import type { NavCatalog } from '../lib/navigation/NavCatalog';
 import { NavLayout } from '../lib/navigation/NavLayout';
+import type { NavNode } from '../lib/navigation/NavTree';
 import type { WindowService } from '../lib/window/WindowService.svelte';
+import type { RecordActionRegistry } from '../lib/actions/RecordActions';
 import type { GuestArea, Role } from '../lib/types';
 import type { Feature, FeatureRoute } from './Feature';
 import type { IconName } from '../icons';
@@ -21,7 +23,7 @@ export interface NavItem {
   badge?: number;
   /** Bottom of the sidebar instead of the main list. */
   footer?: boolean;
-  /** Tabs of a group row (two or more), shown in its flyout. */
+  /** Entries of a group (two or more: tabs and subgroups), shown as a collapsible section. */
   children?: NavItem[];
 }
 
@@ -64,23 +66,25 @@ export class FeatureRegistry {
         },
       ];
     });
+    const toItem = (node: NavNode<NavItem>): NavItem => {
+      if ('leaf' in node) return node.leaf;
+      const children = node.children.map(toItem);
+      const badge = children.reduce((sum, c) => sum + (c.badge ?? 0), 0);
+      return {
+        key: NavLayout.groupKey(node.group.id),
+        path: children[0].path,
+        label: node.group.label,
+        icon: node.group.icon,
+        ...(badge > 0 ? { badge } : {}),
+        children,
+      };
+    };
     const main = this.layout
       .arrange(
         items.filter((i) => !i.footer),
         order,
       )
-      .map((row): NavItem => {
-        if (!row.group) return { ...row.entries[0], key: row.key };
-        const badge = row.entries.reduce((sum, e) => sum + (e.badge ?? 0), 0);
-        return {
-          key: row.key,
-          path: row.entries[0].path,
-          label: row.group.label,
-          icon: row.group.icon,
-          ...(badge > 0 ? { badge } : {}),
-          children: row.entries,
-        };
-      });
+      .map((row): NavItem => ({ ...toItem(row.node), key: row.key }));
     return [...main, ...items.filter((i) => i.footer)];
   }
 
@@ -103,6 +107,12 @@ export class FeatureRegistry {
   registerWindows(windows: WindowService): void {
     for (const feature of this.features) {
       for (const [kind, content] of Object.entries(feature.windows ?? {})) windows.register(kind, content);
+    }
+  }
+
+  registerActions(actions: RecordActionRegistry): void {
+    for (const feature of this.features) {
+      for (const [kind, provider] of Object.entries(feature.actions ?? {})) actions.register(kind, provider);
     }
   }
 

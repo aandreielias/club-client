@@ -1,16 +1,19 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import InfoTip from './InfoTip.svelte';
 
   /**
    * Layout of every detail view (task, appointment, member, photo), the same in the window and on
-   * a full page: large title, actions, optional tag line, then the content at full width.
+   * a full page: large title (with an ⓘ `hint`), actions, optional tag line, then the content at full width.
    */
-  let { title, actions, meta, children }: { title: string; actions?: Snippet; meta?: Snippet; children: Snippet } = $props();
+  let { title, hint, actions, meta, children }: { title: string; hint?: string; actions?: Snippet; meta?: Snippet; children: Snippet } = $props();
 </script>
 
 <div class="detail">
   <header>
-    <h1>{title}</h1>
+    <h1>
+      {title}{#if hint}&nbsp;<InfoTip text={hint} />{/if}
+    </h1>
     {#if actions}<div class="actions">{@render actions()}</div>{/if}
   </header>
   {#if meta}<div class="meta">{@render meta()}</div>{/if}

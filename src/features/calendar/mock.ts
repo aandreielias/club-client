@@ -635,8 +635,10 @@ export class MockCalendar {
     return dto;
   }
 
-  listAbsences(member: Member): Absence[] {
-    const mine = new Set([member.id, ...this.people.wardsOf(member.id)]);
+  listAbsences(member: Member, of: string | null = null): Absence[] {
+    // server: with memberId, for self, guardians, coaches of the member's teams, admin and board.
+    if (of && !this.people.mayOpen(member, of)) fail(404, 'member.not-found');
+    const mine = new Set(of ? [of] : [member.id, ...this.people.wardsOf(member.id)]);
     const today = this.people.clock.today();
     return this.absences.data
       .filter((a) => mine.has(a.memberId) && a.to >= today)
@@ -1172,7 +1174,7 @@ mockServer
   .on('GET', '/api/v1/appointments/:id/links', (req) => calendar.getLinks(actor(req), req.params.id))
   .on('PUT', '/api/v1/appointments/:id/links', (req) => calendar.setLinks(actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/appointments/:id/attendance', (req) => calendar.overview(actor(req), req.params.id))
-  .on('GET', '/api/v1/me/absences', (req) => ({ items: calendar.listAbsences(actor(req)) }))
+  .on('GET', '/api/v1/me/absences', (req) => ({ items: calendar.listAbsences(actor(req), req.query.get('memberId')) }))
   .on('POST', '/api/v1/me/absences', (req) => calendar.addAbsence(actor(req), req.body ?? {}))
   .on('DELETE', '/api/v1/me/absences/:id', (req) => calendar.deleteAbsence(actor(req), req.params.id))
   .on('GET', '/api/v1/appointments/:id/rides', (req) => ({ items: calendar.listRides(actor(req), req.params.id) }))

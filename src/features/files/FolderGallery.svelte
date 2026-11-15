@@ -7,7 +7,7 @@
   import Thumbnail from './Thumbnail.svelte';
   import { pendingDeletes } from '../../lib/container';
   import { menu as contextMenu } from '../../ui/contextMenu';
-  import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
+  import type { MenuSource } from '../../lib/overlay/ContextMenuService.svelte';
   import FolderCover from './FolderCover.svelte';
   import { colorHue } from './model';
   import { RowDragging, type RowDrag } from '../../ui/rowDrag';
@@ -29,7 +29,7 @@
   }: {
     model: FolderItemListModel;
     onopen: (item: FolderItem) => void;
-    menu?: (item: FolderItem) => readonly MenuEntry[];
+    menu?: (item: FolderItem) => MenuSource;
     emptyText?: string;
     emptyAction?: EmptyAction | null;
     /** File tiles get a checkbox when given. */

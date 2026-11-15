@@ -1,73 +1,58 @@
-import type { IconName } from '../../icons';
+import { groupsAbove, leafKeys, resolveTree, type NavDef, type NavNode } from './NavTree';
 
-/** Sidebar tabs shown together behind one row (flyout); the first visible tab opens on click. */
-export interface NavGroup {
-  id: string;
-  label: string;
-  icon: IconName;
-  paths: readonly string[];
-}
-
-/** One top-level sidebar row: a group (two or more visible tabs) or a single tab. */
+/** One top-level sidebar row: a group (shown as a tree) or a single tab. */
 export interface NavRow<T> {
-  /** Order key: `group:<id>` for every tab of a group, also when it shows alone; else the path. */
+  /** Order key: `group:<id>` for a top-level group, also when it shows a single tab; else the path. */
   key: string;
-  group: NavGroup | null;
-  entries: T[];
+  node: NavNode<T>;
 }
 
 /**
- * Groups and default order of the main sidebar. Role filtering happens before: a group keeps only
- * the tabs the member sees, shows a single one as a plain tab and disappears without any.
+ * The main sidebar tree; its top-level order is the default. Role filtering happens before: a group keeps only the tabs the
+ * member sees, shows a single one in its place and disappears without any. Members reorder top-level rows only.
  */
 export class NavLayout {
   constructor(
-    readonly groups: readonly NavGroup[] = [],
-    /** Default order of row keys; rows not named keep their place after these. */
-    readonly order: readonly string[] = [],
+    readonly tree: readonly NavDef[] = [],
+    /** Row keys of earlier layouts → their row now (saved orders). */
+    readonly legacy: Readonly<Record<string, string>> = {},
   ) {}
 
   static groupKey(id: string): string {
     return `group:${id}`;
   }
 
-  /** Rows of the given entries, in the member's `userOrder` (row keys), then the default order. */
+  /** Rows of the given entries, in the member's `userOrder` (row keys), then the tree's order; entries outside the tree last. */
   arrange<T extends { path: string }>(entries: readonly T[], userOrder: readonly string[]): NavRow<T>[] {
-    const rows: NavRow<T>[] = [];
-    const done = new Set<NavGroup>();
-    for (const entry of entries) {
-      const group = this.groupOf(entry.path);
-      if (!group) rows.push({ key: entry.path, group: null, entries: [entry] });
-      else if (!done.has(group)) {
-        done.add(group);
-        const children = group.paths.flatMap((path) => entries.filter((e) => e.path === path));
-        rows.push({ key: NavLayout.groupKey(group.id), group: children.length > 1 ? group : null, entries: children });
-      }
-    }
+    const find = (path: string) => entries.find((e) => e.path === path);
+    const inTree = new Set(leafKeys(this.tree));
+    const rows: NavRow<T>[] = [
+      ...this.tree.flatMap((def) => {
+        const [node] = resolveTree([def], find);
+        return node ? [{ key: typeof def === 'string' ? def : NavLayout.groupKey(def.id), node }] : [];
+      }),
+      ...entries.filter((e) => !inTree.has(e.path)).map((e) => ({ key: e.path, node: { leaf: e } })),
+    ];
     const user = this.migrate(userOrder);
-    const rank = (key: string, order: readonly string[]) => {
-      const index = order.indexOf(key);
-      return index < 0 ? order.length : index;
+    const rank = (key: string) => {
+      const index = user.indexOf(key);
+      return index < 0 ? user.length : index;
     };
     return rows
       .map((row, i) => ({ row, i }))
-      .sort((a, b) => rank(a.row.key, user) - rank(b.row.key, user) || rank(a.row.key, this.order) - rank(b.row.key, this.order) || a.i - b.i)
+      .sort((a, b) => rank(a.row.key) - rank(b.row.key) || a.i - b.i)
       .map((x) => x.row);
   }
 
-  /** An order saved before a tab joined a group: the group takes the place of its first tab. */
+  /** An order saved with another layout: a tab now in a group, or an old group, takes the place of its top-level row. */
   private migrate(order: readonly string[]): string[] {
     return [
       ...new Set(
         order.map((key) => {
-          const group = this.groupOf(key);
-          return group ? NavLayout.groupKey(group.id) : key;
+          const top = groupsAbove(this.tree, key)?.[0];
+          return this.legacy[key] ?? (top ? NavLayout.groupKey(top.id) : key);
         }),
       ),
     ];
-  }
-
-  private groupOf(path: string): NavGroup | undefined {
-    return this.groups.find((g) => g.paths.includes(path));
   }
 }

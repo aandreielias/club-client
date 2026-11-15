@@ -61,10 +61,10 @@
 {/if}
 <fieldset class="stack" disabled={!form.settingsEditable}>
   <div class="grid-2">
-    <Field label="Spielfelder" error={form.error('fields')} hint={fieldHint}>
+    <Field label="Spielfelder" error={form.error('fields')} note={fieldHint}>
       <Select bind:value={() => String(form.fieldCount), (v) => (form.fieldCount = Number(v))} options={numbers(1, settings.tournaments.maxFields)} />
     </Field>
-    <Field label="Gruppen" error={form.error('groups')} hint={groupHint}>
+    <Field label="Gruppen" error={form.error('groups')} note={groupHint}>
       <Select
         bind:value={() => String(form.groupCount), (v) => (form.groupCount = Number(v))}
         options={form.groupOptions.map((g) => ({ value: String(g), label: g === form.fieldCount ? `${g} (eine je Feld)` : String(g) }))}

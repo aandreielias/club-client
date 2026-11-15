@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { bus } from '../../lib/container';
+  import { bus, commands } from '../../lib/container';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import { resolutionActions } from './actions';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
@@ -24,6 +26,14 @@
     busy: () => false,
     changed: () => void resolution.load(),
   });
+  // Keys and palette; the card shows the buttons.
+  useRecordActions(
+    commands,
+    resolutionActions,
+    () => resolution.value,
+    () => view.leave(),
+    () => resolution.load(),
+  );
 </script>
 
 <AsyncView resource={resolution}>

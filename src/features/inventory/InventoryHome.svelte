@@ -1,8 +1,8 @@
 <script lang="ts">
+  import { recordMenu } from '../../ui/contextMenu';
   import { settings } from '../../settings';
-  import { bus, router, windows } from '../../lib/container';
+  import { bus } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
-  import { windowMenu } from '../../lib/window/windowMenu';
   import DataTable from '../../ui/DataTable.svelte';
   import SectionHeading from '../../ui/SectionHeading.svelte';
   import { InventoryListModel } from './InventoryListModel.svelte';
@@ -20,6 +20,6 @@
   limit={settings.home.listRows}
   rowKey={(i) => i.id}
   onopen={(i) => bus.publish(WINDOW_OPEN, { kind: 'item', id: i.id })}
-  menu={(i) => windowMenu(bus, windows, router, 'item', i.id)}
+  menu={(i) => recordMenu('item', i.id)}
   emptyText="Noch nichts im Inventar."
 />

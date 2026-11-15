@@ -1,10 +1,13 @@
 <script lang="ts">
-  import { backStack, bus } from '../../lib/container';
+  import { backStack, bus, commands } from '../../lib/container';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { accountActions } from './actions';
   import { CreateController } from '../../lib/detail/CreateController.svelte';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
-  import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import DetailSkeleton from '../../ui/DetailSkeleton.svelte';
   import EditorForm from '../../ui/EditorForm.svelte';
@@ -65,10 +68,18 @@
     }
   }
 
-  async function setArchived(archived: boolean) {
-    if (await edit.save.run(() => stored.saved(() => accounts.ops(id).archive(archived))))
-      view.notify(archived ? 'Konto archiviert.' : 'Konto wiederhergestellt.');
-  }
+  const act = useRecordActions(
+    commands,
+    accountActions,
+    () => (isNew || edit.form ? null : account),
+    () => view.leave(),
+  );
+  useCommands(commands, {
+    'record.edit': {
+      run: () => account && edit.edit({ label: account.label, sort: account.sort, archived: account.archived }),
+      when: () => !isNew && !edit.form && !!account && financeMay('WRITE'),
+    },
+  });
 </script>
 
 {#snippet editor(f: AccountInput)}
@@ -96,21 +107,7 @@
       {#if account.archived}<Tag tone="gray">Archiviert</Tag>{/if}
     {/snippet}
     {#snippet actions()}
-      {#if !edit.form && financeMay('WRITE')}
-        <Button icon="edit" onclick={() => edit.edit({ label: account.label, sort: account.sort, archived: account.archived })}>Bearbeiten</Button>
-        {#if account.archived}
-          <Button tooltip="Wieder für neue Buchungen anbieten" onclick={() => setArchived(false)}>Wiederherstellen</Button>
-        {:else if account.inUse}
-          <Button tooltip="Für neue Buchungen nicht mehr anbieten; bestehende behalten es" onclick={() => setArchived(true)}>Archivieren</Button>
-        {:else}
-          <Button
-            variant="danger"
-            icon="delete"
-            onclick={() => stored.remove(account.label, 'Konto löschen', 'Konto gelöscht.', edit.save, () => financeApi.deleteAccount(id))}
-            >Löschen</Button
-          >
-        {/if}
-      {/if}
+      <RecordActionButtons actions={act} />
     {/snippet}
 
     {#if form}

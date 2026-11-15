@@ -1,9 +1,12 @@
 <script lang="ts">
-  import { backStack, bus, session } from '../../lib/container';
+  import { backStack, bus, commands, session } from '../../lib/container';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { meetingTypeActions } from './actions';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
-  import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import DetailSkeleton from '../../ui/DetailSkeleton.svelte';
   import Tag from '../../ui/Tag.svelte';
@@ -22,7 +25,7 @@
     SYSTEM_STEP_LABELS,
     VOTING_LABELS,
   } from './model';
-  import { meetingPolicy as policy, meetingsApi, meetingTypes } from './services';
+  import { meetingsApi, meetingTypes } from './services';
 
   /** One meeting type with its rules and the steps around each meeting; admin and board edit it. Window and page. */
   let { id, handle, onclosed }: { id: string; handle?: WindowHandle; onclosed?: () => void } = $props();
@@ -45,15 +48,15 @@
     await edit.submit((form) => stored.saved(() => meetingsApi.saveType(id, form.toInput())), 'Sitzungsart gespeichert.');
   }
 
-  /** In use, it is archived instead of deleted: kept on old meetings, not offered for new ones. */
-  async function setArchived(archived: boolean) {
-    if (await edit.save.run(() => stored.saved(() => meetingTypes.ops(id).archive(archived))))
-      view.notify(archived ? 'Sitzungsart archiviert.' : 'Sitzungsart wiederhergestellt.');
-  }
-
-  function remove(label: string) {
-    void stored.remove(label, 'Sitzungsart löschen', 'Sitzungsart gelöscht.', edit.save, () => meetingsApi.deleteType(id));
-  }
+  const act = useRecordActions(
+    commands,
+    meetingTypeActions,
+    () => (edit.form ? null : type),
+    () => view.leave(),
+  );
+  useCommands(commands, {
+    'record.edit': { run: () => type && edit.edit(new MeetingTypeForm(type)), when: () => act.has('record.edit') },
+  });
 </script>
 
 {#if type}
@@ -62,16 +65,7 @@
       {#if type.archived}<Tag tone="gray">Archiviert</Tag>{/if}
     {/snippet}
     {#snippet actions()}
-      {#if !edit.form && policy.canEditTypes()}
-        <Button icon="edit" onclick={() => edit.edit(new MeetingTypeForm(type))}>Bearbeiten</Button>
-        {#if type.archived}
-          <Button tooltip="Wieder für neue Sitzungen anbieten" onclick={() => setArchived(false)}>Wiederherstellen</Button>
-        {:else if type.inUse}
-          <Button tooltip="Für neue Sitzungen nicht mehr anbieten; bestehende behalten sie" onclick={() => setArchived(true)}>Archivieren</Button>
-        {:else}
-          <Button variant="danger" icon="delete" onclick={() => remove(type.label)}>Löschen</Button>
-        {/if}
-      {/if}
+      <RecordActionButtons actions={act} />
     {/snippet}
 
     {#if edit.form}

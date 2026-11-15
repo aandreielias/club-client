@@ -5,10 +5,11 @@
  * (`Mod+K`, `Shift+R`); a space separates the steps of a sequence (`g k` = G, then K).
  *
  * Context decides where keys may repeat: a `global` key must be unique; keys of other contexts
- * only clash within the same context (e.g. `E` edits in the task window and in the member window).
+ * only clash within the same context. Every action on a record (src/lib/actions) is a `window` command:
+ * verbs shared by many kinds are one `record.*` command each, the window shown decides what it does.
  */
 
-export type ShortcutContext = 'global' | 'window' | 'list' | 'page' | 'calendar' | 'task' | 'appointment' | 'member' | 'meeting' | 'notifications';
+export type ShortcutContext = 'global' | 'window' | 'list' | 'page' | 'calendar' | 'notifications';
 
 export interface ShortcutDefinition {
   label: string;
@@ -35,7 +36,7 @@ export const SHORTCUTS = {
   // ---- Navigation ----
   'nav.home': { label: 'Zu Start', group: 'Navigation', context: 'global', keys: 'g h', path: '/' },
   'nav.calendar': { label: 'Zum Kalender', group: 'Navigation', context: 'global', keys: 'g k', path: '/calendar' },
-  'nav.events': { label: 'Zu den Events', group: 'Navigation', context: 'global', keys: 'g x', path: '/events' },
+  'nav.events': { label: 'Zu den Terminen', group: 'Navigation', context: 'global', keys: 'g x', path: '/events' },
   'nav.meetings': { label: 'Zu den Sitzungen', group: 'Navigation', context: 'global', keys: 'g s', path: '/meetings' },
   'nav.resolutions': { label: 'Zu den Beschlüssen', group: 'Navigation', context: 'global', keys: 'g u', path: '/resolutions' },
   'nav.board': { label: 'Zum Vorstand', group: 'Navigation', context: 'global', keys: 'g v', path: '/board' },
@@ -50,9 +51,11 @@ export const SHORTCUTS = {
   'nav.notifications': { label: 'Zu den Benachrichtigungen', group: 'Navigation', context: 'global', keys: 'g b', path: '/notifications' },
   'nav.mail': { label: 'Zu den E-Mails', group: 'Navigation', context: 'global', keys: 'g n', path: '/mail' },
   'nav.members': { label: 'Zu den Mitgliedern', group: 'Navigation', context: 'global', keys: 'g m', path: '/members' },
-  'nav.activity': { label: 'Zur Aktivität', group: 'Navigation', context: 'global', keys: 'g l', path: '/activity' },
+  'nav.activity': { label: 'Zu den Protokollen', group: 'Navigation', context: 'global', keys: 'g l', path: '/activity' },
   'nav.account': { label: 'Zu meinem Konto', group: 'Navigation', context: 'global', keys: 'g p', path: '/account' },
   'nav.settings': { label: 'Zu den Einstellungen', group: 'Navigation', context: 'global', keys: 'g e', path: '/settings' },
+  'nav.absences': { label: 'Zu den Abwesenheiten', group: 'Navigation', context: 'global', keys: 'g w', path: '/calendar/absences' },
+  'nav.search': { label: 'Zur Suchseite', group: 'Navigation', context: 'global', keys: 'g q', path: '/search' },
   'nav.back': { label: 'Zurück', group: 'Navigation', context: 'global', keys: 'Alt+ArrowLeft' },
 
   // ---- Fenster ----
@@ -85,15 +88,46 @@ export const SHORTCUTS = {
   'calendar.month': { label: 'Monatsansicht', group: 'Kalender', context: 'calendar', keys: 'v m' },
   'calendar.week': { label: 'Wochenansicht', group: 'Kalender', context: 'calendar', keys: 'v w' },
 
-  // ---- Details im Fenster ----
-  'task.edit': { label: 'Aufgabe bearbeiten', group: 'Aufgabe', context: 'task', keys: 'e' },
-  'task.done': { label: 'Aufgabe erledigt oder wieder offen', group: 'Aufgabe', context: 'task', keys: 'x' },
-  'appointment.edit': { label: 'Termin bearbeiten', group: 'Termin', context: 'appointment', keys: 'e' },
-  'appointment.yes': { label: 'Zusagen', group: 'Termin', context: 'appointment', keys: '1' },
-  'appointment.maybe': { label: 'Vielleicht', group: 'Termin', context: 'appointment', keys: '2' },
-  'appointment.no': { label: 'Absagen (Antwort)', group: 'Termin', context: 'appointment', keys: '3' },
-  'member.edit': { label: 'Profil bearbeiten', group: 'Mitglied', context: 'member', keys: 'e' },
-  'meeting.invite': { label: 'Zur Sitzung einladen', group: 'Sitzung', context: 'meeting', keys: 'i' },
+  // ---- Eintrag (das Fenster, auch Kontextmenü und Befehlspalette) ----
+  'record.menu': { label: 'Aktionen des Eintrags', group: 'Eintrag', context: 'window', keys: 'Shift+F10' },
+  'record.edit': { label: 'Bearbeiten', group: 'Eintrag', context: 'window', keys: 'e' },
+  'record.delete': { label: 'Löschen', group: 'Eintrag', context: 'window', keys: 'Shift+Delete' },
+  'record.archive': { label: 'Archivieren', group: 'Eintrag', context: 'window', keys: '' },
+  'record.restore': { label: 'Wiederherstellen', group: 'Eintrag', context: 'window', keys: '' },
+  'record.download': { label: 'Herunterladen', group: 'Eintrag', context: 'window', keys: 'd' },
+  'record.copyLink': { label: 'Link kopieren', group: 'Eintrag', context: 'window', keys: 'Shift+C' },
+
+  'task.done': { label: 'Aufgabe erledigt oder wieder offen', group: 'Aufgabe', context: 'window', keys: 'x' },
+  'appointment.yes': { label: 'Zusagen', group: 'Termin', context: 'window', keys: '1' },
+  'appointment.maybe': { label: 'Vielleicht', group: 'Termin', context: 'window', keys: '2' },
+  'appointment.no': { label: 'Absagen (Antwort)', group: 'Termin', context: 'window', keys: '3' },
+  'appointment.cancel': { label: 'Termin absagen', group: 'Termin', context: 'window', keys: '' },
+  'appointment.extend': { label: 'Serie verlängern', group: 'Termin', context: 'window', keys: '' },
+  'member.invite': { label: 'Login einladen', group: 'Mitglied', context: 'window', keys: '' },
+  'member.deactivate': { label: 'Mitglied deaktivieren', group: 'Mitglied', context: 'window', keys: '' },
+  'member.reactivate': { label: 'Mitglied reaktivieren', group: 'Mitglied', context: 'window', keys: '' },
+  'member.erase': { label: 'Personendaten löschen (DSGVO)', group: 'Mitglied', context: 'window', keys: '' },
+  'team.addMember': { label: 'Mitglied hinzufügen', group: 'Team', context: 'window', keys: '' },
+  'team.requestPlayer': { label: 'Spieler:in anfragen', group: 'Team', context: 'window', keys: '' },
+  'team.newSeason': { label: 'Neue Saison', group: 'Team', context: 'window', keys: '' },
+  'tournament.draw': { label: 'Auslosen', group: 'Turnier', context: 'window', keys: '' },
+  'tournament.knockout': { label: 'KO-Runde starten', group: 'Turnier', context: 'window', keys: '' },
+  'item.stock': { label: 'Bestand verteilen', group: 'Inventar', context: 'window', keys: '' },
+  'file.newVersion': { label: 'Neue Version hochladen', group: 'Datei', context: 'window', keys: '' },
+  'file.tag': { label: 'Personen markieren', group: 'Datei', context: 'window', keys: '' },
+  'mail.reply': { label: 'Antworten', group: 'E-Mail', context: 'window', keys: 'r' },
+  'mail.replyAll': { label: 'Allen antworten', group: 'E-Mail', context: 'window', keys: 'Shift+R' },
+  'mail.forward': { label: 'Weiterleiten', group: 'E-Mail', context: 'window', keys: 'f' },
+  'mail.unread': { label: 'Als ungelesen markieren', group: 'E-Mail', context: 'window', keys: 'u' },
+  'meeting.invite': { label: 'Zur Sitzung einladen', group: 'Sitzung', context: 'window', keys: 'i' },
+  'meeting.open': { label: 'Sitzung eröffnen', group: 'Sitzung', context: 'window', keys: '' },
+  'meeting.close': { label: 'Sitzung beenden', group: 'Sitzung', context: 'window', keys: '' },
+  'meeting.cancel': { label: 'Sitzung absagen', group: 'Sitzung', context: 'window', keys: '' },
+  'resolution.close': { label: 'Abstimmung schließen', group: 'Beschluss', context: 'window', keys: '' },
+  'booking.reverse': { label: 'Buchung stornieren', group: 'Buchhaltung', context: 'window', keys: '' },
+  'invoice.pay': { label: 'Rechnung als bezahlt buchen', group: 'Buchhaltung', context: 'window', keys: '' },
+  'fee.pay': { label: 'Beitragszahlung buchen', group: 'Buchhaltung', context: 'window', keys: '' },
+  'fee.remind': { label: 'An Beitrag erinnern', group: 'Buchhaltung', context: 'window', keys: '' },
   'notifications.readAll': { label: 'Alle als gelesen markieren', group: 'Benachrichtigungen', context: 'notifications', keys: 'Shift+R' },
 } as const satisfies Record<string, ShortcutDefinition>;
 

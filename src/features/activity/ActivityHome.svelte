@@ -1,5 +1,6 @@
 <script lang="ts">
   import { activityApi, bus, session } from '../../lib/container';
+  import { ADMIN_BOARD } from '../../lib/types';
   import { settings } from '../../settings';
   import DataTable from '../../ui/DataTable.svelte';
   import SectionHeading from '../../ui/SectionHeading.svelte';
@@ -11,7 +12,7 @@
   void list.load();
 </script>
 
-<SectionHeading title="Aktivität" href="#/activity" />
+<SectionHeading title="Aktivität" href={session.hasRole(...ADMIN_BOARD) ? '#/activity' : undefined} />
 <DataTable
   model={list}
   toolbar={false}

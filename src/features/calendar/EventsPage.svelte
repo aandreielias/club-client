@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { bus, commands, directory, router, session, store, windows } from '../../lib/container';
+  import { recordMenu } from '../../ui/contextMenu';
+  import { bus, commands, directory, session, store, windows } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
-  import { windowMenu } from '../../lib/window/windowMenu';
   import Button from '../../ui/Button.svelte';
   import DataTable from '../../ui/DataTable.svelte';
   import Page from '../../ui/Page.svelte';
@@ -22,7 +22,7 @@
   useCommands(commands, { 'page.new': { run: create, when: () => policy.canCreate() } });
 </script>
 
-<Page title="Events">
+<Page title="Termine">
   {#snippet actions()}
     {#if policy.canCreate()}<Button variant="primary" icon="add" onclick={create}>Neuer Termin</Button>{/if}
   {/snippet}
@@ -32,7 +32,7 @@
     rowKey={(a) => a.id}
     record={(a) => ({ kind: 'appointment', id: a.id, title: a.title })}
     onopen={(a) => bus.publish(WINDOW_OPEN, { kind: 'appointment', id: a.id })}
-    menu={(a) => windowMenu(bus, windows, router, 'appointment', a.id)}
+    menu={(a) => recordMenu('appointment', a.id)}
     selected={windows.current?.kind === 'appointment' ? windows.current.id : null}
     emptyText={list.filters.past ? 'Keine vergangenen Termine im letzten Jahr.' : 'Keine Termine im kommenden Jahr.'}
     emptyAction={policy.canCreate() ? { label: 'Neuer Termin', icon: 'add', run: create } : null}

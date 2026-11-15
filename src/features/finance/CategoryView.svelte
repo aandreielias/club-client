@@ -1,10 +1,13 @@
 <script lang="ts">
-  import { backStack, bus } from '../../lib/container';
+  import { backStack, bus, commands } from '../../lib/container';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { categoryActions } from './actions';
   import { CreateController } from '../../lib/detail/CreateController.svelte';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
-  import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import DetailSkeleton from '../../ui/DetailSkeleton.svelte';
   import EditorForm from '../../ui/EditorForm.svelte';
@@ -70,10 +73,18 @@
     }
   }
 
-  async function setArchived(archived: boolean) {
-    if (await edit.save.run(() => stored.saved(() => categories.ops(id).archive(archived))))
-      view.notify(archived ? 'Kategorie archiviert.' : 'Kategorie wiederhergestellt.');
-  }
+  const act = useRecordActions(
+    commands,
+    categoryActions,
+    () => (isNew || edit.form ? null : category),
+    () => view.leave(),
+  );
+  useCommands(commands, {
+    'record.edit': {
+      run: () => category && edit.edit({ label: category.label, direction: category.direction, sort: category.sort, archived: category.archived }),
+      when: () => !isNew && !edit.form && !!category && financeMay('WRITE'),
+    },
+  });
 </script>
 
 {#snippet editor(f: CategoryInput)}
@@ -104,25 +115,7 @@
       {#if category.archived}<Tag tone="gray">Archiviert</Tag>{/if}
     {/snippet}
     {#snippet actions()}
-      {#if !edit.form && financeMay('WRITE')}
-        <Button
-          icon="edit"
-          onclick={() => edit.edit({ label: category.label, direction: category.direction, sort: category.sort, archived: category.archived })}
-          >Bearbeiten</Button
-        >
-        {#if category.archived}
-          <Button tooltip="Wieder für neue Buchungen anbieten" onclick={() => setArchived(false)}>Wiederherstellen</Button>
-        {:else if category.inUse}
-          <Button tooltip="Für neue Buchungen nicht mehr anbieten; bestehende behalten sie" onclick={() => setArchived(true)}>Archivieren</Button>
-        {:else}
-          <Button
-            variant="danger"
-            icon="delete"
-            onclick={() => stored.remove(category.label, 'Kategorie löschen', 'Kategorie gelöscht.', edit.save, () => financeApi.deleteCategory(id))}
-            >Löschen</Button
-          >
-        {/if}
-      {/if}
+      <RecordActionButtons actions={act} />
     {/snippet}
 
     {#if form}

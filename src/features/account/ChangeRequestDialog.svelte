@@ -38,9 +38,13 @@
   }
 </script>
 
-<Dialog open={field !== null} title="{label} ändern lassen" onclose={close}>
+<Dialog
+  open={field !== null}
+  title="{label} ändern lassen"
+  hint="Der Vorstand bekommt die Anfrage als Aufgabe. Du wirst benachrichtigt, sobald entschieden ist."
+  onclose={close}
+>
   <form class="stack" onsubmit={submit} {@attach autofocus}>
-    <p class="muted">Der Vorstand bekommt die Anfrage als Aufgabe. Du wirst benachrichtigt, sobald entschieden ist.</p>
     <Field label="Neue Angabe: {label}" hint={mayBeEmpty ? 'Leer lassen, um ihn zu entfernen.' : undefined}>
       <input
         {type}

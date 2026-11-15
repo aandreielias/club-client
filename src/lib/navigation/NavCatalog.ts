@@ -27,7 +27,7 @@ export class NavCatalog {
         this.#entries.filter((e) => !e.roles || hasRole(...e.roles)),
         order,
       )
-      .map((row) => ({ key: row.key, label: row.group?.label ?? row.entries[0].label }));
+      .map((row) => ({ key: row.key, label: 'leaf' in row.node ? row.node.leaf.label : row.node.group.label }));
   }
 
   static sort<T extends { path: string }>(items: readonly T[], order: readonly string[]): T[] {

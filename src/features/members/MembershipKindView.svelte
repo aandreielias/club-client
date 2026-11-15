@@ -1,9 +1,12 @@
 <script lang="ts">
-  import { backStack, bus, permissions } from '../../lib/container';
+  import { backStack, bus, commands, permissions } from '../../lib/container';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { membershipKindActions } from './actions';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
-  import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import DetailSkeleton from '../../ui/DetailSkeleton.svelte';
   import Tag from '../../ui/Tag.svelte';
@@ -35,15 +38,18 @@
     );
   }
 
-  /** In use, it is archived instead of deleted: members keep it, nobody else gets it. */
-  async function setArchived(archived: boolean) {
-    if (await edit.save.run(() => stored.saved(() => membershipKinds.ops(id).archive(archived))))
-      view.notify(archived ? 'Mitgliedsart archiviert.' : 'Mitgliedsart wiederhergestellt.');
-  }
-
-  function remove(label: string) {
-    void stored.remove(label, 'Mitgliedsart löschen', 'Mitgliedsart gelöscht.', edit.save, () => membersApi.deleteMembershipKind(id));
-  }
+  const act = useRecordActions(
+    commands,
+    membershipKindActions,
+    () => (edit.form ? null : kind),
+    () => view.leave(),
+  );
+  useCommands(commands, {
+    'record.edit': {
+      run: () => kind && edit.edit({ label: kind.label, votes: kind.votes, eligible: kind.eligible, sort: kind.sort, archived: kind.archived }),
+      when: () => !edit.form && !!kind && permissions.isManager,
+    },
+  });
 </script>
 
 {#if kind}
@@ -53,22 +59,7 @@
       {#if kind.archived}<Tag tone="gray">Archiviert</Tag>{/if}
     {/snippet}
     {#snippet actions()}
-      {#if !edit.form && permissions.isManager}
-        <Button
-          icon="edit"
-          onclick={() => edit.edit({ label: kind.label, votes: kind.votes, eligible: kind.eligible, sort: kind.sort, archived: kind.archived })}
-          >Bearbeiten</Button
-        >
-        {#if kind.fixed}
-          <!-- never archived or deleted: resolutions grant it -->
-        {:else if kind.archived}
-          <Button tooltip="Wieder für weitere Mitglieder anbieten" onclick={() => setArchived(false)}>Wiederherstellen</Button>
-        {:else if kind.inUse}
-          <Button tooltip="Für weitere Mitglieder nicht mehr anbieten; wer sie hat, behält sie" onclick={() => setArchived(true)}>Archivieren</Button>
-        {:else}
-          <Button variant="danger" icon="delete" onclick={() => remove(kind.label)}>Löschen</Button>
-        {/if}
-      {/if}
+      <RecordActionButtons actions={act} />
     {/snippet}
 
     {#if edit.form}

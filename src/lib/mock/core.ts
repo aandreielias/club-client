@@ -809,7 +809,8 @@ export class MockDirectory {
     return { guardians: relatives(this.guardiansOf([memberId])), wards: relatives(this.wardsOf(memberId)) };
   }
 
-  private mayOpen(viewer: Member, memberId: string): boolean {
+  /** Self, admin/board, guardians and coaches of the member's teams (full profile, birth date, absences). */
+  mayOpen(viewer: Member, memberId: string): boolean {
     return viewer.id === memberId || this.isManager(viewer) || this.wardsOf(viewer.id).includes(memberId) || this.isCoachOf(viewer.id, memberId);
   }
 

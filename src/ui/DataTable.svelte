@@ -5,7 +5,7 @@
   import Icon from './Icon.svelte';
   import { useCommands } from '../lib/keyboard/useCommands.svelte';
   import { ListCursors, type ListColumn, type ListModel } from '../lib/list/ListModel.svelte';
-  import type { MenuEntry } from '../lib/overlay/ContextMenuService.svelte';
+  import type { MenuSource } from '../lib/overlay/ContextMenuService.svelte';
   import AsyncView from './AsyncView.svelte';
   import Empty, { type EmptyAction } from './Empty.svelte';
   import { RowDragging, type RowDrag } from './rowDrag';
@@ -47,7 +47,7 @@
     selected?: string | null;
     toolbar?: boolean;
     /** Right-click menu of a row (also Shift+F10 / context-menu key on the keyboard row). */
-    menu?: (item: T) => readonly MenuEntry[];
+    menu?: (item: T) => MenuSource;
     /** Offered when the list itself is empty (filtered-out lists offer "Filter zurücksetzen"). */
     emptyAction?: EmptyAction | null;
     /** Shows only the first rows (start page sections); the toolbar and counts still see all. */

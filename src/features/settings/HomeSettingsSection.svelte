@@ -21,9 +21,6 @@
 </script>
 
 <div class="stack">
-  <p class="muted small">
-    Abschnitte der Startseite ein- und ausschalten und an die gewünschte Stelle ziehen. Was du nicht sehen darfst, fehlt in der Liste.
-  </p>
   <SortableList {items} label="Abschnitte der Startseite" onreorder={(ids) => preferences.set('homeOrder', ids)}>
     {#snippet extra(item)}
       <label class="check">
@@ -40,9 +37,6 @@
 </div>
 
 <style>
-  p {
-    margin: 0;
-  }
   .check {
     font-size: var(--font-size-small);
   }

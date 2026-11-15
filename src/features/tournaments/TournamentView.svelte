@@ -9,11 +9,14 @@
 </script>
 
 <script lang="ts">
-  import { backStack, bus, pendingDeletes, session } from '../../lib/container';
+  import { backStack, bus, commands, session } from '../../lib/container';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { tournamentActions } from './actions';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
-  import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import Detail from '../../ui/Detail.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -81,12 +84,6 @@
       .sort((a, b) => (a.wave ?? Infinity) - (b.wave ?? Infinity) || (a.field ?? '').localeCompare(b.field ?? '', 'de', { numeric: true }))
       .slice(0, 6);
 
-  function remove(name: string) {
-    // The prop is gone once the view closed, before the undo time ends: keep the id itself.
-    const target = id;
-    pendingDeletes.schedule({ ids: [target], text: `„${name}“ gelöscht.`, commit: () => tournamentsApi.delete(target) });
-    view.leave();
-  }
   /** Name, days and place; before the draw also groups, fields and format. */
   const edit = new EditSession<TournamentForm>(bus, backStack);
   async function save() {
@@ -95,32 +92,28 @@
       if (Object.keys(patch).length) model.tournament.set(await tournamentsApi.update(id, patch));
     }, 'Turnier gespeichert.');
   }
+
+  const act = useRecordActions(
+    commands,
+    tournamentActions,
+    () => (edit.editing ? null : model.tournament.value),
+    () => view.leave(),
+    // A new stage opens its tab, unless the member picked one.
+    () => ((chosen = null), model.load()),
+  );
+  useCommands(commands, {
+    'record.edit': {
+      run: () => model.tournament.value && edit.edit(TournamentForm.from(model.tournament.value)),
+      when: () => act.has('record.edit'),
+    },
+  });
 </script>
 
 <AsyncView resource={model.tournament}>
   {#snippet children(t)}
     <Detail title={t.name}>
       {#snippet actions()}
-        {#if policy.canManage()}
-          {#if t.status === 'DRAFT'}
-            <Button
-              variant="primary"
-              busy={model.action.busy}
-              disabled={t.teams.length < 2}
-              onclick={() => model.draw().then((ok) => ok && (chosen = 'groups'))}>Auslosen</Button
-            >
-          {:else if t.status === 'GROUPS'}
-            <Button
-              variant="primary"
-              busy={model.action.busy}
-              disabled={model.openGroupMatches > 0}
-              tooltip={model.openGroupMatches ? `Noch ${model.openGroupMatches} Gruppenspiele ohne Ergebnis` : undefined}
-              onclick={() => model.startKnockout().then((ok) => ok && (chosen = 'ko'))}>KO-Runde starten</Button
-            >
-          {/if}
-        {/if}
-        {#if policy.canManage()}<Button icon="edit" disabled={edit.editing} onclick={() => edit.edit(TournamentForm.from(t))}>Bearbeiten</Button>{/if}
-        {#if policy.canDelete()}<Button variant="danger" icon="delete" onclick={() => remove(t.name)}>Löschen</Button>{/if}
+        <RecordActionButtons actions={act} />
       {/snippet}
       {#snippet meta()}
         <Tag tone={STATUS_TONES[t.status]}>{STATUS_LABELS[t.status]}</Tag>

@@ -6,6 +6,7 @@ import { dueReminders } from './services';
 import TaskCreateView from './TaskCreateView.svelte';
 import TaskListPage from './TaskListPage.svelte';
 import TaskView from './TaskView.svelte';
+import { taskActions } from './actions';
 
 export const tasksFeature: Feature = {
   id: 'tasks',
@@ -18,6 +19,7 @@ export const tasksFeature: Feature = {
     // Admin/board, and coaches of a team (by team role, server: requireMayManage).
     'task-new': { component: TaskCreateView, canOpen: () => permissions.canManageAnything() },
   },
+  actions: { task: taskActions },
   calendar: {
     TASK: (item) => ({ hue: item.inactive ? 'green' : 'orange', label: 'Fällig' }),
     FOLLOW_UP: (item) => ({ hue: item.inactive ? 'green' : 'brown', label: 'Fällig (aus Sitzung)' }),

@@ -7,6 +7,7 @@ import { detailRoute, type Feature } from '../Feature';
 import MemberInviteView from './MemberInviteView.svelte';
 import MemberView from './MemberView.svelte';
 import { MEMBER_MESSAGES } from './messages';
+import { memberActions, membershipKindActions, officeSettingActions } from './actions';
 import { boardSettings, memberPolicy, membershipKinds } from './services';
 import MembersPage from './MembersPage.svelte';
 import MembershipKindCreateView from './MembershipKindCreateView.svelte';
@@ -28,6 +29,7 @@ export const membersFeature: Feature = {
     { path: '/board', component: BoardPage, nav: 'Vorstand', icon: 'club' },
     detailRoute('/membership-kinds/:key', MembershipKindView, { href: '/settings/membership', label: 'Mitgliedschaft' }, { roles: ADMIN_BOARD }),
   ],
+  actions: { member: memberActions, 'membership-kind': membershipKindActions, 'office-setting': officeSettingActions },
   windows: {
     // server: requireMaySee - coaches only the members of their teams.
     member: { component: MemberView, page: (id) => `/members/${encodeURIComponent(id)}`, canOpen: (id) => permissions.canSeeMember(id) },

@@ -5,16 +5,18 @@
   import { tick, untrack } from 'svelte';
   import { MediaQuery } from 'svelte/reactivity';
   import { bus, commands, keyboard, keymap, motion, pageNavigator, preferences, session } from '../lib/container';
-  import { searchSettings, visibleSettings } from '../features/settings/settingsTree';
-  import { guestOnly, type Role } from '../lib/types';
+  import { searchSettings, settingsViewer, tabPath, visibleSettings, type SectionId } from '../features/settings/model';
   import { settings } from '../settings';
   import { SPLIT_OPEN } from '../lib/split/SplitView.svelte';
+  import { NAVIGATE } from '../lib/router/Router.svelte';
+  import { LinkClipboard } from '../lib/window/LinkClipboard';
   import { menu } from './contextMenu';
   import type { IconName } from '../icons';
   import Icon from './Icon.svelte';
   import { KeySpec } from '../lib/keyboard/KeySpec';
   import GlobalSearch from './GlobalSearch.svelte';
   import Kbd from './Kbd.svelte';
+  import NavTree from './NavTree.svelte';
   import { SidebarFlyout } from './SidebarFlyout.svelte';
   import { tooltip, withKeys } from './tooltip';
 
@@ -42,12 +44,33 @@
 
   // --- settings mode: the tree of Einstellungen, filtered by the search field ---
   let settingsQuery = $state('');
-  const sees = (roles: readonly Role[]) => session.hasRole(...roles);
-  const settingsTree = $derived(settingsBack !== null ? visibleSettings(sees, guestOnly(session.member.roles)) : null);
-  const settingsFound = $derived(
-    settingsTree && settingsQuery.trim() ? new Set(searchSettings(settingsQuery, sees, guestOnly(session.member.roles)).map((t) => t.id)) : null,
-  );
-  const shown = (id: string) => !settingsFound || settingsFound.has(id as never);
+  const settingsTree = $derived(settingsBack !== null ? visibleSettings(settingsViewer()) : null);
+  /** While searching: the matching tabs as a flat list instead of the tree. */
+  const settingsFound = $derived(settingsTree && settingsQuery.trim() ? searchSettings(settingsQuery, settingsViewer()) : null);
+
+  // --- groups of both trees: open unless the member closed them; the one holding the current page opens again ---
+  const closed = $derived(preferences.values.navClosed);
+  const isOpen = (key: string) => !closed.includes(key);
+  const toggle = (key: string) => preferences.set('navClosed', isOpen(key) ? [...closed, key] : closed.filter((k) => k !== key));
+  const main = $derived(items.filter((i) => !i.footer));
+
+  /** Keys of the groups above the active row, outermost first; null when no row is active. */
+  function groupsTo<R extends { key: string; children?: R[] }>(rows: readonly R[], active: (row: R) => boolean): string[] | null {
+    for (const row of rows) {
+      const below = row.children ? groupsTo(row.children, active) : active(row) ? [] : null;
+      if (below) return row.children ? [row.key, ...below] : below;
+    }
+    return null;
+  }
+  $effect(() => {
+    const above = settingsTree ? groupsTo(settingsTree.tree, (row) => isActive(`/settings/${row.key}`)) : groupsTo(main, (row) => isActive(row.path));
+    const shut = untrack(() => preferences.values.navClosed);
+    if (above?.some((k) => shut.includes(k)))
+      preferences.set(
+        'navClosed',
+        shut.filter((k) => !above.includes(k)),
+      );
+  });
 
   let open = $state(false);
   // Icons only (desktop); the phone layout always shows the full overlay.
@@ -83,7 +106,7 @@
   }
 
   /** A group row is active while one of its tabs is. */
-  const isRowActive = (item: NavItem) => (item.children ? item.children.some((c) => isActive(c.path)) : isActive(item.path));
+  const isRowActive = (item: NavItem): boolean => (item.children ? item.children.some(isRowActive) : isActive(item.path));
 
   // Same breakpoint as ThemeService's data-layout="compact".
   const compact = new MediaQuery(`max-width: ${settings.compactBelowPx - 0.02}px`);
@@ -93,14 +116,16 @@
 
   // The active highlight glides between entries (CSS transition on its position).
   let list: HTMLElement | undefined = $state();
-  let indicator = $state<{ y: number; height: number } | null>(null);
+  let indicator = $state<{ x: number; y: number; width: number; height: number } | null>(null);
   /** Off while the highlight appears, so it shows up at its row instead of gliding in from the top. */
   let glide = $state(false);
   function measure() {
-    const active = list?.querySelector<HTMLElement>(':scope > li > a.active');
-    // Measured on the <li>: a group row is positioned (for its flyout), so the link's offsetTop would be 0.
-    const row = active?.parentElement;
-    const next = active && row ? { y: row.offsetTop, height: active.offsetHeight } : null;
+    // Any depth of the tree, but not inside a flyout (it highlights itself).
+    const active = [...(list?.querySelectorAll<HTMLElement>('a.active') ?? [])].find((a) => !a.closest('.flyout'));
+    const box = active?.getBoundingClientRect();
+    const frame = list?.getBoundingClientRect();
+    const next =
+      box && frame && list ? { x: box.left - frame.left, y: box.top - frame.top + list.scrollTop, width: box.width, height: box.height } : null;
     if (next && !untrack(() => indicator)) {
       glide = false;
       requestAnimationFrame(() => (glide = true));
@@ -111,8 +136,23 @@
     void current;
     void items.length;
     void settingsFound;
+    void closed;
     measure();
   });
+  /** While a group slides open or closed: the highlight follows its row every frame, and the list shows no scroll bars. */
+  let sliding = $state(false);
+  let slideUntil = 0;
+  function follow() {
+    slideUntil = performance.now() + motion.ms('base') + 50;
+    if (sliding) return;
+    sliding = true;
+    const frame = () => {
+      measure();
+      if (performance.now() < slideUntil) requestAnimationFrame(frame);
+      else sliding = false;
+    };
+    requestAnimationFrame(frame);
+  }
   // Rows move without a route change too (fonts loading, badges, search results): measure again.
   $effect(() => {
     if (!list) return;
@@ -142,7 +182,12 @@
     aria-current={isActive(item.path) ? 'page' : undefined}
     {@attach tooltip(`Zu ${item.label}${navKeys(item.path)}`)}
     onclick={(e) => go(e, item.path)}
-    {@attach menu(() => [{ label: 'In geteilter Ansicht öffnen', icon: 'split', run: () => bus.publish(SPLIT_OPEN, { path: item.path }) }])}
+    {@attach menu(() => [
+      { label: 'Öffnen', run: () => bus.publish(NAVIGATE, { path: item.path }) },
+      { label: 'In geteilter Ansicht öffnen', icon: 'split', run: () => bus.publish(SPLIT_OPEN, { path: item.path }) },
+      { separator: true },
+      { label: 'Link kopieren', icon: 'copy', run: () => void LinkClipboard.copy(bus, item.path) },
+    ])}
   >
     {#if item.icon}<Icon name={item.icon} />{/if}
     <span class="label">{item.label}</span>
@@ -191,32 +236,30 @@
     <div class="search settings-search">
       <input type="search" bind:value={settingsQuery} placeholder="Einstellungen durchsuchen" aria-label="Einstellungen durchsuchen" />
     </div>
-    <ul bind:this={list} aria-label="Einstellungen">
+    <ul bind:this={list} class="tree settings-tree" class:sliding aria-label="Einstellungen">
       <!-- Always the first row, so showing it never changes which row comes first (and the layout). -->
       <li
         class="indicator"
         aria-hidden="true"
         style:visibility={indicator ? null : 'hidden'}
-        style:transition={glide ? null : 'none'}
+        style:transition={glide && !sliding ? null : 'none'}
         style:transform="translateY({indicator?.y ?? 0}px)"
+        style:left="{indicator?.x ?? 0}px"
+        style:width="{indicator?.width ?? 0}px"
         style:height="{indicator?.height ?? 0}px"
       ></li>
-      {#each settingsTree.groups as group (group.id)}
-        {#if group.subgroups.some((sub) => sub.tabs.some((t) => shown(t.id)))}
-          <li class="section-title" aria-hidden="true"><Icon name={group.icon} small /><span class="label">{group.label}</span></li>
-          {#each group.subgroups as sub (sub.label)}
-            {#each sub.tabs.filter((t) => shown(t.id)) as tab (tab.id)}
-              <li>{@render link(`/settings/${tab.id}`, tab.label, tab.icon, `${group.label} › ${tab.label}`)}</li>
-            {/each}
-          {/each}
-        {/if}
-      {/each}
-      {#each settingsTree.tabs.filter((t) => t.id === 'general' && shown(t.id)) as tab (tab.id)}
-        <li class="section-title" aria-hidden="true"></li>
-        <li>{@render link(`/settings/${tab.id}`, tab.label, tab.icon, tab.label)}</li>
-      {/each}
-      {#if settingsFound && settingsFound.size === 0}
-        <li class="none muted">Nichts gefunden.</li>
+      {#if settingsFound}
+        {#each settingsFound as tab (tab.id)}
+          <li>{@render link(`/settings/${tab.id}`, tab.label, tab.icon, tabPath(tab.id))}</li>
+        {:else}
+          <li class="none muted">Nichts gefunden.</li>
+        {/each}
+      {:else}
+        <NavTree items={settingsTree.tree} {isOpen} ontoggle={toggle} onslide={follow}>
+          {#snippet leaf(entry)}
+            {@render link(`/settings/${entry.key}`, entry.label, entry.icon, entry.tab?.hint ?? tabPath(entry.key as SectionId))}
+          {/snippet}
+        </NavTree>
       {/if}
     </ul>
   {:else}
@@ -228,59 +271,68 @@
       {@attach tooltip(() => withKeys('Suchen', 'search.focus'))}><Icon name="search" /></button
     >
     <div class="search"><GlobalSearch /></div>
-    <ul bind:this={list}>
+    <ul bind:this={list} class="tree" class:sliding>
       <!-- Always the first row, so showing it never changes which row comes first (and the layout). -->
       <li
         class="indicator"
         aria-hidden="true"
         style:visibility={indicator ? null : 'hidden'}
-        style:transition={glide ? null : 'none'}
+        style:transition={glide && !sliding ? null : 'none'}
         style:transform="translateY({indicator?.y ?? 0}px)"
+        style:left="{indicator?.x ?? 0}px"
+        style:width="{indicator?.width ?? 0}px"
         style:height="{indicator?.height ?? 0}px"
       ></li>
-      {#each items.filter((i) => !i.footer) as item (item.key)}
-        {#if item.children}
-          <li
-            class="group"
-            onpointerenter={() => flyout.show(item.key)}
-            onpointerleave={(e) => flyout.leaveGroup(e, item.key)}
-            onfocusout={(e) => flyout.leaveFocus(e)}
-          >
-            <a
-              href="#{item.path}"
-              data-group={item.key}
-              class:active={isRowActive(item)}
-              aria-haspopup="true"
-              aria-expanded={flyout.key === item.key}
-              onclick={(e) => go(e, item.path)}
-              onkeydown={(e) => flyout.groupKeys(e, item.key)}
+      {#if collapsed && !compact.current}
+        <!-- Icons only: a group opens its tree in a flyout to the right while hovered or focused. -->
+        {#each main as item (item.key)}
+          {#if item.children}
+            <li
+              class="group"
+              onpointerenter={() => flyout.show(item.key)}
+              onpointerleave={(e) => flyout.leaveGroup(e, item.key)}
+              onfocusout={(e) => flyout.leaveFocus(e)}
             >
-              {#if item.icon}<Icon name={item.icon} />{/if}
-              <span class="label">{item.label}</span>
-              {#if item.badge}<span class="badge">{item.badge}<span class="visually-hidden"> neu</span></span>{/if}
-              <span class="chevron"><Icon name="next" small /></span>
-            </a>
-            <!-- Desktop: flyout to the right while hovered or focused. Compact (no hover): the tabs stay listed below the group. -->
-            {#if flyout.key === item.key || compact.current}
-              <!-- svelte-ignore a11y_no_noninteractive_element_interactions (arrow keys between the links inside, which bubble here) -->
-              <ul
-                class="flyout"
-                data-flyout={item.key}
-                aria-label={item.label}
-                onkeydown={(e) => flyout.flyoutKeys(e, item.key)}
-                transition:motion.pop={{ origin: 'left' }}
+              <a
+                href="#{item.path}"
+                data-group={item.key}
+                class:active={isRowActive(item)}
+                aria-haspopup="true"
+                aria-expanded={flyout.key === item.key}
+                onclick={(e) => go(e, item.path)}
+                onkeydown={(e) => flyout.groupKeys(e, item.key)}
               >
-                <li class="flyout-title" aria-hidden="true">{item.label}</li>
-                {#each item.children as child, i (child.path)}
-                  <li in:motion.rise={{ delay: motion.stagger(i), distance: 3 }}>{@render tab(child)}</li>
-                {/each}
-              </ul>
-            {/if}
-          </li>
-        {:else}
-          <li>{@render tab(item)}</li>
-        {/if}
-      {/each}
+                {#if item.icon}<Icon name={item.icon} />{/if}
+                <span class="label">{item.label}</span>
+                {#if item.badge}<span class="badge">{item.badge}<span class="visually-hidden"> neu</span></span>{/if}
+                <span class="chevron"><Icon name="next" small /></span>
+              </a>
+              {#if flyout.key === item.key}
+                <!-- svelte-ignore a11y_no_noninteractive_element_interactions (arrow keys between the links inside, which bubble here) -->
+                <ul
+                  class="flyout"
+                  data-flyout={item.key}
+                  aria-label={item.label}
+                  onkeydown={(e) => flyout.flyoutKeys(e, item.key)}
+                  transition:motion.pop={{ origin: 'left' }}
+                >
+                  <li class="flyout-title" aria-hidden="true">{item.label}</li>
+                  <NavTree items={item.children}>
+                    {#snippet leaf(child)}{@render tab(child)}{/snippet}
+                  </NavTree>
+                </ul>
+              {/if}
+            </li>
+          {:else}
+            <li>{@render tab(item)}</li>
+          {/if}
+        {/each}
+      {:else}
+        <NavTree items={main} {isOpen} ontoggle={toggle} onslide={follow}>
+          {#snippet leaf(item)}{@render tab(item)}{/snippet}
+          {#snippet closed(group)}{#if group.badge}<span class="badge">{group.badge}<span class="visually-hidden"> neu</span></span>{/if}{/snippet}
+        </NavTree>
+      {/if}
     </ul>
   {/if}
   <div class="foot">
@@ -390,17 +442,14 @@
     color: var(--color-text);
     font-weight: var(--font-weight-bold);
   }
-  .section-title {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    padding: var(--space-md) var(--space-sm) var(--space-xxs);
-    color: var(--color-text-faint);
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-medium);
+  /* Long trees scroll inside the sidebar; the icon-only sidebar keeps its flyouts visible instead. */
+  nav:not(.collapsed) .tree {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
-  .indicator + .section-title {
-    padding-top: 0;
+  nav:not(.collapsed) .tree.sliding {
+    overflow-y: hidden;
   }
   .none {
     padding: var(--space-xs) var(--space-sm);
@@ -610,6 +659,22 @@
     line-height: 16px;
     font-size: 10px;
   }
+  /* The group arrow sits at the edge, so the icon stays centred like the other rows. */
+  :global(:root:not([data-layout='compact'])) .collapsed .chevron {
+    position: absolute;
+    right: 0;
+  }
+  /* The flyout keeps its labels: icons only would leave it wider than its content. */
+  :global(:root:not([data-layout='compact'])) .collapsed .flyout .label {
+    display: block;
+  }
+  :global(:root:not([data-layout='compact'])) .collapsed .flyout a {
+    justify-content: flex-start;
+    padding: 0 var(--space-sm);
+  }
+  :global(:root:not([data-layout='compact'])) .collapsed .flyout .badge {
+    position: static;
+  }
   :global(:root:not([data-layout='compact'])) .collapsed .user {
     flex-direction: column;
     padding-inline: 0;
@@ -659,17 +724,6 @@
   .flyout a.active {
     background: var(--color-selected);
   }
-  :global([data-layout='compact']) .flyout {
-    position: static;
-    padding: 0 0 0 var(--space-lg);
-    border: 0;
-    background: none;
-    box-shadow: none;
-  }
-  :global([data-layout='compact']) .flyout-title,
-  :global([data-layout='compact']) .chevron {
-    display: none;
-  }
   .search-icon {
     display: none;
     margin-bottom: var(--space-md);
@@ -677,11 +731,18 @@
   :global(:root:not([data-layout='compact'])) .collapsed .search-icon {
     display: flex;
   }
-  :global(:root:not([data-layout='compact'])) .collapsed .section-title {
-    padding: var(--space-sm) 0 0;
+  /* Icons only, Einstellungen: group headings keep their icon, the levels are not indented. */
+  :global(:root:not([data-layout='compact'])) .collapsed .settings-tree :global(.head) {
+    justify-content: center;
+    padding: 0;
   }
-  :global(:root:not([data-layout='compact'])) .collapsed .section-title :global(svg),
-  :global(:root:not([data-layout='compact'])) .collapsed .section-title .label,
+  :global(:root:not([data-layout='compact'])) .collapsed .settings-tree :global(.head .label),
+  :global(:root:not([data-layout='compact'])) .collapsed .settings-tree :global(.head .chevron) {
+    display: none;
+  }
+  :global(:root:not([data-layout='compact'])) .collapsed .settings-tree :global(.branch > ul) {
+    padding-left: 0;
+  }
   :global(:root:not([data-layout='compact'])) .collapsed .settings-search,
   :global(:root:not([data-layout='compact'])) .collapsed .none,
   :global(:root:not([data-layout='compact'])) .collapsed .search {

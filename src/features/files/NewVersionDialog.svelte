@@ -48,7 +48,7 @@
       <input type="file" accept={extension} onchange={(e) => (chosen = e.currentTarget.files?.[0] ?? null)} />
     </Field>
     <div class="grid-2">
-      <Field label="Version" hint={file.version ? `Bisher ${file.version}` : 'Bisher 1.0'} error={submitted ? labelError : null}>
+      <Field label="Version" note={file.version ? `Bisher ${file.version}` : 'Bisher 1.0'} error={submitted ? labelError : null}>
         <input bind:value={label} maxlength={settings.files.versionLabelMaxLength} required />
       </Field>
       <Field label="Stand vom" error={submitted && !date ? 'Datum angeben.' : null}>

@@ -1,11 +1,10 @@
 <script lang="ts">
+  import { recordMenu } from '../../ui/contextMenu';
   import { usePane } from '../../lib/split/usePane';
   import { settings } from '../../settings';
-  import { bus, router, session, store, windows } from '../../lib/container';
-  import { guestOnly } from '../../lib/types';
+  import { bus, session, store, windows } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
-  import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
-  import { windowMenu } from '../../lib/window/windowMenu';
+  import type { MenuSource } from '../../lib/overlay/ContextMenuService.svelte';
   import DataTable from '../../ui/DataTable.svelte';
   import Empty from '../../ui/Empty.svelte';
   import Page from '../../ui/Page.svelte';
@@ -13,14 +12,14 @@
   import { hitDetail, hitTarget, kindLabel, type SearchHit } from './model';
   import { SearchListModel } from './SearchListModel.svelte';
   import { searchApi } from './services';
-  import { searchSettings, tabPath } from '../settings/model';
+  import { searchSettings, settingsViewer, tabPath } from '../settings/model';
 
   /** Results of the sidebar search (`/search?q=`); a result opens in the window, a folder on the files page. */
   const pane = usePane();
   const query = $derived(pane.query.get('q')?.trim() ?? '');
   // Settings sections are found too (only those the member may open), leading to their page.
   const settingHits = (q: string): SearchHit[] =>
-    searchSettings(q, (roles) => session.hasRole(...roles), guestOnly(session.member.roles)).map((tab) => ({
+    searchSettings(q, settingsViewer()).map((tab) => ({
       kind: 'SETTING',
       id: tab.id,
       title: tab.label,
@@ -48,9 +47,9 @@
     else pane.navigate(target.path);
   }
 
-  function hitMenu(hit: SearchHit): MenuEntry[] {
+  function hitMenu(hit: SearchHit): MenuSource {
     const target = hitTarget(hit);
-    return 'window' in target ? windowMenu(bus, windows, router, target.window.kind, target.window.id) : [{ label: 'Öffnen', run: () => open(hit) }];
+    return 'window' in target ? recordMenu(target.window.kind, target.window.id) : [{ label: 'Öffnen', run: () => open(hit) }];
   }
 </script>
 

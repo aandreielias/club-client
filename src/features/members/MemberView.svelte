@@ -3,6 +3,9 @@
   import { backStack, bus, commands, session } from '../../lib/container';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { memberActions } from './actions';
   import { displayName, ROLE_LABELS, roleHue, type Member, type Role } from '../../lib/types';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
@@ -14,6 +17,7 @@
   import GuardianLinker from './GuardianLinker.svelte';
   import HeldItemsSection from './HeldItemsSection.svelte';
   import MyFeesSection from '../finance/MyFeesSection.svelte';
+  import MemberAbsencesSection from '../calendar/MemberAbsencesSection.svelte';
   import MembershipEditor from './MembershipEditor.svelte';
   import { MemberDetailModel } from './MemberDetailModel.svelte';
   import ProfileEditor from './ProfileEditor.svelte';
@@ -39,7 +43,7 @@
     () => (editing = false),
   );
   useCommands(commands, {
-    'member.edit': { run: () => (editing = true), when: () => !editing && !!model.member.value && policy.canEditProfile(model.member.value) },
+    'record.edit': { run: () => (editing = true), when: () => !editing && !!model.member.value && policy.canEditProfile(model.member.value) },
   });
   let roles = $state<Role[]>([]);
   let rolesFor = $state<string | null>(null);
@@ -62,47 +66,22 @@
     }
   }
 
-  async function reactivate(member: Member) {
-    const request = {
-      title: 'Mitglied reaktivieren',
-      message: `${displayName(member)} kann sich wieder anmelden. Teams und Rollen bitte neu zuordnen.`,
-      confirmLabel: 'Reaktivieren',
-    };
-    await view.confirm(request, () => view.attempt(model.reactivateAction, () => model.reactivate()), 'Mitglied reaktiviert.');
-  }
-
-  async function erase(member: Member) {
-    const request = {
-      title: 'Personendaten löschen (DSGVO)',
-      message: `Name, E-Mail, Telefon, Geburtsdatum und Login von ${displayName(member)} werden endgültig gelöscht, ebenso Erziehungsberechtigte, Benachrichtigungen und Foto-Markierungen. Einträge wie Aufgaben oder Dateien bleiben, ohne Namen. Das lässt sich nicht rückgängig machen.`,
-      confirmLabel: 'Endgültig löschen',
-      danger: true,
-    };
-    await view.confirm(request, () => view.attempt(model.eraseAction, () => model.erase()), 'Personendaten gelöscht.');
-  }
-
-  async function resendInvite(first: boolean) {
-    if (await view.attempt(model.inviteAction, () => model.resendInvite())) view.notify(first ? 'Einladung gesendet.' : 'Einladung erneut gesendet.');
-  }
-
   const mayInviteLogin = $derived(!!model.member.value && !model.member.value.login && model.member.value.active && policy.canInvite());
 
-  async function deactivate(member: Member) {
-    const request = {
-      title: 'Mitglied deaktivieren',
-      message: `${displayName(member)} kann sich danach nicht mehr anmelden und wird aus allen Teams entfernt.`,
-      confirmLabel: 'Deaktivieren',
-      danger: true,
-    };
-    await view.confirm(request, () => view.attempt(model.deactivateAction, () => model.deactivate()), 'Mitglied deaktiviert.');
-  }
+  const act = useRecordActions(
+    commands,
+    memberActions,
+    () => (!editing && model.member.value ? { member: model.member.value, invited } : null),
+    () => view.leave(),
+    () => Promise.all([model.load(), policy.canInvite() && model.invitationPending.load()]),
+  );
 </script>
 
 <AsyncView resource={model.member}>
   {#snippet children(member)}
     <Detail title={editing ? 'Profil bearbeiten' : [member.firstName, member.middleName, member.lastName].filter(Boolean).join(' ')}>
       {#snippet actions()}
-        {#if !editing && policy.canEditProfile(member)}<Button icon="edit" onclick={() => (editing = true)}>Profil bearbeiten</Button>{/if}
+        <RecordActionButtons actions={act} />
       {/snippet}
       {#snippet meta()}
         {#if !member.active}<Tag tone="red">Inaktiv</Tag>{:else if !member.login}<Tag>Ohne Login</Tag>{:else if invited}<Tag>Eingeladen</Tag>{/if}
@@ -143,6 +122,7 @@
             parent={member.roles.includes('PARENT')}
           />{/key}
         <HeldItemsSection memberId={member.id} />
+        {#key member.id}<MemberAbsencesSection memberId={member.id} />{/key}
         {#key member.id}<MyFeesSection memberId={member.id} history />{/key}
       {/if}
 
@@ -171,7 +151,7 @@
         <GuardianLinker {member} {model} />
       {/if}
 
-      {#if mayInviteLogin || (invited && member.active) || policy.canDeactivate(member) || policy.canReactivate(member) || policy.canErase(member)}
+      {#if mayInviteLogin || (invited && member.active)}
         <h2>Zugang</h2>
         {#if mayInviteLogin}
           <p class="muted small">
@@ -182,22 +162,6 @@
         {:else if invited && member.active}
           <p class="muted small">Noch nicht angemeldet. Der Link in der Einladung gilt nur eine Zeit lang.</p>
         {/if}
-        <div class="row">
-          {#if mayInviteLogin && member.email}
-            <Button busy={model.inviteAction.busy} onclick={() => resendInvite(true)}>Login einladen</Button>
-          {:else if invited && member.active}
-            <Button busy={model.inviteAction.busy} onclick={() => resendInvite(false)}>Einladung erneut senden</Button>
-          {/if}
-          {#if policy.canDeactivate(member)}
-            <Button variant="danger" busy={model.deactivateAction.busy} onclick={() => deactivate(member)}>Deaktivieren</Button>
-          {/if}
-          {#if policy.canReactivate(member)}
-            <Button busy={model.reactivateAction.busy} onclick={() => reactivate(member)}>Reaktivieren</Button>
-          {/if}
-          {#if policy.canErase(member)}
-            <Button variant="danger" busy={model.eraseAction.busy} onclick={() => erase(member)}>Personendaten löschen (DSGVO)</Button>
-          {/if}
-        </div>
       {/if}
     </Detail>
   {/snippet}

@@ -10,6 +10,7 @@
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Detail from '../../ui/Detail.svelte';
   import Tag from '../../ui/Tag.svelte';
+  import { menu, recordMenu } from '../../ui/contextMenu';
   import { tooltip } from '../../ui/tooltip';
   import { membershipKinds } from '../members/services';
   import { FINANCE_CHANGED } from './events';
@@ -137,7 +138,7 @@
       <ChoiceGroup name="fee-filter" label="Beiträge zeigen" options={FILTERS} bind:value={() => filter, (v) => v && (filter = v)} />
       <ul class="rows">
         {#each shown as charge (charge.id)}
-          <li>
+          <li {@attach menu(() => recordMenu('fee-charge', charge.id))}>
             <button type="button" class="link-button" onclick={() => handle.open('fee-charge', charge.id)} {@attach tooltip('Beitrag öffnen')}
               >{directory.nameOf(charge.memberId)}</button
             >

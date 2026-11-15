@@ -17,6 +17,19 @@ export class MailboxesStore {
     return items;
   }
 
+  #deleted = new Set<string>();
+
+  /** Deletes and reloads; open views of it then close without the "gone elsewhere" note. */
+  async remove(id: string): Promise<void> {
+    await this.api.deleteMailbox(id);
+    this.#deleted.add(id);
+    await this.load();
+  }
+
+  deletedHere(id: string): boolean {
+    return this.#deleted.has(id);
+  }
+
   get(id: string): MailboxAdmin | undefined {
     return this.items.find((m) => m.id === id);
   }

@@ -9,11 +9,11 @@ import MembershipSection from '../members/MembershipSection.svelte';
 import NotificationSettingsSection from '../notifications/NotificationSettingsSection.svelte';
 import HolidaysSection from '../calendar/HolidaysSection.svelte';
 import FileSettingsSection from '../files/FileSettingsSection.svelte';
+import FeeSettingsSection from '../finance/FeeSettingsSection.svelte';
 import FinanceSettingsSection from '../finance/FinanceSettingsSection.svelte';
 import TaskSettingsSection from '../tasks/TaskSettingsSection.svelte';
 import AppearanceSection from './AppearanceSection.svelte';
-import AuditSection from './AuditSection.svelte';
-import BrandSection from './BrandSection.svelte';
+import BrandView from './BrandView.svelte';
 import ClubSection from './ClubSection.svelte';
 import GeneralSection from './GeneralSection.svelte';
 import HomeSettingsSection from './HomeSettingsSection.svelte';
@@ -22,8 +22,9 @@ import ShortcutsSection from './ShortcutsSection.svelte';
 import SidebarSection from './SidebarSection.svelte';
 import type { SectionId } from './settingsTree';
 
-/** The component of each settings section, for the page and the window. */
-export const SETTINGS_SECTIONS: Record<SectionId, Component> = {
+/** The component of each settings section, for the page and the window (with SECTION_PROPS). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- views of several parts take their part as `id`
+export const SETTINGS_SECTIONS: Record<SectionId, Component<any>> = {
   appearance: AppearanceSection,
   home: HomeSettingsSection,
   sidebar: SidebarSection,
@@ -31,7 +32,9 @@ export const SETTINGS_SECTIONS: Record<SectionId, Component> = {
   security: SecuritySection,
   general: GeneralSection,
   club: ClubSection,
-  brand: BrandSection,
+  'brand-look': BrandView,
+  'brand-logos': BrandView,
+  'brand-mail': BrandView,
   templates: TemplatesSection,
   'meeting-types': MeetingTypesSection,
   membership: MembershipSection,
@@ -44,5 +47,15 @@ export const SETTINGS_SECTIONS: Record<SectionId, Component> = {
   tasks: TaskSettingsSection,
   mailboxes: MailboxesSection,
   finance: FinanceSettingsSection,
-  audit: AuditSection,
+  'fees-due': FeeSettingsSection,
+  'fees-payment': FeeSettingsSection,
+};
+
+/** Sections that show one part of a view of several parts. */
+export const SECTION_PROPS: Partial<Record<SectionId, { id: string }>> = {
+  'brand-look': { id: 'look' },
+  'brand-logos': { id: 'logos' },
+  'brand-mail': { id: 'mail' },
+  'fees-due': { id: 'due' },
+  'fees-payment': { id: 'payment' },
 };

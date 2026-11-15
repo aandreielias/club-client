@@ -1,6 +1,7 @@
 import { PRIVILEGED } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
 import { TOURNAMENT_MESSAGES } from './messages';
+import { tournamentActions } from './actions';
 import TournamentCreateView from './TournamentCreateView.svelte';
 import TournamentsPage from './TournamentsPage.svelte';
 import TournamentsHome from './TournamentsHome.svelte';
@@ -14,6 +15,7 @@ export const tournamentsFeature: Feature = {
     { path: '/tournaments', component: TournamentsPage, nav: 'Turniere', icon: 'trophy', guest: 'TOURNAMENTS' },
     detailRoute('/tournaments/:id', TournamentView, { href: '/tournaments', label: 'Turniere' }, { guest: 'TOURNAMENTS' }),
   ],
+  actions: { tournament: tournamentActions },
   windows: {
     tournament: { component: TournamentView, page: (id) => `/tournaments/${encodeURIComponent(id)}` },
     'tournament-new': { component: TournamentCreateView, roles: PRIVILEGED },

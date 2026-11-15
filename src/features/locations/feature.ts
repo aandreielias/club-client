@@ -1,3 +1,4 @@
+import { locationActions } from './actions';
 import { PRIVILEGED } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
 import LocationCreateView from './LocationCreateView.svelte';
@@ -12,6 +13,7 @@ export const locationsFeature: Feature = {
     { path: '/locations', component: LocationsPage, nav: 'Orte', icon: 'location' },
     detailRoute('/locations/:id', LocationView, { href: '/locations', label: 'Orte' }),
   ],
+  actions: { location: locationActions },
   windows: {
     location: { component: LocationView, page: (id) => `/locations/${encodeURIComponent(id)}` },
     'location-new': { component: LocationCreateView, roles: PRIVILEGED },

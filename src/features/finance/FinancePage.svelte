@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { bus, commands, router, session, store, windows } from '../../lib/container';
+  import { recordMenu } from '../../ui/contextMenu';
+  import { bus, commands, session, store, windows } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
-  import { windowMenu } from '../../lib/window/windowMenu';
   import Button from '../../ui/Button.svelte';
   import DataTable from '../../ui/DataTable.svelte';
   import Page from '../../ui/Page.svelte';
@@ -106,7 +106,7 @@
     model={list}
     rowKey={(b) => b.id}
     onopen={(b) => bus.publish(WINDOW_OPEN, { kind: 'booking', id: b.id })}
-    menu={(b) => windowMenu(bus, windows, router, 'booking', b.id)}
+    menu={(b) => recordMenu('booking', b.id)}
     selected={windows.current?.kind === 'booking' ? windows.current.id : null}
     emptyText="Keine Buchungen in dieser Saison."
     emptyAction={writer ? { label: 'Neue Buchung', icon: 'add', run: () => create('booking') } : null}

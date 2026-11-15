@@ -160,9 +160,10 @@ export class CalendarApi {
     return `${CalendarApi.APPOINTMENTS}/${encodeURIComponent(id)}`;
   }
 
-  /** Current and future absences of the member and their minors. */
-  async absences(): Promise<Absence[]> {
-    return (await this.api.get<AbsenceList>('/api/v1/me/absences')).items;
+  /** Current and future absences of the member and their minors; with `memberId` that member's (profile; 404 for who may not see them). */
+  async absences(memberId?: string): Promise<Absence[]> {
+    const query = memberId ? `?memberId=${encodeURIComponent(memberId)}` : '';
+    return (await this.api.get<AbsenceList>(`/api/v1/me/absences${query}`)).items;
   }
 
   addAbsence(absence: NewAbsence): Promise<Absence> {

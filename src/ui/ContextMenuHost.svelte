@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { settings } from '../settings';
   import { contextMenu, keymap } from '../lib/container';
   import { isSeparator, type MenuAction } from '../lib/overlay/ContextMenuService.svelte';
@@ -20,11 +20,11 @@
   const entries = $derived(contextMenu.current?.entries ?? []);
   const actions = $derived(entries.map((e, i) => ({ e, i })).filter((x): x is { e: MenuAction; i: number } => !isSeparator(x.e)));
 
+  // Keyed on the opening, not the entries: loaded record actions replace the rows without re-opening.
+  const openedId = $derived(contextMenu.current?.id);
   $effect(() => {
-    const current = contextMenu.current;
-    if (!current || !menu) return;
+    if (openedId === undefined || !menu) return;
     if (!menu.matches(':popover-open')) menu.showPopover();
-    position = menuPosition(current, menu.getBoundingClientRect(), { width: innerWidth, height: innerHeight }, settings.overlay.offsetPx);
     active = -1;
     void tick().then(() => menu?.focus());
     const outside = (event: PointerEvent) => !menu?.contains(event.target as Node) && contextMenu.close();
@@ -39,6 +39,15 @@
       if (menu?.matches(':popover-open')) menu.hidePopover();
       position = { x: -9999, y: -9999 };
     };
+  });
+
+  // Placed on opening and again when loaded entries change its size.
+  $effect(() => {
+    void entries;
+    const current = untrack(() => contextMenu.current);
+    if (!current || !menu) return;
+    position = menuPosition(current, menu.getBoundingClientRect(), { width: innerWidth, height: innerHeight }, settings.overlay.offsetPx);
+    if (active >= entries.length) untrack(() => (active = -1));
   });
 
   function run(action: MenuAction) {

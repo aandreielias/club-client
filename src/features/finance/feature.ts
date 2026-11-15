@@ -1,13 +1,13 @@
 import { session } from '../../lib/container';
 import { reaches } from './model';
 import { detailRoute, type Feature } from '../Feature';
+import { accountActions, auditActions, bookingActions, categoryActions, chargeActions, invoiceActions } from './actions';
 import AccountView from './AccountView.svelte';
 import AuditView from './AuditView.svelte';
 import BookingCreateView from './BookingCreateView.svelte';
 import BookingView from './BookingView.svelte';
 import CategoryView from './CategoryView.svelte';
 import ChargeView from './ChargeView.svelte';
-import FeeSettingsView from './FeeSettingsView.svelte';
 import FinancePage from './FinancePage.svelte';
 import FinanceSectionView from './FinanceSectionView.svelte';
 import InvoiceView from './InvoiceView.svelte';
@@ -36,9 +36,16 @@ export const financeFeature: Feature = {
     'invoice-new': { component: InvoiceView, canOpen: writes },
     'fee-charge': { component: ChargeView, canOpen: reads },
     'finance-section': { component: FinanceSectionView, canOpen: reads },
-    'finance-fees': { component: FeeSettingsView, canOpen: writes },
     // The server decides who confirms (auditors and admins); READ to open the form.
     'audit-new': { component: AuditView, canOpen: reads },
+  },
+  actions: {
+    booking: bookingActions,
+    'finance-account': accountActions,
+    'finance-category': categoryActions,
+    audit: auditActions,
+    invoice: invoiceActions,
+    'fee-charge': chargeActions,
   },
   messages: FINANCE_MESSAGES,
   // Shown only while the member or a ward has fees.

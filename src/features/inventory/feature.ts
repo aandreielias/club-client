@@ -1,3 +1,4 @@
+import { itemActions } from './actions';
 import InventoryHome from './InventoryHome.svelte';
 import { PRIVILEGED } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
@@ -13,6 +14,7 @@ export const inventoryFeature: Feature = {
     { path: '/inventory', component: InventoryPage, nav: 'Inventar', icon: 'inventory', roles: PRIVILEGED },
     detailRoute('/inventory/:id', ItemView, { href: '/inventory', label: 'Inventar' }, { roles: PRIVILEGED }),
   ],
+  actions: { item: itemActions },
   windows: {
     item: { component: ItemView, page: (id) => `/inventory/${encodeURIComponent(id)}`, roles: PRIVILEGED },
     'item-new': { component: ItemCreateView, roles: PRIVILEGED },

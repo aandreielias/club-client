@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import InfoTip from './InfoTip.svelte';
 
   /** Small modal prompt (confirm, short forms). Details open in the WindowHost instead. */
   let {
@@ -7,12 +8,14 @@
     title,
     onclose,
     wide = false,
+    hint,
     children,
   }: {
     open: boolean;
     title: string;
     onclose: () => void;
     /** Room for a list (e.g. choosing teams). */ wide?: boolean;
+    /** What the dialog does, as ⓘ after the title. */ hint?: string;
     children: Snippet;
   } = $props();
 
@@ -25,7 +28,9 @@
 </script>
 
 <dialog bind:this={element} {onclose} aria-label={title} class:wide>
-  <h2 class="title">{title}</h2>
+  <h2 class="title">
+    {title}{#if hint}&nbsp;<InfoTip text={hint} />{/if}
+  </h2>
   {@render children()}
 </dialog>
 

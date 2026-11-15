@@ -1,3 +1,4 @@
+import { meetingActions, meetingTypeActions, resolutionActions } from './actions';
 import { session } from '../../lib/container';
 import { ADMIN_BOARD } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
@@ -28,6 +29,7 @@ export const meetingsFeature: Feature = {
     detailRoute('/resolutions/:id', ResolutionView, { href: '/resolutions', label: 'Beschlüsse' }),
     detailRoute('/meeting-types/:key', MeetingTypeView, { href: '/settings/meeting-types', label: 'Sitzungsarten' }, { roles: ADMIN_BOARD }),
   ],
+  actions: { meeting: meetingActions, resolution: resolutionActions, 'meeting-type': meetingTypeActions },
   windows: {
     meeting: { component: MeetingView, page: (id) => `/meetings/${encodeURIComponent(id)}` },
     'meeting-new': { component: MeetingCreateView, roles: ADMIN_BOARD },

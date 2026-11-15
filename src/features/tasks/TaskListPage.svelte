@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { bus, commands, directory, router, store, windows } from '../../lib/container';
+  import { bus, commands, directory, store } from '../../lib/container';
   import { APP_ERROR, CONFIRM, TOAST, WINDOW_OPEN } from '../../channels';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
@@ -7,8 +7,6 @@
   import Dialog from '../../ui/Dialog.svelte';
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
-  import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
-  import { windowMenu } from '../../lib/window/windowMenu';
   import TaskTable from './TaskTable.svelte';
   import Page from '../../ui/Page.svelte';
   import { TASK_CHANGED } from './events';
@@ -20,28 +18,6 @@
   void list.load();
   directory.loadRosters();
   useBus(bus, TASK_CHANGED, () => void list.load());
-  /** Window entries plus done/reopen for members who work on the task. */
-  function taskMenu(task: Task): MenuEntry[] {
-    const done = task.status === 'DONE';
-    return [
-      ...windowMenu(bus, windows, router, 'task', task.id),
-      { separator: true },
-      {
-        label: done ? 'Wieder öffnen' : 'Als erledigt markieren',
-        disabled: !taskPolicy.canWork(task),
-        run: async () => {
-          try {
-            await tasksApi.setStatus(task.id, done ? 'OPEN' : 'DONE');
-            bus.publish(TOAST, { text: done ? 'Aufgabe wieder geöffnet.' : 'Aufgabe erledigt.' });
-            void list.load();
-          } catch (error) {
-            bus.publish(APP_ERROR, error);
-          }
-        },
-      },
-    ];
-  }
-
   // Several tasks at once: done, reopened or deleted; each only where the member may (the server checks every one).
   let selecting = $state(false);
   let chosen = $state<ReadonlySet<string>>(new Set());
@@ -166,7 +142,6 @@
 
   <TaskTable
     {list}
-    menu={taskMenu}
     check={selecting ? { checked: (t) => chosen.has(t.id), toggle, label: (t) => `${t.title} auswählen` } : undefined}
     emptyText={list.filters.mine ? 'Dir ist keine offene Aufgabe zugewiesen.' : 'Keine Aufgaben.'}
     emptyAction={taskPolicy.canCreate()

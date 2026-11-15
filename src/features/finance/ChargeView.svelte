@@ -1,12 +1,15 @@
 <script lang="ts">
-  import { backStack, bus, session } from '../../lib/container';
+  import { backStack, commands, bus, session } from '../../lib/container';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { chargeActions } from './actions';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { Action } from '../../lib/state/Action.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
-  import Button from '../../ui/Button.svelte';
   import DateInput from '../../ui/DateInput.svelte';
   import Detail from '../../ui/Detail.svelte';
   import EditorForm from '../../ui/EditorForm.svelte';
@@ -19,7 +22,7 @@
   import { membershipKinds } from '../members/services';
   import { FINANCE_CHANGED } from './events';
   import { chargeStatus, moneyInput, parseMoney, seasonLabel, type Charge } from './model';
-  import { accounts, financeApi, financeMay, money } from './services';
+  import { accounts, financeApi, money } from './services';
 
   /** One member's fee of a season: payments (each a booking), reducing or waiving with a note, deleting while unpaid. Window only. */
   let { id, handle }: { id: string; handle: WindowHandle } = $props();
@@ -45,9 +48,7 @@
     if (!edit.editing && !write.busy) void charge.load();
   });
 
-  const writer = $derived(financeMay('WRITE'));
   const open = (c: Charge) => c.amountCents - c.paidCents;
-  const settled = (c: Charge) => c.status === 'PAID' || c.status === 'WAIVED';
 
   let submitted = $state(false);
   const amountError = $derived(edit.form && parseMoney(edit.form.amount) === null ? 'Einen Betrag angeben, z. B. 120,00.' : null);
@@ -67,18 +68,6 @@
       async (f) => charge.set(await financeApi.adjustCharge(id, parseMoney(f.amount)!, f.waived, f.note.trim() || null)),
       'Beitrag gespeichert.',
     );
-
-  function remove(c: Charge) {
-    void view.confirm(
-      { title: 'Beitrag löschen', message: `Der Beitrag von ${money(c.amountCents)} wird gelöscht.`, confirmLabel: 'Löschen', danger: true },
-      async () => (await view.attempt(write, () => write.run(() => financeApi.deleteCharge(c.id)))) && (view.leave(), true),
-      'Beitrag gelöscht.',
-    );
-  }
-
-  async function remind() {
-    if (await view.attempt(write, () => write.run(() => financeApi.remindCharge(id)))) view.notify('Erinnerung gesendet.');
-  }
 
   // The pay form: account, day and amount (the open rest by default).
   let paying = $state(false);
@@ -106,6 +95,24 @@
       view.notify('Zahlung gebucht.');
     }
   }
+
+  const act = useRecordActions(
+    commands,
+    chargeActions,
+    () => (edit.form || paying ? null : charge.value),
+    () => view.leave(),
+    () => charge.load(),
+  );
+  useCommands(commands, {
+    'record.edit': {
+      run: () => {
+        const c = charge.value;
+        if (c) edit.edit({ amount: moneyInput(c.amountCents), waived: c.status === 'WAIVED', note: c.note ?? '' });
+      },
+      when: () => act.has('record.edit'),
+    },
+    'fee.pay': { run: () => charge.value && startPay(charge.value), when: () => act.has('fee.pay') },
+  });
 </script>
 
 <AsyncView resource={charge}>
@@ -115,22 +122,7 @@
         {#if !edit.form}{@const tag = chargeStatus(c, session.clock.today())}<Tag tone={tag.tone}>{tag.label}</Tag>{/if}
       {/snippet}
       {#snippet actions()}
-        {#if !edit.form && !paying && writer}
-          {#if !settled(c)}
-            <Button variant="primary" onclick={() => startPay(c)} tooltip="Eine Zahlung buchen, auch einen Teil">Zahlung</Button>
-            <Button busy={write.busy} onclick={remind} tooltip="Dem Mitglied und seinen Erziehungsberechtigten jetzt eine Erinnerung schicken"
-              >Erinnern</Button
-            >
-          {/if}
-          <Button
-            icon="edit"
-            tooltip="Den Beitrag senken oder den Rest erlassen, mit Notiz"
-            onclick={() => edit.edit({ amount: moneyInput(c.amountCents), waived: c.status === 'WAIVED', note: c.note ?? '' })}>Anpassen</Button
-          >
-          {#if !c.payments.length}
-            <Button variant="danger" icon="delete" busy={write.busy} onclick={() => remove(c)}>Löschen</Button>
-          {/if}
-        {/if}
+        <RecordActionButtons actions={act} />
       {/snippet}
 
       {#if edit.form}

@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { backStack, bus, session } from '../../lib/container';
+  import { backStack, commands, bus, session } from '../../lib/container';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { invoiceActions } from './actions';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { CreateController } from '../../lib/detail/CreateController.svelte';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
@@ -7,7 +11,6 @@
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
-  import Button from '../../ui/Button.svelte';
   import DateInput from '../../ui/DateInput.svelte';
   import Detail from '../../ui/Detail.svelte';
   import EditorForm from '../../ui/EditorForm.svelte';
@@ -19,7 +22,7 @@
   import { settings } from '../../settings';
   import { FINANCE_CHANGED } from './events';
   import { moneyInput, parseMoney, type Invoice, type InvoiceInput } from './model';
-  import { accounts, categories, financeApi, financeMay, money } from './services';
+  import { accounts, categories, financeApi, money } from './services';
 
   /**
    * One open invoice (`id` '-' = new): to pay (an expense category) or to collect (an income category). Who keeps the books gets it as a
@@ -55,7 +58,6 @@
     if (!isNew && !edit.editing && !write.busy) void invoice.load();
   });
 
-  const writer = $derived(financeMay('WRITE'));
   const blank = $state<InvoiceForm>({ counterparty: '', text: '', amount: '', dueOn: session.clock.today(), category: '', note: '' });
   const form = $derived(isNew ? blank : edit.form);
   let submitted = $state(false);
@@ -100,14 +102,6 @@
     else await edit.submit(async (f) => invoice.set(await financeApi.saveInvoice(id, input(f))), 'Rechnung gespeichert.');
   }
 
-  function remove(i: Invoice) {
-    void view.confirm(
-      { title: 'Rechnung löschen', message: `„${i.text}“ und ihre Aufgabe werden gelöscht.`, confirmLabel: 'Löschen', danger: true },
-      async () => (await view.attempt(write, () => write.run(() => financeApi.deleteInvoice(i.id)))) && (view.leave(), true),
-      'Rechnung gelöscht.',
-    );
-  }
-
   // The pay form: account and day of the booking.
   let paying = $state(false);
   let payAccount = $state('');
@@ -128,6 +122,27 @@
       view.notify('Gebucht; die Aufgabe ist erledigt.');
     }
   }
+
+  const act = useRecordActions(
+    commands,
+    invoiceActions,
+    () => (isNew || edit.form || paying ? null : invoice.value),
+    () => view.leave(),
+    () => invoice.load(),
+  );
+  const startEdit = (i: Invoice) =>
+    edit.edit({
+      counterparty: i.counterparty,
+      text: i.text,
+      amount: moneyInput(i.amountCents),
+      dueOn: i.dueOn,
+      category: i.category,
+      note: i.note ?? '',
+    });
+  useCommands(commands, {
+    'record.edit': { run: () => invoice.value && startEdit(invoice.value), when: () => act.has('record.edit') },
+    'invoice.pay': { run: () => (paying = true), when: () => act.has('invoice.pay') },
+  });
 </script>
 
 {#snippet editor(f: InvoiceForm, kept: string | null)}
@@ -167,22 +182,7 @@
           {/if}
         {/snippet}
         {#snippet actions()}
-          {#if !edit.form && !paying && writer && !i.bookingId}
-            <Button variant="primary" onclick={() => (paying = true)} tooltip="Die Zahlung buchen; die Aufgabe ist dann erledigt">Bezahlt</Button>
-            <Button
-              icon="edit"
-              onclick={() =>
-                edit.edit({
-                  counterparty: i.counterparty,
-                  text: i.text,
-                  amount: moneyInput(i.amountCents),
-                  dueOn: i.dueOn,
-                  category: i.category,
-                  note: i.note ?? '',
-                })}>Bearbeiten</Button
-            >
-            <Button variant="danger" icon="delete" busy={write.busy} onclick={() => remove(i)}>Löschen</Button>
-          {/if}
+          <RecordActionButtons actions={act} />
         {/snippet}
 
         {#if form}

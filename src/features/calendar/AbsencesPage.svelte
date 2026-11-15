@@ -48,11 +48,14 @@
   }
 </script>
 
-<Page title="Abwesenheiten" back={{ href: '/calendar', label: 'Kalender' }}>
+<Page
+  title="Abwesenheiten"
+  hint="Termine an diesen Tagen zählen als „Nein“, bis du anders antwortest."
+  back={{ href: '/calendar', label: 'Kalender' }}
+>
   {#snippet actions()}
     <Button variant="primary" icon="add" onclick={create}>Abwesenheit eintragen</Button>
   {/snippet}
-  <p class="muted small">Termine an diesen Tagen zählen als „Nein“, bis du anders antwortest.</p>
   <DataTable
     model={list}
     toolbar={false}

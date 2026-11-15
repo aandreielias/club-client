@@ -87,14 +87,14 @@
 {/if}
 
 {#if policy.canManage()}
-  <SectionHeading title="Gastzugänge">
+  <SectionHeading
+    title="Gastzugänge"
+    hint="Gastteams sehen damit nur dieses Turnier: Tabellen, Spielplan und KO-Runde. Die Zugänge werden einen Monat nach dem Turnier gelöscht."
+  >
     {#snippet actions()}
       {#if policy.canInviteGuests()}<Button size="sm" variant="ghost" icon="add" onclick={() => (inviting = true)}>Gastzugang anlegen</Button>{/if}
     {/snippet}
   </SectionHeading>
-  <p class="muted small">
-    Gastteams sehen damit nur dieses Turnier: Tabellen, Spielplan und KO-Runde. Die Zugänge werden einen Monat nach dem Turnier gelöscht.
-  </p>
   {#if tournament.guests.length}
     <ul class="rows teams">
       {#each tournament.guests as guest (guest.memberId)}

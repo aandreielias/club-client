@@ -3,12 +3,13 @@
   import { WINDOW_OPEN } from '../channels';
   import { bus } from '../lib/container';
   import { RecordDrag } from '../lib/records/RecordDrag';
+  import { menu, recordMenu } from './contextMenu';
   import { tooltip } from './tooltip';
   import { windowHandle } from './windowContext';
 
   /**
    * A name that opens its record in the window: inside a window with a way back, elsewhere fresh.
-   * Without `allowed` it renders as plain text, so records the member may not open never look clickable.
+   * Right-click gives the record's menu (its actions). Without `allowed` it renders as plain text, so records the member may not open never look clickable.
    */
   let {
     kind,
@@ -36,7 +37,8 @@
     onclick={open}
     draggable="true"
     ondragstart={(e) => RecordDrag.set(e, { kind, id, title: (e.currentTarget as HTMLElement).textContent?.trim() ?? '' })}
-    {@attach tooltip(hint ?? 'Öffnen')}>{@render children()}</button
+    {@attach tooltip(hint ?? 'Öffnen')}
+    {@attach onopen ? undefined : menu(() => recordMenu(kind, id))}>{@render children()}</button
   >
 {:else}
   <span class="record-text">{@render children()}</span>

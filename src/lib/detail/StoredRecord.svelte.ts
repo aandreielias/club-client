@@ -1,10 +1,10 @@
 import { background } from '../state/background';
-import type { Action } from '../state/Action.svelte';
 import type { DetailController } from './DetailController.svelte';
 
 interface Store<T> {
   get(key: string): T | undefined;
   load(): Promise<unknown>;
+  deletedHere?(key: string): boolean;
 }
 
 /**
@@ -13,7 +13,6 @@ interface Store<T> {
  */
 export class StoredRecord<T> {
   #loaded = $state(false);
-  #removed = false;
   readonly record: T | undefined;
 
   constructor(
@@ -28,7 +27,7 @@ export class StoredRecord<T> {
     background(store.load().then(() => (this.#loaded = true)));
     $effect(() => {
       if (this.#loaded && !this.record && !busy()) {
-        if (!this.#removed) view.notify(gone);
+        if (!store.deletedHere?.(key())) view.notify(gone);
         view.leave();
       }
     });
@@ -38,21 +37,5 @@ export class StoredRecord<T> {
   async saved(write: () => Promise<unknown>): Promise<void> {
     await write();
     await this.store.load();
-  }
-
-  /** Asks, deletes through `remove` with `action`, reloads; the view then closes. */
-  remove(label: string, title: string, success: string, action: Action, remove: () => Promise<unknown>): Promise<boolean> {
-    return this.view.confirm(
-      { title, message: label, confirmLabel: 'Löschen', danger: true },
-      () =>
-        this.view.attempt(action, () =>
-          action.run(async () => {
-            this.#removed = true;
-            await remove();
-            await this.store.load();
-          }),
-        ),
-      success,
-    );
   }
 }

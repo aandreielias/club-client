@@ -6,7 +6,8 @@
   import { bus, commands, directory, pendingDeletes, preferences, session, store } from '../../lib/container';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
-  import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
+  import type { MenuSource } from '../../lib/overlay/ContextMenuService.svelte';
+  import { recordMenu } from '../../ui/contextMenu';
   import { LinkClipboard } from '../../lib/window/LinkClipboard';
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
@@ -29,7 +30,7 @@
   import { colorHue, type Folder, type StoredFile } from './model';
   import MoveFilesDialog from './MoveFilesDialog.svelte';
   import MoveFolderDialog from './MoveFolderDialog.svelte';
-  import { fileDownloads, fileLinks, fileMover, filePolicy, filesApi, fileTypes, folderZip, photoTagDrops } from './services';
+  import { fileLinks, fileMover, filePolicy, filesApi, fileTypes, folderZip, photoTagDrops } from './services';
   import UploadPanel from './UploadPanel.svelte';
 
   /** '/files' (root folders) or '/files/:id' (one folder). */
@@ -86,17 +87,8 @@
     else bus.publish(WINDOW_OPEN, { kind: 'file', id: `${item.file.folderId}:${item.file.id}` });
   }
 
-  async function download(item: FolderItem) {
-    if (item.kind !== 'file') return;
-    try {
-      await fileDownloads.download(item.file);
-    } catch (error) {
-      bus.publish(APP_ERROR, error);
-    }
-  }
-
   /** Folder: open, edit. File: open, download, edit, delete (where allowed). */
-  function itemMenu(item: FolderItem): MenuEntry[] {
+  function itemMenu(item: FolderItem): MenuSource {
     if (item.kind === 'folder') {
       const target = item.folder;
       return [
@@ -108,15 +100,7 @@
         { label: 'Link kopieren', icon: 'copy', run: () => void LinkClipboard.copy(bus, `/files/${target.id}`) },
       ];
     }
-    const file = item.file;
-    const modifiable = fileActions.canModify(file);
-    return [
-      { label: 'Öffnen', run: () => open(item) },
-      { label: 'Herunterladen', icon: 'download', run: () => void download(item) },
-      ...(modifiable ? [{ label: 'Bearbeiten', icon: 'edit' as const, run: () => (editingFile = file) }] : []),
-      { separator: true },
-      ...(modifiable ? [{ label: 'Löschen', icon: 'delete' as const, danger: true, run: () => fileActions.remove([file]) }] : []),
-    ];
+    return recordMenu('file', `${item.file.folderId}:${item.file.id}`);
   }
 
   // Empty folder: create a subfolder (uploading has its own panel below).

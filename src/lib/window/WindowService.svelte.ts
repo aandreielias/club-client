@@ -3,6 +3,7 @@ import { defineEvent, type EventBus } from '../bus';
 import { Router } from '../router/Router.svelte';
 import type { LocalStore } from '../storage/LocalStore';
 import type { Role } from '../types';
+import type { CommandId } from '../../shortcuts';
 
 export type Dock = 'center' | 'side' | 'bottom';
 
@@ -26,8 +27,8 @@ export interface ResizeLimits {
   pageMinHeightPx: number;
 }
 
-/** Opens a record in the window, optionally moving the window to `dock` first. */
-export const WINDOW_OPEN = defineEvent<WindowTarget & { dock?: Dock }>('ui/window/open');
+/** Opens a record in the window, optionally moving the window to `dock` first; `command` then runs in it (e.g. edit). */
+export const WINDOW_OPEN = defineEvent<WindowTarget & { dock?: Dock; command?: CommandId }>('ui/window/open');
 export const WINDOW_CLOSE = defineEvent('ui/window/close');
 
 /** Given to window contents so they can talk to their window. */
@@ -71,6 +72,8 @@ export class WindowService {
   /** Docked width (side) and height (bottom) in px, dragged at the inner edge; null keeps the theme's default. */
   size = $state<DockSizes>({ side: null, bottom: null });
   title = $state('');
+  /** Command to run in the window once its view handles it (WindowHost), e.g. "Bearbeiten" from a context menu. */
+  pendingCommand = $state<(WindowTarget & { command: CommandId }) | null>(null);
   readonly current: WindowTarget | null;
 
   readonly #contents = new Map<string, WindowContent>();
@@ -91,10 +94,11 @@ export class WindowService {
     private readonly hasRole: (roles: readonly Role[]) => boolean = () => true,
   ) {
     // Opening from outside (lists, calendar, links) starts a fresh window history.
-    bus.subscribe(WINDOW_OPEN, ({ kind, id, dock }) => {
+    bus.subscribe(WINDOW_OPEN, ({ kind, id, dock, command }) => {
       if (dock) this.setDock(dock);
       this.setTrail([]);
       this.open(kind, id);
+      this.pendingCommand = command ? { kind, id, command } : null;
     });
     bus.subscribe(WINDOW_CLOSE, () => this.close());
     const stored = store.get<Dock>(WindowService.DOCK_KEY);
@@ -142,6 +146,7 @@ export class WindowService {
 
   private closeNow(then?: () => void): void {
     this.setTrail([]);
+    this.pendingCommand = null;
     if (!this.current) return then?.();
     if (this.#pushed) {
       this.#pushed = false;

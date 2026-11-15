@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { bus, router, session, windows } from '../../lib/container';
+  import { bus, session } from '../../lib/container';
   import { NAVIGATE, WINDOW_OPEN } from '../../channels';
   import type { CalendarEntry } from '../../lib/calendar/CalendarSources';
-  import { windowMenu } from '../../lib/window/windowMenu';
-  import { menu } from '../../ui/contextMenu';
+  import { menu, recordMenu } from '../../ui/contextMenu';
   import { tooltip } from '../../ui/tooltip';
   import type { CalendarDrag, ResizeEdge, ResizeMode } from './CalendarDrag';
   import type { CalendarResize } from './CalendarResize';
@@ -77,7 +76,7 @@
   style:--chip-text="var(--color-tag-{entry.hue}-text)"
   aria-label="{entry.label}: {entry.title}"
   {@attach tooltip(hint)}
-  {@attach menu(() => (entry.window ? windowMenu(bus, windows, router, entry.window.kind, entry.window.id) : []))}
+  {@attach menu(() => (entry.window ? recordMenu(entry.window.kind, entry.window.id) : []))}
   onclick={(e) => (e.stopPropagation(), open())}
 >
   {#if time}<span class="time">{time}</span>{/if}

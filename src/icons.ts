@@ -18,6 +18,7 @@ import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 import ChevronRight from '@lucide/svelte/icons/chevron-right';
 import CircleAlert from '@lucide/svelte/icons/circle-alert';
 import CircleHelp from '@lucide/svelte/icons/circle-question-mark';
+import Info from '@lucide/svelte/icons/info';
 import Command from '@lucide/svelte/icons/command';
 import Copy from '@lucide/svelte/icons/copy';
 import Download from '@lucide/svelte/icons/download';
@@ -140,6 +141,7 @@ export const ICONS = {
   check: Check,
   alert: CircleAlert,
   help: CircleHelp,
+  info: Info,
   empty: Inbox,
   copy: Copy,
   download: Download,

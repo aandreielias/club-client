@@ -30,9 +30,6 @@ export const BRAND_COLORS: readonly { key: keyof Brand; label: string; hint: str
   { key: 'line', label: 'Linien', hint: 'Rahmen und Trennlinien' },
 ];
 
-/** The entries of Einstellungen › Erscheinungsbild, each opened in the window `brand`. */
-export const BRAND_PARTS: Record<string, string> = { look: 'Farben, Schrift und Ecken', mail: 'E-Mails', logos: 'Logos' };
-
 const HEX = /^#[0-9A-Fa-f]{6}$/;
 
 /** The draft as a brand the previews can use: while a hex code or corner is half typed, the saved value stays. */

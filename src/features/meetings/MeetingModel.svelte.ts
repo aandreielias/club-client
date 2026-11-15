@@ -20,14 +20,6 @@ export class MeetingModel {
     return this.meeting.load();
   }
 
-  invite(): Promise<boolean> {
-    return this.write(() => this.api.invite(this.id));
-  }
-
-  open(): Promise<boolean> {
-    return this.write(() => this.api.open(this.id));
-  }
-
   close(protocol: string): Promise<boolean> {
     return this.write(() => this.api.close(this.id, protocol));
   }
@@ -73,10 +65,6 @@ export class MeetingModel {
 
   finalizeProtocol(): Promise<boolean> {
     return this.write(() => this.api.finalizeProtocol(this.id));
-  }
-
-  cancel(): Promise<boolean> {
-    return this.write(() => this.api.cancel(this.id));
   }
 
   saveProtocol(protocol: string): Promise<boolean> {

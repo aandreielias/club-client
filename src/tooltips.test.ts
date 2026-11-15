@@ -44,3 +44,19 @@ describe('button tooltips', () => {
     expect(missing).toEqual([]);
   });
 });
+
+describe('hints', () => {
+  it('sit in an ⓘ, not as a paragraph right under a heading', () => {
+    // Status lines that change with the record stay visible text.
+    const STATUS = ['gewonnen, {list.lost} verloren', 'noch kein Kind verknüpft', 'läuft ohne Server'];
+    const found: string[] = [];
+    for (const [file, source] of Object.entries(sources)) {
+      for (const match of source.matchAll(
+        /(?:<\/h[23]>|<\/SectionHeading>|<SectionHeading\b[^>]*\/>|<Dialog\b(?:[^>{]|\{[^}]*\})*>)\s*(?:<div class="stack">\s*)?<p class="muted[^"]*">([^<]*)/g,
+      )) {
+        if (!STATUS.some((s) => match[1].includes(s))) found.push(`${file}: ${match[1].trim().slice(0, 60)}`);
+      }
+    }
+    expect(found).toEqual([]);
+  });
+});

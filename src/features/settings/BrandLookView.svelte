@@ -61,7 +61,7 @@
   <h3>Farben</h3>
   <div class="grid-2">
     {#each BRAND_COLORS as color (color.key)}
-      <Field label={color.label} hint={warnings[color.key] ?? color.hint}>
+      <Field label={color.label} hint={color.hint} note={warnings[color.key]}>
         <span class="color">
           <input type="color" bind:value={draft.value[color.key] as string} aria-label="{color.label} wählen" />
           <input class="mono" bind:value={draft.value[color.key] as string} maxlength="7" pattern="#[0-9A-Fa-f]{6}" />

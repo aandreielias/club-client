@@ -621,6 +621,8 @@ export const settings = {
     flyoutCloseDelayMs: 180,
     /** While the pointer heads for an open flyout (SafeTriangle), a pause this long ends the aim: the flyout closes or the row below opens. */
     flyoutAimMs: 400,
+    /** Touch: holding a finger this long opens the context menu. */
+    longPressMs: 500,
   },
 
   /** "Benötigt" lists and attached files of appointments and tasks (server: platform.LinkResolver). */

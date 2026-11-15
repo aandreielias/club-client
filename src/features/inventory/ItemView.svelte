@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { backStack, bus, pendingDeletes, permissions, session } from '../../lib/container';
+  import { backStack, bus, commands, permissions, session } from '../../lib/container';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { itemActions } from './actions';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
@@ -54,23 +58,23 @@
     await stockEdit.submit(async (form) => item.set(await inventoryApi.setStock(id, form.toInput())), 'Bestand gespeichert.');
   }
 
-  /** Termine und Aufgaben, die ihn benötigen, zeigen ihn danach als gelöscht an. */
-  function destroy(name: string) {
-    // The prop is gone once the view closed, before the undo time ends: keep the id itself.
-    const target = id;
-    pendingDeletes.schedule({ ids: [target], text: `„${name}“ gelöscht.`, commit: () => inventoryApi.delete(target) });
-    view.leave();
-  }
+  const act = useRecordActions(
+    commands,
+    itemActions,
+    () => (edit.form || stockEdit.form ? null : item.value),
+    () => view.leave(),
+  );
+  useCommands(commands, {
+    'record.edit': { run: () => item.value && edit.edit(ItemForm.edit(item.value)), when: () => act.has('record.edit') },
+    'item.stock': { run: () => item.value && stockEdit.edit(new StockForm(item.value.stock)), when: () => act.has('item.stock') },
+  });
 </script>
 
 <AsyncView resource={item}>
   {#snippet children(value)}
     <Detail title={edit.form ? 'Gegenstand bearbeiten' : value.name}>
       {#snippet actions()}
-        {#if !edit.form && permissions.isPrivileged}
-          <Button icon="edit" onclick={() => edit.edit(ItemForm.edit(value))}>Bearbeiten</Button>
-          <Button variant="danger" icon="delete" onclick={() => destroy(value.name)}>Löschen</Button>
-        {/if}
+        <RecordActionButtons actions={act} except={['item.stock']} />
       {/snippet}
       {#snippet meta()}
         {#if !edit.form && value.category}<Tag tone="gray">{value.category}</Tag>{/if}

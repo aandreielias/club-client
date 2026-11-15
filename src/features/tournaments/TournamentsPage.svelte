@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { bus, commands, router, session, store, windows } from '../../lib/container';
+  import { recordMenu } from '../../ui/contextMenu';
+  import { bus, commands, session, store, windows } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { usePane } from '../../lib/split/usePane';
-  import { windowMenu } from '../../lib/window/windowMenu';
   import Button from '../../ui/Button.svelte';
   import DataTable from '../../ui/DataTable.svelte';
   import Page from '../../ui/Page.svelte';
@@ -42,7 +42,7 @@
     rowKey={(t) => t.id}
     record={(t) => ({ kind: 'tournament', id: t.id, title: t.name })}
     onopen={(t) => bus.publish(WINDOW_OPEN, { kind: 'tournament', id: t.id })}
-    menu={(t) => windowMenu(bus, windows, router, 'tournament', t.id)}
+    menu={(t) => recordMenu('tournament', t.id)}
     selected={windows.current?.kind === 'tournament' ? windows.current.id : null}
     emptyText="Keine Turniere."
     emptyAction={policy.canManage() ? { label: 'Neues Turnier', icon: 'add', run: create } : null}

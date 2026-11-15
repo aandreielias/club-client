@@ -1,9 +1,12 @@
 <script lang="ts">
-  import { backStack, bus, permissions } from '../../lib/container';
+  import { backStack, bus, commands, permissions } from '../../lib/container';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { appointmentTypeActions } from './actions';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
-  import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import DetailSkeleton from '../../ui/DetailSkeleton.svelte';
   import Tag from '../../ui/Tag.svelte';
@@ -32,15 +35,28 @@
     await edit.submit((form) => stored.saved(() => calendarApi.saveType(id, { ...form, label: form.label.trim() })), 'Terminart gespeichert.');
   }
 
-  /** In use, it is archived instead of deleted: kept on old appointments, not offered for new ones. */
-  async function setArchived(archived: boolean) {
-    if (await edit.save.run(() => stored.saved(() => appointmentTypes.ops(id).archive(archived))))
-      view.notify(archived ? 'Terminart archiviert.' : 'Terminart wiederhergestellt.');
-  }
-
-  function remove(label: string) {
-    void stored.remove(label, 'Terminart löschen', 'Terminart gelöscht.', edit.save, () => calendarApi.deleteType(id));
-  }
+  const act = useRecordActions(
+    commands,
+    appointmentTypeActions,
+    () => (edit.form ? null : type),
+    () => view.leave(),
+  );
+  useCommands(commands, {
+    'record.edit': {
+      run: () =>
+        type &&
+        edit.edit({
+          label: type.label,
+          hue: type.hue,
+          rides: type.rides,
+          cabins: type.cabins,
+          sort: type.sort,
+          archived: type.archived,
+          remindHours: type.remindHours ?? null,
+        }),
+      when: () => !edit.form && !!type && permissions.isManager,
+    },
+  });
 </script>
 
 {#if type}
@@ -49,28 +65,7 @@
       {#if type.archived}<Tag tone="gray">Archiviert</Tag>{/if}
     {/snippet}
     {#snippet actions()}
-      {#if !edit.form && permissions.isManager}
-        <Button
-          icon="edit"
-          onclick={() =>
-            edit.edit({
-              label: type.label,
-              hue: type.hue,
-              rides: type.rides,
-              cabins: type.cabins,
-              sort: type.sort,
-              archived: type.archived,
-              remindHours: type.remindHours ?? null,
-            })}>Bearbeiten</Button
-        >
-        {#if type.archived}
-          <Button tooltip="Wieder für neue Termine anbieten" onclick={() => setArchived(false)}>Wiederherstellen</Button>
-        {:else if type.inUse}
-          <Button tooltip="Für neue Termine nicht mehr anbieten; bestehende behalten sie" onclick={() => setArchived(true)}>Archivieren</Button>
-        {:else}
-          <Button variant="danger" icon="delete" onclick={() => remove(type.label)}>Löschen</Button>
-        {/if}
-      {/if}
+      <RecordActionButtons actions={act} />
     {/snippet}
 
     {#if edit.form}

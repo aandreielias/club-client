@@ -1,11 +1,14 @@
 <script lang="ts">
-  import { backStack, bus, pendingDeletes, permissions, session } from '../../lib/container';
+  import { backStack, bus, commands, session } from '../../lib/container';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { locationActions } from './actions';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import { DAY_MS } from '../../lib/time/ZonedClock';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
-  import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import LocationMap from '../../ui/LocationMap.svelte';
   import MapButtons from '../../ui/MapButtons.svelte';
@@ -43,22 +46,22 @@
     await edit.submit(async (form) => location.set(await locationsApi.update(id, form.toPatch())), 'Ort gespeichert.');
   }
 
-  function destroy(name: string) {
-    // The prop is gone once the view closed, before the undo time ends: keep the id itself.
-    const target = id;
-    pendingDeletes.schedule({ ids: [target], text: `„${name}“ gelöscht. Termine behalten den Namen.`, commit: () => locationsApi.delete(target) });
-    view.leave();
-  }
+  const act = useRecordActions(
+    commands,
+    locationActions,
+    () => (edit.form ? null : location.value),
+    () => view.leave(),
+  );
+  useCommands(commands, {
+    'record.edit': { run: () => location.value && edit.edit(LocationForm.edit(location.value)), when: () => act.has('record.edit') },
+  });
 </script>
 
 <AsyncView resource={location}>
   {#snippet children(value)}
     <Detail title={edit.form ? 'Ort bearbeiten' : value.name}>
       {#snippet actions()}
-        {#if !edit.form && permissions.isPrivileged}
-          <Button icon="edit" onclick={() => edit.edit(LocationForm.edit(value))}>Bearbeiten</Button>
-          <Button variant="danger" icon="delete" onclick={() => destroy(value.name)}>Löschen</Button>
-        {/if}
+        <RecordActionButtons actions={act} />
       {/snippet}
 
       {#if edit.form}

@@ -9,8 +9,6 @@ export class AppointmentDetailModel {
   readonly attendance: Resource<Attendance>;
   readonly respondAction = new Action();
   readonly cancelAction = new Action();
-  readonly restoreAction = new Action();
-  readonly deleteAction = new Action();
   readonly remindAction = new Action();
   readonly presenceAction = new Action();
 
@@ -48,17 +46,6 @@ export class AppointmentDetailModel {
     const ok = await this.cancelAction.run(() => this.api.cancel(this.id, includeFollowing, reason?.trim() || null));
     if (ok) await this.appointment.load();
     return ok;
-  }
-
-  async restore(): Promise<boolean> {
-    const ok = await this.restoreAction.run(() => this.api.restore(this.id));
-    if (ok) await this.load();
-    return ok;
-  }
-
-  /** Only while nobody answered. */
-  delete(): Promise<boolean> {
-    return this.deleteAction.run(() => this.api.delete(this.id));
   }
 
   /** How many were reminded (0: reminded already, or everyone answered). */

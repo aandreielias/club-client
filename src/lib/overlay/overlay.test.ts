@@ -34,6 +34,27 @@ describe('ContextMenuService', () => {
     menu.close();
     expect(menu.current).toBeNull();
   });
+
+  it('shows loading entries at once, swaps in the loaded ones and ignores them after closing', async () => {
+    const menu = new ContextMenuService();
+    let resolve: (entries: MenuEntry[]) => void = () => {};
+    const later = new Promise<MenuEntry[]>((r) => (resolve = r));
+    expect(menu.show(1, 2, { now: [{ label: 'Öffnen', run }], later })).toBe(true);
+    const id = menu.current?.id;
+    expect(menu.current?.entries.map((e) => (isSeparator(e) ? '-' : e.label))).toEqual(['Öffnen', '…']);
+    resolve([{ label: 'Öffnen', run }, { separator: true }, { label: 'Löschen', run }]);
+    await later;
+    expect(menu.current?.entries.map((e) => (isSeparator(e) ? '-' : e.label))).toEqual(['Öffnen', '-', 'Löschen']);
+    expect(menu.current?.id).toBe(id);
+
+    let late: (entries: MenuEntry[]) => void = () => {};
+    const slow = new Promise<MenuEntry[]>((r) => (late = r));
+    menu.show(1, 2, { now: [], later: slow });
+    menu.close();
+    late([{ label: 'Löschen', run }]);
+    await slow;
+    expect(menu.current).toBeNull();
+  });
 });
 
 describe('placement', () => {

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { bus, router, windows } from '../../lib/container';
+  import { recordMenu } from '../../ui/contextMenu';
+  import { bus, windows } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
-  import { windowMenu } from '../../lib/window/windowMenu';
   import { ROLE_LABELS, roleHue } from '../../lib/types';
   import DataTable from '../../ui/DataTable.svelte';
   import type { EmptyAction } from '../../ui/Empty.svelte';
@@ -39,7 +39,7 @@
   record={(m) => (m.nameOnly ? null : { kind: 'member', id: m.id, title: `${m.firstName} ${m.lastName}` })}
   {check}
   onopen={check ? undefined : (m) => !m.nameOnly && bus.publish(WINDOW_OPEN, { kind: 'member', id: m.id })}
-  menu={(m) => (m.nameOnly ? [] : windowMenu(bus, windows, router, 'member', m.id))}
+  menu={(m) => (m.nameOnly ? [] : recordMenu('member', m.id))}
   selected={windows.current?.kind === 'member' ? windows.current.id : null}
   emptyText="Noch keine Mitglieder."
 >

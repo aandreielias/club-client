@@ -47,14 +47,6 @@ export class TournamentModel {
     return this.run(() => this.api.setTeams(this.id, teams));
   }
 
-  draw(): Promise<boolean> {
-    return this.run(() => this.api.draw(this.id));
-  }
-
-  startKnockout(): Promise<boolean> {
-    return this.run(() => this.api.startKnockout(this.id));
-  }
-
   setResult(matchId: string, result: ResultInput): Promise<boolean> {
     return this.run(() => this.api.setResult(this.id, matchId, result));
   }

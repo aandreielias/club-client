@@ -1,13 +1,16 @@
 <script lang="ts">
-  import { backStack, bus, directory, permissions, router, session, store, windows } from '../../lib/container';
+  import { backStack, bus, commands, directory, permissions, session, store } from '../../lib/container';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { teamActions } from './actions';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { TEAM_ROLE_LABELS, type RosterEntry, type TeamRole } from '../../lib/types';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
-  import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
-  import { windowMenu } from '../../lib/window/windowMenu';
-  import { openMenuAt } from '../../ui/contextMenu';
+  import { extendMenu, type MenuEntry, type MenuSource } from '../../lib/overlay/ContextMenuService.svelte';
+  import { recordMenu } from '../../ui/contextMenu';
   import DataTable from '../../ui/DataTable.svelte';
   import Detail from '../../ui/Detail.svelte';
   import Select from '../../ui/Select.svelte';
@@ -19,7 +22,6 @@
   import TeamEditor from './TeamEditor.svelte';
   import { TeamForm } from './TeamForm.svelte';
   import TeamActionDialog from './TeamActionDialog.svelte';
-  import { Action } from '../../lib/state/Action.svelte';
   import { MEMBERSHIP_CHANGED, TEAMS_CHANGED } from './events';
   import { RosterListModel } from './RosterListModel.svelte';
   import { RosterModel } from './RosterModel.svelte';
@@ -45,7 +47,6 @@
   let adding = $state(false);
   const edit = new EditSession<TeamForm>(bus, backStack);
   let dialog = $state<{ kind: 'player' | 'season' | 'request'; entry?: RosterEntry } | null>(null);
-  const archiveAction = new Action();
 
   function dialogDone(result: unknown) {
     const kind = dialog?.kind;
@@ -106,14 +107,6 @@
     if (ok) stopSelecting();
   }
 
-  async function setArchived(archived: boolean) {
-    if (await view.attempt(archiveAction, () => archiveAction.run(() => teamsApi.update(model.teamId, { archived })))) {
-      directory.forgetTeams();
-      void model.load();
-      view.notify(archived ? 'Team archiviert.' : 'Team wiederhergestellt.');
-    }
-  }
-  const deleteAction = new Action();
   backStack.while(
     () => adding,
     () => (adding = false),
@@ -141,24 +134,6 @@
     await view.confirm(request, () => view.attempt(model.removeAction, () => model.remove(entry)), 'Aus dem Team entfernt.');
   }
 
-  async function deleteTeam(name: string) {
-    const request = {
-      title: 'Team löschen',
-      message: `„${name}“ wird gelöscht, die Mitgliedschaften mit ihm.`,
-      confirmLabel: 'Löschen',
-      danger: true,
-    };
-    const deleted = await view.confirm(
-      request,
-      () => view.attempt(deleteAction, () => deleteAction.run(() => teamsApi.delete(model.teamId))),
-      'Team gelöscht.',
-    );
-    if (deleted) {
-      directory.forgetTeams();
-      view.leave();
-    }
-  }
-
   function startEdit(name: string, season: string) {
     const form = new TeamForm(session.clock, session.club?.seasonStartMonth ?? 7);
     Object.assign(form, { name, season });
@@ -174,22 +149,38 @@
     }, 'Team gespeichert.');
   }
 
+  const act = useRecordActions(
+    commands,
+    teamActions,
+    () => (edit.editing || adding ? null : model.roster.value?.team),
+    () => view.leave(),
+    () => model.load(),
+  );
+  useCommands(commands, {
+    'record.edit': {
+      run: () => model.roster.value && startEdit(model.roster.value.team.name, model.roster.value.team.season),
+      when: () => act.has('record.edit'),
+    },
+    'team.addMember': { run: () => (adding = true), when: () => act.has('team.addMember') },
+    'team.requestPlayer': { run: () => (dialog = { kind: 'request' }), when: () => act.has('team.requestPlayer') },
+    'team.newSeason': { run: () => (dialog = { kind: 'season' }), when: () => act.has('team.newSeason') },
+  });
+
   function open(entry: RosterEntry) {
     if (policy.canOpenProfile(model.teamId, entry)) view.open('member', entry.memberId);
   }
 
-  function rowMenu(entry: RosterEntry): MenuEntry[] {
-    return [
-      ...(policy.canOpenProfile(model.teamId, entry) ? windowMenu(bus, windows, router, 'member', entry.memberId) : []),
-      { separator: true },
-      ...(policy.canRemove(model.teamId, entry) ? [{ label: 'Aus dem Team entfernen', danger: true, run: () => void remove(entry) }] : []),
-    ];
+  function rowMenu(entry: RosterEntry): MenuSource {
+    const removal: MenuEntry[] = policy.canRemove(model.teamId, entry)
+      ? [{ separator: true }, { label: 'Aus dem Team entfernen', danger: true, run: () => void remove(entry) }]
+      : [];
+    return policy.canOpenProfile(model.teamId, entry) ? extendMenu(recordMenu('member', entry.memberId), removal) : removal;
   }
 </script>
 
 <Detail title={model.roster.value?.team.name ?? (model.roster.error ? null : directory.teamName(id)) ?? 'Team'}>
   {#snippet actions()}
-    {#if policy.canAssign() && !adding}<Button variant="primary" onclick={() => (adding = true)}>Mitglied hinzufügen</Button>{/if}
+    {#if !selecting}<RecordActionButtons actions={act} except={['record.archive', 'record.restore', 'record.delete', 'team.newSeason']} />{/if}
     {#if selecting}
       <span class="muted">{chosen.size} ausgewählt</span>
       {#if policy.canAssign()}
@@ -200,26 +191,6 @@
       <Button variant="ghost" onclick={stopSelecting}>Fertig</Button>
     {:else if policy.canAssign() || policy.canSetPlayerInfo(model.teamId)}
       <Button onclick={() => (selecting = true)}>Auswählen</Button>
-    {/if}
-    {#if policy.canRequestPlayer(model.teamId)}<Button onclick={() => (dialog = { kind: 'request' })}>Spieler:in anfragen</Button>{/if}
-    {#if policy.canEdit() && model.roster.value}
-      {@const team = model.roster.value.team}
-      <Button icon="edit" disabled={edit.editing} onclick={() => startEdit(team.name, team.season)}>Bearbeiten</Button>
-      <!-- Rarer team actions behind one button, so the header stays one line. -->
-      <Button
-        icon="more"
-        tooltip="Weitere Aktionen"
-        busy={archiveAction.busy || deleteAction.busy}
-        onclick={(e) =>
-          openMenuAt(e.currentTarget, [
-            { label: 'Neue Saison', run: () => (dialog = { kind: 'season' }) },
-            team.archived
-              ? { label: 'Wiederherstellen', icon: 'archive', run: () => setArchived(false) }
-              : { label: 'Archivieren', icon: 'archive', run: () => setArchived(true) },
-            { separator: true },
-            { label: 'Löschen', icon: 'delete', danger: true, run: () => deleteTeam(team.name) },
-          ])}
-      />
     {/if}
   {/snippet}
   {#snippet meta()}

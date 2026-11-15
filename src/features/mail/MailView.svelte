@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { bus, pendingDeletes, session } from '../../lib/container';
-  import { TOAST } from '../../channels';
+  import { bus, commands, session } from '../../lib/container';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { mailActions, mailRecord } from './actions';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
-  import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import Icon from '../../ui/Icon.svelte';
   import RecordLink from '../../ui/RecordLink.svelte';
@@ -62,56 +63,19 @@
     }
   };
 
-  /** Back from the trash where it came from: own mails to Gesendet, others to the Posteingang. */
-  async function restore(from: string) {
-    const own = center.mailboxes.value?.find((b) => b.id === mailboxId)?.address;
-    await mailApi.update(mailboxId, mailId, { folder: from === own ? 'SENT' : 'INBOX' });
-    bus.publish(TOAST, { text: from === own ? 'E-Mail nach „Gesendet“ zurückgelegt.' : 'E-Mail in den Posteingang zurückgelegt.' });
-    await center.mailboxes.load();
-    view.leave();
-  }
-
-  async function markUnread() {
-    await mailApi.update(mailboxId, mailId, { read: false });
-    await center.mailboxes.load();
-    view.leave();
-  }
-
-  const compose = (mode: 'reply' | 'reply-all' | 'forward') => view.open('mail-new', `${mode}:${mailboxId}:${mailId}`);
-
-  function destroy(inTrash: boolean) {
-    pendingDeletes.schedule({
-      ids: [mailId],
-      text: inTrash ? 'E-Mail endgültig gelöscht.' : 'E-Mail in den Papierkorb verschoben.',
-      commit: async () => {
-        await mailApi.delete(mailboxId, mailId);
-        await center.mailboxes.load();
-      },
-    });
-    view.leave();
-  }
+  const act = useRecordActions(
+    commands,
+    mailActions,
+    () => mail.value && mailRecord(mailboxId, mail.value),
+    () => view.leave(),
+  );
 </script>
 
 <AsyncView resource={mail}>
   {#snippet children(value)}
     <Detail title={value.subject}>
       {#snippet actions()}
-        {#if value.folder !== 'SENT'}<Button icon="reply" onclick={() => compose('reply')}>Antworten</Button>{/if}
-        {#if value.folder !== 'SENT' && value.to.length + value.cc.length > 1}
-          <Button onclick={() => compose('reply-all')}>Allen antworten</Button>
-        {/if}
-        <Button icon="forward" onclick={() => compose('forward')}>Weiterleiten</Button>
-        {#if value.folder === 'INBOX'}
-          <Button icon="mail" tooltip="Wieder als neu markieren und schließen" onclick={() => void markUnread()}>Als ungelesen markieren</Button>
-        {/if}
-        {#if value.folder === 'TRASH'}
-          <Button icon="back" tooltip="Aus dem Papierkorb zurücklegen" onclick={() => void restore(value.from)}>Wiederherstellen</Button>
-          <Button variant="danger" icon="delete" tooltip="Aus dem Papierkorb endgültig löschen" onclick={() => destroy(true)}
-            >Endgültig löschen</Button
-          >
-        {:else}
-          <Button variant="danger" icon="delete" tooltip="In den Papierkorb verschieben" onclick={() => destroy(false)}>Löschen</Button>
-        {/if}
+        <RecordActionButtons actions={act} />
       {/snippet}
 
       <dl class="props">

@@ -1,13 +1,14 @@
 <script lang="ts">
-  import { bus, session } from '../../lib/container';
-  import { APP_ERROR, CONFIRM } from '../../channels';
+  import { bus, commands, session } from '../../lib/container';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { auditActions } from './actions';
+  import { CONFIRM } from '../../channels';
   import { CreateController } from '../../lib/detail/CreateController.svelte';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
-  import { downloadLink } from '../../lib/window/openTab';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
-  import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import EditorForm from '../../ui/EditorForm.svelte';
   import Field from '../../ui/Field.svelte';
@@ -68,16 +69,12 @@
     await create!.submit(async () => (await financeApi.confirmAudit(checkedUntil, note.trim() || null)).id, 'audit', 'Kassenprüfung bestätigt.');
   }
 
-  async function report(auditId: string, name: string) {
-    try {
-      await downloadLink(
-        financeApi.auditReportLink(auditId).then((l) => l.url),
-        `${name}.docx`,
-      );
-    } catch (error) {
-      bus.publish(APP_ERROR, error);
-    }
-  }
+  const act = useRecordActions(
+    commands,
+    auditActions,
+    () => (isNew ? null : audit.value),
+    () => handle.close(),
+  );
 </script>
 
 {#if isNew}
@@ -85,7 +82,7 @@
     <EditorForm action={create!.save} submitLabel="Bestätigen" oncancel={() => handle.close()} onsubmit={submit} validate={check}>
       <Field
         label="Geprüft bis"
-        hint={last ? `Letzte Prüfung bis ${session.format.date(last)}.` : 'Noch keine Prüfung.'}
+        note={last ? `Letzte Prüfung bis ${session.format.date(last)}.` : 'Noch keine Prüfung.'}
         error={submitted && !dateOk ? 'Ein Tag vor heute und nach der letzten Prüfung.' : null}
       >
         <input type="date" bind:value={checkedUntil} min={last ?? undefined} max={yesterday} required />
@@ -100,9 +97,7 @@
     {#snippet children(a)}
       <Detail title={a.title}>
         {#snippet actions()}
-          {#if a.reportId}
-            <Button icon="download" tooltip="Den Prüfbericht als Word-Dokument herunterladen" onclick={() => report(a.id, a.title)}>Bericht</Button>
-          {/if}
+          <RecordActionButtons actions={act} />
         {/snippet}
         <dl class="props">
           <dt>Geprüft bis</dt>

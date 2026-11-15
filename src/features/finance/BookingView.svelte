@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { backStack, bus, session } from '../../lib/container';
+  import { backStack, commands, bus, session } from '../../lib/container';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { bookingActions } from './actions';
   import { APP_ERROR } from '../../channels';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
@@ -18,7 +22,7 @@
   import { BookingForm } from './BookingForm.svelte';
   import BookingEditor from './BookingEditor.svelte';
   import { FINANCE_CHANGED } from './events';
-  import { isFixed, type Booking } from './model';
+  import type { Booking } from './model';
   import { accounts, categories, financeApi, financeMay, money } from './services';
   import { settings } from '../../settings';
 
@@ -55,31 +59,19 @@
     if (await view.attempt(write, () => write.run(async () => booking.set(await run())))) view.notify(success);
   }
 
-  function reverse(b: Booking) {
-    void view.confirm(
-      {
-        title: 'Buchung stornieren',
-        message: `Eine Gegenbuchung über ${money(-b.amountCents)} mit heutigem Datum hebt „${b.text}“ auf.${b.transferId ? ' Bei einer Umbuchung beide Konten.' : ''}`,
-        confirmLabel: 'Stornieren',
-        danger: true,
-      },
-      () => view.attempt(write, () => write.run(async () => view.open('booking', (await financeApi.reverse(b.id)).id))),
-      'Buchung storniert.',
-    );
-  }
-
-  function remove(b: Booking) {
-    void view.confirm(
-      {
-        title: 'Buchung löschen',
-        message: `„${b.text}“ und ihre Belege werden gelöscht.${b.transferId ? ' Bei einer Umbuchung beide Konten.' : ''}`,
-        confirmLabel: 'Löschen',
-        danger: true,
-      },
-      async () => (await view.attempt(write, () => write.run(() => financeApi.delete(b.id)))) && (view.leave(), true),
-      'Buchung gelöscht.',
-    );
-  }
+  const act = useRecordActions(
+    commands,
+    bookingActions,
+    () => (edit.form ? null : booking.value),
+    () => view.leave(),
+    () => booking.load(),
+  );
+  useCommands(commands, {
+    'record.edit': {
+      run: () => booking.value && edit.edit(BookingForm.edit(booking.value, direction)),
+      when: () => !edit.form && !!booking.value && act.has('record.edit'),
+    },
+  });
 
   function picked() {
     const file = input?.files?.[0];
@@ -111,17 +103,7 @@
         {/if}
       {/snippet}
       {#snippet actions()}
-        {#if !edit.form && writer}
-          {#if !isFixed(b) && !b.locked}
-            <Button icon="edit" onclick={() => edit.edit(BookingForm.edit(b, direction))}>Bearbeiten</Button>
-          {/if}
-          {#if !b.reversesId && !b.reversedBy}
-            <Button icon="undo" busy={write.busy} onclick={() => reverse(b)} tooltip="Gegenbuchung mit heutigem Datum">Stornieren</Button>
-          {/if}
-          {#if !b.reversedBy && !b.locked}
-            <Button variant="danger" icon="delete" onclick={() => remove(b)}>Löschen</Button>
-          {/if}
-        {/if}
+        <RecordActionButtons actions={act} />
       {/snippet}
 
       {#if edit.form}

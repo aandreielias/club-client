@@ -1,10 +1,13 @@
 <script lang="ts">
-  import { backStack, bus, permissions } from '../../lib/container';
+  import { backStack, bus, commands } from '../../lib/container';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { mailboxActions } from './actions';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
   import { ROLE_LABELS } from '../../lib/types';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
-  import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import DetailSkeleton from '../../ui/DetailSkeleton.svelte';
   import MailboxEditor from './MailboxEditor.svelte';
@@ -35,27 +38,21 @@
     }, 'Postfach gespeichert.');
   }
 
-  function remove(address: string) {
-    void stored.remove(
-      `${address}: niemand liest die Adresse dann mehr in der App. Die E-Mails selbst bleiben beim Mail-Anbieter.`,
-      'Postfach entfernen',
-      'Postfach entfernt.',
-      edit.save,
-      async () => {
-        await mailApi.deleteMailbox(id);
-        await mailCenter.mailboxes.load();
-      },
-    );
-  }
+  const act = useRecordActions(
+    commands,
+    mailboxActions,
+    () => (edit.form ? null : mailbox),
+    () => view.leave(),
+  );
+  useCommands(commands, {
+    'record.edit': { run: () => mailbox && edit.edit(MailboxForm.edit(mailbox)), when: () => act.has('record.edit') },
+  });
 </script>
 
 {#if mailbox}
   <Detail title={edit.form ? 'Postfach bearbeiten' : mailbox.address}>
     {#snippet actions()}
-      {#if !edit.form && permissions.isManager}
-        <Button icon="edit" onclick={() => edit.edit(MailboxForm.edit(mailbox))}>Bearbeiten</Button>
-        <Button variant="danger" icon="delete" tooltip="Postfach aus der App entfernen" onclick={() => remove(mailbox.address)}>Löschen</Button>
-      {/if}
+      <RecordActionButtons actions={act} />
     {/snippet}
 
     {#if edit.form}

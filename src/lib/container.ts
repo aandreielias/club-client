@@ -45,6 +45,7 @@ import { RecentRecords } from './window/RecentRecords.svelte';
 import { LinksApi } from './links/LinksApi';
 import { MainPane, SplitPane } from './split/Pane';
 import { SplitView } from './split/SplitView.svelte';
+import { RecordActionRegistry } from './actions/RecordActions';
 import { ContextMenuService } from './overlay/ContextMenuService.svelte';
 import { TooltipService } from './overlay/TooltipService.svelte';
 import { LINK_MESSAGES } from './links/messages';
@@ -163,6 +164,8 @@ export function forgetUser(): void {
 export const tooltips = new TooltipService(settings.overlay.tooltipDelayMs, settings.overlay.tooltipSkipDelayMs);
 
 export const contextMenu = new ContextMenuService();
+/** What can be done with each kind of record (Feature.actions): context menus, window buttons, commands. */
+export const recordActions = new RecordActionRegistry();
 
 export const errors = new ErrorMessages(STATUS_MESSAGES, UNKNOWN_MESSAGE).register(CORE_MESSAGES).register(LINK_MESSAGES);
 

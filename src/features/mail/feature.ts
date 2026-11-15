@@ -1,3 +1,4 @@
+import { mailActions, mailboxActions } from './actions';
 import { ADMIN_BOARD } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
 import MailboxCreateView from './MailboxCreateView.svelte';
@@ -21,6 +22,7 @@ export const mailFeature: Feature = {
   ],
   // server: NotificationHandlers.onMailReceived - a new mail's notice opens that mail.
   links: [{ server: '/mail/:mailbox/:mail', to: ({ mailbox, mail }) => ({ window: { kind: 'mail', id: `${mailbox}:${mail}` } }) }],
+  actions: { mail: mailActions, mailbox: mailboxActions },
   windows: {
     mail: { component: MailView },
     'mail-new': { component: MailComposeView },

@@ -3,18 +3,21 @@
   import MemberName from '../../ui/MemberName.svelte';
   import { settings } from '../../settings';
   import { tick } from 'svelte';
-  import { bus, pendingDeletes, session } from '../../lib/container';
+  import { bus, commands, session } from '../../lib/container';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
+  import { fileActions } from './actions';
   import { recordDrop } from '../../ui/recordDrop';
-  import { APP_ERROR, TOAST } from '../../channels';
+  import { TOAST } from '../../channels';
   import { Resource } from '../../lib/state/Resource.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
-  import Button from '../../ui/Button.svelte';
   import Detail from '../../ui/Detail.svelte';
   import { FolderContents } from './FolderContents.svelte';
   import { FolderTree } from './FolderTree.svelte';
   import type { Folder, StoredFile } from './model';
-  import { fileDownloads, fileLinks, filePolicy, filePreviews, filesApi, fileTypes, photoTagDrops } from './services';
+  import { fileLinks, filePolicy, filePreviews, filesApi, fileTypes, photoTagDrops } from './services';
   import DocumentPreview from './DocumentPreview.svelte';
   import TagEditor from './TagEditor.svelte';
   import EditFileDialog from './EditFileDialog.svelte';
@@ -66,18 +69,18 @@
     }
   });
 
-  function remove(target: StoredFile) {
-    pendingDeletes.schedule({ ids: [target.id], text: `„${target.name}“ gelöscht.`, commit: () => filesApi.deleteFile(target.id) });
-    handle?.close();
-  }
-
-  async function download(target: StoredFile) {
-    try {
-      await fileDownloads.download(target);
-    } catch (error) {
-      bus.publish(APP_ERROR, error);
-    }
-  }
+  const busy = () => editing || versioning || tagging;
+  const act = useRecordActions(
+    commands,
+    fileActions,
+    () => (data.value && file && !busy() ? { folder: data.value.folder, file } : null),
+    () => handle?.close(),
+  );
+  useCommands(commands, {
+    'record.edit': { run: () => (editing = true), when: () => act.has('record.edit') },
+    'file.newVersion': { run: () => (versioning = true), when: () => act.has('file.newVersion') },
+    'file.tag': { run: () => (tagging = true), when: () => act.has('file.tag') },
+  });
 </script>
 
 <AsyncView resource={data}>
@@ -93,17 +96,7 @@
       >
         <Detail title={file.name}>
           {#snippet actions()}
-            <Button icon="download" onclick={() => download(file)}>Herunterladen</Button>
-            {#if filePolicy.canModify(file, folder)}<Button icon="edit" onclick={() => (editing = true)} tooltip="Umbenennen oder verschieben"
-                >Bearbeiten</Button
-              >{/if}
-            {#if filePolicy.canModify(file, folder)}<Button icon="upload" onclick={() => (versioning = true)}>Neue Version</Button>{/if}
-            {#if image && filePolicy.canTag(file, folder) && !tagging}<Button onclick={() => (tagging = true)}>Personen markieren</Button>{/if}
-            {#if filePolicy.canModify(file, folder)}
-              <Button variant="danger" icon="delete" onclick={() => remove(file)} tooltip="{image ? 'Foto' : 'Datei'} endgültig löschen"
-                >Löschen</Button
-              >
-            {/if}
+            <RecordActionButtons actions={act} />
           {/snippet}
 
           {#if image}<div class="image"><Thumbnail {file} full /></div>{/if}

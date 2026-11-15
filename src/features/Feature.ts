@@ -9,6 +9,7 @@ import type { RouteParams } from '../lib/router/Router.svelte';
 import type { GuestArea, Role } from '../lib/types';
 import type { IconName } from '../icons';
 import type { HomeSection } from '../lib/home/HomeSections';
+import type { RecordActionProvider } from '../lib/actions/RecordActions';
 
 /** Props every routed page receives. */
 export interface PageProps {
@@ -53,6 +54,8 @@ export interface Feature {
   readonly links?: readonly LinkRule[];
   /** Detail windows this feature provides, by kind (opened with `bus.publish(WINDOW_OPEN, { kind, id })`). */
   readonly windows?: Readonly<Record<string, WindowContent>>;
+  /** What can be done with the records of these window kinds: context menus, window buttons, commands (lib/actions). */
+  readonly actions?: Readonly<Record<string, RecordActionProvider<unknown>>>;
   /** How this feature's calendar items look (the server collects them; see CalendarSources). */
   readonly calendar?: Partial<Record<CalendarCategory, CalendarStyle>>;
   /** Sections this feature offers for the start page. */

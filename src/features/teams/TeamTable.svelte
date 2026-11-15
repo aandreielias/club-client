@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { bus, router, session, windows } from '../../lib/container';
+  import { recordMenu } from '../../ui/contextMenu';
+  import { bus, session } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
-  import { windowMenu } from '../../lib/window/windowMenu';
   import DataTable from '../../ui/DataTable.svelte';
   import type { EmptyAction } from '../../ui/Empty.svelte';
   import Tag from '../../ui/Tag.svelte';
@@ -25,7 +25,7 @@
   rowKey={(t) => t.id}
   record={(t) => ({ kind: 'team', id: t.id, title: t.name })}
   onopen={(t) => bus.publish(WINDOW_OPEN, { kind: 'team', id: t.id })}
-  menu={(t) => windowMenu(bus, windows, router, 'team', t.id)}
+  menu={(t) => recordMenu('team', t.id)}
   {emptyText}
 >
   {#snippet cell(team, column)}

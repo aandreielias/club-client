@@ -1,6 +1,7 @@
 import TeamsHome from './TeamsHome.svelte';
 import { detailRoute, type Feature } from '../Feature';
 import { TEAM_MESSAGES } from './messages';
+import { teamActions } from './actions';
 import { teamPolicy } from './services';
 import TeamsPage from './TeamsPage.svelte';
 import TeamCreateView from './TeamCreateView.svelte';
@@ -12,6 +13,7 @@ export const teamsFeature: Feature = {
     { path: '/teams', component: TeamsPage, nav: 'Teams', icon: 'teams' },
     detailRoute('/teams/:id', TeamView, { href: '/teams', label: 'Teams' }),
   ],
+  actions: { team: teamActions },
   windows: {
     team: { component: TeamView, page: (id) => `/teams/${encodeURIComponent(id)}` },
     'team-new': { component: TeamCreateView, canOpen: () => teamPolicy.canCreate() },

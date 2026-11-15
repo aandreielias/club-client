@@ -1,4 +1,5 @@
 <script lang="ts">
+  import InfoTip from '../../ui/InfoTip.svelte';
   import { settings } from '../../settings';
   import { auth, bus } from '../../lib/container';
   import { TOAST } from '../../channels';
@@ -37,8 +38,7 @@
 <div class="stack">
   <form class="panel stack" onsubmit={changePassword} novalidate aria-label="Passwort">
     <header>
-      <h2>Passwort</h2>
-      <p class="muted small">Gilt für die Anmeldung in App und Website.</p>
+      <h2>Passwort&nbsp;<InfoTip text="Gilt für die Anmeldung in App und Website." /></h2>
     </header>
     <!-- Lets password managers pair the fields with the account. -->
     <input class="visually-hidden" type="email" autocomplete="username" value={auth.session?.email ?? ''} readonly tabindex="-1" aria-hidden="true" />

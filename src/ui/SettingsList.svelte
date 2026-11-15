@@ -25,6 +25,7 @@
   import ErrorNote from './ErrorNote.svelte';
   import SortableList from './SortableList.svelte';
   import Tag from './Tag.svelte';
+  import { menu, recordMenu } from './contextMenu';
   import { tooltip } from './tooltip';
 
   /**
@@ -96,7 +97,7 @@
 {:else}
   <ul class="rows">
     {#each shown as row (row.key)}
-      <li class:archived={row.archived}>
+      <li class:archived={row.archived} {@attach menu(() => recordMenu(kind, row.key))}>
         <button type="button" class="row-button" onclick={() => open(row.key)} {@attach tooltip(`${row.label} öffnen`)}>
           {#if row.hue}<Tag tone={row.hue}>{row.label}</Tag>{:else}<span class="name">{row.label}</span>{/if}
           {#each row.tags ?? [] as tag (tag)}<Tag tone="gray">{tag}</Tag>{/each}

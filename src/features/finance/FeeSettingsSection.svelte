@@ -1,7 +1,6 @@
 <script lang="ts">
   import { Action } from '../../lib/state/Action.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
-  import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
@@ -9,8 +8,8 @@
   import { FEE_PARTS, type FeeSettings } from './model';
   import { categories, financeApi } from './services';
 
-  /** One part of the fee settings in the window (WRITE): when fees fall due and are reminded, or how members pay. */
-  let { id, handle }: { id: string; handle?: WindowHandle } = $props();
+  /** One part of the fee settings (Einstellungen › Verein › Buchhaltung › Mitgliedsbeiträge, WRITE): when fees fall due and are reminded, or how members pay. */
+  let { id }: { id: string } = $props();
 
   const fees = new SettingsDraft<FeeSettings>({
     category: 'FEES',
@@ -29,7 +28,6 @@
       .filter((c) => c.direction === 'IN' && (!c.archived || c.key === fees.value.category))
       .map((c) => ({ value: c.key, label: c.label })),
   );
-  $effect(() => handle?.setTitle(FEE_PARTS[id] ?? 'Mitgliedsbeiträge'));
   const text = (value: string) => value.trim() || null;
 </script>
 

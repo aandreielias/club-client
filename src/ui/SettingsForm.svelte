@@ -6,9 +6,10 @@
   import type { SettingsDraft } from '../lib/state/SettingsDraft.svelte';
   import Button from './Button.svelte';
   import ErrorNote from './ErrorNote.svelte';
+  import InfoTip from './InfoTip.svelte';
 
   /**
-   * Club-wide values in Einstellungen as one card: title, intro, the fields, and a save bar that appears as soon as something changed
+   * Club-wide values in Einstellungen as one card: title (with the intro as ⓘ), the fields, and a save bar that appears as soon as something changed
    * ("Verwerfen" / "Speichern"). Leaving with unsaved changes asks first.
    */
   let {
@@ -43,10 +44,9 @@
 </script>
 
 <form class="panel stack" onsubmit={submit} novalidate aria-label={title}>
-  <header>
-    <h2>{title}</h2>
-    {#if intro}<p class="muted small">{intro}</p>{/if}
-  </header>
+  <h2>
+    {title}{#if intro}&nbsp;<InfoTip text={intro} />{/if}
+  </h2>
   {@render children()}
   {#if draft.dirty || draft.save.error}
     <div class="bar" role="region" aria-label="Änderungen speichern">

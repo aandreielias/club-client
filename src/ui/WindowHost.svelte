@@ -1,6 +1,9 @@
 <script lang="ts">
   import { tick, untrack } from 'svelte';
-  import { backStack, bus, documentTitle, motion, recentRecords, windows } from '../lib/container';
+  import { backStack, bus, commands, router, documentTitle, motion, recentRecords, recordActions, windows } from '../lib/container';
+  import { useCommands } from '../lib/keyboard/useCommands.svelte';
+  import { copyLinkEntry } from '../lib/window/windowMenu';
+  import { menu, openMenuAt, recordMenu } from './contextMenu';
   import { WINDOW_CLOSE } from '../channels';
   import { WindowService, type Dock } from '../lib/window/WindowService.svelte';
   import { innerHeight, innerWidth } from 'svelte/reactivity/window';
@@ -32,7 +35,27 @@
   provideWindowHandle(handle);
 
   let element: HTMLElement | undefined = $state();
+  let moreButton: HTMLElement | undefined = $state();
   let opener: HTMLElement | null = null;
+
+  // A command asked for with the opening (e.g. "Bearbeiten" from a context menu) runs once the view handles it.
+  $effect(() => {
+    const pending = windows.pendingCommand;
+    void commands.version;
+    if (!pending || pending.kind !== target?.kind || pending.id !== target.id) return;
+    if (untrack(() => commands.run(pending.command))) windows.pendingCommand = null;
+  });
+
+  const hasActions = $derived(!!target && !!recordActions.provider(target.kind));
+  const headerMenu = () => (target ? recordMenu(target.kind, target.id, { inWindow: true }) : []);
+  const focusInside = () => !!element?.contains(document.activeElement);
+  useCommands(commands, {
+    'record.menu': { run: () => moreButton && openMenuAt(moreButton, headerMenu()), when: () => hasActions && focusInside() },
+    'record.copyLink': {
+      run: () => target && copyLinkEntry(bus, windows, router, target.kind, target.id).run(),
+      when: () => !!target && !target.kind.endsWith('-new') && focusInside(),
+    },
+  });
 
   // Remember what had focus to return to it; reflect the dock on <html> so the page can make room.
   $effect(() => {
@@ -222,9 +245,20 @@
             tooltip={withKeys('Zurück zum vorherigen Eintrag', 'view.back')}
           />
         {/if}
-        <h2 id="window-title">{windows.title || ' '}</h2>
+        <h2 id="window-title" {@attach menu(headerMenu)}>{windows.title || ' '}</h2>
       </div>
       <div class="controls">
+        {#if hasActions}
+          <span class="more" bind:this={moreButton}>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon="more"
+              onclick={() => moreButton && openMenuAt(moreButton, headerMenu())}
+              tooltip={withKeys('Weitere Aktionen', 'record.menu')}
+            />
+          </span>
+        {/if}
         <div class="docks">
           <ChoiceGroup
             name="window-dock"
@@ -372,6 +406,9 @@
     font-weight: var(--font-weight-medium);
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .more {
+    display: contents;
   }
   .controls,
   .docks {

@@ -10,10 +10,6 @@ export class MemberDetailModel {
   readonly rolesAction = new Action();
   readonly membershipAction = new Action();
   readonly guardianAction = new Action();
-  readonly deactivateAction = new Action();
-  readonly reactivateAction = new Action();
-  readonly eraseAction = new Action();
-  readonly inviteAction = new Action();
   /** Invited and never signed in; loaded only for those who may invite. */
   readonly invitationPending: Resource<boolean>;
 
@@ -23,13 +19,6 @@ export class MemberDetailModel {
   ) {
     this.member = new Resource(() => this.api.get(this.id));
     this.invitationPending = new Resource(async () => (await this.api.pendingInvitations()).includes(this.id));
-  }
-
-  /** The invitation mail again; for a member without a login the first one (then the member has a login, still pending). */
-  async resendInvite(): Promise<boolean> {
-    if (!(await this.inviteAction.run(() => this.api.resendInvite(this.id)))) return false;
-    await Promise.all([this.member.load(), this.invitationPending.load()]);
-    return true;
   }
 
   load(): Promise<void> {
@@ -54,21 +43,6 @@ export class MemberDetailModel {
 
   linkGuardian(guardianId: string): Promise<boolean> {
     return this.write(this.guardianAction, () => this.api.linkGuardian(this.id, guardianId));
-  }
-
-  deactivate(): Promise<boolean> {
-    return this.write(this.deactivateAction, () => this.api.deactivate(this.id));
-  }
-
-  reactivate(): Promise<boolean> {
-    return this.write(this.reactivateAction, () => this.api.reactivate(this.id));
-  }
-
-  /** The record stays (anonymised); reload shows the erased state. */
-  async erase(): Promise<boolean> {
-    if (!(await this.eraseAction.run(() => this.api.erase(this.id)))) return false;
-    await this.member.load();
-    return true;
   }
 
   unlinkGuardian(guardianId: string): Promise<boolean> {

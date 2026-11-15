@@ -8479,7 +8479,9 @@ export interface operations {
     };
     list_5: {
         parameters: {
-            query?: never;
+            query?: {
+                memberId?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

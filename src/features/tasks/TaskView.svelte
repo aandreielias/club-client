@@ -1,8 +1,10 @@
 <script lang="ts">
   import { background } from '../../lib/state/background';
-  import { backStack, bus, commands, directory, linksApi, pendingDeletes, permissions, session } from '../../lib/container';
+  import { backStack, bus, commands, directory, linksApi, permissions, session } from '../../lib/container';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
+  import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
+  import { taskActions } from './actions';
   import { LinksModel } from '../../lib/links/LinksModel.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import ActivitySection from '../../ui/ActivitySection.svelte';
@@ -54,24 +56,21 @@
   });
 
   useCommands(commands, {
-    'task.edit': {
+    'record.edit': {
       run: () => detail.task.value && edit.edit(TaskForm.edit(session.clock, detail.task.value)),
       when: () => !edit.editing && !!detail.task.value && policy.canManage(detail.task.value),
     },
-    'task.done': {
-      run: () => detail.task.value && void detail.setStatus(detail.task.value.status === 'DONE' ? 'OPEN' : 'DONE'),
-      when: () => !edit.editing && !!detail.task.value && policy.canWork(detail.task.value),
-    },
   });
+  const act = useRecordActions(
+    commands,
+    taskActions,
+    () => (edit.editing ? null : detail.task.value),
+    () => view.leave(),
+  );
 
   async function submit() {
     const original = edit.form?.original;
     if (original && (await edit.submit((form) => tasksApi.update(original.id, form.toPatch()), 'Aufgabe gespeichert.'))) void detail.load();
-  }
-
-  function remove(title: string) {
-    pendingDeletes.schedule({ ids: [detail.id], text: `Aufgabe „${title}“ gelöscht.`, commit: () => tasksApi.delete(detail.id) });
-    view.leave();
   }
 </script>
 
@@ -81,7 +80,7 @@
       {#snippet actions()}
         {#if !edit.form && policy.canManage(task)}
           <Button icon="edit" onclick={() => edit.edit(TaskForm.edit(session.clock, task))}>Bearbeiten</Button>
-          <Button variant="danger" icon="delete" onclick={() => remove(task.title)}>Löschen</Button>
+          <Button variant="danger" icon="delete" onclick={() => act.run('record.delete')}>Löschen</Button>
         {/if}
       {/snippet}
       {#snippet meta()}

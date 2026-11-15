@@ -1,7 +1,7 @@
 <script lang="ts">
   import { bus, windows } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
-  import type { MenuEntry } from '../../lib/overlay/ContextMenuService.svelte';
+  import { recordMenu } from '../../ui/contextMenu';
   import DataTable from '../../ui/DataTable.svelte';
   import type { EmptyAction } from '../../ui/Empty.svelte';
   import Tag from '../../ui/Tag.svelte';
@@ -12,7 +12,6 @@
   /** Tasks as rows (task list page, start page): status tag, due date, opens in the window. */
   let {
     list,
-    menu,
     emptyText,
     emptyAction,
     toolbar = true,
@@ -20,7 +19,6 @@
     check,
   }: {
     list: TaskListModel;
-    menu?: (task: Task) => MenuEntry[];
     emptyText: string;
     emptyAction?: EmptyAction | null;
     toolbar?: boolean;
@@ -37,8 +35,8 @@
   rowKey={(t) => t.id}
   record={(t) => ({ kind: 'task', id: t.id, title: t.title })}
   onopen={check ? undefined : (t) => bus.publish(WINDOW_OPEN, { kind: 'task', id: t.id })}
+  menu={(t) => recordMenu('task', t.id)}
   {check}
-  {menu}
   selected={windows.current?.kind === 'task' ? windows.current.id : null}
   {emptyText}
   {emptyAction}

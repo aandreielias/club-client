@@ -1,4 +1,5 @@
 <script lang="ts">
+  import InfoTip from '../../ui/InfoTip.svelte';
   import { bus } from '../../lib/container';
   import { removeRecord, restoreRecord } from '../../lib/detail/removeRecord';
   import { Action } from '../../lib/state/Action.svelte';
@@ -56,8 +57,7 @@
 
 <div class="stack">
   <section class="stack">
-    <h2>Mitgliedsarten</h2>
-    <p class="muted small">Wer in der Mitgliederversammlung abstimmt und in eine Funktion gewählt werden kann.</p>
+    <h2>Mitgliedsarten&nbsp;<InfoTip text="Wer in der Mitgliederversammlung abstimmt und in eine Funktion gewählt werden kann." /></h2>
     <SettingsList
       {rows}
       kind="membership-kind"

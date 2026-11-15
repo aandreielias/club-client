@@ -1,4 +1,5 @@
 <script lang="ts">
+  import InfoTip from '../../ui/InfoTip.svelte';
   import { settings } from '../../settings';
   import { Action } from '../../lib/state/Action.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
@@ -85,10 +86,11 @@
   </SettingsForm>
 
   <section class="stack">
-    <h2>Funktionen</h2>
-    <p class="muted small">
-      Wie die Funktionen heißen, wie viele sie innehaben, wie lange eine Periode dauert und was eine Person zugleich innehaben darf.
-    </p>
+    <h2>
+      Funktionen&nbsp;<InfoTip
+        text="Wie die Funktionen heißen, wie viele sie innehaben, wie lange eine Periode dauert und was eine Person zugleich innehaben darf."
+      />
+    </h2>
     <SettingsList
       {rows}
       kind="office-setting"

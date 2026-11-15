@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { bus, commands, permissions, router, store, windows } from '../../lib/container';
+  import { recordMenu } from '../../ui/contextMenu';
+  import { bus, commands, permissions, store, windows } from '../../lib/container';
   import { WINDOW_OPEN } from '../../channels';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
   import Button from '../../ui/Button.svelte';
   import DataTable from '../../ui/DataTable.svelte';
-  import { windowMenu } from '../../lib/window/windowMenu';
 
   import Page from '../../ui/Page.svelte';
   import { ITEM_CHANGED } from './events';
@@ -30,7 +30,7 @@
     rowKey={(i) => i.id}
     record={(i) => ({ kind: 'item', id: i.id, title: i.name })}
     onopen={(i) => bus.publish(WINDOW_OPEN, { kind: 'item', id: i.id })}
-    menu={(i) => windowMenu(bus, windows, router, 'item', i.id)}
+    menu={(i) => recordMenu('item', i.id)}
     selected={windows.current?.kind === 'item' ? windows.current.id : null}
     emptyText="Noch nichts im Inventar."
     emptyAction={permissions.isPrivileged

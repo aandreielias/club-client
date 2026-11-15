@@ -3,6 +3,7 @@ import { CommandRegistry } from './CommandRegistry.svelte';
 import { KeyboardService, type KeyEventLike } from './KeyboardService.svelte';
 import { Keymap } from './Keymap.svelte';
 import { KeySpec } from './KeySpec';
+import { SHORTCUTS, type CommandId } from '../../shortcuts';
 
 function key(key: string, extra: Partial<KeyEventLike> = {}): KeyEventLike {
   const code = /^[a-z]$/i.test(key) ? `Key${key.toUpperCase()}` : /^\d$/.test(key) ? `Digit${key}` : '';
@@ -61,57 +62,16 @@ describe('Keymap', () => {
 
   it('reports clashes only where both commands can be active', () => {
     const keymap = new Keymap(null);
-    expect(keymap.conflicts('member.edit', 'e')).toEqual([]); // task.edit and appointment.edit live in other contexts
+    expect(keymap.conflicts('record.edit', 'x')).toEqual(['task.done']); // both window commands
+    expect(keymap.conflicts('record.edit', 'Shift+R')).toEqual(['mail.replyAll']); // not notifications.readAll: another context
     expect(keymap.conflicts('nav.files', 'g k')).toEqual(['nav.calendar']);
     expect(keymap.conflicts('page.new', 'g')).toEqual(expect.arrayContaining(['nav.home', 'nav.calendar']));
-    expect(keymap.conflicts('task.edit', 'Mod+K')).toEqual(['palette.open']);
+    expect(keymap.conflicts('record.edit', 'Mod+K')).toEqual(['palette.open']);
   });
 
   it('has no clashing defaults', () => {
     const keymap = new Keymap(null);
-    const ids = [
-      'palette.open',
-      'sidebar.toggle',
-      'settings.open',
-      'help.shortcuts',
-      'theme.toggle',
-      'nav.home',
-      'nav.calendar',
-      'nav.tasks',
-      'nav.files',
-      'nav.teams',
-      'nav.notifications',
-      'nav.members',
-      'nav.account',
-      'nav.settings',
-      'nav.back',
-      'view.back',
-      'form.submit',
-      'window.close',
-      'window.center',
-      'window.side',
-      'window.bottom',
-      'window.page',
-      'page.new',
-      'list.search',
-      'list.next',
-      'list.previous',
-      'list.open',
-      'list.reset',
-      'calendar.previous',
-      'calendar.next',
-      'calendar.today',
-      'calendar.month',
-      'calendar.week',
-      'task.edit',
-      'task.done',
-      'appointment.edit',
-      'appointment.yes',
-      'appointment.maybe',
-      'appointment.no',
-      'member.edit',
-      'notifications.readAll',
-    ] as const;
+    const ids = Object.keys(SHORTCUTS) as CommandId[];
     for (const id of ids) expect(keymap.conflicts(id, keymap.keys(id)), id).toEqual([]);
   });
 });

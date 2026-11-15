@@ -23,10 +23,6 @@
 </script>
 
 <div class="stack">
-  <p class="muted small">
-    Ferien und freie Tage. Neue wöchentliche Serien lassen diese Tage aus; der Kalender zeigt sie allen. Bestehende Termine sagst du im Kalender mit
-    „Zeitraum absagen“ ab.
-  </p>
   <SettingsList
     {rows}
     kind="holiday"
@@ -37,9 +33,3 @@
     emptyText="Noch keine Ferien eingetragen."
   />
 </div>
-
-<style>
-  p {
-    margin: 0;
-  }
-</style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import InfoTip from '../../ui/InfoTip.svelte';
   import { settings } from '../../settings';
   import { bus, session } from '../../lib/container';
   import { TOAST, WINDOW_OPEN } from '../../channels';
@@ -96,8 +97,7 @@
     <div><Button type="submit" variant="primary" busy={savePhone.busy}>Speichern</Button></div>
   </form>
 
-  <h2>Meine Daten</h2>
-  <p class="muted small">Alles, was der Verein in der App über dich speichert, als Datei (JSON).</p>
+  <h2>Meine Daten&nbsp;<InfoTip text="Alles, was der Verein in der App über dich speichert, als Datei (JSON)." /></h2>
   <div class="row">
     <Button busy={exporting.busy} onclick={() => exportData(undefined, member.firstName)}>Daten herunterladen</Button>
     {#each session.me?.wardIds ?? [] as wardId (wardId)}
