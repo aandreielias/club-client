@@ -21,7 +21,9 @@ export type SectionId =
   | 'resolution-rules'
   | 'appointment-types'
   | 'holidays'
+  | 'calendar-rules'
   | 'notifications'
+  | 'notification-rules'
   | 'files'
   | 'tasks'
   | 'mailboxes'
@@ -64,7 +66,7 @@ export interface SettingsViewer {
 }
 
 const TABS: { [K in SectionId]: Omit<SettingsTab, 'id'> } = {
-  appearance: { label: 'Darstellung', icon: 'appearance', keywords: 'farbe theme dunkel hell schrift dichte' },
+  appearance: { label: 'Darstellung', icon: 'appearance', keywords: 'farbe theme dunkel hell schrift dichte kalender monat woche' },
   home: {
     label: 'Startseite',
     hint: 'Abschnitte der Startseite ein- und ausschalten und an die gewünschte Stelle ziehen. Was du nicht sehen darfst, fehlt in der Liste.',
@@ -113,6 +115,12 @@ const TABS: { [K in SectionId]: Omit<SettingsTab, 'id'> } = {
     icon: 'holidays',
     keywords: 'ferien frei urlaub schulferien serie',
   },
+  'calendar-rules': {
+    label: 'Kalender-Regeln',
+    hint: 'Kabinen-Bezeichnungen, Erinnerung an Mitzubringendes, wie weit offene Antworten reichen und wie viele Plätze ein Auto anbietet.',
+    icon: 'calendar',
+    keywords: 'kabinen herren damen fahrgemeinschaft plätze erinnerung material offene antworten',
+  },
   finance: { label: 'Konten und Kategorien', icon: 'finance', keywords: 'kassa bank geld einnahmen ausgaben' },
   'fees-due': {
     label: 'Fälligkeit',
@@ -128,10 +136,15 @@ const TABS: { [K in SectionId]: Omit<SettingsTab, 'id'> } = {
     keywords: 'mitgliedsbeitrag iban bic qr überweisung',
     finance: 'WRITE',
   },
+  'notification-rules': {
+    label: 'Benachrichtigungs-Regeln',
+    icon: 'notifications',
+    keywords: 'benachrichtigungen wichtig push e-mail vorgabe aufbewahrung posteingang verlauf löschen',
+  },
   tasks: { label: 'Aufgaben-Erinnerung', icon: 'tasks', keywords: 'aufgaben erinnerung fällig frist vorlauf' },
   files: { label: 'Speicherplatz', icon: 'files', keywords: 'dateien upload kontingent quota gb' },
   mailboxes: { label: 'Postfächer', icon: 'mail', keywords: 'mail e-mail domain adresse limit signatur' },
-  general: { label: 'Allgemein', icon: 'settings', keywords: 'sprache zeitzone app version' },
+  general: { label: 'Allgemein', icon: 'settings', keywords: 'app version' },
 };
 
 /** The tree of Einstellungen, by who sets things up: the member, the club (admin/board), then Allgemein. */
@@ -163,14 +176,14 @@ const SETTINGS_TREE: readonly NavDef[] = [
       },
       { id: 'membership', label: 'Mitgliedschaft', icon: 'members', children: ['membership', 'offices'] },
       { id: 'meetings', label: 'Sitzungen und Beschlüsse', icon: 'meetings', children: ['meeting-types', 'resolution-rules'] },
-      { id: 'calendar', label: 'Kalender', icon: 'calendar', children: ['appointment-types', 'holidays'] },
+      { id: 'calendar', label: 'Kalender', icon: 'calendar', children: ['appointment-types', 'holidays', 'calendar-rules'] },
       {
         id: 'finance',
         label: 'Buchhaltung',
         icon: 'finance',
         children: ['finance', { id: 'fees', label: 'Mitgliedsbeiträge', icon: 'finance', children: ['fees-due', 'fees-payment'] }],
       },
-      { id: 'operations', label: 'Betrieb', icon: 'settings', children: ['tasks', 'files', 'mailboxes'] },
+      { id: 'operations', label: 'Betrieb', icon: 'settings', children: ['tasks', 'notification-rules', 'files', 'mailboxes'] },
     ],
   },
   'general',

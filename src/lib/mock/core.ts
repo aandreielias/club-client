@@ -186,6 +186,7 @@ export class MockDirectory {
     address: null,
     registerNumber: null,
     seasonStartMonth: 7,
+    fiscalYearStartMonth: 1,
     configured: false,
   };
 
@@ -521,6 +522,7 @@ export class MockDirectory {
       address: e.address || null,
       registerNumber: e.registerNumber || null,
       seasonStartMonth: e.seasonStartMonth ?? this.club.seasonStartMonth,
+      fiscalYearStartMonth: e.fiscalYearStartMonth ?? this.club.fiscalYearStartMonth,
       brand: this.brand.brand(),
       assets: this.brand.assets(),
       configured: Object.keys(e).length > 0,
@@ -539,8 +541,11 @@ export class MockDirectory {
       if (typeof value !== 'string' || value.length > max || (pattern && !pattern.test(value))) return fail(400, 'request.invalid');
       return value.trim() || null;
     };
-    const month = body.seasonStartMonth;
-    if (month != null && (!Number.isInteger(month) || (month as number) < 1 || (month as number) > 12)) fail(400, 'request.invalid');
+    const month = (key: string): number | undefined => {
+      const value = body[key];
+      if (value != null && (!Number.isInteger(value) || (value as number) < 1 || (value as number) > 12)) fail(400, 'request.invalid');
+      return (value as number | null) ?? undefined;
+    };
     Object.assign(this.clubEdits.data, {
       name: text('name', limits.nameMaxLength),
       shortName: text('shortName', limits.shortNameMaxLength),
@@ -548,7 +553,8 @@ export class MockDirectory {
       contactEmail: text('contactEmail', limits.linkMaxLength, /^[^@\s]+@[^@\s]+$/),
       address: text('address', limits.addressMaxLength),
       registerNumber: text('registerNumber', 20, new RegExp(limits.registerNumberPattern)),
-      seasonStartMonth: (month as number | null) ?? undefined,
+      seasonStartMonth: month('seasonStartMonth'),
+      fiscalYearStartMonth: month('fiscalYearStartMonth'),
     });
     this.clubEdits.save();
     return this.clubChanged();

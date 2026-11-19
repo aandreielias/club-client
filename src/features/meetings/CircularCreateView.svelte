@@ -11,7 +11,8 @@
   import DateInput from '../../ui/DateInput.svelte';
   import MemberChips from './MemberChips.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
-  import { noticeText, QUORUM_LABELS } from './model';
+  import Select from '../../ui/Select.svelte';
+  import { MAJORITY_LABELS, majorities, noticeText, quorumLabel, type Majority } from './model';
   import { activePeople } from './people';
   import { meetingsApi, resolutionRules } from './services';
 
@@ -48,6 +49,9 @@
     },
   };
 
+  const allowed = $derived(majorities(resolutionRules.value.circular.majorities));
+  let majority = $state<Majority>(majorities(resolutionRules.value.circular.majorities)[0] ?? 'SIMPLE');
+
   async function submit() {
     await create.submit(
       async () => {
@@ -58,6 +62,7 @@
           session.clock.toInstant(deadline),
           assignees,
           implementDue || null,
+          majority,
         );
         return opened.id;
       },
@@ -77,13 +82,18 @@
     </Field>
     <Field
       label="Abstimmen bis"
-      hint="Mindestens {noticeText(resolutionRules.value.circular.minHours)}; gültig, wenn {QUORUM_LABELS[
-        resolutionRules.value.circular.quorum
-      ]} des Vorstands abstimmt."
+      hint="Mindestens {noticeText(resolutionRules.value.circular.minHours)}; gültig, wenn {quorumLabel(
+        resolutionRules.value.circular.quorum,
+      )} des Vorstands abstimmt."
       error={submitted && tooSoon ? `Mindestens ${noticeText(resolutionRules.value.circular.minHours)} ab jetzt.` : null}
     >
       <DateTimeInput bind:value={deadline} min={earliest} required />
     </Field>
+    {#if allowed.length > 1}
+      <Field label="Mehrheit">
+        <Select bind:value={majority} options={allowed.map((m) => ({ value: m, label: MAJORITY_LABELS[m] }))} aria-label="Mehrheit" />
+      </Field>
+    {/if}
     <MemberChips bind:value={assignees} candidates={people.value ?? []} label="Umsetzung durch" placeholder="Umsetzung durch (sonst Vorstand)" />
     <Field label="Umsetzen bis (optional)" hint="Fälligkeit der Aufgabe, wenn der Beschluss angenommen ist.">
       <DateInput bind:value={implementDue} min={session.clock.today()} />

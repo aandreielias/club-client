@@ -29,7 +29,7 @@
   import InviteesSection from './InviteesSection.svelte';
   import RecordLink from '../../ui/RecordLink.svelte';
   import { permissions } from '../../lib/container';
-  import { invitesVoters, quorumText, STATUS_LABELS, STATUS_TONES, type Meeting } from './model';
+  import { DEFAULT_PROTOCOL, invitesVoters, quorumText, STATUS_LABELS, STATUS_TONES, type Meeting } from './model';
   import { meetingsApi, meetingTypes } from './services';
 
   /** One meeting: date, Tagesordnung with its Beschlüsse (voted right there), invitation, presence with the quorum, protocol. Window and page. */
@@ -87,10 +87,15 @@
   /** Vorsitz and Schriftführer:in are picked among those present, from the invitation until the protocol is final. */
   const rolesOpen = (m: Meeting) => m.canManage && (m.status === 'INVITED' || m.status === 'OPEN' || (m.status === 'CLOSED' && !m.protocolFinalAt));
   const presentOptions = (m: Meeting) => [{ value: '', label: 'Noch niemand' }, ...m.present.map((p) => ({ value: p.memberId, label: p.name }))];
-  /** server: approveProtocol — the picked Vorsitz and Schriftführer:in; without a pick whoever runs the meeting may try (office holders). */
-  const mayApprove = (m: Meeting) =>
-    !m.approvals.some((a) => a.memberId === me) &&
-    (m.chair?.memberId === me || m.secretary?.memberId === me || (m.canManage && (!m.chair || !m.secretary)));
+  const protocolRules = (m: Meeting) => meetingTypes.get(m.kind)?.protocol ?? DEFAULT_PROTOCOL;
+  /** server: approveProtocol — the type's approvers: the picked Vorsitz/Schriftführer:in; without a pick whoever runs it may try (office holders). */
+  const mayApprove = (m: Meeting) => {
+    const approvers = protocolRules(m).approvers;
+    const role = (r: 'CHAIR' | 'SECRETARY', picked: Meeting['chair']) =>
+      approvers.includes(r) && (picked?.memberId === me || (!picked && m.canManage));
+    return !m.approvals.some((a) => a.memberId === me) && (role('CHAIR', m.chair) || role('SECRETARY', m.secretary));
+  };
+  const approved = (m: Meeting) => protocolRules(m).approvalsNeeded > 0 && m.approvals.length >= protocolRules(m).approvalsNeeded;
 
   async function setRoles(m: Meeting, chairId: string | null, secretaryId: string | null) {
     if (chairId && chairId === secretaryId) {
@@ -321,8 +326,9 @@
       {#if m.status === 'CLOSED'}
         <div class="row">
           {#if m.protocolFinalAt}
+            {#if approved(m)}<Tag tone="green">Protokoll genehmigt</Tag>{/if}
             {#each m.approvals as a (a.memberId)}
-              <Tag tone="green">Genehmigt: {a.name}</Tag>
+              <Tag tone={approved(m) ? 'neutral' : 'green'}>Genehmigt: {a.name}</Tag>
             {/each}
             {#if mayApprove(m)}
               <Button

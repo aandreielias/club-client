@@ -4,6 +4,19 @@ import type { Member } from '../../lib/types';
 import { calendar } from './mock';
 import type { NewAppointment } from './model';
 
+const RULES = {
+  defaultStart: '18:00',
+  defaultMinutes: 90,
+  maxDays: 7,
+  answerDeadlineHours: 0,
+  allowMaybe: true,
+  reasonOnNo: false,
+  expectAnswers: 'TEAM',
+  notifyChanges: true,
+  minShiftMinutes: 0,
+  selfCheckIn: false,
+  remindAgainHours: null,
+} as const;
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
 const range = (days: number) => [new Date(Date.now() - 8 * 86_400_000).toISOString(), new Date(Date.now() + days * 86_400_000).toISOString()];
 
@@ -14,12 +27,13 @@ const draft = (teamId: string | null, extra: Partial<NewAppointment> = {}): NewA
   description: null,
   location: null,
   locationId: null,
-  cabinMen: null,
-  cabinWomen: null,
+  cabins: [],
   startsAt: '2027-01-12T18:00:00.000Z',
   endsAt: '2027-01-12T19:30:00.000Z',
   repeatUntil: null,
   intervalWeeks: null,
+  intervalMonths: null,
+  byWeekday: false,
   ...extra,
 });
 
@@ -54,6 +68,8 @@ describe('mock calendar', () => {
         endsAt: '2027-03-23T18:00:00.000Z',
         repeatUntil: '2027-04-06',
         intervalWeeks: 1,
+        intervalMonths: null,
+        byWeekday: false,
       }),
     );
     expect(series.map((a) => directory.clock.toLocal(a.startsAt))).toEqual(['2027-03-23T18:00', '2027-03-30T18:00', '2027-04-06T18:00']);
@@ -130,7 +146,14 @@ describe('mock calendar', () => {
     calendar.saveHoliday(member('admin'), null, { name: 'Ferien', from: '2027-02-08', to: '2027-02-14' });
     const created = calendar.create(
       member('admin'),
-      draft('t-u16', { startsAt: '2027-02-01T17:00:00.000Z', endsAt: '2027-02-01T18:30:00.000Z', repeatUntil: '2027-02-15', intervalWeeks: 1 }),
+      draft('t-u16', {
+        startsAt: '2027-02-01T17:00:00.000Z',
+        endsAt: '2027-02-01T18:30:00.000Z',
+        repeatUntil: '2027-02-15',
+        intervalWeeks: 1,
+        intervalMonths: null,
+        byWeekday: false,
+      }),
     );
     expect(created.map((a) => a.startsAt.slice(0, 10))).toEqual(['2027-02-01', '2027-02-15']);
     const added = calendar.extend(member('admin'), created[0].id, '2027-03-01');
@@ -165,17 +188,33 @@ describe('mock calendar', () => {
     expect(training.rides).toBe(false);
   });
 
+  it('calendar settings: admin/board only, cabins follow the labels, seats the limit', () => {
+    const before = calendar.settings();
+    expect(() => calendar.saveSettings(member('spieler'), before)).toThrow(expect.objectContaining({ status: 403 }));
+    expect(() => calendar.saveSettings(member('admin'), { ...before, openAnswerDays: 3 })).toThrow(
+      expect.objectContaining({ code: 'calendar-settings.invalid' }),
+    );
+    calendar.saveSettings(member('admin'), { ...before, cabinLabels: ['A'], maxRideSeats: 2 });
+    expect(() => calendar.create(member('trainer'), draft('t-u16', { cabins: ['1', '2'] }))).toThrow(
+      expect.objectContaining({ code: 'appointment.cabin-not-allowed' }),
+    );
+    const [match] = calendar.create(member('admin'), draft(null, { type: 'MATCH', title: 'Auswärts', cabins: ['1', ''] }));
+    expect(match.cabins).toEqual(['1']);
+    expect(() => calendar.offerRide(member('admin'), match.id, { seats: 3 })).toThrow(expect.objectContaining({ code: 'ride.seats-invalid' }));
+    calendar.saveSettings(member('admin'), before);
+  });
+
   it('links places, keeps their name as text and checks cabins', () => {
-    const [created] = calendar.create(member('trainer'), draft('t-u16', { locationId: 'l-sued', location: 'egal', cabinMen: ' Kabine 2 ' }));
-    expect(created).toMatchObject({ location: 'Turnhalle Süd', locationId: 'l-sued', cabinMen: 'Kabine 2', cabinWomen: null });
-    expect(() => calendar.create(member('trainer'), draft('t-u16', { type: 'MEETING', cabinMen: 'Kabine 1' }))).toThrow(
+    const [created] = calendar.create(member('trainer'), draft('t-u16', { locationId: 'l-sued', location: 'egal', cabins: [' Kabine 2 ', ' ', ''] }));
+    expect(created).toMatchObject({ location: 'Turnhalle Süd', locationId: 'l-sued', cabins: ['Kabine 2'] });
+    expect(() => calendar.create(member('trainer'), draft('t-u16', { type: 'MEETING', cabins: ['Kabine 1'] }))).toThrow(
       expect.objectContaining({ code: 'appointment.cabin-not-allowed' }),
     );
     expect(() => calendar.update(member('trainer'), created.id, { locationId: 'nope' })).toThrow(
       expect.objectContaining({ code: 'appointment.location-unknown' }),
     );
-    const moved = calendar.update(member('trainer'), created.id, { clearLocationId: true, location: 'Beachplatz', cabinMen: '' });
-    expect(moved).toMatchObject({ locationId: null, location: 'Beachplatz', cabinMen: null });
+    const moved = calendar.update(member('trainer'), created.id, { clearLocationId: true, location: 'Beachplatz', cabins: [] });
+    expect(moved).toMatchObject({ locationId: null, location: 'Beachplatz', cabins: [] });
   });
 
   it('reminds holders of needed items once, guardians included', async () => {
@@ -191,8 +230,8 @@ describe('mock calendar', () => {
       { locationId: 'l-nord', holderId: null, quantity: 1 },
     ]);
     calendar.links.set(member('trainer'), match.id, { needs: [{ itemId: 'i-cart', quantity: 1 }], fileIds: [] });
-    calendar.remindItemHolders(24 * 3_600_000);
-    calendar.remindItemHolders(24 * 3_600_000);
+    calendar.remindItemHolders();
+    calendar.remindItemHolders();
     for (const id of ['spieler', 'eltern']) {
       expect(
         notifications
@@ -210,7 +249,7 @@ describe('mock appointment types', () => {
     const { appointmentTypes } = await import('./mock');
     const board = directory.members.data.find((m) => m.id === 'vorstand')!;
     expect(() => appointmentTypes.save(board, null, { label: 'Kurs', hue: 'pink', sort: 1 })).toThrow();
-    const kurs = appointmentTypes.save(board, null, { label: 'Kurs', hue: 'green', rides: false, cabins: false, sort: 9 });
+    const kurs = appointmentTypes.save(board, null, { label: 'Kurs', hue: 'green', rides: false, cabins: false, sort: 9, ...RULES });
     const start = new Date(Date.now() + 3 * 86_400_000).toISOString();
     const end = new Date(Date.now() + 3 * 86_400_000 + 3_600_000).toISOString();
     const base = {
@@ -224,10 +263,69 @@ describe('mock appointment types', () => {
       endsAt: end,
       repeatUntil: null,
       intervalWeeks: null,
+      intervalMonths: null,
+      byWeekday: false,
     };
-    expect(() => calendar.create(board, { ...base, cabinMen: 'Kabine 1', cabinWomen: null } as never)).toThrow();
-    calendar.create(board, { ...base, cabinMen: null, cabinWomen: null } as never);
+    expect(() => calendar.create(board, { ...base, cabins: ['Kabine 1'] } as never)).toThrow();
+    calendar.create(board, { ...base, cabins: [] } as never);
     expect(appointmentTypes.list().items.find((t) => t.key === kurs.key)?.inUse).toBe(true);
     expect(() => appointmentTypes.delete(board, kurs.key)).toThrow();
+  });
+
+  it('hold the answer rules and the longest duration (server: AppointmentTypesIT.typeRules)', async () => {
+    const { appointmentTypes } = await import('./mock');
+    const board = member('vorstand');
+    const code = (c: string) => expect.objectContaining({ code: c });
+    expect(() => appointmentTypes.save(board, null, { label: 'X', hue: 'green', sort: 9, ...RULES, defaultMinutes: 2000, maxDays: 1 })).toThrow(
+      code('appointment-type.rules-invalid'),
+    );
+    const strict = { label: 'Streng', hue: 'green', sort: 9, ...RULES, maxDays: 1, answerDeadlineHours: 96, allowMaybe: false, reasonOnNo: true };
+    const key = appointmentTypes.save(board, null, strict).key;
+    const start = Date.now() + 3 * 86_400_000;
+    const at = (ms: number) => new Date(ms).toISOString();
+    expect(() => calendar.create(board, { ...draft(null), type: key, startsAt: at(start), endsAt: at(start + 2 * 86_400_000) })).toThrow(
+      code('appointment.too-long'),
+    );
+    const id = calendar.create(board, { ...draft(null), type: key, startsAt: at(start), endsAt: at(start + 3_600_000) })[0].id;
+    const player = member('spielerin');
+    expect(() => calendar.respond(player, id, { status: 'YES' })).toThrow(code('attendance.deadline-passed'));
+    appointmentTypes.save(board, key, { ...strict, answerDeadlineHours: 0 });
+    expect(() => calendar.respond(player, id, { status: 'MAYBE' })).toThrow(code('attendance.maybe-off'));
+    expect(() => calendar.respond(player, id, { status: 'NO', reason: ' ' })).toThrow(code('attendance.reason-required'));
+    calendar.respond(player, id, { status: 'NO', reason: 'Krank' });
+    appointmentTypes.save(board, key, { ...strict, answerDeadlineHours: 0, expectAnswers: 'NONE' });
+    expect(() => calendar.respond(player, id, { status: 'YES' })).toThrow(code('attendance.answers-off'));
+  });
+
+  it('club sign-ups, a minimum shift, a second reminder and self check-in (server: AppointmentChangesIT)', async () => {
+    const { appointmentTypes } = await import('./mock');
+    const board = member('vorstand');
+    const code = (c: string) => expect.objectContaining({ code: c });
+    const fest = { label: 'Fest', hue: 'green', sort: 9, ...RULES, expectAnswers: 'CLUB', minShiftMinutes: 30, selfCheckIn: true, remindHours: 48 };
+    expect(() => appointmentTypes.save(board, null, { ...fest, remindAgainHours: 48 })).toThrow(code('appointment-type.rules-invalid'));
+    const key = appointmentTypes.save(board, null, { ...fest, remindAgainHours: 30 }).key;
+    const at = (ms: number) => new Date(ms).toISOString();
+    const start = Date.now() + 86_400_000;
+    const id = calendar.create(board, { ...draft(null), type: key, startsAt: at(start), endsAt: at(start + 3_600_000) })[0].id;
+
+    calendar.respond(member('spieler'), id, { status: 'YES' });
+    const parent = calendar.openAnswers(member('eltern')).items.filter((o) => o.appointmentId === id);
+    expect(parent.map((o) => o.memberId)).toEqual(['eltern']); // the ward (spieler) answered already
+    expect(calendar.overview(board, id).open).toBe(directory.audienceIds({ everyone: true }).length - 1);
+
+    calendar.remindDue();
+    calendar.remindDue();
+    expect(calendar.openReminded.data.filter((k) => k.startsWith(id))).toEqual([`${id}:2`]);
+
+    calendar.update(board, id, { startsAt: at(start + 15 * 60_000), endsAt: at(start + 75 * 60_000) });
+    expect(calendar.overview(board, id).entries.find((e) => e.memberId === 'spieler')?.unconfirmed).toBe(false);
+
+    const running = calendar.create(board, { ...draft(null), type: key, startsAt: at(Date.now() - 3_600_000), endsAt: at(Date.now() + 3_600_000) })[0]
+      .id;
+    const own = calendar.setPresence(member('spieler'), running, { memberId: 'spieler', present: true });
+    expect(own.entries.find((e) => e.memberId === 'spieler')?.present).toBe(true);
+    expect(() => calendar.setPresence(member('spieler'), running, { memberId: 'spielerin', present: true })).toThrow(
+      expect.objectContaining({ status: 404 }),
+    );
   });
 });

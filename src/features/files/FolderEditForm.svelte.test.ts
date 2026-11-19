@@ -9,6 +9,7 @@ const folder = (overrides: Partial<Folder> = {}): Folder => ({
   kind: 'PHOTOS',
   scope: 'TEAM',
   teamIds: ['t1'],
+  office: null,
   membersCanUpload: false,
   color: 'BLUE',
   coverFileId: 'p1',
@@ -26,7 +27,7 @@ describe('FolderEditForm', () => {
     form.color = null;
     form.coverFileId = null;
     form.scope = 'CLUB';
-    expect(form.toPatch()).toEqual({ name: 'Fotos 2026', scope: 'CLUB', teamIds: [], clearColor: true, clearCover: true });
+    expect(form.toPatch()).toEqual({ name: 'Fotos 2026', scope: 'CLUB', teamIds: [], office: null, clearColor: true, clearCover: true });
   });
 
   it('never changes the visibility of subfolders and requires a team for team folders', () => {

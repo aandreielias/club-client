@@ -36,7 +36,7 @@
   import type { Appointment } from './model';
   import ResponseForm from './ResponseForm.svelte';
   import RidesPanel from './RidesPanel.svelte';
-  import { appointmentPolicy as policy, appointmentTypes, calendarApi } from './services';
+  import { appointmentPolicy as policy, appointmentTypes, calendarApi, calendarSettings } from './services';
 
   /** One appointment: properties, own answer, attendance; edit and cancel for managers. Window and page. */
   let { id, handle }: { id: string; handle?: WindowHandle } = $props();
@@ -76,7 +76,11 @@
   });
 
   const respondents = $derived(detail.appointment.value ? policy.respondents(detail.appointment.value, detail.attendance.value ?? null) : []);
-  const canAnswer = () => !edit.editing && !!detail.attendance.value && respondents.length > 0;
+  const canAnswer = () =>
+    !edit.editing &&
+    !!detail.attendance.value &&
+    respondents.length > 0 &&
+    appointmentTypes.get(detail.appointment.value!.type)?.expectAnswers !== 'NONE';
   /** Keyboard answers go to the first person (oneself, else the first minor). */
   async function answer(status: 'YES' | 'MAYBE' | 'NO') {
     const target = respondents[0].id;
@@ -122,9 +126,12 @@
       : format.range(appointment.startsAt, appointment.endsAt, false);
   }
 
+  const deadlineHours = (appointment: Appointment) => appointmentTypes.get(appointment.type)?.answerDeadlineHours ?? 0;
+
   function closedReason(appointment: Appointment): string {
     if (appointment.cancelled) return 'Antworten sind nicht mehr möglich.';
     if (policy.isPast(appointment)) return 'Der Termin hat schon begonnen.';
+    if (policy.answersClosed(appointment, deadlineHours(appointment))) return 'Die Antwortfrist ist vorbei.';
     return 'Nur Mitglieder des Teams können antworten.';
   }
 
@@ -174,10 +181,11 @@
                 <MapButtons place={place ?? { name: appointment.location, address: null, lat: null, lng: null }} />
               {/if}
             </dd>
-            {#if appointment.cabinMen || appointment.cabinWomen}
+            {#if appointment.cabins.some(Boolean)}
               <dt>Kabinen</dt>
               <dd>
-                {[appointment.cabinMen && `Herren: ${appointment.cabinMen}`, appointment.cabinWomen && `Damen: ${appointment.cabinWomen}`]
+                {appointment.cabins
+                  .map((c, i) => c && `${calendarSettings.value?.cabinLabels[i] ?? `Kabine ${i + 1}`}: ${c}`)
                   .filter(Boolean)
                   .join(' · ')}
               </dd>
@@ -193,19 +201,27 @@
 
         <AppointmentExtras {appointment} editable={policy.canEdit(appointment)} />
 
-        <h2>{respondents.length > 1 || respondents[0]?.name !== 'Ich' ? 'Antwort' : 'Meine Antwort'}</h2>
-        {#if policy.canRespond(appointment)}
-          <AsyncView resource={detail.attendance}>
-            {#snippet children()}
-              {#if respondents.length}
-                {#key respondents.map((r) => r.id).join()}<ResponseForm {detail} {respondents} />{/key}
-              {:else}
-                <p class="muted">{closedReason(appointment)}</p>
-              {/if}
-            {/snippet}
-          </AsyncView>
+        {#if appointmentTypes.get(appointment.type)?.expectAnswers === 'NONE'}
+          <!-- server: attendance.answers-off — no answers for this type -->
         {:else}
-          <p class="muted">{closedReason(appointment)}</p>
+          <h2>{respondents.length > 1 || respondents[0]?.name !== 'Ich' ? 'Antwort' : 'Meine Antwort'}</h2>
+          {#if policy.canRespond(appointment, new Date(), deadlineHours(appointment))}
+            <AsyncView resource={detail.attendance}>
+              {#snippet children()}
+                {#if respondents.length}
+                  {#key respondents.map((r) => r.id).join()}<ResponseForm
+                      {detail}
+                      {respondents}
+                      type={appointmentTypes.get(appointment.type)}
+                    />{/key}
+                {:else}
+                  <p class="muted">{closedReason(appointment)}</p>
+                {/if}
+              {/snippet}
+            </AsyncView>
+          {:else}
+            <p class="muted">{closedReason(appointment)}</p>
+          {/if}
         {/if}
 
         <h2>Teilnahme</h2>

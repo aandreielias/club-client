@@ -12,7 +12,7 @@
   import type { Ride } from './model';
   import CarSeats from './CarSeats.svelte';
   import { RidesModel } from './RidesModel.svelte';
-  import { calendarApi } from './services';
+  import { calendarApi, calendarSettings } from './services';
 
   /** Car pools of an appointment: drivers offer seats, members take one for themselves or their minors. */
   let { appointmentId, open }: { appointmentId: string; open: boolean } = $props();
@@ -25,10 +25,12 @@
     if (data.appointmentId === model.appointmentId && !model.action.busy) void model.load();
   });
 
-  const seatOptions = Array.from({ length: settings.calendar.rideMaxSeats }, (_, i) => ({
-    value: String(i + 1),
-    label: `${i + 1} ${i ? 'Plätze' : 'Platz'}`,
-  }));
+  const seatOptions = $derived(
+    Array.from({ length: calendarSettings.value?.maxRideSeats ?? settings.calendar.rideMaxSeats }, (_, i) => ({
+      value: String(i + 1),
+      label: `${i + 1} ${i ? 'Plätze' : 'Platz'}`,
+    })),
+  );
   let seats = $state('3');
   let note = $state('');
 

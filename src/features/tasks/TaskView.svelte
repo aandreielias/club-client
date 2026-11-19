@@ -114,9 +114,9 @@
         <dl class="props">
           <dt>Fällig</dt>
           <dd><DueField {task} {detail} editable={policy.canManage(task)} /></dd>
-          {#if task.repeatWeeks}
+          {#if repeatLabel(task)}
             <dt>Wiederholt</dt>
-            <dd>{repeatLabel(task.repeatWeeks)}</dd>
+            <dd>{repeatLabel(task)}</dd>
           {/if}
           <dt>Für</dt>
           <dd>{task.teamId ? (directory.teamName(task.teamId) ?? 'Team') : 'Ganzer Verein'}</dd>

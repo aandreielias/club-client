@@ -117,7 +117,7 @@ export class OfficeReader {
     if (type === 'b') return raw === '1' ? 'WAHR' : 'FALSCH';
     if (type === 'str' || type === 'e') return raw;
     const number = Number(raw);
-    return raw && Number.isFinite(number) ? number.toLocaleString('de-AT', { maximumFractionDigits: 10 }) : raw;
+    return raw && Number.isFinite(number) ? number.toLocaleString('de', { maximumFractionDigits: 10 }) : raw;
   }
 
   /** "C12" → 2 */

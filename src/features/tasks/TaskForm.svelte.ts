@@ -1,7 +1,7 @@
 import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import type { ZonedClock, LocalDateTime } from '../../lib/time/ZonedClock';
-import type { NewTask, Task, TaskPatch } from './model';
+import { rhythmCode, rhythmOf, type NewTask, type Task, type TaskPatch } from './model';
 
 export type TaskField = 'title' | 'description' | 'dueAt' | 'assignees' | 'checklist' | 'repeat';
 
@@ -28,7 +28,7 @@ export class TaskForm extends FormState<TaskFormErrors> {
   description = $state('');
   /** Empty = no due date. */
   due = $state<LocalDateTime>('');
-  /** Weeks between repeats as text ('' = once), for the select. */
+  /** The rhythm as select value (`rhythmCode`, '' = once). */
   repeat = $state('');
   assignees = $state<string[]>([]);
   checklist = $state<ChecklistLine[]>([]);
@@ -58,7 +58,7 @@ export class TaskForm extends FormState<TaskFormErrors> {
     form.title = task.title;
     form.description = task.description ?? '';
     form.due = task.dueAt ? clock.toLocal(task.dueAt) : '';
-    form.repeat = task.repeatWeeks ? String(task.repeatWeeks) : '';
+    form.repeat = rhythmCode(task);
     form.assignees = [...task.assignees];
     form.checklist = task.checklist.map((item) => form.line(item.text));
     return form;
@@ -104,7 +104,7 @@ export class TaskForm extends FormState<TaskFormErrors> {
       dueAt: this.due ? this.clock.toInstant(this.due) : null,
       assignees: [...this.assignees],
       checklist: this.texts(),
-      repeatWeeks: this.repeat ? Number(this.repeat) : null,
+      ...rhythmOf(this.repeat),
     };
   }
 
@@ -120,8 +120,9 @@ export class TaskForm extends FormState<TaskFormErrors> {
     if (!next.dueAt && original.dueAt) patch.clearDue = true;
     if (!TaskForm.sameSet(next.assignees, original.assignees)) patch.assignees = next.assignees;
     if (this.checklistChanged()) patch.checklist = next.checklist;
-    if (next.repeatWeeks !== original.repeatWeeks) {
+    if (this.repeat !== rhythmCode(original)) {
       if (next.repeatWeeks) patch.repeatWeeks = next.repeatWeeks;
+      else if (next.repeatMonths) Object.assign(patch, { repeatMonths: next.repeatMonths, repeatByWeekday: next.repeatByWeekday });
       else patch.clearRepeat = true;
     }
     return patch;

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { settings } from '../../settings';
 import { ZonedClock } from '../../lib/time/ZonedClock';
 import { AppointmentForm, CLUB_WIDE } from './AppointmentForm.svelte';
-import type { Appointment } from './model';
+import { SEEDED_APPOINTMENT_TYPES, type Appointment } from './model';
 
 const clock = new ZonedClock('Europe/Vienna');
 
@@ -15,8 +15,7 @@ const existing: Appointment = {
   description: 'Bälle mitnehmen',
   location: null,
   locationId: null,
-  cabinMen: null,
-  cabinWomen: null,
+  cabins: [],
   startsAt: '2026-07-01T17:00:00.000Z',
   endsAt: '2026-07-01T18:30:00.000Z',
   cancelled: false,
@@ -29,6 +28,22 @@ describe('AppointmentForm', () => {
     expect(form.teamId).toBe(CLUB_WIDE);
     expect(form.start.slice(11)).toBe(settings.calendar.defaultStartTime);
     expect(Date.parse(`${form.end}Z`) - Date.parse(`${form.start}Z`)).toBe(settings.calendar.defaultDurationMinutes * 60_000);
+  });
+
+  it("takes the type's default time unless changed, and its longest duration", () => {
+    const kurs = { ...SEEDED_APPOINTMENT_TYPES[0], key: 'KURS', defaultStart: '10:00', defaultMinutes: 60, maxDays: 1 };
+    const items = [...SEEDED_APPOINTMENT_TYPES, kurs];
+    const form = AppointmentForm.blank(clock, null, '2026-07-01', { items, get: (k) => items.find((t) => t.key === k) });
+    expect(form.type).toBe('TRAINING');
+    form.type = 'KURS';
+    expect([form.start, form.end]).toEqual(['2026-07-01T10:00', '2026-07-01T11:00']);
+    form.setStart('2026-07-01T12:00');
+    form.type = 'TRAINING';
+    expect(form.start).toBe('2026-07-01T12:00');
+    form.type = 'KURS';
+    form.title = 'Kurs';
+    form.end = '2026-07-03T12:00';
+    expect(form.errors.end).toBe('Ein Termin dauert höchstens 1 Tag.');
   });
 
   it('validates title, times and series limits', () => {
@@ -48,9 +63,14 @@ describe('AppointmentForm', () => {
     expect(form.errors.repeatUntil).toContain(String(settings.calendar.maxSeriesOccurrences));
     form.repeatUntil = '2026-07-29';
     expect(form.occurrences()).toBe(5);
-    form.intervalWeeks = 2;
+    form.interval = 2;
     expect(form.occurrences()).toBe(3);
     expect(form.valid).toBe(true);
+    form.unit = 'months';
+    form.interval = 1;
+    form.repeatUntil = '2026-09-01';
+    expect(form.occurrences()).toBe(3);
+    expect(form.toNew()).toMatchObject({ intervalWeeks: null, intervalMonths: 1, byWeekday: false });
   });
 
   it('keeps the duration when the start moves', () => {
@@ -76,7 +96,7 @@ describe('AppointmentForm', () => {
   });
 
   it('switches between a place and free text and drops cabins for meetings', () => {
-    const form = AppointmentForm.edit(clock, { ...existing, location: 'Turnhalle Nord', locationId: 'l-nord', cabinMen: 'Kabine 1' });
+    const form = AppointmentForm.edit(clock, { ...existing, location: 'Turnhalle Nord', locationId: 'l-nord', cabins: ['Kabine 1'] });
     form.locationId = '';
     form.location = 'Beachplatz';
     expect(form.toPatch()).toEqual({ clearLocationId: true, location: 'Beachplatz' });
@@ -84,7 +104,7 @@ describe('AppointmentForm', () => {
     expect(form.toPatch()).toEqual({ locationId: 'l-sued' });
     form.type = 'MEETING';
     expect(form.cabinsShown).toBe(false);
-    expect(form.toPatch()).toEqual({ locationId: 'l-sued', type: 'MEETING', cabinMen: '' });
+    expect(form.toPatch()).toEqual({ locationId: 'l-sued', type: 'MEETING', cabins: [] });
   });
 
   it('offers car pools as the type does until switched', () => {

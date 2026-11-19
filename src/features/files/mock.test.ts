@@ -31,6 +31,31 @@ describe('mock files', () => {
     expect(files.listFolders(member('spielerin')).find((f) => f.id === 'f-docs')).toMatchObject({ canManage: false, canUpload: false });
   });
 
+  it('shows coach and office folders only to their people and the board (server: FileAccess)', () => {
+    const admin = member('admin');
+    const doc = { kind: 'DOCUMENTS', membersCanUpload: false };
+    expect(() => files.createFolder(admin, { ...doc, name: 'X', scope: 'OFFICE', office: 'NOPE' })).toThrow(
+      expect.objectContaining({ code: 'folder.office-invalid' }),
+    );
+    const coaches = files.createFolder(admin, { ...doc, name: 'Trainer', scope: 'COACHES' });
+    const audit = files.createFolder(admin, { ...doc, name: 'Prüfung', scope: 'OFFICE', office: 'AUDITOR' });
+    let sub: { id: string } | undefined;
+    try {
+      sub = files.createFolder(admin, { ...doc, name: 'Belege', parentId: audit.id });
+      expect(sub).toMatchObject({ scope: 'OFFICE', office: 'AUDITOR' });
+      expect(visible('trainer')).toContain(coaches.id);
+      expect(visible('trainer')).not.toContain(audit.id);
+      expect(visible('pruefer')).toEqual(expect.arrayContaining([audit.id, sub.id]));
+      expect(visible('spieler')).not.toContain(coaches.id);
+      expect(visible('spieler')).not.toContain(audit.id);
+      expect(files.updateFolder(admin, audit.id, { scope: 'CLUB', teamIds: [] })).toMatchObject({ scope: 'CLUB', office: null });
+    } finally {
+      if (sub) files.deleteFolder(admin, sub.id);
+      files.deleteFolder(admin, audit.id);
+      files.deleteFolder(admin, coaches.id);
+    }
+  });
+
   it('hides photos tagged with members without consent from non-managers', () => {
     expect(files.listFiles(member('spieler'), 'f-u16')).toEqual([]);
     expect(files.listFiles(member('trainer'), 'f-u16').map((f) => f.id)).toEqual(['file-7']);
@@ -46,6 +71,22 @@ describe('mock files', () => {
       files.upload(uploadRequest('spielerin', 'f-damen', `${PDF}X5O!P%@AP EICAR-STANDARD-ANTIVIRUS-TEST-FILE!`, 'eicar.pdf')),
     ).rejects.toMatchObject({ code: 'file.infected' });
     await expect(files.upload(uploadRequest('spielerin', 'f-docs', PDF, 'x.pdf'))).rejects.toMatchObject({ code: 'access.denied' });
+  });
+
+  it('follows the club file settings: switched-off types and their validation (server: FileHandlers.saveSettings)', async () => {
+    const admin = member('vorstand');
+    const base: Record<string, unknown> = { ...files.fileSettings(admin) };
+    expect(() => files.saveFileSettings(admin, { ...base, types: ['PDF', 'EXE'] })).toThrow(
+      expect.objectContaining({ code: 'file-settings.invalid' }),
+    );
+    expect(() => files.saveFileSettings(admin, { ...base, maxImageSide: 1000 })).toThrow(expect.objectContaining({ code: 'file-settings.invalid' }));
+    files.saveFileSettings(admin, { ...base, types: ['JPEG'], roleQuotaMb: { PLAYER: 100 } });
+    try {
+      await expect(files.upload(uploadRequest('spielerin', 'f-damen', PDF, 'Plan.pdf'))).rejects.toMatchObject({ code: 'file.type-not-allowed' });
+      expect(files.fileSettings(admin).roleQuotaMb).toEqual({ PLAYER: 100 });
+    } finally {
+      files.saveFileSettings(admin, base);
+    }
   });
 
   it('allows tags only with photo consent', async () => {

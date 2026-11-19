@@ -6,7 +6,8 @@
   import Tag from '../../ui/Tag.svelte';
   import BankQr from './BankQr.svelte';
   import { FINANCE_CHANGED } from './events';
-  import { chargeStatus, seasonLabel } from './model';
+  import { yearLabel } from '../../lib/time/clubYear';
+  import { chargeStatus } from './model';
   import { financeApi, financeMay, money } from './services';
 
   /**
@@ -36,7 +37,7 @@
     {#each shown as c (c.id)}
       <li>
         <span>
-          {#if others && !memberId}{`${directory.nameOf(c.memberId)}, `}{/if}Saison {seasonLabel(c.season, startMonth)}
+          {#if others && !memberId}{`${directory.nameOf(c.memberId)}, `}{/if}Saison {yearLabel(c.season, startMonth)}
         </span>
         <span class="row">
           <span class="muted small">

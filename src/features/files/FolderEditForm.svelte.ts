@@ -7,6 +7,7 @@ export class FolderEditForm extends FormState<FolderFormErrors> {
   name = $state('');
   scope = $state<FolderScope>('CLUB');
   teamIds = $state<string[]>([]);
+  office = $state<string | null>(null);
   color = $state<FolderColor | null>(null);
   coverFileId = $state<string | null>(null);
   membersCanUpload = $state(false);
@@ -17,6 +18,7 @@ export class FolderEditForm extends FormState<FolderFormErrors> {
     this.name = folder.name;
     this.scope = folder.scope;
     this.teamIds = [...folder.teamIds];
+    this.office = folder.office;
     this.color = folder.color;
     this.coverFileId = folder.coverFileId;
   }
@@ -32,9 +34,11 @@ export class FolderEditForm extends FormState<FolderFormErrors> {
     if (name !== this.folder.name) patch.name = name;
     const teamIds = this.scope === 'TEAM' ? [...this.teamIds].sort() : [];
     const sameTeams = teamIds.join() === [...this.folder.teamIds].sort().join();
-    if (this.canChangeScope && (this.scope !== this.folder.scope || !sameTeams)) {
+    const office = this.scope === 'OFFICE' ? this.office : null;
+    if (this.canChangeScope && (this.scope !== this.folder.scope || !sameTeams || office !== this.folder.office)) {
       patch.scope = this.scope;
       patch.teamIds = teamIds;
+      patch.office = office;
     }
     if (this.color !== this.folder.color) {
       if (this.color) patch.color = this.color;
@@ -53,7 +57,12 @@ export class FolderEditForm extends FormState<FolderFormErrors> {
   }
 
   protected validate(): FolderFormErrors {
-    return folderErrors(this.name, this.canChangeScope && this.scope === 'TEAM', this.teamIds);
+    return folderErrors(
+      this.name,
+      this.canChangeScope && this.scope === 'TEAM',
+      this.teamIds,
+      this.canChangeScope && this.scope === 'OFFICE' && !this.office,
+    );
   }
 }
 

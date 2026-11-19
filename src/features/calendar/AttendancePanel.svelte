@@ -9,16 +9,21 @@
   import type { AppointmentDetailModel } from './AppointmentDetailModel.svelte';
   import { AttendanceListModel } from './AttendanceListModel.svelte';
   import { responseHue, responseLabel, type Appointment, type Attendance } from './model';
-  import { appointmentPolicy as policy } from './services';
+  import { appointmentPolicy as policy, appointmentTypes } from './services';
 
   /**
    * Answer counts plus the list of entries (reasons only where the server sends them). Who runs the team reminds the open ones
-   * before the start and marks who came once it started.
+   * before the start and marks who came once it started. With the type's self check-in, members mark themselves and their minors
+   * while it runs.
    */
   let { attendance, detail, appointment }: { attendance: Attendance; detail: AppointmentDetailModel; appointment: Appointment } = $props();
 
   const runs = $derived(policy.runsTeam(appointment) && !appointment.cancelled);
   const started = $derived(policy.isPast(appointment));
+  const checkIn = $derived(
+    !runs && !appointment.cancelled && started && new Date(appointment.endsAt) > new Date() && !!appointmentTypes.get(appointment.type)?.selfCheckIn,
+  );
+  const own = (id: string) => id === session.member.id || session.wardIds.includes(id);
 
   async function remind() {
     const count = await detail.remindOpen();
@@ -53,7 +58,7 @@
   {/each}
 </dl>
 
-{#if runs && !started && appointment.teamId && attendance.open > 0}
+{#if runs && !started && (appointment.teamId || appointmentTypes.get(appointment.type)?.expectAnswers === 'CLUB') && attendance.open > 0}
   <div class="row">
     <Button busy={detail.remindAction.busy} onclick={remind}>Offene erinnern</Button>
   </div>
@@ -66,7 +71,7 @@
       {#if entry.absent}<Tag tone="gray">Abwesend</Tag>{:else}<Tag tone={responseHue(entry.status)}>{responseLabel(entry.status)}</Tag>{/if}
       {#if entry.unconfirmed}<Tag tone="orange">Unbestätigt</Tag>{/if}
     {:else if column.key === 'present'}
-      {#if runs && started}
+      {#if (runs && started) || (checkIn && own(entry.memberId))}
         <span class="marks" role="group" aria-label="Anwesenheit {entry.name}">
           <Button
             size="sm"

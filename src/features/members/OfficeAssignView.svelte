@@ -13,6 +13,10 @@
   import { OFFICES_CHANGED } from './events';
   import type { OfficeKind } from './MembersApi';
   import { boardSettings, membersApi } from './services';
+  import { invitesVoters } from '../meetings/model';
+  import { meetingTypes } from '../meetings/services';
+
+  const assembly = $derived(meetingTypes.items.find((t) => !t.archived && invitesVoters(t))?.label ?? 'Versammlung');
 
   /** Gives an eligible member a function (Vorstand, auditor, club offices). Offices have no window of their own, so it closes. */
   let { handle }: { id: string; handle: WindowHandle } = $props();
@@ -80,6 +84,6 @@
         <DateInput bind:value={termEndsOn} min={startsOn} />
       </Field>
     </div>
-    <label class="check"><input type="checkbox" bind:checked={coopted} /> Kooptiert, bis die nächste Mitgliederversammlung bestätigt</label>
+    <label class="check"><input type="checkbox" bind:checked={coopted} /> Kooptiert, bis die nächste {assembly} bestätigt</label>
   </EditorForm>
 </Detail>

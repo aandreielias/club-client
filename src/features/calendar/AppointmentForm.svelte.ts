@@ -1,24 +1,32 @@
 import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import { ZonedClock, type LocalDate, type LocalDateTime } from '../../lib/time/ZonedClock';
-import { SEEDED_APPOINTMENT_TYPES, type Appointment, type AppointmentPatch, type AppointmentType, type NewAppointment } from './model';
+import { repeatAt } from '../../lib/time/repeat';
+import {
+  SEEDED_APPOINTMENT_TYPES,
+  type Appointment,
+  type AppointmentPatch,
+  type AppointmentType,
+  type AppointmentTypeInfo,
+  type NewAppointment,
+} from './model';
 
-export type FormField = 'title' | 'team' | 'start' | 'end' | 'description' | 'location' | 'cabins' | 'repeatUntil' | 'intervalWeeks';
+export type FormField = 'title' | 'team' | 'start' | 'end' | 'description' | 'location' | 'cabins' | 'repeatUntil' | 'interval';
 
 export type FormErrors = Partial<Record<FormField, string>>;
 
 /** Select value for "club-wide" (no team). */
 export const CLUB_WIDE = '';
 
-/** What a type offers (the club's types: AppointmentTypesStore; default: the seeded ones). */
+/** The club's types (AppointmentTypesStore; default: the seeded ones). */
 export interface TypeOffers {
-  cabins(type: AppointmentType): boolean;
-  rides(type: AppointmentType): boolean;
+  readonly items: readonly AppointmentTypeInfo[];
+  get(type: AppointmentType): AppointmentTypeInfo | undefined;
 }
 
 const SEEDED_OFFERS: TypeOffers = {
-  cabins: (type) => SEEDED_APPOINTMENT_TYPES.some((t) => t.key === type && t.cabins),
-  rides: (type) => SEEDED_APPOINTMENT_TYPES.some((t) => t.key === type && t.rides),
+  items: SEEDED_APPOINTMENT_TYPES,
+  get: (type) => SEEDED_APPOINTMENT_TYPES.find((t) => t.key === type),
 };
 
 const limits = settings.calendar;
@@ -29,20 +37,22 @@ const limits = settings.calendar;
  * most mistakes show before a request.
  */
 export class AppointmentForm extends FormState<FormErrors> {
-  type = $state<AppointmentType>('TRAINING');
+  #type = $state<AppointmentType>('TRAINING');
   teamId = $state<string>(CLUB_WIDE);
   title = $state('');
   description = $state('');
   location = $state('');
   /** A place of the locations module; '' = free text in `location`. */
   locationId = $state('');
-  cabinMen = $state('');
-  cabinWomen = $state('');
+  /** One per club cabin label, by position. */
+  cabins = $state<string[]>([]);
   start = $state<LocalDateTime>('');
   end = $state<LocalDateTime>('');
   repeat = $state(false);
   repeatUntil = $state<LocalDate>('');
-  intervalWeeks = $state(1);
+  /** Steps of `unit` between occurrences. */
+  interval = $state(1);
+  unit = $state<'weeks' | 'months' | 'weekday'>('weeks');
   /** Car pools for this appointment; null follows the type until switched. */
   rides = $state<boolean | null>(null);
   /** Editing one occurrence of a series: the later ones change alike. */
@@ -60,29 +70,50 @@ export class AppointmentForm extends FormState<FormErrors> {
     return this.original !== null;
   }
 
-  /** Empty form for a new appointment on `date` (default today) at the default time. */
+  /** Empty form for a new appointment on `date` (default today): the club's first type at its default time. */
   static blank(clock: ZonedClock, teamId: string | null, date: LocalDate = clock.today(), types: TypeOffers = SEEDED_OFFERS): AppointmentForm {
     const form = new AppointmentForm(clock, null, types);
     form.teamId = teamId ?? CLUB_WIDE;
-    form.start = `${date}T${limits.defaultStartTime}`;
-    form.end = ZonedClock.addMinutes(form.start, limits.defaultDurationMinutes);
+    form.#type = types.items.find((t) => !t.archived)?.key ?? form.#type;
+    const info = form.info;
+    form.start = `${date}T${info?.defaultStart ?? limits.defaultStartTime}`;
+    form.end = ZonedClock.addMinutes(form.start, info?.defaultMinutes ?? limits.defaultDurationMinutes);
     return form;
   }
 
   static edit(clock: ZonedClock, appointment: Appointment, types: TypeOffers = SEEDED_OFFERS): AppointmentForm {
     const form = new AppointmentForm(clock, appointment, types);
     form.rides = appointment.rides;
-    form.type = appointment.type;
+    form.#type = appointment.type;
     form.teamId = appointment.teamId ?? CLUB_WIDE;
     form.title = appointment.title;
     form.description = appointment.description ?? '';
     form.location = appointment.location ?? '';
     form.locationId = appointment.locationId ?? '';
-    form.cabinMen = appointment.cabinMen ?? '';
-    form.cabinWomen = appointment.cabinWomen ?? '';
+    form.cabins = [...appointment.cabins];
     form.start = clock.toLocal(appointment.startsAt);
     form.end = clock.toLocal(appointment.endsAt);
     return form;
+  }
+
+  get type(): AppointmentType {
+    return this.#type;
+  }
+
+  /** A new appointment still at the old type's default time takes the new type's. */
+  set type(type: AppointmentType) {
+    const before = this.info;
+    this.#type = type;
+    const after = this.info;
+    if (this.isEdit || !before || !after || !this.start) return;
+    if (this.start.slice(11) === before.defaultStart && this.durationMinutes() === before.defaultMinutes) {
+      this.start = `${this.start.slice(0, 10)}T${after.defaultStart}`;
+      this.end = ZonedClock.addMinutes(this.start, after.defaultMinutes);
+    }
+  }
+
+  private get info(): AppointmentTypeInfo | undefined {
+    return this.types.get(this.#type);
   }
 
   /** Moves the start and keeps the duration. */
@@ -94,12 +125,12 @@ export class AppointmentForm extends FormState<FormErrors> {
 
   /** Cabins only for types that have them; switching to a type without drops them. */
   get cabinsShown(): boolean {
-    return this.types.cabins(this.type);
+    return this.info?.cabins ?? false;
   }
 
   /** Car pools as they will be saved: switched here, else what the type offers. */
   get ridesOn(): boolean {
-    return this.rides ?? this.types.rides(this.type);
+    return this.rides ?? this.info?.rides ?? false;
   }
 
   toNew(): NewAppointment {
@@ -110,12 +141,13 @@ export class AppointmentForm extends FormState<FormErrors> {
       description: this.description.trim() || null,
       location: this.locationId ? null : this.location.trim() || null,
       locationId: this.locationId || null,
-      cabinMen: (this.cabinsShown && this.cabinMen.trim()) || null,
-      cabinWomen: (this.cabinsShown && this.cabinWomen.trim()) || null,
+      cabins: this.cabinsShown ? AppointmentForm.trimmed(this.cabins) : [],
       startsAt: this.clock.toInstant(this.start),
       endsAt: this.clock.toInstant(this.end),
       repeatUntil: this.repeat ? this.repeatUntil : null,
-      intervalWeeks: this.repeat ? this.intervalWeeks : null,
+      intervalWeeks: this.repeat && this.unit === 'weeks' ? this.interval : null,
+      intervalMonths: this.repeat && this.unit !== 'weeks' ? this.interval : null,
+      byWeekday: this.repeat && this.unit === 'weekday',
       rides: this.ridesOn,
     };
   }
@@ -136,8 +168,7 @@ export class AppointmentForm extends FormState<FormErrors> {
         patch.location = next.location ?? '';
       }
     } else if (!next.locationId && (next.location ?? '') !== (original.location ?? '')) patch.location = next.location ?? '';
-    if ((next.cabinMen ?? '') !== (original.cabinMen ?? '')) patch.cabinMen = next.cabinMen ?? '';
-    if ((next.cabinWomen ?? '') !== (original.cabinWomen ?? '')) patch.cabinWomen = next.cabinWomen ?? '';
+    if (next.cabins.join('\n') !== original.cabins.join('\n')) patch.cabins = next.cabins;
     if (next.startsAt !== original.startsAt) patch.startsAt = next.startsAt;
     if (next.endsAt !== original.endsAt) patch.endsAt = next.endsAt;
     if (next.rides !== original.rides) patch.rides = next.rides;
@@ -145,11 +176,23 @@ export class AppointmentForm extends FormState<FormErrors> {
     return patch;
   }
 
+  /** server: Appointment.cabins — values trimmed, trailing empty ones dropped. */
+  private static trimmed(cabins: string[]): string[] {
+    const out = cabins.map((c) => (c ?? '').trim());
+    while (out.length && !out[out.length - 1]) out.pop();
+    return out;
+  }
+
   /** Number of occurrences the series would create (1 without repetition). */
   occurrences(): number {
     if (!this.repeat || !this.repeatUntil || !this.start) return 1;
-    const days = ZonedClock.daysBetween(this.start.slice(0, 10), this.repeatUntil);
-    return days < 0 ? 0 : Math.floor(days / (7 * this.intervalWeeks)) + 1;
+    const rhythm =
+      this.unit === 'weeks'
+        ? { weeks: this.interval, months: 0, byWeekday: false }
+        : { weeks: 0, months: this.interval, byWeekday: this.unit === 'weekday' };
+    let n = 0;
+    while (n <= limits.maxSeriesOccurrences && repeatAt(this.start, rhythm, n).slice(0, 10) <= this.repeatUntil) n++;
+    return n;
   }
 
   private durationMinutes(): number | null {
@@ -165,23 +208,25 @@ export class AppointmentForm extends FormState<FormErrors> {
       errors.description = `Höchstens ${limits.descriptionMaxLength} Zeichen.`;
     }
     if (this.location.length > limits.locationMaxLength) errors.location = `Höchstens ${limits.locationMaxLength} Zeichen.`;
-    if (this.cabinMen.trim().length > limits.cabinMaxLength || this.cabinWomen.trim().length > limits.cabinMaxLength) {
+    if (this.cabins.some((c) => (c ?? '').trim().length > limits.cabinMaxLength)) {
       errors.cabins = `Höchstens ${limits.cabinMaxLength} Zeichen.`;
     }
     if (!this.start) errors.start = 'Beginn angeben.';
     const duration = this.durationMinutes();
     if (!this.end) errors.end = 'Ende angeben.';
     else if (duration !== null && duration <= 0) errors.end = 'Das Ende muss nach dem Beginn liegen.';
-    else if (duration !== null && duration > limits.maxDurationDays * 24 * 60) {
-      errors.end = `Ein Termin dauert höchstens ${limits.maxDurationDays} Tage.`;
+    else {
+      const maxDays = this.info?.maxDays ?? limits.maxDurationDays;
+      if (duration !== null && duration > maxDays * 24 * 60) errors.end = `Ein Termin dauert höchstens ${maxDays} ${maxDays === 1 ? 'Tag' : 'Tage'}.`;
     }
     if (this.repeat && !this.isEdit) this.validateSeries(errors);
     return errors;
   }
 
   private validateSeries(errors: FormErrors): void {
-    if (!Number.isInteger(this.intervalWeeks) || this.intervalWeeks < 1 || this.intervalWeeks > limits.maxIntervalWeeks) {
-      errors.intervalWeeks = `1 bis ${limits.maxIntervalWeeks} Wochen.`;
+    const max = this.unit === 'weeks' ? limits.maxIntervalWeeks : limits.maxIntervalMonths;
+    if (!Number.isInteger(this.interval) || this.interval < 1 || this.interval > max) {
+      errors.interval = `1 bis ${max} ${this.unit === 'weeks' ? 'Wochen' : 'Monate'}.`;
       return;
     }
     if (!this.repeatUntil || (this.start && this.repeatUntil < this.start.slice(0, 10))) {

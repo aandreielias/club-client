@@ -74,6 +74,8 @@ export interface Club {
   registerNumber: string | null;
   /** Month (1-12) in which a new season starts, e.g. for the default season of a new team. */
   seasonStartMonth: number;
+  /** Month (1-12) in which the fiscal year starts (journal, budget, Kassenprüfung); independent of the season. */
+  fiscalYearStartMonth: number;
   /** Colours, fonts and logos the Vorstand chose (Einstellungen > Erscheinungsbild). */
   brand: Brand;
   assets: BrandAssets;
@@ -130,7 +132,10 @@ export interface MailSample {
   text: string | null;
 }
 
-export type ClubEdit = Pick<Club, 'name' | 'shortName' | 'website' | 'contactEmail' | 'address' | 'registerNumber' | 'seasonStartMonth'>;
+export type ClubEdit = Pick<
+  Club,
+  'name' | 'shortName' | 'website' | 'contactEmail' | 'address' | 'registerNumber' | 'seasonStartMonth' | 'fiscalYearStartMonth'
+>;
 
 export interface Member {
   id: string;
@@ -162,7 +167,7 @@ export interface Member {
 
 export interface MemberList {
   items: Member[];
-  /** Under 18 today (also when the birth date is hidden). */
+  /** Younger than the club's guardianUntilAge today (also when the birth date is hidden). */
   minorIds: string[];
   /** Members with a linked guardian. */
   wardIds: string[];

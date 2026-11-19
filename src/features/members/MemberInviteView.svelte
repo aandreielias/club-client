@@ -56,7 +56,9 @@
     </div>
     <Field
       label="Mitgliedschaft"
-      hint="Mitglied ab heute. Nur mit Stimmrecht gehört jemand zur Mitgliederversammlung, nur wählbar in eine Funktion. Ehrenmitglied wird man durch Beschluss."
+      hint="Mitglied ab heute. Nur mit Stimmrecht stimmt jemand in Sitzungen ab, nur wählbar kommt jemand in eine Funktion. {membershipKinds.label(
+        'HONORARY',
+      )} wird man durch Beschluss."
       error={form.error('membershipType')}
     >
       <Select bind:value={form.membershipType} placeholder="Bitte wählen" options={membershipKinds.inviteChoices()} aria-label="Mitgliedschaft" />

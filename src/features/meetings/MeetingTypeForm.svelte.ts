@@ -1,8 +1,16 @@
+import { settings } from '../../settings';
+import type { Hue } from '../../lib/types';
 import { FormState } from '../../lib/state/FormState.svelte';
 import type { OfficeKind } from '../members/MembersApi';
 import {
   isDayOfYear,
+  quorum,
+  quorumValid,
+  protocolValid,
+  DEFAULT_PROTOCOL,
+  type ProtocolRules,
   type Majority,
+  type MajorityBase,
   type MeetingStep,
   type MeetingType,
   type MeetingTypeInput,
@@ -13,7 +21,19 @@ import {
 } from './model';
 
 export type MeetingTypeField =
-  'label' | 'invitationLabel' | 'notice' | 'grace' | 'majorities' | 'conveners' | 'dueBy' | 'steps' | 'videoUrl' | 'invitees';
+  | 'label'
+  | 'invitationLabel'
+  | 'notice'
+  | 'quorum'
+  | 'grace'
+  | 'majorities'
+  | 'conveners'
+  | 'dueBy'
+  | 'steps'
+  | 'videoUrl'
+  | 'invitees'
+  | 'protocol'
+  | 'maxDays';
 type Errors = Partial<Record<MeetingTypeField, string>>;
 
 export type NoticeUnit = 'hours' | 'days';
@@ -29,9 +49,14 @@ export class MeetingTypeForm extends FormState<Errors> {
   maxInvitees = $state<number | null>(null);
   notice = $state(14);
   noticeUnit = $state<NoticeUnit>('days');
-  quorum = $state<Quorum>('MORE_THAN_HALF');
+  quorum = $state<Quorum>(quorum(1, 2, true));
   grace = $state<number | null>(null);
   majorities = $state<Majority[]>(['SIMPLE']);
+  majorityBase = $state<MajorityBase>('VALID');
+  protocol = $state<ProtocolRules>({ ...DEFAULT_PROTOCOL, approvers: [...DEFAULT_PROTOCOL.approvers] });
+  boardSeesDrafts = $state(true);
+  maxDays = $state(1);
+  hue = $state<Hue>('purple');
   conveners = $state<OfficeKind[]>(['CHAIR', 'VICE_CHAIR']);
   needsReason = $state(false);
   yearly = $state(false);
@@ -83,9 +108,14 @@ export class MeetingTypeForm extends FormState<Errors> {
     this.maxInvitees = type.maxInvitees ?? null;
     this.noticeUnit = type.noticeHours % 24 === 0 ? 'days' : 'hours';
     this.notice = this.noticeUnit === 'days' ? type.noticeHours / 24 : type.noticeHours;
-    this.quorum = type.quorum;
+    this.quorum = { ...type.quorum };
     this.grace = type.graceMinutes;
     this.majorities = [...type.majorities];
+    this.majorityBase = type.majorityBase;
+    this.protocol = { ...type.protocol, approvers: [...type.protocol.approvers] };
+    this.boardSeesDrafts = type.boardSeesDrafts;
+    this.maxDays = type.maxDays;
+    this.hue = type.hue;
     this.conveners = [...type.conveners];
     this.needsReason = type.needsReason;
     this.yearly = !!type.dueBy;
@@ -144,6 +174,11 @@ export class MeetingTypeForm extends FormState<Errors> {
       quorum: this.quorum,
       graceMinutes: this.grace || null,
       majorities: this.majorities,
+      majorityBase: this.majorityBase,
+      protocol: this.protocol,
+      boardSeesDrafts: this.boardSeesDrafts,
+      maxDays: this.maxDays,
+      hue: this.hue,
       conveners: this.conveners,
       needsReason: this.needsReason,
       dueBy: this.yearly ? `${String(this.dueMonth).padStart(2, '0')}-${String(this.dueDay).padStart(2, '0')}` : null,
@@ -168,6 +203,7 @@ export class MeetingTypeForm extends FormState<Errors> {
     const invitation = this.invitationLabel.trim();
     if (!invitation || invitation.length > 120) errors.invitationLabel = 'Text für die Einladung mit 1 bis 120 Zeichen angeben.';
     if (!Number.isInteger(this.notice) || this.notice < 0 || this.noticeHours > 8760) errors.notice = 'Ganze Zahl, höchstens ein Jahr.';
+    if (!quorumValid(this.quorum)) errors.quorum = 'Ungültiger Anteil.';
     if (this.grace != null && (!Number.isInteger(this.grace) || this.grace < 1 || this.grace > 1440)) errors.grace = '1 bis 1440 Minuten, oder leer.';
     const bound = (n: number | null) => n == null || (Number.isInteger(n) && n >= 1 && n <= 50);
     if (
@@ -176,6 +212,9 @@ export class MeetingTypeForm extends FormState<Errors> {
     )
       errors.invitees = '1 bis 50 Personen, die Mindestzahl nicht über der Höchstzahl.';
     if (!this.majorities.length) errors.majorities = 'Mindestens eine Mehrheit.';
+    if (!protocolValid(this.protocol, this.invitees))
+      errors.protocol = 'Genehmigungen von 1 bis zur Zahl der Genehmigenden; „alle Mitglieder“ nicht bei ausgewählten Personen.';
+    if (!Number.isInteger(this.maxDays) || this.maxDays < 1 || this.maxDays > settings.calendar.maxDurationDays) errors.maxDays = '1 bis 30 Tage.';
     if (!this.conveners.length) errors.conveners = 'Mindestens eine Funktion.';
     if (this.yearly && !isDayOfYear(this.dueMonth, this.dueDay)) {
       errors.dueBy = 'Diesen Tag gibt es nicht.';

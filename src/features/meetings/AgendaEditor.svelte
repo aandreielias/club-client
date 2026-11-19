@@ -31,7 +31,7 @@
 <div class="stack editor">
   <AgendaItemsEditor
     bind:rows
-    majorities={majorities(meetingTypes.get(meeting.kind) ?? null)}
+    majorities={majorities(meetingTypes.get(meeting.kind)?.majorities ?? ['SIMPLE'])}
     candidates={people.value ?? []}
     today={session.clock.today()}
   />

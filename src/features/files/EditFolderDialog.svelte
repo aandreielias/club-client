@@ -66,9 +66,11 @@
       <FolderVisibility
         bind:scope={form.scope}
         bind:teamIds={form.teamIds}
+        bind:office={form.office}
         {scopes}
         {teamList}
         error={form.error('team')}
+        officeError={form.error('office')}
         hintSuffix=" Unterordner und Dateien folgen."
       />
     {:else}

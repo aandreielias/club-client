@@ -1,12 +1,13 @@
 <script lang="ts">
-  import { backStack, bus, commands } from '../../lib/container';
+  import { backStack, bus, commands, directory } from '../../lib/container';
+  import { boardSettings } from '../members/services';
+  import { ownersText } from './ownersText';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
   import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
   import { mailboxActions } from './actions';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { StoredRecord } from '../../lib/detail/StoredRecord.svelte';
-  import { ROLE_LABELS } from '../../lib/types';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import Detail from '../../ui/Detail.svelte';
   import DetailSkeleton from '../../ui/DetailSkeleton.svelte';
@@ -17,6 +18,8 @@
   /** One club mailbox; admin and board change or remove it. Window and page. */
   let { id, handle, onclosed }: { id: string; handle?: WindowHandle; onclosed?: () => void } = $props();
 
+  void boardSettings.load();
+  void directory.loadTeams();
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle, onclosed);
   const edit = new EditSession<MailboxForm>(bus, backStack);
@@ -66,7 +69,7 @@
         <dt>Absendername</dt>
         <dd>{mailbox.name}</dd>
         <dt>Wer liest es</dt>
-        <dd>{mailbox.memberId ? (mailbox.memberName ?? 'Mitglied') : `Alle mit der Rolle ${ROLE_LABELS[mailbox.role!]}`}</dd>
+        <dd>{mailbox.memberId ? (mailbox.memberName ?? 'Mitglied') : ownersText(mailbox.owners)}</dd>
       </dl>
     {/if}
   </Detail>

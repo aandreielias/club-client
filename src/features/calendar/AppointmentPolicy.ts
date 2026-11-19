@@ -19,9 +19,14 @@ export class AppointmentPolicy extends PlanningPolicy {
     return new Date(appointment.startsAt) <= now;
   }
 
-  /** Answers are allowed until the appointment starts, for members of its team (any member when club-wide) and their guardians. */
-  canRespond(appointment: Appointment, now: Date = new Date()): boolean {
-    if (appointment.cancelled || this.isPast(appointment, now)) return false;
+  /** Answers close `deadlineHours` before the start (the type's answer deadline). */
+  answersClosed(appointment: Appointment, deadlineHours: number, now: Date = new Date()): boolean {
+    return new Date(appointment.startsAt).getTime() - deadlineHours * 3_600_000 <= now.getTime();
+  }
+
+  /** Answers are allowed until the type's deadline, for members of its team (any member when club-wide) and their guardians. */
+  canRespond(appointment: Appointment, now: Date = new Date(), deadlineHours = 0): boolean {
+    if (appointment.cancelled || this.answersClosed(appointment, deadlineHours, now)) return false;
     return appointment.teamId === null || this.session.isInTeam(appointment.teamId) || this.session.wardIds.length > 0;
   }
 

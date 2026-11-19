@@ -16,6 +16,7 @@ import type {
   ResolutionRules,
   VoteMode,
   InviteesInput,
+  Majority,
 } from './model';
 
 /** Typed access to the meetings endpoints. */
@@ -175,8 +176,9 @@ export class MeetingsApi {
     deadline: string,
     assigneeIds: string[] = [],
     implementDue: string | null = null,
+    majority: Majority | null = null,
   ): Promise<Resolution> {
-    return this.api.post<Resolution>(MeetingsApi.RESOLUTIONS, { title, text, deadline, assigneeIds, implementDue, open: true });
+    return this.api.post<Resolution>(MeetingsApi.RESOLUTIONS, { title, text, deadline, assigneeIds, implementDue, majority, open: true });
   }
 
   /** Replaces the records linked to a resolution. */

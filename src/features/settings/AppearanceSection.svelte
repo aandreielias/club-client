@@ -13,6 +13,10 @@
     { value: 'dark', label: 'Dunkel' },
     { value: 'system', label: 'System' },
   ] as const;
+  const VIEWS = [
+    { value: 'month', label: 'Monat' },
+    { value: 'week', label: 'Woche' },
+  ] as const;
   const DOCKS: readonly { value: Dock; label: string }[] = [
     { value: 'center', label: 'Mitte' },
     { value: 'side', label: 'Seite' },
@@ -21,6 +25,15 @@
 </script>
 
 <div class="stack">
+  <Field label="Kalender öffnet mit" group>
+    <ChoiceGroup
+      name="calendar-view-pref"
+      label="Kalender öffnet mit"
+      options={VIEWS}
+      bind:value={() => preferences.values.calendarView, (v) => v && preferences.set('calendarView', v)}
+    />
+  </Field>
+
   <Field label="Farbschema" group>
     <ChoiceGroup
       name="scheme"

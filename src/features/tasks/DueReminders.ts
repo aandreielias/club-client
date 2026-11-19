@@ -8,8 +8,8 @@ import { isDueSoon, isOverdue, type Task } from './model';
 import type { TasksApi } from './TasksApi';
 
 export interface ReminderOptions {
-  /** Open tasks due within this many hours (or overdue) are mentioned. */
-  dueSoonHours: number;
+  /** Open tasks due within this many hours (or overdue) are mentioned; undefined = not known yet, nothing is checked. */
+  dueSoonHours: () => number | undefined;
   /** How often to look again while signed in. */
   checkEveryMs: number;
   /** More than this many: one summary instead of one toast each. */
@@ -41,6 +41,8 @@ export class DueReminders {
   }
 
   async check(now: Date = new Date()): Promise<void> {
+    const hours = this.options.dueSoonHours();
+    if (hours === undefined) return;
     let tasks: Task[];
     try {
       tasks = (await this.api.list({ mine: true, teamId: null, includeDone: false })).items;
@@ -49,7 +51,7 @@ export class DueReminders {
     }
     const today = this.today(now);
     const shown = this.store.get<Record<string, string>>(DueReminders.KEY) ?? {};
-    const due = DueReminders.due(tasks, now, this.options.dueSoonHours).filter((t) => shown[t.id] !== today);
+    const due = DueReminders.due(tasks, now, hours).filter((t) => shown[t.id] !== today);
     if (!due.length) return;
     if (due.length > this.options.maxToasts) {
       this.bus.publish(TOAST, {

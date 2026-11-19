@@ -20,20 +20,137 @@ export interface AppointmentTypeInfo {
   inUse: boolean;
   /** Members without an answer are reminded this many hours before the start; null: never. */
   remindHours: number | null;
+  /** Opponent, home/away and sets. */
+  hasResult: boolean;
+  /** Heading of the plan block (e.g. "Trainingsinhalt"); null: none. */
+  planLabel: string | null;
+  /** New appointments start at this club time (HH:MM) … */
+  defaultStart: string;
+  /** … and last this long. */
+  defaultMinutes: number;
+  /** None lasts longer (1–30 days). */
+  maxDays: number;
+  /** Answers close this many hours before the start; 0: at the start. */
+  answerDeadlineHours: number;
+  /** "Vielleicht" is offered. */
+  allowMaybe: boolean;
+  /** "Nein" needs a reason. */
+  reasonOnNo: boolean;
+  /** Who answers: the team (club-wide: whoever likes), every member for club-wide ones, or nobody. */
+  expectAnswers: ExpectAnswers;
+  /** A new time or place is announced (and answers wait for confirmation). */
+  notifyChanges: boolean;
+  /** Time shifts up to this many minutes are not announced. */
+  minShiftMinutes: number;
+  /** Members (guardians for minors) mark their own presence while it runs. */
+  selfCheckIn: boolean;
+  /** A second reminder, fewer hours before the start than the first; null: none. */
+  remindAgainHours: number | null;
 }
+
+export type ExpectAnswers = 'TEAM' | 'CLUB' | 'NONE';
 
 export type AppointmentTypeInput = Omit<AppointmentTypeInfo, 'key' | 'inUse'>;
 
-/** server: V55__appointment_types.sql — shown until the club's types are loaded. */
+const RULES = {
+  defaultStart: '18:00',
+  defaultMinutes: 90,
+  maxDays: 7,
+  answerDeadlineHours: 0,
+  allowMaybe: true,
+  reasonOnNo: false,
+  expectAnswers: 'TEAM',
+  notifyChanges: true,
+  minShiftMinutes: 0,
+  selfCheckIn: false,
+  remindAgainHours: null,
+} as const;
+
+/** server: V55__appointment_types.sql + V134__type_rules.sql + V137__type_notices.sql — the mock's seed and the tests' defaults. */
 export const SEEDED_APPOINTMENT_TYPES: readonly AppointmentTypeInfo[] = [
-  { key: 'TRAINING', label: 'Training', hue: 'blue', rides: false, cabins: true, sort: 1, archived: false, inUse: false, remindHours: null },
-  { key: 'MATCH', label: 'Spiel', hue: 'red', rides: true, cabins: true, sort: 2, archived: false, inUse: false, remindHours: 48 },
-  { key: 'TOURNAMENT', label: 'Turnier', hue: 'purple', rides: true, cabins: true, sort: 3, archived: false, inUse: false, remindHours: 48 },
-  { key: 'MEETING', label: 'Besprechung', hue: 'brown', rides: false, cabins: false, sort: 4, archived: false, inUse: false, remindHours: null },
-  { key: 'EVENT', label: 'Veranstaltung', hue: 'yellow', rides: true, cabins: true, sort: 5, archived: false, inUse: false, remindHours: null },
+  {
+    key: 'TRAINING',
+    label: 'Training',
+    hue: 'blue',
+    rides: false,
+    cabins: true,
+    sort: 1,
+    archived: false,
+    inUse: false,
+    remindHours: null,
+    hasResult: false,
+    planLabel: 'Trainingsinhalt',
+    ...RULES,
+  },
+  {
+    key: 'MATCH',
+    label: 'Spiel',
+    hue: 'red',
+    rides: true,
+    cabins: true,
+    sort: 2,
+    archived: false,
+    inUse: false,
+    remindHours: 48,
+    hasResult: true,
+    planLabel: null,
+    ...RULES,
+  },
+  {
+    key: 'TOURNAMENT',
+    label: 'Turnier',
+    hue: 'purple',
+    rides: true,
+    cabins: true,
+    sort: 3,
+    archived: false,
+    inUse: false,
+    remindHours: 48,
+    hasResult: true,
+    planLabel: null,
+    ...RULES,
+  },
+  {
+    key: 'MEETING',
+    label: 'Besprechung',
+    hue: 'brown',
+    rides: false,
+    cabins: false,
+    sort: 4,
+    archived: false,
+    inUse: false,
+    remindHours: null,
+    hasResult: false,
+    planLabel: null,
+    ...RULES,
+  },
+  {
+    key: 'EVENT',
+    label: 'Veranstaltung',
+    hue: 'yellow',
+    rides: true,
+    cabins: true,
+    sort: 5,
+    archived: false,
+    inUse: false,
+    remindHours: null,
+    hasResult: false,
+    planLabel: null,
+    ...RULES,
+  },
 ];
 
 export const HUES: readonly Hue[] = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'red'];
+export const HUE_LABELS: Readonly<Record<Hue, string>> = {
+  gray: 'Grau',
+  brown: 'Braun',
+  orange: 'Orange',
+  yellow: 'Gelb',
+  green: 'Grün',
+  blue: 'Blau',
+  purple: 'Violett',
+  red: 'Rot',
+};
 
 export type ResponseStatus = 'YES' | 'NO' | 'MAYBE';
 
@@ -50,9 +167,8 @@ export interface Appointment {
   location: string | null;
   /** A place of the locations module; null for free-text locations. */
   locationId: string | null;
-  /** Changing cabins (free text), not for meetings. */
-  cabinMen: string | null;
-  cabinWomen: string | null;
+  /** Changing cabins (free text) in the order of the club's cabin labels; '' = none for that label. */
+  cabins: string[];
   startsAt: string;
   endsAt: string;
   cancelled: boolean;
@@ -60,6 +176,18 @@ export interface Appointment {
   rides: boolean;
   /** Why it was cancelled (only on a single appointment's read). */
   cancelReason?: string | null;
+}
+
+/** server: CalendarApi.CalendarSettings — club-wide calendar rules (Einstellungen › Kalender, admin/board). */
+export interface CalendarSettings {
+  /** 0–4 names of changing cabins (e.g. Herren, Damen); appointments carry one cabin per label. */
+  cabinLabels: string[];
+  /** Holders of needed items are reminded this long before the appointment (1–336). */
+  itemRemindHours: number;
+  /** "Offene Antworten" looks this many days ahead (7–60). */
+  openAnswerDays: number;
+  /** Most free seats one car pool may offer (1–50). */
+  maxRideSeats: number;
 }
 
 export interface AppointmentList {
@@ -73,20 +201,22 @@ export interface NewAppointment {
   description: string | null;
   location: string | null;
   locationId: string | null;
-  cabinMen: string | null;
-  cabinWomen: string | null;
+  cabins: string[];
   startsAt: string;
   endsAt: string;
   /** Club-local date of the last occurrence; null = single appointment. */
   repeatUntil: string | null;
+  /** Every n weeks, or every n months (same date, or same nth weekday with byWeekday); not both. */
   intervalWeeks: number | null;
+  intervalMonths: number | null;
+  byWeekday: boolean;
   /** Omitted: what the type offers. */
   rides?: boolean;
 }
 
 /** Changes one occurrence; omitted fields stay unchanged, '' clears a text; clearLocationId unlinks the place. */
 export type AppointmentPatch = Partial<
-  Pick<Appointment, 'type' | 'title' | 'description' | 'location' | 'locationId' | 'cabinMen' | 'cabinWomen' | 'startsAt' | 'endsAt' | 'rides'>
+  Pick<Appointment, 'type' | 'title' | 'description' | 'location' | 'locationId' | 'cabins' | 'startsAt' | 'endsAt' | 'rides'>
 > & { clearLocationId?: boolean; /** The later occurrences of the series change alike (times shift by as much). */ includeFollowing?: boolean };
 
 export interface AttendanceEntry {

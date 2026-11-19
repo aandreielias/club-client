@@ -4,6 +4,7 @@ import { AppointmentTypesStore } from './AppointmentTypesStore.svelte';
 import { CalendarApi } from './CalendarApi';
 import { CalendarExport } from './CalendarExport';
 import { HolidaysStore } from './HolidaysStore.svelte';
+import { Resource } from '../../lib/state/Resource.svelte';
 import { settings } from '../../settings';
 
 /** Calendar services, created once and shared by the calendar pages. */
@@ -13,3 +14,5 @@ export const appointmentPolicy = new AppointmentPolicy(session, permissions);
 
 export const calendarExport = new CalendarExport(calendarApi, settings.calendar, (type) => appointmentTypes.label(type));
 export const holidays = new HolidaysStore(calendarApi);
+/** The club's calendar rules (cabin labels, ride seats); loaded at sign-in. */
+export const calendarSettings = new Resource(() => calendarApi.settings());

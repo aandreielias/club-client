@@ -1,7 +1,8 @@
 import { ListModel } from '../../lib/list/ListModel.svelte';
 import type { LocalStore } from '../../lib/storage/LocalStore';
 import type { FinanceApi } from './FinanceApi';
-import { seasonLabel, type Booking } from './model';
+import { yearLabel } from '../../lib/time/clubYear';
+import type { Booking } from './model';
 
 interface Lookups {
   account: (key: string) => string;
@@ -13,18 +14,18 @@ interface Lookups {
   categories: () => readonly { value: string; label: string }[];
 }
 
-/** The journal of one season (asked from the server; '' = the running one), account and category filtered here. */
+/** The journal of one fiscal year (asked from the server; '' = the running one), account and category filtered here. */
 export class JournalListModel extends ListModel<Booking> {
-  /** The server cut the season (more than its cap). */
+  /** The server cut the fiscal year (more than its cap). */
   truncated = $state(false);
 
   constructor(api: FinanceApi, current: number, startMonth: number, look: Lookups, store: LocalStore | null) {
-    const seasons = Array.from({ length: 5 }, (_, i) => current - 1 - i);
+    const years = Array.from({ length: 5 }, (_, i) => current - 1 - i);
     super(
       {
         id: 'finance-journal',
         load: async (server) => {
-          const list = await api.bookings(server.season ? Number(server.season) : current);
+          const list = await api.bookings(server.year ? Number(server.year) : current);
           this.truncated = list.truncated;
           return list.items;
         },
@@ -46,11 +47,11 @@ export class JournalListModel extends ListModel<Booking> {
         ],
         filters: [
           {
-            key: 'season',
-            label: 'Saison',
+            key: 'year',
+            label: 'Geschäftsjahr',
             kind: 'select',
-            allLabel: `Saison ${seasonLabel(current, startMonth)}`,
-            options: () => seasons.map((s) => ({ value: String(s), label: `Saison ${seasonLabel(s, startMonth)}` })),
+            allLabel: `Geschäftsjahr ${yearLabel(current, startMonth)}`,
+            options: () => years.map((y) => ({ value: String(y), label: `Geschäftsjahr ${yearLabel(y, startMonth)}` })),
             transient: true,
           },
           {

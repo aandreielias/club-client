@@ -2,7 +2,7 @@
 // `npm run api:sync`) must satisfy the client's own DTO types, so a renamed, removed or retyped field fails the build.
 // Not checked: whether a field may be null (the server's records write every field; nullability is not in the document).
 import type { components } from './schema';
-import type { Absence, AbsenceList, Appointment, AppointmentList, Attendance, Ride, RideList } from '../../features/calendar/model';
+import type { Absence, AbsenceList, Appointment, AppointmentList, Attendance, CalendarSettings, Ride, RideList } from '../../features/calendar/model';
 import type { DownloadLink, FileHits, FileList, FilePatch, FileSettings, FolderList, FolderPatch, SettingFileList } from '../../features/files/model';
 import type {
   Account,
@@ -43,7 +43,7 @@ import type {
   OrgPerson,
   Relative,
 } from '../../features/members/MembersApi';
-import type { Notification, NotificationList, Preference, Preferences } from '../../features/notifications/model';
+import type { Notification, NotificationList, NotificationSettings, Preference, Preferences } from '../../features/notifications/model';
 import type { SearchHit, SearchResult } from '../../features/search/model';
 import type { Task, TaskList, TaskSettings } from '../../features/tasks/model';
 import type { TeamInput, Tournament, TournamentSummary } from '../../features/tournaments/model';
@@ -60,6 +60,7 @@ type With<T, K extends keyof T, V> = Omit<T, K> & Record<K, V>;
 export type Contract = [
   Satisfies<S['at.clubserver.calendar.api.CalendarApi.AppointmentDto'], Appointment>,
   Satisfies<S['at.clubserver.calendar.api.CalendarApi.AppointmentList'], AppointmentList>,
+  Satisfies<S['at.clubserver.calendar.api.CalendarApi.CalendarSettings'], CalendarSettings>,
   Satisfies<S['at.clubserver.attendance.api.AttendanceApi.Attendance'], Attendance>,
   Satisfies<S['at.clubserver.attendance.api.AttendanceApi.AbsenceDto'], Absence>,
   Satisfies<S['at.clubserver.attendance.api.AttendanceApi.AbsenceList'], AbsenceList>,
@@ -106,7 +107,7 @@ export type Contract = [
   Satisfies<S['at.clubserver.mail.api.MailApi.MailRefDto'], MailRef>,
   Satisfies<S['at.clubserver.mail.api.MailApi.MailList'], MailPage>,
   Satisfies<S['at.clubserver.mail.api.MailApi.MailSettingsDto'], MailSettings>,
-  Satisfies<S['at.clubserver.meetings.api.MeetingsApi.MeetingTypeDto'], MeetingType>,
+  Satisfies<With<S['at.clubserver.meetings.api.MeetingsApi.MeetingTypeDto'], 'hue', MeetingType['hue']>, MeetingType>, // the server keeps hues as strings
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.Person'], Person>,
   Satisfies<S['at.clubserver.meetings.api.MeetingsApi.MeetingDto'], Meeting>,
   Satisfies<S['at.clubserver.gateway.rest.MeetingsController.InviteesBody'], InviteesInput>,
@@ -133,6 +134,7 @@ export type Contract = [
   Satisfies<S['at.clubserver.gateway.rest.SearchController.SearchResult'], SearchResult>,
   Satisfies<S['at.clubserver.tasks.api.TasksApi.TaskDto'], Task>,
   Satisfies<S['at.clubserver.tasks.api.TasksApi.TaskSettings'], TaskSettings>,
+  Satisfies<S['at.clubserver.notifications.api.NotificationsApi.NotificationSettings'], NotificationSettings>,
   Satisfies<S['at.clubserver.tasks.api.TasksApi.TaskList'], TaskList>,
   Satisfies<S['at.clubserver.tournaments.api.TournamentsApi.TournamentDto'], Tournament>,
   Satisfies<S['at.clubserver.tournaments.api.TournamentsApi.TournamentSummary'], TournamentSummary>,

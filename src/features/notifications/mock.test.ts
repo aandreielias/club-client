@@ -38,6 +38,8 @@ describe('mock notifications', () => {
       assignees: ['spieler'],
       checklist: [],
       repeatWeeks: null,
+      repeatMonths: null,
+      repeatByWeekday: false,
     });
     expect(notifications.list('spieler', true).items[0]).toMatchObject({
       kind: 'TASK_ASSIGNED',
@@ -80,5 +82,30 @@ describe('mock notifications', () => {
     calendar.cancel(member('vorstand'), target.id, false);
     const title = `Abgesagt: ${target.title}`;
     for (const id of directory.activeIds().filter((id) => id !== 'vorstand')) expect(cancelledTitles(id), id).toContain(title);
+  });
+});
+
+describe('mock notification rules', () => {
+  it('lets the board set important kinds and defaults; the member choice wins, important kinds stay on', () => {
+    const body = {
+      importantKinds: ['FEE'],
+      defaults: [{ kind: 'TASK_DUE', push: false, email: true }],
+      inboxRetentionDays: 60,
+      activityRetentionDays: 365,
+    } as const;
+    expect(() => notifications.saveSettings(member('spieler'), structuredClone(body) as any)).toThrow();
+    expect(() => notifications.saveSettings(member('vorstand'), { ...structuredClone(body), inboxRetentionDays: 10 } as any)).toThrow();
+    const before = structuredClone(notifications.settings.data);
+    try {
+      notifications.saveSettings(member('vorstand'), structuredClone(body) as any);
+      notifications.setPreferences('spieler', [{ kind: 'FEE', push: false, email: false }]);
+      const prefs = notifications.effective('spieler');
+      expect(prefs.find((p) => p.kind === 'FEE')).toEqual({ kind: 'FEE', push: true, email: true });
+      expect(prefs.find((p) => p.kind === 'TASK_DUE')).toEqual({ kind: 'TASK_DUE', push: false, email: true });
+      expect(prefs.find((p) => p.kind === 'MEETING')).toEqual({ kind: 'MEETING', push: true, email: true });
+    } finally {
+      Object.assign(notifications.settings.data, before);
+      notifications.setPreferences('spieler', []);
+    }
   });
 });

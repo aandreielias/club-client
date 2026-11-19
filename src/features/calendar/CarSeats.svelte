@@ -19,9 +19,12 @@
   /** Passengers take the offered seats in filling order (seat 1 is the front passenger seat). */
   const passenger = (seatIndex: number) => ride.passengers[seatIndex - 1] ?? null;
   const size = settings.calendar.rideGraphic;
+  /** Cars up to 9 places keep the set width; a bus grows longer at the same seat size. */
+  const scale = size.width / CarLayout.shape(8).width;
+  const width = $derived(Math.max(size.width, w * scale));
 </script>
 
-<svg class="car" viewBox="0 0 {w} {h}" width={size.width} height={(size.width * h) / w} role="img" aria-label={label}>
+<svg class="car" viewBox="0 0 {w} {h}" {width} height={(width * h) / w} role="img" aria-label={label}>
   <rect class="mirror" x="20" y="-3" width="5" height="6" rx="2.5" />
   <rect class="mirror" x="20" y={h - 3} width="5" height="6" rx="2.5" />
   <!-- body: narrower at the bonnet (left), rounder in front than at the back -->
@@ -57,6 +60,8 @@
     display: block;
     flex: none;
     overflow: visible;
+    max-width: 100%;
+    height: auto;
   }
   .body {
     fill: var(--color-surface);

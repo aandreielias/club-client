@@ -42,6 +42,16 @@ export interface Preferences {
   items: Preference[];
 }
 
+/** server: NotificationsApi.NotificationSettings — the club's rules; every member reads them, admin/board change them. */
+export interface NotificationSettings {
+  /** Always go out by push and e-mail. */
+  importantKinds: NotificationKind[];
+  /** Each kind's channels until a member chooses (the member's choice wins). */
+  defaults: Preference[];
+  inboxRetentionDays: number;
+  activityRetentionDays: number;
+}
+
 /** Live event 'notifications.notification-created' (sent to the recipient only). */
 export interface NotificationCreated {
   notificationId: string;
@@ -65,13 +75,10 @@ export const NOTIFICATION_KINDS: readonly { value: NotificationKind; label: stri
     hint: 'Erinnerung, wenn du noch nicht geantwortet hast; für Trainer:innen: Abwesenheit trotz Zusage.',
   },
   { value: 'RIDE', label: 'Fahrgemeinschaften', hint: 'Wer in dein Auto steigt oder aussteigt, und wenn deine Mitfahrt ausfällt.' },
-  { value: 'ITEM_REMINDER', label: 'Gegenstände mitbringen', hint: 'Etwa einen Tag vor einem Termin, für den du etwas aus dem Inventar hast.' },
+  { value: 'ITEM_REMINDER', label: 'Gegenstände mitbringen', hint: 'Vor einem Termin, für den du etwas aus dem Inventar hast.' },
   { value: 'CHANGE_DECIDED', label: 'Kontoänderungen', hint: 'Wenn der Vorstand über deine Änderungsanfrage entschieden hat.' },
   { value: 'TEAM', label: 'Teams', hint: 'Für Vorstand und Admins: wenn Trainer:innen jemanden ins Team aufnehmen möchten.' },
   { value: 'MAIL', label: 'Neue E-Mails', hint: 'Wenn in deinem Vereins-Postfach oder einem geteilten Postfach eine E-Mail ankommt.' },
   { value: 'FEE', label: 'Mitgliedsbeiträge', hint: 'Erinnerung, wenn dein Beitrag oder der deiner Kinder überfällig ist.' },
-  { value: 'MEETING', label: 'Sitzungen', hint: 'Einladungen, Umlaufbeschlüsse und Erinnerungen an Fristen. Werden immer gesendet.' },
+  { value: 'MEETING', label: 'Sitzungen', hint: 'Einladungen, Umlaufbeschlüsse und Erinnerungen an Fristen.' },
 ];
-
-/** Important kinds always go out by push and e-mail (server: NotificationsApi.IMPORTANT). */
-export const isImportant = (kind: NotificationKind): boolean => kind === 'MEETING';

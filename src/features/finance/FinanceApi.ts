@@ -56,8 +56,8 @@ export class FinanceApi {
   }
 
   /** The season starting in `season`, newest first. */
-  bookings(season: number): Promise<BookingList> {
-    return this.api.get<BookingList>(`${FinanceApi.BASE}/bookings`, { season });
+  bookings(year: number): Promise<BookingList> {
+    return this.api.get<BookingList>(`${FinanceApi.BASE}/bookings`, { year });
   }
 
   booking(id: string): Promise<Booking> {
@@ -119,17 +119,17 @@ export class FinanceApi {
   }
 
   /** The season's journal as a file (logged as an export). */
-  exportJournal(season: number, format: ExportFormat): Promise<Blob> {
-    return this.api.get<Blob>(`${FinanceApi.BASE}/bookings/export`, { season, format });
+  exportJournal(year: number, format: ExportFormat): Promise<Blob> {
+    return this.api.get<Blob>(`${FinanceApi.BASE}/bookings/export`, { year, format });
   }
 
-  budget(season: number): Promise<Budget> {
-    return this.api.get<Budget>(`${FinanceApi.BASE}/budget`, { season });
+  budget(year: number): Promise<Budget> {
+    return this.api.get<Budget>(`${FinanceApi.BASE}/budget`, { year });
   }
 
-  /** Replaces the season's plan; 0 = nothing planned. */
-  saveBudget(season: number, items: { category: string; plannedCents: number }[]): Promise<Budget> {
-    return this.api.put<Budget>(`${FinanceApi.BASE}/budget?season=${season}`, { items });
+  /** Replaces the fiscal year's plan; 0 = nothing planned. */
+  saveBudget(year: number, items: { category: string; plannedCents: number }[]): Promise<Budget> {
+    return this.api.put<Budget>(`${FinanceApi.BASE}/budget?year=${year}`, { items });
   }
 
   /** Open ones first (soonest due), then paid ones. */

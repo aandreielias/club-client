@@ -106,7 +106,7 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   Vergleichen: { text: 'Die zwei gewählten Versionen in der geteilten Ansicht nebeneinander zeigen' },
   Tauschen: { text: 'Die beiden Seiten der geteilten Ansicht tauschen', command: 'split.swap' },
   'Neues Turnier': { text: 'Turnier planen: Datum, Gruppen und Punkte', command: 'page.new' },
-  'Neue Sitzung': { text: 'Mitgliederversammlung oder Vorstandssitzung planen', command: 'page.new' },
+  'Neue Sitzung': { text: 'Eine Sitzung einer Sitzungsart planen', command: 'page.new' },
   Einladen: { text: 'Einladung mit Tagesordnung per E-Mail und App verschicken; danach steht der Termin fest' },
   'Sitzung eröffnen': { text: 'Sitzung beginnen: Anwesenheit und Protokoll' },
   'Sitzung beenden': { text: 'Sitzung schließen; Protokoll und Anwesenheit bleiben dann so' },

@@ -13,7 +13,7 @@ import { tasks } from '../tasks/mock';
 import { meetings } from './mock';
 import { mockServer } from '../../lib/mock/MockServer';
 import { SEEDED_TYPES } from './mockSeeds';
-import { latestInvite, type MeetingType } from './model';
+import { latestInvite, quorum, quorumReached, type MajorityBase, type MeetingType } from './model';
 
 const type = (key: string): MeetingType => SEEDED_TYPES.find((t) => t.key === key)!;
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
@@ -176,6 +176,54 @@ describe('mock resolutions', () => {
     expect(meetings.approveProtocol(member('kassier'), mv.id).approvals[0]).toMatchObject({ memberId: 'kassier', office: 'CHAIR' });
   });
 
+  it('follow the type: approvers, protocol readers and drafts the board sees', () => {
+    const t = meetings.listTypes().items.find((x) => x.key === 'SIMPLE_BOARD')!;
+    expect(() =>
+      meetings.saveType(member('vorstand'), t.key, { ...t, protocol: { approvers: ['CHAIR'], approvalsNeeded: 2, readers: 'INVITED' } }),
+    ).toThrow(expect.objectContaining({ code: 'meeting-type.protocol-invalid' }));
+    meetings.saveType(member('vorstand'), t.key, {
+      ...t,
+      protocol: { approvers: ['CHAIR'], approvalsNeeded: 1, readers: 'ALL_MEMBERS' },
+      boardSeesDrafts: false,
+      conveners: ['CHAIR'],
+    });
+    const mv = meetings.create(member('vorstand'), { kind: 'SIMPLE_BOARD', title: 'VS offen', startsAt: inDays(16), endsAt: inDays(16.1) });
+    expect(() => meetings.get(member('beisitz'), mv.id)).toThrow(expect.objectContaining({ code: 'meeting.not-found' }));
+    meetings.invite(member('vorstand'), mv.id);
+    for (const id of ['vorstand', 'kassier', 'schrift']) meetings.setPresence(member('vorstand'), mv.id, id, true);
+    meetings.setRoles(member('vorstand'), mv.id, { chairId: 'kassier', secretaryId: 'schrift' });
+    meetings.open(member('vorstand'), mv.id);
+    meetings.close(member('vorstand'), mv.id, 'Offen für alle.');
+    expect(() => meetings.get(member('spielerin'), mv.id)).toThrow(expect.objectContaining({ code: 'meeting.not-found' }));
+    meetings.finalizeProtocol(member('vorstand'), mv.id);
+    expect(meetings.get(member('spielerin'), mv.id).protocol).toBe('Offen für alle.');
+    expect(() => meetings.approveProtocol(member('schrift'), mv.id)).toThrow(expect.objectContaining({ code: 'meeting.approve-not-allowed' }));
+    expect(meetings.approveProtocol(member('kassier'), mv.id).approvals).toHaveLength(1);
+    meetings.saveType(member('vorstand'), t.key, t);
+  });
+
+  it('follow the type: days a meeting lasts and its colour; a Beschluss without assignees may go to the chair', () => {
+    const t = meetings.listTypes().items.find((x) => x.key === 'SIMPLE_BOARD')!;
+    expect(t).toMatchObject({ maxDays: 1, hue: 'purple' });
+    expect(() => meetings.saveType(member('vorstand'), t.key, { ...t, maxDays: 31 })).toThrow(
+      expect.objectContaining({ code: 'meeting-type.max-days-invalid' }),
+    );
+    const weekend = { kind: 'SIMPLE_BOARD', title: 'Klausur', startsAt: inDays(16), endsAt: inDays(18) };
+    expect(() => meetings.create(member('vorstand'), weekend)).toThrow(expect.objectContaining({ code: 'meeting.too-long' }));
+    meetings.saveType(member('vorstand'), t.key, { ...t, maxDays: 2, hue: 'green' });
+    expect(meetings.create(member('vorstand'), weekend).kind).toBe('SIMPLE_BOARD');
+    meetings.saveType(member('vorstand'), t.key, t);
+
+    const { circular } = meetings.rules();
+    meetings.saveRules(member('vorstand'), { circular, taskFallback: 'CHAIR' });
+    const r = meetings.createResolution(member('vorstand'), null, { title: 'Neue Netze', deadline: inDays(4) });
+    meetings.openResolution(member('vorstand'), r.id);
+    for (const id of ['kassier', 'schrift', 'beisitz', 'beisitz2']) meetings.recordVote(member('vorstand'), r.id, id, 'YES');
+    const passed = meetings.vote(member('vorstand'), r.id, 'YES');
+    expect(tasks.get(member('vorstand'), passed.taskId!).assignees).toEqual(['vorstand']);
+    meetings.saveRules(member('vorstand'), { circular, taskFallback: 'BOARD' });
+  });
+
   it('let the picked Vorsitz run the meeting, also without a board office', () => {
     const mv = meetings.create(member('vorstand'), { kind: 'ASSEMBLY', title: 'MV', startsAt: inDays(20), endsAt: inDays(20.1) });
     meetings.invite(member('vorstand'), mv.id);
@@ -219,6 +267,30 @@ describe('mock resolutions', () => {
     for (const id of ['kassier', 'schrift', 'beisitz']) meetings.recordVote(member('vorstand'), r.id, id, 'NO');
     // the last board member's vote closes it: 2 yes, 3 no
     expect(meetings.recordVote(member('vorstand'), r.id, 'beisitz2', 'YES')).toMatchObject({ status: 'CLOSED', result: 'FAILED', yes: 2 });
+  });
+
+  it('count abstentions only under the CAST or PRESENT base, and need the quorum minimum', () => {
+    const before = structuredClone(meetings.circular.data);
+    const run = (majorityBase: MajorityBase) => {
+      meetings.saveRules(member('vorstand'), { circular: { ...before, majorityBase } });
+      const r = meetings.createResolution(member('vorstand'), null, { title: 'Netze', deadline: inDays(4) });
+      meetings.openResolution(member('vorstand'), r.id);
+      const votes: [string, 'YES' | 'NO' | 'ABSTAIN'][] = [
+        ['kassier', 'YES'],
+        ['schrift', 'YES'],
+        ['beisitz', 'NO'],
+        ['beisitz2', 'ABSTAIN'],
+      ];
+      for (const [id, choice] of votes) meetings.recordVote(member('vorstand'), r.id, id, choice);
+      return meetings.vote(member('vorstand'), r.id, 'ABSTAIN').result;
+    };
+    expect(run('VALID')).toBe('PASSED'); // 2 of 3
+    expect(run('CAST')).toBe('FAILED'); // 2 of 5
+    expect(run('PRESENT')).toBe('FAILED'); // 2 of the board's 5
+    meetings.saveRules(member('vorstand'), { circular: before });
+    expect(quorumReached(quorum(1, 2, true, 4), 3, 5)).toBe(false);
+    expect(quorumReached(quorum(1, 2, true, 3), 3, 5)).toBe(true);
+    expect(quorumReached(quorum(0, 1), 1, 5)).toBe(true);
   });
 });
 
@@ -528,7 +600,7 @@ describe('Schlichtungseinrichtung (chosen invitees)', () => {
 
   it('is an ordinary type whose steps follow each other; steps to an office need one the club has', () => {
     const t = meetings.listTypes().items.find((x) => x.key === 'SCHLICHTUNG')!;
-    expect([t.minInvitees, t.maxInvitees, t.quorum]).toEqual([3, 3, 'ALL']);
+    expect([t.minInvitees, t.maxInvitees, t.quorum]).toEqual([3, 3, quorum(1, 1)]);
     expect(meetings.saveType(member('vorstand'), t.key, { ...t, archived: true }).archived).toBe(true);
     meetings.saveType(member('vorstand'), t.key, { ...t, archived: false });
     const [request, check] = t.steps;

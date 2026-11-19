@@ -6,6 +6,8 @@
   import { autofocus } from '../../ui/autofocus';
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
+  import ColorSwatches from '../../ui/ColorSwatches.svelte';
+  import { HUES, HUE_LABELS } from '../calendar/model';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
   import OptionList from '../../ui/OptionList.svelte';
@@ -13,19 +15,23 @@
   import { tooltip } from '../../ui/tooltip';
   import { boardSettings } from '../members/services';
   import MeetingStepDialog from './MeetingStepDialog.svelte';
+  import QuorumField from './QuorumField.svelte';
   import type { MeetingTypeForm } from './MeetingTypeForm.svelte';
   import TimelineBar from './TimelineBar.svelte';
   import {
     ACTION_KIND_LABELS,
     AUDIENCE_LABELS,
+    MAJORITY_BASE_HINTS,
+    MAJORITY_BASE_LABELS,
+    PROTOCOL_READERS_LABELS,
     MAJORITY_LABELS,
     noticeText,
-    QUORUM_LABELS,
     stepAnchorText,
     stepName,
     type Majority,
+    type MajorityBase,
+    type ProtocolReaders,
     type MeetingStep,
-    type Quorum,
     type Invitees,
     type Voting,
     INVITEES_LABELS,
@@ -55,18 +61,24 @@
   let open = $state<{ index: number | null; step: MeetingStep } | null>(null);
 
   const INVITEES = (Object.keys(INVITEES_LABELS) as Invitees[]).map((v) => ({ value: v, label: INVITEES_LABELS[v] }));
+  const HUE_OPTIONS = HUES.map((h) => ({ value: h, label: HUE_LABELS[h], hue: h }));
   const VOTINGS = (Object.keys(VOTING_LABELS) as Voting[]).map((v) => ({ value: v, label: VOTING_LABELS[v] }));
   const UNITS = [
     { value: 'days', label: 'Tage' },
     { value: 'hours', label: 'Stunden' },
   ] as const;
-  const QUORUMS = (Object.keys(QUORUM_LABELS) as Quorum[]).map((q) => ({ value: q, label: QUORUM_LABELS[q] }));
   const MONTHS = session.format.monthNames().map((label, i) => ({ value: String(i + 1), label }));
   const MAJORITY_HINTS: Readonly<Record<Majority, string>> = {
-    SIMPLE: 'Mehr Ja als Nein; Enthaltungen zählen nicht.',
-    TWO_THIRDS: 'Mindestens doppelt so viele Ja wie Nein.',
-    THREE_QUARTERS: 'Mindestens dreimal so viele Ja wie Nein.',
+    SIMPLE: 'Mehr als die Hälfte der gezählten Stimmen sagt Ja.',
+    TWO_THIRDS: 'Mindestens zwei Drittel der gezählten Stimmen sagen Ja.',
+    THREE_QUARTERS: 'Mindestens drei Viertel der gezählten Stimmen sagen Ja.',
   };
+  const APPROVERS = [
+    { value: 'CHAIR' as const, label: 'Vorsitz' },
+    { value: 'SECRETARY' as const, label: 'Schriftführung' },
+  ];
+  const READERS = (Object.keys(PROTOCOL_READERS_LABELS) as ProtocolReaders[]).map((r) => ({ value: r, label: PROTOCOL_READERS_LABELS[r] }));
+  const BASES = (Object.keys(MAJORITY_BASE_LABELS) as MajorityBase[]).map((b) => ({ value: b, label: MAJORITY_BASE_LABELS[b] }));
   // Functions the club uses (Einstellungen › Funktionen); one already chosen stays visible so it can be removed.
   const OFFICES = $derived(
     boardSettings.all
@@ -126,6 +138,13 @@
       <Field label="In der Einladung" hint="„Einladung zur …“, z. B. ordentlichen Mitgliederversammlung" error={form.error('invitationLabel')}>
         <input bind:value={form.invitationLabel} maxlength={settings.meetings.type.invitationLabelMaxLength} required />
       </Field>
+      <Field label="Dauert höchstens" hint="Tage, z. B. 2 für eine Klausur übers Wochenende (1 bis 30)" error={form.error('maxDays')}>
+        <div class="row">
+          <input type="number" min="1" max={settings.calendar.maxDurationDays} class="short" bind:value={form.maxDays} required />
+          <span>{form.maxDays === 1 ? 'Tag' : 'Tage'}</span>
+        </div>
+      </Field>
+      <ColorSwatches label="Farbe im Kalender" options={HUE_OPTIONS} bind:value={form.hue} />
     </div>
     <Field label="Eingeladen" group>
       <ChoiceGroup name="type-invitees" label="Eingeladen" options={INVITEES} bind:value={() => form.invitees, (v) => v && (form.invitees = v)} />
@@ -183,6 +202,9 @@
     >
       <OptionList label="Einberufen von" options={OFFICES} bind:value={form.conveners} />
     </Field>
+    <label class="check"
+      ><input type="checkbox" bind:checked={form.boardSeesDrafts} /> Der ganze Vorstand sieht Entwürfe (sonst nur, wer einberuft, und Admins)</label
+    >
     <label class="check"><input type="checkbox" bind:checked={form.needsReason} /> Die Einladung nennt den Grund der Dringlichkeit</label>
     <label class="check"><input type="checkbox" bind:checked={form.yearly} /> Findet jährlich statt (Erinnerung und Aufgabe für den Vorstand)</label>
     {#if form.yearly}
@@ -199,10 +221,8 @@
 
   <fieldset>
     <legend>Beschlussfähigkeit</legend>
+    <QuorumField bind:value={form.quorum} of="der Stimmberechtigten anwesend" submitted={!!form.error('quorum')} />
     <div class="grid-2">
-      <Field label="Beschlussfähig mit">
-        <Select bind:value={form.quorum} options={QUORUMS} aria-label="Beschlussfähig mit" />
-      </Field>
       <Field label="Danach ohne Mindestzahl (optional)" hint="Minuten nach Beginn, wenn zu wenige da sind" error={form.error('grace')}>
         <input
           type="number"
@@ -225,6 +245,28 @@
     >
       <OptionList label="Mögliche Mehrheiten" options={MAJORITIES} bind:value={form.majorities} />
     </Field>
+    <Field label="Gezählt werden" hint={MAJORITY_BASE_HINTS[form.majorityBase]}>
+      <Select bind:value={form.majorityBase} options={BASES} aria-label="Gezählt werden" />
+    </Field>
+  </fieldset>
+
+  <fieldset>
+    <legend>Protokoll</legend>
+    <Field
+      label="Genehmigt von"
+      hint="Vorsitz und Schriftführung der Sitzung, ohne Wahl die Inhaber dieser Funktionen."
+      error={form.error('protocol')}
+    >
+      <OptionList label="Genehmigt von" options={APPROVERS} bind:value={form.protocol.approvers} />
+    </Field>
+    <div class="grid-2">
+      <Field label="Nötige Genehmigungen" hint="0 nur ohne Genehmigende">
+        <input type="number" min="0" max="2" class="short" bind:value={form.protocol.approvalsNeeded} />
+      </Field>
+      <Field label="Fertiges Protokoll lesen">
+        <Select bind:value={form.protocol.readers} options={READERS} aria-label="Fertiges Protokoll lesen" />
+      </Field>
+    </div>
   </fieldset>
 
   <fieldset>

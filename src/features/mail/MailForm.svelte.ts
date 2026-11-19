@@ -141,7 +141,6 @@ export class MailForm extends FormState<Partial<Record<MailField, string>>> {
     else if (!this.to.every(MailForm.valid)) errors.to = invalid;
     if (!this.cc.every(MailForm.valid)) errors.cc = invalid;
     if (!this.bcc.every(MailForm.valid)) errors.bcc = invalid;
-    if (this.to.length + this.cc.length + this.bcc.length > limits.maxRecipients) errors.to = `Höchstens ${limits.maxRecipients} Empfänger.`;
     const subject = this.subject.trim();
     if (!subject || subject.length > limits.subjectMaxLength) errors.subject = `Betreff mit 1 bis ${limits.subjectMaxLength} Zeichen.`;
     if (this.html.length > limits.bodyMaxLength) errors.body = 'Der Text ist zu lang.';

@@ -2,7 +2,6 @@ import { meetingActions, meetingTypeActions, resolutionActions } from './actions
 import { session } from '../../lib/container';
 import { ADMIN_BOARD } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
-import { invitesVoters } from './model';
 import { meetingTypes, resolutionRules } from './services';
 import MeetingCreateView from './MeetingCreateView.svelte';
 import MeetingsPage from './MeetingsPage.svelte';
@@ -42,8 +41,7 @@ export const meetingsFeature: Feature = {
     MEETING: (item) => {
       const type = meetingTypes.get(item.detail ?? '');
       if (!type) return {}; // types not loaded yet: the category's own label, never a wrong one
-      const assembly = invitesVoters(type);
-      return { hue: assembly ? 'blue' : 'purple', label: assembly ? 'Mitgliederversammlung' : 'Vorstandssitzung' };
+      return { hue: type.hue, label: type.label };
     },
   },
   start: (guest) => {

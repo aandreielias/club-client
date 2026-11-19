@@ -1,16 +1,17 @@
 <script lang="ts">
   import InfoTip from '../../ui/InfoTip.svelte';
   import { settings } from '../../settings';
-  import { bus } from '../../lib/container';
   import { removeRecord } from '../../lib/detail/removeRecord';
   import { Action } from '../../lib/state/Action.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
-  import { ROLE_LABELS } from '../../lib/types';
+  import { bus, directory } from '../../lib/container';
+  import { boardSettings } from '../members/services';
+  import { ownersText } from './ownersText';
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
   import SettingsForm from '../../ui/SettingsForm.svelte';
   import SettingsList from '../../ui/SettingsList.svelte';
-  import type { MailSettings } from './model';
+  import { ADDRESS_PATTERNS, type MailSettings } from './model';
   import { mailApi, mailboxes, mailCenter } from './services';
 
   /**
@@ -20,8 +21,17 @@
   const load = new Action();
   const reload = () => void load.run(() => mailboxes.load());
   reload();
+  void boardSettings.load();
+  void directory.loadTeams();
 
-  const draft = new SettingsDraft<MailSettings>({ domain: null, dailyLimit: 200, keepsMail: true, personalFor: 'ALL' });
+  const draft = new SettingsDraft<MailSettings>({
+    domain: null,
+    dailyLimit: 200,
+    keepsMail: true,
+    personalFor: 'ALL',
+    addressPattern: 'FIRSTLAST',
+    maxRecipients: 50,
+  });
   const PERSONAL_FOR = [
     { value: 'ALL', label: 'Alle mit eigenem Login' },
     { value: 'CLUB_MEMBERS', label: 'Nur Vereinsmitglieder (mit Mitgliedsart)' },
@@ -34,7 +44,7 @@
     mailboxes.items.map((m) => ({
       key: m.id,
       label: m.address,
-      detail: [...new Set([m.name, m.memberId ? (m.memberName ?? 'Mitglied') : `alle mit Rolle ${ROLE_LABELS[m.role!]}`])].join(' · '),
+      detail: [...new Set([m.name, m.memberId ? (m.memberName ?? 'Mitglied') : ownersText(m.owners)])].join(' · '),
       tags: m.memberId ? [] : ['geteilt'],
       archived: false,
       inUse: false,
@@ -56,7 +66,7 @@
 <div class="stack">
   <SettingsForm
     title="E-Mail des Vereins"
-    intro="Alle Postfach-Adressen enden auf die Mail-Domain; neue Mitglieder bekommen vornamenachname@… von selbst."
+    intro="Alle Postfach-Adressen enden auf die Mail-Domain; neue Mitglieder bekommen eine persönliche Adresse nach dem gewählten Muster."
     {draft}
     onsave={(value) =>
       mailApi.saveSettings({ ...value, domain: value.domain?.trim() || null }).then(async (saved) => {
@@ -75,11 +85,20 @@
             autocomplete="off"
           />
         </Field>
-        <Field label="Persönliches Postfach für" hint="Wer beim Einladen automatisch vornamenachname@… bekommt. Einzelne vergibst du unten selbst.">
+        <Field
+          label="Persönliches Postfach für"
+          hint="Wer beim Einladen automatisch eine persönliche Adresse bekommt. Einzelne vergibst du unten selbst."
+        >
           <Select bind:value={draft.value.personalFor} options={PERSONAL_FOR} />
         </Field>
         <Field label="Empfänger pro Tag" hint="So viele Empfänger darf ein Mitglied an einem Tag anschreiben (Schutz vor Spam).">
           <input type="number" min="1" max={settings.mail.maxDailyLimit} bind:value={draft.value.dailyLimit} class="short" />
+        </Field>
+        <Field label="Muster der Adresse" hint="Wie persönliche Adressen gebildet werden; bestehende bleiben.">
+          <Select bind:value={draft.value.addressPattern} options={ADDRESS_PATTERNS} />
+        </Field>
+        <Field label="Empfänger pro Mail" hint="Höchstens so viele Empfänger in einer Mail, nicht mehr als pro Tag.">
+          <input type="number" min="1" max={draft.value.dailyLimit} bind:value={draft.value.maxRecipients} class="short" />
         </Field>
       </div>
     {/if}
@@ -94,7 +113,7 @@
   <section class="stack">
     <h2>
       Postfächer&nbsp;<InfoTip
-        text="Persönliche Postfächer gehören einem Mitglied, geteilte (etwa vorstand@) allen mit einer Rolle. Die E-Mails selbst bleiben beim Mail-Anbieter."
+        text="Persönliche Postfächer gehören einem Mitglied, geteilte (etwa vorstand@) allen mit einer der Rollen, einem der Ämter, den Trainer:innen einer Mannschaft und den gewählten Mitgliedern. Die E-Mails selbst bleiben beim Mail-Anbieter."
       />
     </h2>
     <SettingsList

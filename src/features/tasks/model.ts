@@ -33,8 +33,10 @@ export interface Task {
   comments: TaskComment[];
   createdAt: string;
   completedAt: string | null;
-  /** Repeats every n weeks: finishing it creates the next one. null = once. */
+  /** Repeats every n weeks or n months (by date or nth weekday): finishing it creates the next one. Both null = once. */
   repeatWeeks: number | null;
+  repeatMonths: number | null;
+  repeatByWeekday: boolean;
   /** The record a system-created task is about, e.g. a member's change request. Only GET /tasks/{id} fills it. */
   source: TaskSource | null;
 }
@@ -60,6 +62,8 @@ export interface NewTask {
   assignees: string[];
   checklist: string[];
   repeatWeeks: number | null;
+  repeatMonths: number | null;
+  repeatByWeekday: boolean;
 }
 
 /** Omitted fields stay unchanged; a given checklist replaces the old one (and resets its ticks). */
@@ -67,6 +71,8 @@ export interface NewTask {
 export type TaskPatch = Partial<Pick<NewTask, 'title' | 'description' | 'dueAt' | 'assignees' | 'checklist'>> & {
   clearDue?: boolean;
   repeatWeeks?: number;
+  repeatMonths?: number;
+  repeatByWeekday?: boolean;
   clearRepeat?: boolean;
 };
 
@@ -77,9 +83,31 @@ export const REPEAT_OPTIONS: readonly { value: string; label: string }[] = [
   { value: '2', label: 'Alle 2 Wochen' },
   { value: '3', label: 'Alle 3 Wochen' },
   { value: '4', label: 'Alle 4 Wochen' },
+  { value: 'm1', label: 'Jeden Monat am selben Tag' },
+  { value: 'm1w', label: 'Jeden Monat am selben Wochentag (z. B. 2. Dienstag)' },
+  { value: 'm3', label: 'Alle 3 Monate' },
+  { value: 'm6', label: 'Alle 6 Monate' },
+  { value: 'm12', label: 'Jedes Jahr' },
 ];
 
-export const repeatLabel = (weeks: number | null): string | null => (weeks === null ? null : weeks === 1 ? 'Jede Woche' : `Alle ${weeks} Wochen`);
+export type TaskRhythm = Pick<NewTask, 'repeatWeeks' | 'repeatMonths' | 'repeatByWeekday'>;
+
+/** The select value of a rhythm: weeks as 'n', months as 'mn', by weekday 'mnw'; '' = once. */
+export const rhythmCode = (r: TaskRhythm): string =>
+  r.repeatWeeks ? String(r.repeatWeeks) : r.repeatMonths ? `m${r.repeatMonths}${r.repeatByWeekday ? 'w' : ''}` : '';
+
+export const rhythmOf = (code: string): TaskRhythm =>
+  code.startsWith('m')
+    ? { repeatWeeks: null, repeatMonths: parseInt(code.slice(1)), repeatByWeekday: code.endsWith('w') }
+    : { repeatWeeks: code ? Number(code) : null, repeatMonths: null, repeatByWeekday: false };
+
+export const repeatLabel = (r: TaskRhythm): string | null => {
+  const code = rhythmCode(r);
+  if (!code) return null;
+  const known = REPEAT_OPTIONS.find((o) => o.value === code);
+  if (known) return known.label;
+  return r.repeatWeeks ? `Alle ${r.repeatWeeks} Wochen` : `Alle ${r.repeatMonths} Monate${r.repeatByWeekday ? ' am selben Wochentag' : ''}`;
+};
 
 export interface TaskQuery {
   /** Only tasks assigned to the member or their minors. */
@@ -112,7 +140,13 @@ export const statusHue = (status: TaskStatus): Hue => STATUS_HUES[status];
 /** Sort order of statuses (open first). */
 export const statusRank = (status: TaskStatus): number => TASK_STATUSES.findIndex((s) => s.value === status);
 
-/** server: TasksApi.TaskSettings — hours before the due time when assignees get the reminder. */
+/**
+ * server: TasksApi.TaskSettings — hours before the due time when assignees get the reminder; an overdue task is announced
+ * again every `overdueRepeatDays` (0 = once) and escalated after `escalateAfterDays` (0 = never) to its creator, or the board
+ * for tasks the app created.
+ */
 export interface TaskSettings {
   remindHours: number;
+  overdueRepeatDays: number;
+  escalateAfterDays: number;
 }

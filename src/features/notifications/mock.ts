@@ -4,7 +4,8 @@ import { personalData, directory, MockDirectory } from '../../lib/mock/core';
 import type { MockEvent } from '../../lib/mock/MockEventBus';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
-import { isImportant, type Notification, type NotificationKind, type Preference } from './model';
+import type { Notification, NotificationKind, NotificationSettings, Preference } from './model';
+import { ADMIN_BOARD, type Member } from '../../lib/types';
 import { CHANGE_FIELD_LABELS, type ChangeField } from '../members/MembersApi';
 
 const fail = MockServer.fail;
@@ -30,6 +31,14 @@ export class MockNotifications {
   readonly inbox: MockTable<Record<string, Notification[]>>;
   /** memberId → stored preferences (missing kinds = all channels on) */
   readonly preferences = new MockTable<Record<string, Preference[]>>('notification-preferences', () => ({}));
+
+  /** server: notifications_setting (V142) */
+  readonly settings = new MockTable<NotificationSettings>('notification-settings', () => ({
+    importantKinds: ['MEETING'],
+    defaults: KINDS.map((kind) => ({ kind, push: true, email: kind !== 'MAIL' })),
+    inboxRetentionDays: 90,
+    activityRetentionDays: 730,
+  }));
 
   readonly #dateTime: Intl.DateTimeFormat;
 
@@ -60,13 +69,42 @@ export class MockNotifications {
     this.inbox.save();
   }
 
-  /** server: NotificationHandlers.effective — meeting notices always on, e-mails about new mail off by default */
+  /** server: NotificationHandlers.effective — the member's choice, else the club's default; important kinds always on */
   effective(memberId: string): Preference[] {
     const stored = this.preferences.data[memberId] ?? [];
+    const { importantKinds, defaults } = this.settings.data;
     return KINDS.map((kind) => {
-      const pref = stored.find((p) => p.kind === kind);
-      return { kind, push: isImportant(kind) || (pref?.push ?? true), email: isImportant(kind) || (pref?.email ?? kind !== 'MAIL') };
+      const pref = stored.find((p) => p.kind === kind) ?? defaults.find((p) => p.kind === kind) ?? { kind, push: true, email: true };
+      const important = importantKinds.includes(kind);
+      return { kind, push: important || pref.push, email: important || pref.email };
     });
+  }
+
+  /** server: NotificationHandlers.saveSettings; kinds missing from the defaults count as on (like the server's off lists) */
+  saveSettings(actor: Member, body: Partial<NotificationSettings> | undefined): NotificationSettings {
+    this.people.requirePrivileged(actor, ADMIN_BOARD);
+    const inRange = (v: unknown, min: number, max: number) => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
+    if (
+      !Array.isArray(body?.importantKinds) ||
+      !Array.isArray(body?.defaults) ||
+      body.importantKinds.some((k) => !KINDS.includes(k)) ||
+      body.defaults.some((d) => !KINDS.includes(d?.kind)) ||
+      !inRange(body.inboxRetentionDays, 30, 365) ||
+      !inRange(body.activityRetentionDays, 90, 3650)
+    )
+      fail(400, 'notification-settings.invalid');
+    const given = body!.defaults!;
+    Object.assign(this.settings.data, {
+      importantKinds: KINDS.filter((k) => body!.importantKinds!.includes(k)),
+      defaults: KINDS.map((kind) => {
+        const d = given.find((p) => p.kind === kind);
+        return { kind, push: d ? !!d.push : true, email: d ? !!d.email : true };
+      }),
+      inboxRetentionDays: body!.inboxRetentionDays!,
+      activityRetentionDays: body!.activityRetentionDays!,
+    });
+    this.settings.save();
+    return this.settings.data;
   }
 
   setPreferences(memberId: string, items: unknown): Preference[] {
@@ -316,5 +354,7 @@ mockServer
     if (req.body?.read !== true) MockServer.fail(400, 'request.invalid'); // server: ReadBody, only true
     return notifications.markRead(me(req), req.params.id);
   })
+  .on('GET', '/api/v1/notifications/settings', () => notifications.settings.data)
+  .on('PUT', '/api/v1/notifications/settings', (req) => notifications.saveSettings(directory.actor(req), req.body))
   .on('GET', '/api/v1/me/notification-preferences', (req) => ({ items: notifications.effective(me(req)) }))
   .on('PUT', '/api/v1/me/notification-preferences', (req) => ({ items: notifications.setPreferences(me(req), req.body?.items) }));

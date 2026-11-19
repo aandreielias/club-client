@@ -18,6 +18,7 @@ const folder = (id: string, parentId: string | null, name = id): Folder => ({
   name,
   kind: 'DOCUMENTS',
   scope: 'CLUB',
+  office: null,
   teamIds: [],
   membersCanUpload: true,
   color: null,

@@ -3,6 +3,7 @@ import { board } from './mock';
 import { directory } from '../../lib/mock/core';
 import type { Member } from '../../lib/types';
 import { meetings } from '../meetings/mock';
+import { SEEDED_CIRCULAR } from '../meetings/model';
 import { boardWarning } from './messages';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
@@ -46,9 +47,13 @@ describe('club rules for offices and circular votes', () => {
   });
 
   it('keep the circular vote rules within bounds', () => {
-    expect(() => meetings.saveRules(member('vorstand'), { circular: { minHours: 0, quorum: 'MORE_THAN_HALF' } })).toThrow();
-    expect(meetings.saveRules(member('vorstand'), { circular: { minHours: 48, quorum: 'MORE_THAN_HALF' } }).circular.minHours).toBe(48);
-    meetings.saveRules(member('vorstand'), { circular: { minHours: 72, quorum: 'MORE_THAN_HALF' } });
+    expect(() => meetings.saveRules(member('vorstand'), { circular: { ...SEEDED_CIRCULAR, minHours: 0 } })).toThrow();
+    expect(() => meetings.saveRules(member('vorstand'), { circular: { ...SEEDED_CIRCULAR, majorities: [] } })).toThrow();
+    expect(() =>
+      meetings.saveRules(member('vorstand'), { circular: { ...SEEDED_CIRCULAR, quorum: { ...SEEDED_CIRCULAR.quorum, denominator: 0 } } }),
+    ).toThrow();
+    expect(meetings.saveRules(member('vorstand'), { circular: { ...SEEDED_CIRCULAR, minHours: 48 } }).circular.minHours).toBe(48);
+    meetings.saveRules(member('vorstand'), { circular: SEEDED_CIRCULAR });
   });
 
   it('let the club define membership kinds and office pairs, and keep office holders eligible', () => {

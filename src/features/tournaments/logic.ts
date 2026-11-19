@@ -1,3 +1,4 @@
+import { settings } from '../../settings';
 // Tournament rules, the same as the server's (tournaments.domain: RoundRobin, Standings, Bracket).
 import type { StandingRow, TournamentFormat } from './model';
 
@@ -215,9 +216,9 @@ export function groupPhase(teams: number, groups: number, fields: number): { mat
 
 /** server: TournamentHandlers.draw. Group counts the teams allow: at least 2 per group and enough to advance; 2 to 32 in the knockout. */
 export function groupChoices(teams: number, advancePerGroup: number): number[] {
-  return Array.from({ length: 8 }, (_, i) => i + 1).filter((g) => {
+  return Array.from({ length: settings.tournaments.maxGroups }, (_, i) => i + 1).filter((g) => {
     const qualifiers = g * advancePerGroup;
-    return qualifiers >= 2 && qualifiers <= 32 && (teams === 0 || teams >= Math.max(2 * g, qualifiers));
+    return qualifiers >= 2 && qualifiers <= settings.tournaments.maxQualifiers && (teams === 0 || teams >= Math.max(2 * g, qualifiers));
   });
 }
 

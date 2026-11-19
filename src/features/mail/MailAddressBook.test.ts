@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { MailAddressBook } from './MailAddressBook.svelte';
+import { NO_OWNERS } from './model';
 
 const book = () =>
   new MailAddressBook({
     entries: async () => [
-      { address: 'anna.admin@club.at', name: 'Anna Admin', memberId: 'anna', role: null },
-      { address: 'david.spieler@club.at', name: 'David Spieler', memberId: 'david', role: null },
-      { address: 'vorstand@club.at', name: 'Vorstand', memberId: null, role: 'BOARD' },
+      { address: 'anna.admin@club.at', name: 'Anna Admin', memberId: 'anna', owners: NO_OWNERS },
+      { address: 'david.spieler@club.at', name: 'David Spieler', memberId: 'david', owners: NO_OWNERS },
+      { address: 'vorstand@club.at', name: 'Vorstand', memberId: null, owners: { ...NO_OWNERS, roles: ['BOARD'] } },
     ],
     teams: async () => [{ id: 't1', name: 'Damen 1' }],
     members: async () => ['david', 'nobody'],

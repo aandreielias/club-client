@@ -44,7 +44,15 @@
     {#if parent}
       <p class="small empty">Sichtbarkeit und Team übernimmt der Unterordner vom übergeordneten Ordner.</p>
     {:else}
-      <FolderVisibility bind:scope={form.scope} bind:teamIds={form.teamIds} {scopes} {teamList} error={form.error('team')} />
+      <FolderVisibility
+        bind:scope={form.scope}
+        bind:teamIds={form.teamIds}
+        bind:office={form.office}
+        {scopes}
+        {teamList}
+        error={form.error('team')}
+        officeError={form.error('office')}
+      />
     {/if}
     <label class="check">
       <input type="checkbox" bind:checked={form.membersCanUpload} />

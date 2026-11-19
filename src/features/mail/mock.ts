@@ -9,11 +9,13 @@ import { ADMIN_BOARD, type Member, type Role } from '../../lib/types';
 import { settings } from '../../settings';
 import { meetings } from '../meetings/mock';
 import {
+  NO_OWNERS,
   personalLocal,
   type AddressEntry,
   type Mail,
   type Mailbox,
   type MailboxAdmin,
+  type MailboxOwners,
   type MailFolder,
   type MailPage,
   type MailRef,
@@ -38,7 +40,7 @@ interface StoredMailbox {
   address: string;
   name: string;
   memberId: string | null;
-  role: Role | null;
+  owners: MailboxOwners;
   signature?: string | null;
 }
 
@@ -85,10 +87,13 @@ export class MockMail {
   /** member → send times and recipient counts of the last two days (server: mail_sent) */
   readonly sent = new MockTable<Record<string, { at: number; recipients: number }[]>>('mail-sent', () => ({}));
   /** server: mail_setting */
-  readonly settings = new MockTable<Omit<MailSettings, 'keepsMail' | 'personalFor'> & { personalFor?: MailSettings['personalFor'] }>(
-    'mail-settings',
-    () => ({ domain: DOMAIN, dailyLimit: limits.dailyLimit }),
-  );
+  readonly settings = new MockTable<Omit<MailSettings, 'keepsMail'>>('mail-settings', () => ({
+    domain: DOMAIN,
+    dailyLimit: limits.dailyLimit,
+    personalFor: 'ALL',
+    addressPattern: 'FIRSTLAST',
+    maxRecipients: 50,
+  }));
 
   constructor(private readonly people: MockDirectory) {
     this.mailboxes = new MockTable('mailboxes', () => this.seedMailboxes());
@@ -98,13 +103,9 @@ export class MockMail {
       const memberId = (event.data as { memberId?: string }).memberId!;
       // server: MailboxHandlers - a mailbox when invited or back, none while deactivated
       if (event.type === 'members.member-invited' || event.type === 'members.member-reactivated') return this.giveMailbox(memberId);
-      if (event.type === 'members.member-deactivated') {
-        this.mailboxes.data.splice(0, this.mailboxes.data.length, ...this.mailboxes.data.filter((b) => b.memberId !== memberId));
-        return this.mailboxes.save();
-      }
+      if (event.type === 'members.member-deactivated') return this.dropOwner(memberId);
       if (event.type !== 'members.member-erased') return;
-      this.mailboxes.data.splice(0, this.mailboxes.data.length, ...this.mailboxes.data.filter((b) => b.memberId !== memberId));
-      this.mailboxes.save();
+      this.dropOwner(memberId);
       for (const [code, ref] of Object.entries(this.refCodes.data)) if (ref.kind === 'MEMBER' && ref.id === memberId) delete this.refCodes.data[code];
       this.refCodes.save();
     });
@@ -136,9 +137,23 @@ export class MockMail {
     return this.list(member).find((b) => b.id === box.id)!;
   }
 
+  /** server: MailboxRepository.deleteOwnedBy - the personal mailbox goes, and shared ones only this member read; others drop the name */
+  private dropOwner(memberId: string): void {
+    const onlyReader = (b: StoredMailbox) =>
+      b.owners.memberIds.length === 1 &&
+      b.owners.memberIds[0] === memberId &&
+      !b.owners.roles.length &&
+      !b.owners.offices.length &&
+      !b.owners.teamIds.length;
+    const kept = this.mailboxes.data.filter((b) => b.memberId !== memberId && !onlyReader(b));
+    for (const b of kept) b.owners = { ...b.owners, memberIds: b.owners.memberIds.filter((m) => m !== memberId) };
+    this.mailboxes.data.splice(0, this.mailboxes.data.length, ...kept);
+    this.mailboxes.save();
+  }
+
   /** server: MailApi.ADDRESS_BOOK */
   addressBook(): AddressEntry[] {
-    return this.mailboxes.data.map(({ address, name, memberId, role }) => ({ address, name, memberId, role }));
+    return this.mailboxes.data.map(({ address, name, memberId, owners }) => ({ address, name, memberId, owners }));
   }
 
   /** server: MailHandlers.saveDraft - kept as typed */
@@ -147,7 +162,7 @@ export class MockMail {
     const current = draftId ? this.find(box, draftId) : null;
     if (current && current.folder !== 'DRAFTS') fail(404, 'mail.not-found');
     const [to, cc, bcc] = [addressList(body.to), addressList(body.cc), addressList(body.bcc)];
-    if (to.length + cc.length + bcc.length > limits.maxRecipients) fail(400, 'mail.too-many-recipients');
+    if (to.length + cc.length + bcc.length > this.settings.data.maxRecipients) fail(400, 'mail.too-many-recipients');
     const raw = typeof body.html === 'string' ? body.html : '';
     if (raw.length > limits.bodyMaxLength) fail(400, 'mail.body-too-long');
     // server: drafts carry linked records as codes too
@@ -234,10 +249,8 @@ export class MockMail {
   /** server: MailGateway.keepsMail — the mock keeps its mail in the browser, but like the dev server's memory gateway nothing is delivered. */
   private settingsDto(): MailSettings {
     return {
-      domain: this.settings.data.domain,
-      dailyLimit: this.settings.data.dailyLimit,
+      ...this.settings.data,
       keepsMail: false,
-      personalFor: this.settings.data.personalFor ?? 'ALL',
     };
   }
 
@@ -248,8 +261,11 @@ export class MockMail {
     const dailyLimit = Number(body.dailyLimit);
     if (!Number.isInteger(dailyLimit) || dailyLimit < 1 || dailyLimit > 10_000) fail(400, 'mail.daily-limit-invalid');
     const personalFor = ['ALL', 'CLUB_MEMBERS', 'NONE'].includes(body.personalFor) ? body.personalFor : 'ALL';
-    const changed = domain !== this.settings.data.domain || personalFor !== (this.settings.data.personalFor ?? 'ALL');
-    Object.assign(this.settings.data, { domain, dailyLimit, personalFor });
+    const addressPattern = ['FIRSTLAST', 'FIRST_DOT_LAST', 'INITIAL_DOT_LAST'].includes(body.addressPattern) ? body.addressPattern : 'FIRSTLAST';
+    const maxRecipients = Number(body.maxRecipients);
+    if (!Number.isInteger(maxRecipients) || maxRecipients < 1 || maxRecipients > dailyLimit) fail(400, 'mail.max-recipients-invalid');
+    const changed = domain !== this.settings.data.domain || personalFor !== this.settings.data.personalFor;
+    Object.assign(this.settings.data, { domain, dailyLimit, personalFor, addressPattern, maxRecipients });
     this.settings.save();
     // server: MailboxHandlers.saveSettings — a new domain gives every audience member without one a personal mailbox
     if (changed && domain) for (const m of this.people.members.data.filter((m) => m.active)) this.giveMailbox(m.id);
@@ -285,12 +301,12 @@ export class MockMail {
     const member = this.people.members.data.find((m) => m.id === memberId);
     if (!domain || !member || this.mailboxes.data.some((b) => b.memberId === memberId)) return;
     // server: MailSettings.personalFor and members without a login
-    const personalFor = this.settings.data.personalFor ?? 'ALL';
+    const personalFor = this.settings.data.personalFor;
     if (member.login === false || personalFor === 'NONE' || (personalFor === 'CLUB_MEMBERS' && !member.membershipTypes.length)) return;
-    const local = personalLocal(member.firstName, member.lastName);
+    const local = personalLocal(member.firstName, member.lastName, this.settings.data.addressPattern);
     let address = `${local}@${domain}`;
     for (let n = 2; this.mailboxes.data.some((b) => b.address === address); n++) address = `${local}${n}@${domain}`;
-    this.mailboxes.data.push({ id: crypto.randomUUID(), address, name: `${member.firstName} ${member.lastName}`, memberId, role: null });
+    this.mailboxes.data.push({ id: crypto.randomUUID(), address, name: `${member.firstName} ${member.lastName}`, memberId, owners: NO_OWNERS });
     this.mailboxes.save();
   }
 
@@ -301,7 +317,7 @@ export class MockMail {
     const bcc = addressList(body.bcc).filter((a) => !to.includes(a) && !cc.includes(a));
     if ([...to, ...cc, ...bcc].some((a) => a.length > 254 || !ADDRESS.test(a))) fail(400, 'mail.address-invalid');
     if (!to.length) fail(400, 'mail.recipient-missing');
-    if (to.length + cc.length + bcc.length > limits.maxRecipients) fail(400, 'mail.too-many-recipients');
+    if (to.length + cc.length + bcc.length > this.settings.data.maxRecipients) fail(400, 'mail.too-many-recipients');
     const subject = typeof body.subject === 'string' ? body.subject.trim() : '';
     if (!subject || subject.length > limits.subjectMaxLength || /[\r\n]/.test(subject)) fail(400, 'mail.subject-invalid');
     const raw = typeof body.html === 'string' ? body.html : '';
@@ -352,7 +368,7 @@ export class MockMail {
       mockServer.events.publish({
         type: 'mail.mail-received',
         data: { mailboxId: receiver.id, mailId: delivered.get(receiver.address), fromName: box.name, subject },
-        audience: receiver.memberId ? { members: [receiver.memberId] } : { roles: [receiver.role!] },
+        audience: receiver.memberId ? { members: [receiver.memberId] } : { members: this.holders(receiver.owners), roles: receiver.owners.roles },
       });
     }
     return { ...sent };
@@ -450,13 +466,12 @@ export class MockMail {
     const name = typeof body.name === 'string' ? body.name.trim() : '';
     if (!name || name.length > 100) fail(400, 'mail.mailbox-name-invalid');
     const memberId: string | null = body.memberId || null;
-    const role: Role | null = body.role || null;
-    if ((memberId === null) === (role === null) || role === 'GUEST') fail(400, 'mail.mailbox-owner-invalid');
+    const owners = memberId ? NO_OWNERS : this.owners(body.owners);
     const current = id ? (this.mailboxes.data.find((b) => b.id === id) ?? fail(404, 'mail.mailbox-not-found')) : null;
     if (memberId && !this.people.activeIds().includes(memberId)) fail(400, 'mail.member-unknown');
     if (this.mailboxes.data.some((b) => b !== current && b.address === address)) fail(409, 'mail.address-taken');
     if (memberId && this.mailboxes.data.some((b) => b !== current && b.memberId === memberId)) fail(409, 'mail.member-has-mailbox');
-    const saved: StoredMailbox = { id: current?.id ?? crypto.randomUUID(), address, name, memberId, role };
+    const saved: StoredMailbox = { id: current?.id ?? crypto.randomUUID(), address, name, memberId, owners };
     if (current) Object.assign(current, saved);
     else this.mailboxes.data.push(saved);
     this.mailboxes.save();
@@ -475,8 +490,41 @@ export class MockMail {
     return { ...b, memberName: b.memberId ? this.people.displayName(b.memberId) : null };
   }
 
+  /** server: Mailbox - one member, or non-empty lists (at most 20 each, no GUEST, offices the club has) */
+  private owners(raw: unknown): MailboxOwners {
+    const list = (v: unknown): string[] => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string'))] : []);
+    const o = (raw ?? {}) as Record<string, unknown>;
+    const owners: MailboxOwners = {
+      roles: list(o.roles) as Role[],
+      offices: list(o.offices),
+      teamIds: list(o.teamIds),
+      memberIds: list(o.memberIds),
+    };
+    const lists = [owners.roles, owners.offices, owners.teamIds, owners.memberIds];
+    if (!lists.some((l) => l.length) || lists.some((l) => l.length > 20) || owners.roles.includes('GUEST')) fail(400, 'mail.mailbox-owner-invalid');
+    const known = this.people.boardSettings.data.offices.map((s) => s.office as string);
+    if (owners.offices.some((k) => !known.includes(k))) fail(400, 'mail.mailbox-owner-invalid');
+    if (owners.memberIds.some((m) => !this.people.activeIds().includes(m))) fail(400, 'mail.member-unknown');
+    return owners;
+  }
+
+  /** server: MailHandlers.holders - running office holders and coaches of the teams (roles are matched as roles) */
+  private holders(owners: MailboxOwners): string[] {
+    return this.people.members.data.filter((m) => m.active && this.readsAsHolder(m, owners)).map((m) => m.id);
+  }
+
+  private readsAsHolder(member: Member, owners: MailboxOwners): boolean {
+    const teamRoles = this.people.teamRoles(member.id);
+    return (
+      owners.memberIds.includes(member.id) ||
+      this.people.officesOf(member.id).some((k) => owners.offices.includes(k)) ||
+      owners.teamIds.some((t) => teamRoles[t] === 'COACH' || teamRoles[t] === 'ASSISTANT')
+    );
+  }
+
   private opens(member: Member, box: StoredMailbox): boolean {
-    return box.memberId ? box.memberId === member.id : this.people.hasRole(member, [box.role!]);
+    if (box.memberId) return box.memberId === member.id;
+    return this.people.hasRole(member, box.owners.roles) || this.readsAsHolder(member, box.owners);
   }
 
   /** server: MailHandlers.mailbox - unknown and foreign mailboxes answer 404 alike */
@@ -501,9 +549,16 @@ export class MockMail {
         address: `${personalLocal(m.firstName, m.lastName)}@${DOMAIN}`,
         name: `${m.firstName} ${m.lastName}`,
         memberId: m.id,
-        role: null,
+        owners: NO_OWNERS,
       }));
-    return [...personal, { id: 'mb-shared-board', address: `vorstand@${DOMAIN}`, name: 'Vorstand', memberId: null, role: 'BOARD' }];
+    const board: StoredMailbox = {
+      id: 'mb-shared-board',
+      address: `vorstand@${DOMAIN}`,
+      name: 'Vorstand',
+      memberId: null,
+      owners: { ...NO_OWNERS, roles: ['BOARD'] },
+    };
+    return [...personal, board];
   }
 
   private seedMails(): Record<string, Mail[]> {

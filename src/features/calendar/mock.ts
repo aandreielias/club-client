@@ -7,12 +7,14 @@ import { itemUseSources, MockLinks, type ItemUse } from '../../lib/mock/MockLink
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import { ZonedClock, type LocalDate } from '../../lib/time/ZonedClock';
+import { repeatAt, type Rhythm } from '../../lib/time/repeat';
 import { coaches, type Member } from '../../lib/types';
 import {
   HUES,
   SEEDED_APPOINTMENT_TYPES,
   type Absence,
   type AppointmentTypeInfo,
+  type CalendarSettings,
   type Appointment,
   type AppointmentPatch,
   type Ride,
@@ -60,6 +62,17 @@ const DAY_MS = 86_400_000;
 /** server: calendar_type (`inUse` computed when listed). */
 const types = new MockTable<AppointmentTypeInfo[]>('appointment-types', () => structuredClone([...SEEDED_APPOINTMENT_TYPES]));
 const typeOf = (key: AppointmentType): AppointmentTypeInfo => types.data.find((t) => t.key === key) ?? fail(400, 'appointment.type-unknown');
+/** server: calendar_setting (V135). */
+const calendarSettings = new MockTable<CalendarSettings>('calendar-settings', () => ({
+  cabinLabels: ['Herren', 'Damen'],
+  itemRemindHours: 24,
+  openAnswerDays: 14,
+  maxRideSeats: 8,
+}));
+/** server: CalendarHandlers.requireCabinLabels */
+const requireCabinLabels = (cabins: string[]) => {
+  if (cabins.length > calendarSettings.data.cabinLabels.length) fail(400, 'appointment.cabin-not-allowed');
+};
 const STATUSES: readonly ResponseStatus[] = ['YES', 'NO', 'MAYBE'];
 
 export class MockCalendar {
@@ -75,7 +88,7 @@ export class MockCalendar {
   /** server: calendar_holiday */
   readonly holidays = new MockTable<Holiday[]>('holidays', () => []);
   /** server: calendar_series — seriesId → weeks between occurrences */
-  readonly intervals = new MockTable<Record<string, number>>('series-intervals', () => ({}));
+  readonly intervals = new MockTable<Record<string, Rhythm>>('series-intervals', () => ({}));
   /** server: calendar_extra — training plan; opponent, home/away, sets */
   readonly extrasTable = new MockTable<Record<string, ExtrasInput>>('appointment-extras', () => ({}));
   /** server: attendance_reminder — appointments whose open answers were reminded */
@@ -151,10 +164,15 @@ export class MockCalendar {
     if (typeOf(body.type).archived) fail(400, 'appointment.type-archived');
     const rides = body.rides ?? typeOf(body.type).rides;
     const first = MockCalendar.validated(this.placed({ ...body, id: '', seriesId: null, cancelled: false, rides }, body.locationId ?? null));
-    const starts = this.occurrences(first.startsAt, body.repeatUntil, body.intervalWeeks);
-    const seriesId = starts.length > 1 || body.repeatUntil ? crypto.randomUUID() : null;
+    requireCabinLabels(first.cabins);
+    const rhythm = body.repeatUntil ? MockCalendar.rhythm(body.intervalWeeks, body.intervalMonths, body.byWeekday) : null;
+    const local = this.people.clock.toLocal(first.startsAt);
+    if (rhythm && (!/^\d{4}-\d{2}-\d{2}$/.test(body.repeatUntil!) || body.repeatUntil! < local.slice(0, 10)))
+      fail(400, 'appointment.repeat-until-invalid');
+    const starts = rhythm ? this.seriesStarts(local, rhythm, 0, body.repeatUntil!) : [first.startsAt];
+    const seriesId = rhythm ? crypto.randomUUID() : null;
     if (seriesId) {
-      this.intervals.data[seriesId] = body.intervalWeeks ?? 1;
+      this.intervals.data[seriesId] = rhythm!;
       this.intervals.save();
     }
     const duration = Date.parse(first.endsAt) - Date.parse(first.startsAt);
@@ -184,6 +202,7 @@ export class MockCalendar {
       return MockCalendar.validated(clearLocationId ? { ...merged, locationId: null } : this.placed(merged, patch.locationId ?? null));
     };
     const next = apply(current, patch.startsAt ?? current.startsAt, patch.endsAt ?? current.endsAt);
+    if (patch.cabins) requireCabinLabels(next.cabins);
     const startShift = Date.parse(next.startsAt) - Date.parse(before.startsAt);
     const endShift = Date.parse(next.endsAt) - Date.parse(before.endsAt);
     const later =
@@ -200,9 +219,12 @@ export class MockCalendar {
     this.appointments.save();
     const all = [current, ...later];
     const upcoming = Date.parse(before.endsAt) > Date.now() && !before.cancelled;
-    const moved = upcoming && (startShift !== 0 || endShift !== 0);
+    // server: AppointmentType.moved — announced only with notifyChanges and beyond the type's minimum shift
+    const rule = typeOf(current.type);
+    const min = rule.minShiftMinutes * 60_000;
+    const moved = upcoming && rule.notifyChanges && (Math.abs(startShift) > min || Math.abs(endShift) > min);
     const placeChanged =
-      upcoming && (before.location !== current.location || before.cabinMen !== current.cabinMen || before.cabinWomen !== current.cabinWomen);
+      upcoming && rule.notifyChanges && (before.location !== current.location || before.cabins.join('\n') !== current.cabins.join('\n'));
     if (moved) {
       // server: AttendanceHandlers — YES and MAYBE wait for a confirmation
       for (const a of all) for (const r of Object.values(this.responses.data[a.id] ?? {})) if (r.status !== 'NO') r.unconfirmed = true;
@@ -359,25 +381,18 @@ export class MockCalendar {
     if (!any.seriesId) fail(400, 'appointment.not-a-series');
     const series = this.appointments.data.filter((a) => a.seriesId === any.seriesId).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
     const last = series[series.length - 1];
-    const interval = this.intervals.data[any.seriesId!] ?? 1;
-    const clock = this.people.clock;
-    const local = clock.toLocal(last.startsAt);
-    const nextDay = ZonedClock.addDays(local.slice(0, 10), 7 * interval);
-    if (!repeatUntil || repeatUntil < nextDay) fail(400, 'appointment.repeat-until-invalid');
+    const rhythm = this.intervals.data[any.seriesId!] ?? { weeks: 1, months: 0, byWeekday: false };
+    const local = this.people.clock.toLocal(last.startsAt);
+    if (!repeatUntil || repeatUntil < repeatAt(local, rhythm, 1).slice(0, 10)) fail(400, 'appointment.repeat-until-invalid');
     const duration = Date.parse(last.endsAt) - Date.parse(last.startsAt);
-    const added: Appointment[] = [];
-    for (let date = nextDay; date <= repeatUntil!; date = ZonedClock.addDays(date, 7 * interval)) {
-      if (this.holidays.data.some((h) => h.from <= date && date <= h.to)) continue;
-      const startsAt = clock.toInstant(`${date}T${local.slice(11)}`);
-      added.push({
-        ...last,
-        id: crypto.randomUUID(),
-        cancelled: false,
-        cancelReason: null,
-        startsAt,
-        endsAt: new Date(Date.parse(startsAt) + duration).toISOString(),
-      });
-    }
+    const added: Appointment[] = this.seriesStarts(local, rhythm, 1, repeatUntil!).map((startsAt) => ({
+      ...last,
+      id: crypto.randomUUID(),
+      cancelled: false,
+      cancelReason: null,
+      startsAt,
+      endsAt: new Date(Date.parse(startsAt) + duration).toISOString(),
+    }));
     this.appointments.data.push(...added);
     this.appointments.save();
     this.changed(member, added, 'CREATED');
@@ -396,8 +411,11 @@ export class MockCalendar {
 
   /** server: AttendanceHandlers.requireRunsTeam */
   private requireRunsTeam(member: Member, teamId: string | null): void {
-    if (this.people.isManager(member)) return;
-    if (!teamId || !coaches(this.people.teamRoles(member.id)[teamId])) fail(403, 'access.denied');
+    if (!this.runsTeam(member, teamId)) fail(403, 'access.denied');
+  }
+
+  private runsTeam(member: Member, teamId: string | null): boolean {
+    return this.people.isManager(member) || (!!teamId && coaches(this.people.teamRoles(member.id)[teamId]));
   }
 
   private coachesOf(teamId: string): string[] {
@@ -422,48 +440,88 @@ export class MockCalendar {
     });
   }
 
-  /** server: AttendanceHandlers.remind — players without an answer and not absent, plus their guardians; once per appointment. */
+  /** server: AttendanceHandlers.remindOpen — counts as the first reminder. */
   remindOpen(member: Member, id: string): number {
     const appointment = this.open(member, id);
     this.requireRunsTeam(member, appointment.teamId);
-    if (!appointment.teamId) fail(400, 'attendance.not-a-team-appointment');
-    return this.remind(appointment);
+    const expect = typeOf(appointment.type).expectAnswers;
+    if (expect === 'NONE') fail(400, 'attendance.answers-off');
+    if (!appointment.teamId && expect !== 'CLUB') fail(400, 'attendance.not-a-team-appointment');
+    return this.remind(appointment, 1);
   }
 
-  private remind(appointment: Appointment): number {
-    if (this.openReminded.data.includes(appointment.id)) return 0;
-    this.openReminded.data.push(appointment.id);
+  /** server: AttendanceHandlers.remind — players (club-wide CLUB: every member) without an answer and not absent, plus their guardians. */
+  private remind(appointment: Appointment, round: 1 | 2): number {
+    // server: attendance_reminder per appointment and round; round 1 is stored as the bare id
+    const key = round === 1 ? appointment.id : `${appointment.id}:2`;
+    if (this.openReminded.data.includes(key)) return 0;
+    this.openReminded.data.push(key);
     this.openReminded.save();
-    const teamId = appointment.teamId!;
+    const teamId = appointment.teamId;
     const answers = this.responses.data[appointment.id] ?? {};
-    const open = this.people
-      .teamMembers(teamId)
-      .filter((id) => !coaches(this.people.teamRoles(id)[teamId]) && !answers[id] && !this.absentOn(id, appointment.startsAt));
+    const players = teamId
+      ? this.people.teamMembers(teamId).filter((id) => !coaches(this.people.teamRoles(id)[teamId]))
+      : this.people.audienceIds({ everyone: true });
+    const open = players.filter((id) => !answers[id] && !this.absentOn(id, appointment.startsAt));
     this.notice('OPEN_REMINDER', [...open, ...this.people.guardiansOf(open)], appointment);
     return open.length;
   }
 
-  /** server: AttendanceModule.remindOpenAnswers — the reminder hours of the type before the start. */
+  /** server: AttendanceModule.remindOpenAnswers — the type's reminder hours before the start, and again closer to it. */
   remindDue(): void {
     const now = Date.now();
     for (const a of this.appointments.data) {
-      const hours = types.data.find((t) => t.key === a.type)?.remindHours;
+      const type = types.data.find((t) => t.key === a.type);
       const start = Date.parse(a.startsAt);
-      if (!hours || a.cancelled || !a.teamId || start <= now || start - hours * 3_600_000 > now) continue;
-      this.remind(a);
+      if (!type?.remindHours || type.expectAnswers === 'NONE' || (!a.teamId && type.expectAnswers !== 'CLUB')) continue;
+      if (a.cancelled || start <= now) continue;
+      if (type.remindAgainHours && start - type.remindAgainHours * 3_600_000 <= now) this.remind(a, 2);
+      else if (start - type.remindHours * 3_600_000 <= now) this.remind(a, 1);
     }
   }
 
-  /** server: AttendanceHandlers.openAnswers — next two weeks, oneself and one's minors. */
+  /** server: CalendarHandlers GET_SETTINGS / SAVE_SETTINGS (admin/board). */
+  settings(): CalendarSettings {
+    return structuredClone(calendarSettings.data);
+  }
+
+  saveSettings(member: Member, body: Partial<CalendarSettings>): CalendarSettings {
+    this.people.requirePrivileged(member, ['ADMIN', 'BOARD']);
+    const labels = Array.isArray(body.cabinLabels) ? body.cabinLabels.map((l) => String(l ?? '').trim()) : null;
+    const whole = (v: unknown, min: number, max: number) => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
+    if (
+      !labels ||
+      labels.length > 4 ||
+      labels.some((l) => !l || l.length > 40) ||
+      !whole(body.itemRemindHours, 1, 336) ||
+      !whole(body.openAnswerDays, 7, 60) ||
+      !whole(body.maxRideSeats, 1, 50)
+    ) {
+      fail(400, 'calendar-settings.invalid');
+    }
+    Object.assign(calendarSettings.data, {
+      cabinLabels: labels,
+      itemRemindHours: body.itemRemindHours,
+      openAnswerDays: body.openAnswerDays,
+      maxRideSeats: body.maxRideSeats,
+    });
+    calendarSettings.save();
+    return this.settings();
+  }
+
+  /** server: AttendanceHandlers.openAnswers — the club's openAnswerDays ahead, oneself and one's minors. */
   openAnswers(member: Member): { items: OpenAnswer[] } {
     const people = [member.id, ...this.people.wardsOf(member.id)];
     const now = Date.now();
     const items: OpenAnswer[] = [];
     for (const a of this.appointments.data) {
       const start = Date.parse(a.startsAt);
-      if (a.cancelled || !a.teamId || start <= now || start > now + 14 * DAY_MS || !this.canSee(member, a)) continue;
+      const expect = typeOf(a.type).expectAnswers;
+      const expected = a.teamId ? expect !== 'NONE' : expect === 'CLUB';
+      if (a.cancelled || !expected || start <= now || start > now + calendarSettings.data.openAnswerDays * DAY_MS || !this.canSee(member, a))
+        continue;
       for (const id of people) {
-        if (!(a.teamId in this.people.teamRoles(id)) || this.responses.data[a.id]?.[id] || this.absentOn(id, a.startsAt)) continue;
+        if ((a.teamId && !(a.teamId in this.people.teamRoles(id))) || this.responses.data[a.id]?.[id] || this.absentOn(id, a.startsAt)) continue;
         items.push({
           appointmentId: a.id,
           teamId: a.teamId,
@@ -477,10 +535,14 @@ export class MockCalendar {
     return { items: items.sort((x, y) => x.startsAt.localeCompare(y.startsAt) || x.name.localeCompare(y.name)) };
   }
 
-  /** server: AttendanceHandlers.setPresence — once it started, by who runs the team. */
+  /** server: AttendanceHandlers.setPresence — once it started, by who runs the team; with self check-in by the member or a guardian until the end. */
   setPresence(member: Member, id: string, body: { memberId?: string; present?: boolean | null }): Attendance {
     const appointment = this.visible(member, id);
-    this.requireRunsTeam(member, appointment.teamId);
+    if (!this.runsTeam(member, appointment.teamId)) {
+      if (!typeOf(appointment.type).selfCheckIn) fail(403, 'access.denied');
+      if (body.memberId !== member.id && !this.people.wardsOf(member.id).includes(body.memberId ?? '')) fail(404, 'member.not-found');
+      if (Date.parse(appointment.endsAt) <= Date.now()) fail(409, 'attendance.check-in-closed');
+    }
     if (appointment.cancelled || Date.parse(appointment.startsAt) > Date.now()) fail(409, 'attendance.presence-not-yet');
     if (!body.memberId) fail(400, 'request.invalid');
     if (appointment.teamId && !this.people.teamMembers(appointment.teamId).includes(body.memberId!)) fail(403, 'attendance.not-in-team');
@@ -538,6 +600,11 @@ export class MockCalendar {
     if (appointment.cancelled) fail(409, 'attendance.appointment-cancelled');
     if (Date.parse(appointment.startsAt) <= Date.now()) fail(409, 'attendance.closed');
     if (appointment.teamId && !(appointment.teamId in this.people.teamRoles(target))) fail(403, 'attendance.not-in-team');
+    const type = typeOf(appointment.type);
+    if (type.expectAnswers === 'NONE') fail(400, 'attendance.answers-off');
+    if (Date.parse(appointment.startsAt) - type.answerDeadlineHours * 3_600_000 <= Date.now()) fail(409, 'attendance.deadline-passed');
+    if (body.status === 'MAYBE' && !type.allowMaybe) fail(400, 'attendance.maybe-off');
+    if (body.status === 'NO' && type.reasonOnNo && !body.reason?.trim()) fail(400, 'attendance.reason-required');
     const response: StoredResponse = {
       status: body.status as ResponseStatus,
       reason: body.reason?.trim() || null,
@@ -560,10 +627,12 @@ export class MockCalendar {
     const answers = this.responses.data[id] ?? {};
     const expected = new Set(Object.keys(answers));
     if (appointment.teamId) this.people.teamMembers(appointment.teamId).forEach((m) => expected.add(m));
+    else if (typeOf(appointment.type).expectAnswers === 'CLUB') this.people.audienceIds({ everyone: true }).forEach((m) => expected.add(m));
     // server: an absence on the appointment's local day counts as NO until the member answers.
     const day = this.people.clock.localDate(appointment.startsAt);
     const showReasons =
       this.people.isManager(member) || (appointment.teamId !== null && coaches(this.people.teamRoles(member.id)[appointment.teamId]));
+    const own = [member.id, ...this.people.wardsOf(member.id)];
     const entries: AttendanceEntry[] = [...expected]
       .flatMap((memberId): AttendanceEntry[] => {
         const name = this.people.name(memberId);
@@ -571,7 +640,8 @@ export class MockCalendar {
         const answer = answers[memberId];
         const found = this.absences.data.find((a) => a.memberId === memberId && a.from <= day && day <= a.to);
         const away = found && MockCalendar.overrules(found, answer) ? found : undefined;
-        const present = showReasons ? (this.presence.data[id]?.[memberId] ?? null) : null;
+        // server: everyone's presence for who sees reasons, otherwise one's own and one's minors'
+        const present = showReasons || own.includes(memberId) ? (this.presence.data[id]?.[memberId] ?? null) : null;
         if (away) {
           return [
             {
@@ -678,7 +748,7 @@ export class MockCalendar {
     const appointment = this.open(member, appointmentId);
     this.requireRides(appointment);
     const seats = Number(body.seats);
-    if (!Number.isInteger(seats) || seats < 1 || seats > 8) fail(400, 'ride.seats-invalid');
+    if (!Number.isInteger(seats) || seats < 1 || seats > calendarSettings.data.maxRideSeats) fail(400, 'ride.seats-invalid');
     if ((body.note?.length ?? 0) > 200) fail(400, 'ride.note-too-long');
     const all = this.rides.data.filter((r) => r.appointmentId === appointment.id);
     if (all.some((r) => r.driverId === member.id)) fail(409, 'ride.exists');
@@ -817,27 +887,34 @@ export class MockCalendar {
     if (!coaches(this.people.teamRoles(member.id)[teamId])) fail(403, 'access.denied');
   }
 
-  /** Start instants of a weekly series in club time (same wall-clock time each week, across DST). */
-  private occurrences(startsAt: string, repeatUntil: LocalDate | null, intervalWeeks: number | null): string[] {
-    if (!repeatUntil) return [startsAt];
-    const interval = intervalWeeks ?? 1;
-    if (!Number.isInteger(interval) || interval < 1 || interval > limits.maxIntervalWeeks) fail(400, 'appointment.interval-invalid');
-    const clock = this.people.clock;
-    const local = clock.toLocal(startsAt);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(repeatUntil) || repeatUntil < local.slice(0, 10)) fail(400, 'appointment.repeat-until-invalid');
-    const starts: string[] = [];
-    for (let date = local.slice(0, 10); date <= repeatUntil; date = ZonedClock.addDays(date, 7 * interval)) {
-      if (starts.length === limits.maxSeriesOccurrences) fail(400, 'appointment.series-too-long');
-      // server: WeeklySeries skips the club's holidays
-      if (this.holidays.data.some((h) => h.from <= date && date <= h.to)) continue;
-      starts.push(clock.toInstant(`${date}T${local.slice(11)}`));
+  /** server: Series.rhythm — weeks (default 1, up to 8) or months (1–12, by date or weekday), not both. */
+  private static rhythm(weeks: number | null | undefined, months: number | null | undefined, byWeekday: boolean | undefined): Rhythm {
+    const ok = (n: number, max: number) => Number.isInteger(n) && n >= 1 && n <= max;
+    if (months == null) {
+      if (!ok(weeks ?? 1, limits.maxIntervalWeeks)) fail(400, 'appointment.interval-invalid');
+      return { weeks: weeks ?? 1, months: 0, byWeekday: false };
     }
-    return starts;
+    if (weeks != null || !ok(months, limits.maxIntervalMonths)) fail(400, 'appointment.interval-invalid');
+    return { weeks: 0, months, byWeekday: byWeekday === true };
+  }
+
+  /** server: Series.expand — start instants from the i-th step on, same wall-clock time (across DST), skipping the club's holidays. */
+  private seriesStarts(anchor: string, rhythm: Rhythm, from: number, repeatUntil: LocalDate): string[] {
+    const starts: string[] = [];
+    for (let i = from; ; i++) {
+      const at = repeatAt(anchor, rhythm, i);
+      const date = at.slice(0, 10);
+      if (date > repeatUntil) return starts;
+      if (starts.length === limits.maxSeriesOccurrences) fail(400, 'appointment.series-too-long');
+      if (this.holidays.data.some((h) => h.from <= date && date <= h.to)) continue;
+      starts.push(this.people.clock.toInstant(at));
+    }
   }
 
   /** server: CalendarHandlers.remindItemHolders - holders of needed items, once per appointment, item and person. */
-  remindItemHolders(beforeMs: number): void {
+  remindItemHolders(): void {
     const now = Date.now();
+    const beforeMs = calendarSettings.data.itemRemindHours * 3_600_000;
     const due = this.appointments.data.filter((a) => !a.cancelled && Date.parse(a.startsAt) >= now && Date.parse(a.startsAt) < now + beforeMs);
     for (const appointment of due) {
       const needs = this.links.table.data[appointment.id]?.needs ?? [];
@@ -891,22 +968,22 @@ export class MockCalendar {
     if (!a.title?.trim() || a.title.length > limits.titleMaxLength) fail(400, 'appointment.title-invalid');
     if ((a.description?.length ?? 0) > limits.descriptionMaxLength) fail(400, 'appointment.description-too-long');
     if ((a.location?.length ?? 0) > limits.locationMaxLength) fail(400, 'appointment.location-too-long');
-    const cabinMen = a.cabinMen?.trim() || null;
-    const cabinWomen = a.cabinWomen?.trim() || null;
-    if ((cabinMen?.length ?? 0) > limits.cabinMaxLength || (cabinWomen?.length ?? 0) > limits.cabinMaxLength) fail(400, 'appointment.cabin-too-long');
-    if ((cabinMen || cabinWomen) && !type.cabins) fail(400, 'appointment.cabin-not-allowed');
+    // server: Appointment.cabins — trimmed, trailing empty ones dropped, at most 4
+    const cabins = (a.cabins ?? []).map((c) => (c ?? '').trim());
+    while (cabins.length && !cabins[cabins.length - 1]) cabins.pop();
+    if (cabins.some((c) => c.length > limits.cabinMaxLength)) fail(400, 'appointment.cabin-too-long');
+    if (cabins.length > 4 || (cabins.length && !type.cabins)) fail(400, 'appointment.cabin-not-allowed');
     const start = Date.parse(a.startsAt);
     const end = Date.parse(a.endsAt);
     if (isNaN(start) || isNaN(end) || end <= start) fail(400, 'appointment.times-invalid');
-    if (end - start > limits.maxDurationDays * DAY_MS) fail(400, 'appointment.too-long');
+    if (end - start > type.maxDays * DAY_MS) fail(400, 'appointment.too-long');
     return {
       ...a,
       title: a.title.trim(),
       description: a.description || null,
       location: a.location || null,
       locationId: a.locationId ?? null,
-      cabinMen,
-      cabinWomen,
+      cabins,
     };
   }
 
@@ -918,14 +995,13 @@ export class MockCalendar {
     const at = (offsetDays: number, time: string) => clock.toInstant(`${ZonedClock.addDays(weekStart, offsetDays)}T${time}`);
     const items: Appointment[] = [];
     let n = 0;
-    type Seed = Omit<Appointment, 'id' | 'cancelled' | 'locationId' | 'cabinMen' | 'cabinWomen' | 'rides'> & Partial<Appointment>;
+    type Seed = Omit<Appointment, 'id' | 'cancelled' | 'locationId' | 'cabins' | 'rides'> & Partial<Appointment>;
     const add = (a: Seed) =>
       items.push({
         id: `a-${++n}`,
         cancelled: false,
         locationId: null,
-        cabinMen: null,
-        cabinWomen: null,
+        cabins: [],
         rides: typeOf(a.type).rides,
         ...a,
         description: a.description ?? null,
@@ -946,7 +1022,7 @@ export class MockCalendar {
           description: null,
           location: 'Turnhalle Nord',
           locationId: 'l-nord',
-          cabinWomen: 'Kabine 3',
+          cabins: ['', 'Kabine 3'],
           startsAt: at(base + day, '19:00'),
           endsAt: at(base + day, '21:00'),
         });
@@ -1102,9 +1178,36 @@ export const appointmentTypes = {
       archived: !!body.archived,
       inUse: false,
       remindHours: body.remindHours == null ? null : body.remindHours,
+      hasResult: !!body.hasResult,
+      planLabel: typeof body.planLabel === 'string' && body.planLabel.trim() ? body.planLabel.trim() : null,
+      defaultStart: body.defaultStart,
+      defaultMinutes: body.defaultMinutes,
+      maxDays: body.maxDays,
+      answerDeadlineHours: body.answerDeadlineHours,
+      allowMaybe: !!body.allowMaybe,
+      reasonOnNo: !!body.reasonOnNo,
+      expectAnswers: body.expectAnswers,
+      notifyChanges: !!body.notifyChanges,
+      minShiftMinutes: body.minShiftMinutes,
+      selfCheckIn: !!body.selfCheckIn,
+      remindAgainHours: body.remindAgainHours == null ? null : body.remindAgainHours,
     };
     if (type.remindHours != null && (!Number.isInteger(type.remindHours) || type.remindHours < 1 || type.remindHours > 336)) {
       fail(400, 'appointment-type.remind-invalid');
+    }
+    const whole = (n: unknown, min: number, max: number) => Number.isInteger(n) && (n as number) >= min && (n as number) <= max;
+    if (
+      (type.planLabel?.length ?? 0) > 40 ||
+      typeof type.defaultStart !== 'string' ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(type.defaultStart) ||
+      !whole(type.maxDays, 1, 30) ||
+      !whole(type.defaultMinutes, 5, type.maxDays * 24 * 60) ||
+      !whole(type.answerDeadlineHours, 0, 336) ||
+      !['TEAM', 'CLUB', 'NONE'].includes(type.expectAnswers) ||
+      !whole(type.minShiftMinutes, 0, 1440) ||
+      (type.remindAgainHours != null && (type.remindHours == null || !whole(type.remindAgainHours, 1, type.remindHours - 1)))
+    ) {
+      fail(400, 'appointment-type.rules-invalid');
     }
     const index = types.data.findIndex((t) => t.key === type.key);
     if (index >= 0) types.data[index] = type;
@@ -1129,7 +1232,7 @@ export const appointmentTypes = {
 if (typeof window !== 'undefined') {
   // server: AttendanceModule.remindOpenAnswers (hourly) runs alongside
   const remind = () => {
-    calendar.remindItemHolders(settings.inventory.reminderBeforeMs);
+    calendar.remindItemHolders();
     calendar.remindDue();
   };
   setTimeout(remind, 0);
@@ -1142,6 +1245,8 @@ const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer
   .on('GET', '/api/v1/appointments/:id/activity', (req) => activity.list(actor(req), 'APPOINTMENT', calendar.visible(actor(req), req.params.id).id))
+  .on('GET', '/api/v1/calendar/settings', (req) => (directory.actor(req), calendar.settings()))
+  .on('PUT', '/api/v1/calendar/settings', (req) => calendar.saveSettings(directory.actor(req), req.body ?? {}))
   .on('GET', '/api/v1/calendar/types', (req) => (directory.actor(req), appointmentTypes.list()))
   .on('POST', '/api/v1/calendar/types', (req) => appointmentTypes.save(directory.actor(req), null, req.body ?? {}))
   .on('PUT', '/api/v1/calendar/types/:key', (req) => appointmentTypes.save(directory.actor(req), req.params.key, req.body ?? {}))

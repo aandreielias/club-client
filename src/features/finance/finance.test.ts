@@ -5,7 +5,8 @@ import type { Member } from '../../lib/types';
 import { BookingForm } from './BookingForm.svelte';
 import { finance } from './mock';
 import { tasks } from '../tasks/mock';
-import { parseMoney, seasonLabel, seasonOf } from './model';
+import { yearLabel, yearOf } from '../../lib/time/clubYear';
+import { parseMoney } from './model';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
 const code = (c: string) => expect.objectContaining({ code: c });
@@ -32,10 +33,10 @@ describe('finance model', () => {
   });
 
   it('names the season by its first year', () => {
-    expect(seasonOf('2026-06-30', 7)).toBe(2025);
-    expect(seasonOf('2026-07-01', 7)).toBe(2026);
-    expect(seasonLabel(2026, 7)).toBe('2026/27');
-    expect(seasonLabel(2026, 1)).toBe('2026');
+    expect(yearOf('2026-06-30', 7)).toBe(2025);
+    expect(yearOf('2026-07-01', 7)).toBe(2026);
+    expect(yearLabel(2026, 7)).toBe('2026/27');
+    expect(yearLabel(2026, 1)).toBe('2026');
   });
 
   it('signs the amount by the category', () => {

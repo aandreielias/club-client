@@ -347,7 +347,7 @@ export const settings = {
   teams: {
     nameMaxLength: 80,
     /** Season format, e.g. 2026/27. */
-    seasonPattern: '^\\d{4}/\\d{2}$',
+    seasonPattern: '^\\d{4}(/\\d{2})?$',
     seasonMaxLength: 7,
     maxJersey: 99,
     positionMaxLength: 40,
@@ -360,7 +360,7 @@ export const settings = {
     urgencyMaxLength: 1000,
     locationMaxLength: 200,
     videoUrlMaxLength: 500,
-    protocolMaxLength: 20_000,
+    protocolMaxLength: 100_000,
     guestNameMaxLength: 100,
     guestEmailMaxLength: 200,
     type: { labelMaxLength: 80, invitationLabelMaxLength: 120, maxInvitees: 50, maxGraceMinutes: 1440 },
@@ -368,6 +368,8 @@ export const settings = {
     agenda: { maxItems: 50, titleMaxLength: 200, noteMaxLength: 1000, motionTextMaxLength: 4000, maxAssignees: 30 },
     /** Circular votes: longest minimum deadline admins may set. */
     maxCircularMinHours: 720,
+    /** Linked records of a meeting or resolution (server: MAX_LINKS). */
+    maxLinks: 30,
   },
 
   /** server: tournaments module (Tournament, TournamentHandlers) */
@@ -377,6 +379,7 @@ export const settings = {
     maxTeams: 64,
     maxFields: 16,
     maxQualifiers: 32,
+    maxGroups: 8,
     guestNameMaxLength: 100,
     fieldMaxLength: 40,
     maxSetPoints: 99,
@@ -397,16 +400,18 @@ export const settings = {
     maxRangeDays: 366,
     /** .ics export: upcoming appointments within this many days (weekly series run at most 2 years). */
     exportDays: 2 * 366,
-    maxDurationDays: 7,
+    /** server: Appointment.MAX_DURATION; each type sets its own (maxDays). */
+    maxDurationDays: 30,
     maxSeriesOccurrences: 104,
-    maxIntervalWeeks: 4,
+    maxIntervalWeeks: 8,
+    maxIntervalMonths: 12,
     titleMaxLength: 120,
     descriptionMaxLength: 2000,
     locationMaxLength: 200,
     reasonMaxLength: 300,
-    /** Changing cabins for men and women, free text (where the appointment type offers them). */
+    /** Changing cabins, free text per club cabin label (where the appointment type offers them). */
     cabinMaxLength: 60,
-    /** Car pools (where the appointment type offers them): server limits seats and note. */
+    /** Car pools: seats until the club's calendar settings (maxRideSeats) are loaded; the server limits the note. */
     rideMaxSeats: 8,
     /** Car seen from above next to each ride (CarSeats); height follows the number of seats. */
     rideGraphic: { width: 84 },
@@ -414,6 +419,8 @@ export const settings = {
     holidayNameMaxLength: 80,
     typeLabelMaxLength: 40,
     maxRemindHours: 336,
+    /** server: calendar_type.min_shift_minutes (a day). */
+    maxShiftMinutes: 1440,
     opponentMaxLength: 80,
     trainingPlanMaxLength: 4000,
   },
@@ -489,7 +496,6 @@ export const settings = {
 
   /** Club mailboxes (server: OutgoingMail limits). */
   mail: {
-    maxRecipients: 50,
     /** Default recipients per member and day until admin/board change it (server: mail_setting.daily_limit). */
     dailyLimit: 200,
     subjectMaxLength: 200,
@@ -523,6 +529,9 @@ export const settings = {
   notifications: {
     /** Show a toast when a new notification arrives live. */
     toastOnArrival: true,
+    /** server: NotificationHandlers.saveSettings, days the inbox and the activity log are kept */
+    inboxRetentionDays: { min: 30, max: 365 },
+    activityRetentionDays: { min: 90, max: 3650 },
   },
 
   files: {
@@ -547,6 +556,10 @@ export const settings = {
     /** Upload quota per member in GB (server: files_setting, 100 MB to 100 GB). */
     quotaMinGb: 0.1,
     quotaMaxGb: 100,
+    /** server: files_setting.max_image_side and keep_versions */
+    imageSideMin: 1600,
+    imageSideMax: 6000,
+    maxKeepVersions: 100,
     /** Download links live 5 minutes on the server; reuse them until this long before expiry. */
     linkReuseMarginMs: 30_000,
     /** File pickers offer these; the server checks the real type by content. */
@@ -558,8 +571,6 @@ export const settings = {
 
   tasks: {
     defaultDueTime: '18:00',
-    /** Open tasks due within this many hours are highlighted (server reminds 24 h before). */
-    dueSoonHours: 24,
     /** In-app reminders of own due tasks: how often to look, and when to sum up instead. */
     reminderCheckMs: 60 * 60_000,
     reminderMaxToasts: 3,
@@ -571,6 +582,8 @@ export const settings = {
     checklistItemMaxLength: 200,
     commentMaxLength: 2000,
     maxRemindHours: 336,
+    maxOverdueRepeatDays: 30,
+    maxEscalateAfterDays: 90,
   },
 
   finance: {
@@ -582,6 +595,8 @@ export const settings = {
     maxRefs: 20,
     maxReceipts: 10,
     listCap: 2000,
+    /** server: FeeSettings (due and reminder days, how to pay, account holder) */
+    fee: { maxDays: 365, instructionsMaxLength: 2000, holderMaxLength: 70 },
   },
   inventory: {
     /** server: inventory module (Item) */
@@ -589,8 +604,7 @@ export const settings = {
     categoryMaxLength: 60,
     /** Lines of the "Wo ist es?" editor (server: InventoryHandlers.MAX_STOCK_ENTRIES). */
     maxStockLines: 50,
-    /** Mock of the server's reminder job: people holding needed items hear about it this long before. */
-    reminderBeforeMs: 24 * 3_600_000,
+    /** Mock of the server's reminder job (lead time: the club's calendar settings). */
     reminderCheckMs: 5 * 60_000,
     descriptionMaxLength: 2000,
     maxQuantity: 100_000,

@@ -10,16 +10,20 @@
   import Field from '../../ui/Field.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { SET_PATTERN, type Appointment } from './model';
-  import { calendarApi } from './services';
+  import { appointmentTypes, calendarApi } from './services';
 
-  /** Training plan (trainings) or opponent, home/away and sets (matches); everyone who sees it reads, who may edit it writes. */
+  /** The type's plan block and/or opponent, home/away and sets (types with a result); everyone who sees it reads, who may edit it writes. */
   let { appointment, editable }: { appointment: Appointment; editable: boolean } = $props();
 
   // svelte-ignore state_referenced_locally
   const extras = new Resource(() => calendarApi.extras(appointment.id));
   void extras.load();
   const save = new Action();
-  const isMatch = $derived(appointment.type === 'MATCH' || !!extras.value?.opponent || !!extras.value?.sets.length);
+  const type = $derived(appointmentTypes.get(appointment.type));
+  const isMatch = $derived(!!type?.hasResult || !!extras.value?.opponent || !!extras.value?.sets.length);
+  /** Types without a plan block still show text written before (the type changed). */
+  const offered = $derived(isMatch || !!type?.planLabel || !!extras.value?.content);
+  const planLabel = $derived(type?.planLabel ?? 'Inhalt');
 
   let editing = $state(false);
   let content = $state('');
@@ -62,8 +66,8 @@
 
 {#if extras.value === undefined && !extras.error}
   <span class="skeleton slot" aria-busy="true" aria-label="Laden"></span>
-{:else if extras.value && (editing || editable || extras.value.content || extras.value.opponent || extras.value.sets.length)}
-  <h2>{isMatch ? 'Spiel' : 'Trainingsinhalt'}</h2>
+{:else if extras.value && offered && (editing || editable || extras.value.content || extras.value.opponent || extras.value.sets.length)}
+  <h2>{isMatch ? 'Spiel' : planLabel}</h2>
   {#if editing}
     <EditorForm action={save} submitLabel="Speichern" onsubmit={submit} oncancel={() => (editing = false)}>
       {#if isMatch}

@@ -7,6 +7,7 @@ describe('TeamForm', () => {
     expect(TeamForm.currentSeason('2026-10-15', 7)).toBe('2026/27');
     expect(TeamForm.currentSeason('2027-03-01', 7)).toBe('2026/27');
     expect(TeamForm.currentSeason('2099-08-01', 7)).toBe('2099/00');
+    expect(TeamForm.currentSeason('2027-03-01', 1)).toBe('2027');
   });
 
   it('validates name and season format', () => {
@@ -16,6 +17,8 @@ describe('TeamForm', () => {
     form.season = '2026-27';
     expect(Object.keys(form.errors)).toEqual(['season']);
     form.season = '2026/27';
+    expect(form.valid).toBe(true);
+    form.season = '2026';
     expect(form.valid).toBe(true);
   });
 });
@@ -51,12 +54,13 @@ describe('mock teams', async () => {
       description: null,
       location: null,
       locationId: null,
-      cabinMen: null,
-      cabinWomen: null,
+      cabins: [],
       startsAt: start.toISOString(),
       endsAt: new Date(start.getTime() + 7_200_000).toISOString(),
       repeatUntil: null,
       intervalWeeks: null,
+      intervalMonths: null,
+      byWeekday: false,
     });
     expect(calendar.setExtras(member('admin'), match.id, { opponent: 'SV Nord', home: true, sets: ['25:20', '22:25', '25:18'] })).toMatchObject({
       setsWon: 2,

@@ -7,7 +7,7 @@
   import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import Select from '../../ui/Select.svelte';
   import { CLUB_WIDE, type AppointmentForm } from './AppointmentForm.svelte';
-  import { appointmentTypes } from './services';
+  import { appointmentTypes, calendarSettings } from './services';
   import { appointmentPolicy as policy } from './services';
   import type { Location } from '../locations/model';
   import { locationsApi } from '../locations/services';
@@ -21,6 +21,11 @@
   }: { form: AppointmentForm; action: Action; submitLabel: string; oncancel: () => void; onsubmit: () => void } = $props();
 
   const limits = settings.calendar;
+  const UNITS = [
+    { value: 'weeks', label: 'Wöchentlich' },
+    { value: 'months', label: 'Monatlich am selben Tag' },
+    { value: 'weekday', label: 'Monatlich am selben Wochentag' },
+  ];
   const teamOptions = $derived([
     ...(policy.canCreateClubWide() || form.teamId === CLUB_WIDE ? [{ value: CLUB_WIDE, label: 'Ganzer Verein' }] : []),
     ...policy.plannableTeams().map((t) => ({ value: t.id, label: t.name })),
@@ -73,12 +78,11 @@
 
   {#if form.cabinsShown}
     <div class="grid-2">
-      <Field label="Kabine Herren (optional)" error={form.error('cabins')}>
-        <input bind:value={form.cabinMen} maxlength={limits.cabinMaxLength} placeholder="z. B. Kabine 2" />
-      </Field>
-      <Field label="Kabine Damen (optional)">
-        <input bind:value={form.cabinWomen} maxlength={limits.cabinMaxLength} placeholder="z. B. Kabine 3" />
-      </Field>
+      {#each calendarSettings.value?.cabinLabels ?? [] as label, i (i)}
+        <Field label="Kabine {label} (optional)" error={i === 0 ? form.error('cabins') : undefined}>
+          <input bind:value={form.cabins[i]} maxlength={limits.cabinMaxLength} placeholder="z. B. Kabine {i + 2}" />
+        </Field>
+      {/each}
     </div>
   {/if}
 
@@ -97,12 +101,21 @@
   {#if !form.isEdit}
     <label class="check">
       <input type="checkbox" bind:checked={form.repeat} />
-      Wöchentlich wiederholen
+      Wiederholen
     </label>
     {#if form.repeat}
       <div class="grid-2">
-        <Field label="Alle … Wochen" error={form.error('intervalWeeks')}>
-          <input type="number" bind:value={form.intervalWeeks} min="1" max={limits.maxIntervalWeeks} step="1" />
+        <Field label="Rhythmus" hint="Monatlich am Wochentag: z. B. jeden 2. Dienstag; ein 5. Wochentag wird zum letzten des Monats.">
+          <Select bind:value={form.unit} options={UNITS} />
+        </Field>
+        <Field label={form.unit === 'weeks' ? 'Alle … Wochen' : 'Alle … Monate'} error={form.error('interval')}>
+          <input
+            type="number"
+            bind:value={form.interval}
+            min="1"
+            max={form.unit === 'weeks' ? limits.maxIntervalWeeks : limits.maxIntervalMonths}
+            step="1"
+          />
         </Field>
         <Field label="Bis einschließlich" error={form.error('repeatUntil')} note={form.repeatUntil ? `${form.occurrences()} Termine` : undefined}>
           <DateInput bind:value={form.repeatUntil} min={form.start.slice(0, 10)} />

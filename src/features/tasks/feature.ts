@@ -2,7 +2,7 @@ import TasksHome from './TasksHome.svelte';
 import { permissions } from '../../lib/container';
 import { detailRoute, type Feature } from '../Feature';
 import { TASK_MESSAGES } from './messages';
-import { dueReminders } from './services';
+import { dueReminders, taskSettings } from './services';
 import TaskCreateView from './TaskCreateView.svelte';
 import TaskListPage from './TaskListPage.svelte';
 import TaskView from './TaskView.svelte';
@@ -25,7 +25,18 @@ export const tasksFeature: Feature = {
     FOLLOW_UP: (item) => ({ hue: item.inactive ? 'green' : 'brown', label: 'Fällig (aus Sitzung)' }),
   },
   messages: TASK_MESSAGES,
-  start: (guest) => (guest ? undefined : dueReminders.start()),
+  start: (guest) => {
+    if (guest) return undefined;
+    let stop: (() => void) | undefined;
+    let ended = false;
+    void taskSettings.load().then(() => {
+      if (!ended) stop = dueReminders.start();
+    });
+    return () => {
+      ended = true;
+      stop?.();
+    };
+  },
   home: { id: 'tasks', label: 'Meine Aufgaben', component: TasksHome },
   links: [{ server: '/tasks/:id', to: ({ id }) => ({ window: { kind: 'task', id } }) }],
 };

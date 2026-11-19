@@ -9,6 +9,7 @@ import type {
   AppointmentTypeInput,
   Attendance,
   AttendanceResponse,
+  CalendarSettings,
   FeedLink,
   NewAppointment,
   NewAbsence,
@@ -98,6 +99,15 @@ export class CalendarApi {
   /** Answers still to give in the next two weeks, for oneself and one's minors. */
   async openAnswers(): Promise<OpenAnswer[]> {
     return (await this.api.get<{ items: OpenAnswer[] }>('/api/v1/me/open-answers')).items;
+  }
+
+  settings(): Promise<CalendarSettings> {
+    return this.api.get<CalendarSettings>('/api/v1/calendar/settings');
+  }
+
+  /** Admin/board. */
+  saveSettings(settings: CalendarSettings): Promise<CalendarSettings> {
+    return this.api.put<CalendarSettings>('/api/v1/calendar/settings', settings);
   }
 
   async holidays(): Promise<Holiday[]> {

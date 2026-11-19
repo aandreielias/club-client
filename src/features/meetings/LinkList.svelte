@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import type { Snippet } from 'svelte';
   import { backStack, bus } from '../../lib/container';
   import { TOAST } from '../../channels';
@@ -29,8 +30,6 @@
     actions?: Snippet;
   } = $props();
 
-  /** server: MAX_LINKS of meetings and resolutions */
-  const MAX_LINKS = 30;
   let draft = $state<RefList | null>(null);
   backStack.while(
     () => draft !== null,
@@ -68,7 +67,7 @@
   {#if canEdit}
     <div class="row">
       {@render actions?.()}
-      <Button size="sm" icon="link" onclick={() => (draft = new RefList(MAX_LINKS, links))}>Verknüpfungen bearbeiten</Button>
+      <Button size="sm" icon="link" onclick={() => (draft = new RefList(settings.meetings.maxLinks, links))}>Verknüpfungen bearbeiten</Button>
     </div>
   {/if}
 {/if}

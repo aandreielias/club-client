@@ -1,5 +1,5 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
-import type { NotificationList, Preference, Preferences } from './model';
+import type { NotificationList, NotificationSettings, Preference, Preferences } from './model';
 
 /** Typed access to the inbox and notification preferences of the signed-in member. */
 export class NotificationsApi {
@@ -21,6 +21,14 @@ export class NotificationsApi {
 
   async preferences(): Promise<Preference[]> {
     return (await this.api.get<Preferences>(`${NotificationsApi.BASE}/notification-preferences`)).items;
+  }
+
+  settings(): Promise<NotificationSettings> {
+    return this.api.get<NotificationSettings>('/api/v1/notifications/settings');
+  }
+
+  saveSettings(value: NotificationSettings): Promise<NotificationSettings> {
+    return this.api.put<NotificationSettings>('/api/v1/notifications/settings', value);
   }
 
   async savePreferences(items: readonly Preference[]): Promise<Preference[]> {

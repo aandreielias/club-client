@@ -124,7 +124,7 @@
             <legend>Tagesordnung</legend>
             <AgendaItemsEditor
               bind:rows={form.rows}
-              majorities={majorities(form.type)}
+              majorities={majorities(form.type?.majorities ?? ['SIMPLE'])}
               candidates={people.value ?? []}
               today={session.clock.today()}
             />

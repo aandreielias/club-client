@@ -17,7 +17,7 @@ export interface CarShape {
 /**
  * Seat plan of a car seen from above, driving to the left (front on the left). Rows are columns here; the car's
  * right side is at the top, the driver sits front left (bottom). Up to 5 places: 2 in front, 3 behind; up to 7
- * a third row; 8 or more places have 3 in front. Middle seats are taken last.
+ * a third row; 8 or more places have 3 in front, and beyond 9 it grows into a bus of rows of 3. Middle seats are taken last.
  */
 export class CarLayout {
   static readonly SEAT = 12;
@@ -33,7 +33,7 @@ export class CarLayout {
   static rows(places: number): number[] {
     if (places <= 5) return [2, 3];
     if (places <= 7) return [2, 3, 3];
-    return [3, 3, 3];
+    return Array<number>(Math.max(3, Math.ceil(places / 3))).fill(3);
   }
 
   static shape(offered: number): CarShape {

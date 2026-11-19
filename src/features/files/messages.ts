@@ -29,6 +29,7 @@ export const FILE_MESSAGES: MessageCatalog = {
   'file.version-not-found': 'Die Version gibt es nicht mehr.',
   'file.version-type-mismatch': 'Die neue Version muss dasselbe Dateiformat haben.',
   'folder.cover-invalid': 'Das Titelbild muss ein Foto aus diesem Ordner sein.',
+  'folder.office-invalid': 'Ein Amt auswählen, das der Verein hat.',
   'folder.scope-inherited': 'Unterordner übernehmen die Sichtbarkeit ihres obersten Ordners.',
   'folder.move-into-self': 'Ein Ordner kann nicht in sich selbst verschoben werden.',
   'setting-file.wrong-type': 'Logos: PNG, JPEG oder SVG; Vorlagen: Word-Vorlage (.dotx).',

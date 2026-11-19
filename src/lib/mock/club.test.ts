@@ -17,13 +17,21 @@ describe('mock club facts', () => {
 
     expect(() => directory.updateClub(member('spieler'), { name: 'X' })).toThrow();
     expect(() => directory.updateClub(member('vorstand'), { seasonStartMonth: 13 })).toThrow();
-    expect(directory.updateClub(member('vorstand'), { name: 'VC Beispiel', registerNumber: '123', seasonStartMonth: 8 })).toMatchObject({
+    expect(
+      directory.updateClub(member('vorstand'), { name: 'VC Beispiel', registerNumber: '123', seasonStartMonth: 8, fiscalYearStartMonth: 3 }),
+    ).toMatchObject({
       name: 'VC Beispiel',
       shortName: 'Verein',
       registerNumber: '123',
       seasonStartMonth: 8,
+      fiscalYearStartMonth: 3,
     });
-    expect(directory.updateClub(member('vorstand'), { name: ' ' })).toMatchObject({ name: 'Mein Verein', registerNumber: null, seasonStartMonth: 7 });
+    expect(directory.updateClub(member('vorstand'), { name: ' ' })).toMatchObject({
+      name: 'Mein Verein',
+      registerNumber: null,
+      seasonStartMonth: 7,
+      fiscalYearStartMonth: 1,
+    });
   });
 });
 

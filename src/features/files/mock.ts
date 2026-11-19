@@ -9,8 +9,20 @@ import { linkRefs, type FileLink } from '../../lib/mock/MockLinks';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import type { FileRef } from '../../lib/links/model';
-import { ADMIN_BOARD, coaches, type Member } from '../../lib/types';
-import type { DownloadLink, FileSettings, FileVersion, Folder, FolderKind, FolderScope, SettingFile, SettingSlot, StoredFile } from './model';
+import { ADMIN_BOARD, ROLE_LABELS, coaches, type Member } from '../../lib/types';
+import { FILE_TYPES } from './model';
+import type {
+  DownloadLink,
+  FileSettings,
+  FileTypeName,
+  FileVersion,
+  Folder,
+  FolderKind,
+  FolderScope,
+  SettingFile,
+  SettingSlot,
+  StoredFile,
+} from './model';
 import logoBlack from '../../lib/mock/brand/sdg-logo-mono-black.svg?url';
 import logoWhite from '../../lib/mock/brand/sdg-logo-mono-white.svg?url';
 import logoWine from '../../lib/mock/brand/sdg-logo-mono-wine.svg?url';
@@ -27,7 +39,7 @@ import invitationTemplate from '../../lib/mock/brand/Einladung Sitzung.dotx?url'
 import protocolTemplate from '../../lib/mock/brand/Protokoll Sitzung.dotx?url';
 
 /** `system`: the read-only folder "Einstellungen" (server: files_folder.system). */
-type StoredFolder = Omit<Folder, 'canUpload' | 'canManage' | 'system'> & { system?: boolean };
+type StoredFolder = Omit<Folder, 'canUpload' | 'canManage' | 'system' | 'office'> & { system?: boolean; office?: string | null };
 
 /** server: files_setting_file — the slot's copy and the file in Dateien it follows. */
 interface SettingRow {
@@ -61,6 +73,8 @@ class Viewer {
   readonly voter: boolean;
   readonly teamIds: Set<string>;
   readonly coachTeamIds: Set<string>;
+  readonly coach: boolean;
+  readonly offices: string[];
   readonly meetingFolders: { visible: Set<string>; managed: Set<string> };
 
   constructor(
@@ -72,6 +86,8 @@ class Viewer {
     this.voter = member.voter;
     this.teamIds = new Set(Object.keys(own));
     this.coachTeamIds = new Set(Object.keys(own).filter((t) => coaches(own[t])));
+    this.coach = member.roles.includes('COACH');
+    this.offices = people.officesOf(member.id);
     this.meetingFolders = meetingFolderRights.of(member);
   }
 
@@ -81,6 +97,8 @@ class Viewer {
     if (f.scope === 'ASSEMBLY') return this.board || this.voter;
     // server: FileAccess — no board bypass, the meeting decides
     if (f.scope === 'MEETING') return this.meetingFolders.visible.has(f.id);
+    if (f.scope === 'COACHES') return this.board || this.coach;
+    if (f.scope === 'OFFICE') return this.board || this.offices.includes(f.office ?? '');
     return this.board;
   }
 
@@ -139,7 +157,13 @@ export class MockFiles {
   /** fileId → versions, newest first (server: files_version); bytes in #blobs under the version id. */
   readonly versions: MockTable<Record<string, StoredVersion[]>>;
   /** server: files_setting */
-  readonly settings = new MockTable<FileSettings>('file-settings', () => ({ quotaMb: 2048 }));
+  readonly settings = new MockTable<FileSettings>('file-settings', () => ({
+    quotaMb: 2048,
+    roleQuotaMb: {},
+    types: FILE_TYPES.map((t) => t.value),
+    maxImageSide: 3000,
+    keepVersions: 0,
+  }));
   /** server: files_setting_file */
   readonly settingFiles = new MockTable<SettingRow[]>('setting-files', () => MockFiles.seedSettingFiles());
   /** Seeded files with real content (bundled assets), by file id; copies take their original's. */
@@ -193,15 +217,17 @@ export class MockFiles {
         kind: body.kind,
         scope: parent.scope,
         teamIds: [...parent.teamIds],
+        office: parent.office ?? null,
         membersCanUpload: !!body.membersCanUpload,
         color: null,
         coverFileId: null,
       };
     } else {
       const scope = body.scope as FolderScope;
-      if (!['CLUB', 'TEAM', 'BOARD', 'ASSEMBLY'].includes(scope)) fail(400, 'folder.kind-or-scope-missing');
+      if (!['CLUB', 'TEAM', 'BOARD', 'ASSEMBLY', 'COACHES', 'OFFICE'].includes(scope)) fail(400, 'folder.kind-or-scope-missing');
       const teamIds: string[] = Array.isArray(body.teamIds) ? [...new Set(body.teamIds.map(String))] : [];
       if ((scope === 'TEAM') !== teamIds.length > 0) fail(400, 'folder.team-scope-mismatch');
+      const office = this.requireOffice(scope, body.office);
       folder = {
         id: crypto.randomUUID(),
         parentId: null,
@@ -209,6 +235,7 @@ export class MockFiles {
         kind: body.kind,
         scope,
         teamIds,
+        office,
         membersCanUpload: !!body.membersCanUpload,
         color: null,
         coverFileId: null,
@@ -252,14 +279,18 @@ export class MockFiles {
     let scope: FolderScope = body.scope ?? folder.scope;
     const current = [...folder.teamIds].sort();
     let teamIds: string[] = body.scope ? [...new Set<string>((body.teamIds ?? []).map(String))].sort() : current;
+    const oldOffice = folder.office ?? null;
+    let office: string | null = body.scope ? (body.scope === 'OFFICE' ? (body.office ?? null) : null) : oldOffice;
     if (moved && parentId) {
       // server: below another folder it takes that folder's visibility, like a new subfolder
       const parent = this.movableInto(viewer, folder, parentId);
       scope = parent.scope;
       teamIds = [...parent.teamIds].sort();
-    } else if (parentId && (scope !== folder.scope || teamIds.join() !== current.join())) fail(400, 'folder.scope-inherited');
+      office = parent.office ?? null;
+    } else if (parentId && (scope !== folder.scope || teamIds.join() !== current.join() || office !== oldOffice)) fail(400, 'folder.scope-inherited');
+    else if (office !== oldOffice) office = this.requireOffice(scope, office);
     if ((scope === 'MEETING') !== (folder.scope === 'MEETING')) fail(403, 'access.denied');
-    const scopeChanged = scope !== folder.scope || teamIds.join() !== current.join();
+    const scopeChanged = scope !== folder.scope || teamIds.join() !== current.join() || office !== oldOffice;
     if ((scope === 'TEAM') !== teamIds.length > 0) fail(400, 'folder.team-scope-mismatch');
     let cover = body.clearCover ? null : (folder.coverFileId ?? null);
     if (body.coverFileId && !body.clearCover) {
@@ -268,11 +299,12 @@ export class MockFiles {
       cover = body.coverFileId;
     }
     const color = body.clearColor ? null : (body.color ?? folder.color ?? null);
-    const changed: StoredFolder = { ...folder, parentId, name, scope, teamIds, color, coverFileId: cover };
+    if (scope === 'OFFICE' && !office) fail(400, 'folder.office-invalid');
+    const changed: StoredFolder = { ...folder, parentId, name, scope, teamIds, office, color, coverFileId: cover };
     this.requireManage(viewer, changed);
     const before = { ...folder };
     Object.assign(folder, changed);
-    if (scopeChanged) for (const sub of this.descendants(folder.id)) Object.assign(sub, { scope, teamIds });
+    if (scopeChanged) for (const sub of this.descendants(folder.id)) Object.assign(sub, { scope, teamIds, office });
     this.folders.save();
     this.changed(before, null, 'FOLDER_UPDATED');
     if (scopeChanged) this.changed(folder, null, 'FOLDER_UPDATED');
@@ -379,9 +411,34 @@ export class MockFiles {
   /** server: FileHandlers.saveSettings */
   saveFileSettings(member: Member, body: Record<string, unknown>): FileSettings {
     directory.requirePrivileged(member, ADMIN_BOARD);
-    const quotaMb = Number(body.quotaMb);
-    if (!Number.isInteger(quotaMb) || quotaMb < 100 || quotaMb > 102_400) fail(400, 'file-settings.invalid');
-    this.settings.data.quotaMb = quotaMb;
+    const quota = (mb: unknown) => Number.isInteger(mb) && (mb as number) >= 100 && (mb as number) <= 102_400;
+    const roles = (body.roleQuotaMb ?? null) as Record<string, unknown> | null;
+    const types = body.types as unknown[];
+    const known = FILE_TYPES.map((t) => t.value as string);
+    const side = Number(body.maxImageSide);
+    const keep = Number(body.keepVersions);
+    const valid =
+      quota(body.quotaMb) &&
+      roles !== null &&
+      typeof roles === 'object' &&
+      Object.entries(roles).every(([r, mb]) => r in ROLE_LABELS && quota(mb)) &&
+      Array.isArray(types) &&
+      types.length > 0 &&
+      types.every((t) => known.includes(t as string)) &&
+      Number.isInteger(side) &&
+      side >= 1600 &&
+      side <= 6000 &&
+      Number.isInteger(keep) &&
+      keep >= 0 &&
+      keep <= 100;
+    if (!valid) fail(400, 'file-settings.invalid');
+    Object.assign(this.settings.data, {
+      quotaMb: body.quotaMb as number,
+      roleQuotaMb: roles as FileSettings['roleQuotaMb'],
+      types: [...new Set(types)] as string[],
+      maxImageSide: side,
+      keepVersions: keep,
+    });
     this.settings.save();
     return { ...this.settings.data };
   }
@@ -393,7 +450,10 @@ export class MockFiles {
       .flat()
       .filter((v) => v.uploadedBy === member.id)
       .reduce((sum, v) => sum + v.sizeBytes, 0);
-    if (own + versions + adding > this.settings.data.quotaMb * 1024 * 1024) fail(409, 'file.quota-exceeded');
+    const s = this.settings.data;
+    const byRole = member.roles.map((r) => s.roleQuotaMb[r]).filter((mb): mb is number => mb !== undefined);
+    const mb = byRole.length ? Math.max(...byRole) : s.quotaMb;
+    if (own + versions + adding > mb * 1024 * 1024) fail(409, 'file.quota-exceeded');
   }
 
   async upload(req: MockRequest): Promise<StoredFile> {
@@ -410,7 +470,9 @@ export class MockFiles {
     const bytes = new Uint8Array(await file.arrayBuffer());
     const name = file instanceof File ? file.name : 'datei';
     const detected = MockFiles.detect(bytes, name);
-    if (!detected || (folder.kind === 'PHOTOS' && !detected.image)) return fail(400, 'file.type-not-allowed');
+    if (!detected || (folder.kind === 'PHOTOS' && !detected.image) || !this.settings.data.types.includes(detected.type)) {
+      return fail(400, 'file.type-not-allowed');
+    }
     if (new TextDecoder().decode(bytes.subarray(0, 512)).includes(EICAR)) fail(400, 'file.infected');
     const tags = req.query.getAll('tag');
     this.requireTaggable(detected.image, tags);
@@ -498,6 +560,9 @@ export class MockFiles {
     // server: an image version is re-encoded and gets a new thumbnail
     const size = detected!.image && !detected!.heic && detected!.contentType !== SVG ? await MockFiles.imageSize(upload) : null;
     Object.assign(file, { sizeBytes: upload.size, version: label, ...(size ?? {}) });
+    // server: FileHandlers.pruneVersions — the oldest beyond keepVersions go (never the current one)
+    const keep = this.settings.data.keepVersions;
+    if (keep > 0) list.splice(keep).forEach((v) => this.#blobs.delete(v.id));
     this.files.save();
     this.versions.save();
     this.changed(folder, file.id, 'UPDATED');
@@ -897,10 +962,18 @@ export class MockFiles {
     return depth;
   }
 
+  /** server: FolderHandlers.requireOffice — an OFFICE folder names an office the club has; other scopes carry none. */
+  private requireOffice(scope: FolderScope, office: unknown): string | null {
+    if (scope !== 'OFFICE') return null;
+    if (typeof office !== 'string' || !directory.boardSettings.data.offices.some((o) => o.office === office)) fail(400, 'folder.office-invalid');
+    return office as string;
+  }
+
   private toDto(f: StoredFolder, viewer: Viewer): Folder {
     const manage = viewer.canManage(f);
     return {
       ...f,
+      office: f.office ?? null,
       canManage: manage,
       canUpload: manage || (f.membersCanUpload && viewer.canSee(f)),
       system: !!f.system,
@@ -916,9 +989,11 @@ export class MockFiles {
           ? { roles: ['ADMIN', 'BOARD'] }
           : folder.scope === 'ASSEMBLY'
             ? { members: this.people.electorate('ASSEMBLY'), roles: ['ADMIN', 'BOARD'] }
-            : folder.scope === 'MEETING'
-              ? { roles: ['ADMIN'] } // shortcut as on the server: others reload
-              : this.teamsAudience(folder.teamIds);
+            : folder.scope === 'MEETING' || folder.scope === 'OFFICE'
+              ? { roles: folder.scope === 'MEETING' ? ['ADMIN'] : ['ADMIN', 'BOARD'] } // shortcut as on the server: others reload
+              : folder.scope === 'COACHES'
+                ? { roles: ['ADMIN', 'BOARD', 'COACH'] }
+                : this.teamsAudience(folder.teamIds);
     mockServer.events.publish({ type: 'files.files-changed', data: { folderId: folder.id, fileId, change }, audience });
   }
 
@@ -1084,16 +1159,18 @@ export class MockFiles {
   }
 
   /** server: FileType.detect (magic bytes; Office files by ZIP signature plus extension) */
-  private static detect(bytes: Uint8Array, name: string): { contentType: string; image: boolean; heic: boolean } | null {
+  private static detect(bytes: Uint8Array, name: string): { type: FileTypeName; contentType: string; image: boolean; heic: boolean } | null {
     const starts = (...sig: number[]) => sig.every((b, i) => bytes[i] === b);
-    if (starts(0xff, 0xd8, 0xff)) return { contentType: 'image/jpeg', image: true, heic: false };
-    if (starts(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) return { contentType: 'image/png', image: true, heic: false };
+    if (starts(0xff, 0xd8, 0xff)) return { type: 'JPEG', contentType: 'image/jpeg', image: true, heic: false };
+    if (starts(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) return { type: 'PNG', contentType: 'image/png', image: true, heic: false };
     const brand = new TextDecoder().decode(bytes.subarray(4, 12));
-    if (/^ftyp(heic|heix|mif1|msf1)/.test(brand)) return { contentType: 'image/jpeg', image: true, heic: true };
-    if (starts(0x25, 0x50, 0x44, 0x46, 0x2d)) return { contentType: 'application/pdf', image: false, heic: false };
-    if (isSafeSvg(new TextDecoder().decode(bytes))) return { contentType: SVG, image: true, heic: false };
+    if (/^ftyp(heic|heix|mif1|msf1)/.test(brand)) return { type: 'HEIC', contentType: 'image/jpeg', image: true, heic: true };
+    if (starts(0x25, 0x50, 0x44, 0x46, 0x2d)) return { type: 'PDF', contentType: 'application/pdf', image: false, heic: false };
+    if (isSafeSvg(new TextDecoder().decode(bytes))) return { type: 'SVG', contentType: SVG, image: true, heic: false };
     const extension = name.toLowerCase().split('.').pop() ?? '';
-    if (starts(0x50, 0x4b, 0x03, 0x04) && OFFICE[extension]) return { contentType: OFFICE[extension], image: false, heic: false };
+    if (starts(0x50, 0x4b, 0x03, 0x04) && OFFICE[extension]) {
+      return { type: extension.toUpperCase() as FileTypeName, contentType: OFFICE[extension], image: false, heic: false };
+    }
     return null;
   }
 

@@ -4,7 +4,7 @@ import OpenAnswersHome from './OpenAnswersHome.svelte';
 import { permissions } from '../../lib/container';
 import { ADMIN_BOARD } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
-import { appointmentTypes } from './services';
+import { appointmentTypes, calendarSettings } from './services';
 import AppointmentCreateView from './AppointmentCreateView.svelte';
 import AppointmentView from './AppointmentView.svelte';
 import AppointmentTypeCreateView from './AppointmentTypeCreateView.svelte';
@@ -43,7 +43,11 @@ export const calendarFeature: Feature = {
     'absence-new': { component: AbsenceCreateView },
   },
   actions: { appointment: appointmentActions, 'appointment-type': appointmentTypeActions, holiday: holidayActions },
-  start: (guest) => (guest ? undefined : appointmentTypes.start()),
+  start: (guest) => {
+    if (guest) return undefined;
+    void calendarSettings.load();
+    return appointmentTypes.start();
+  },
   calendar: {
     // The reason comes only for who may see it (self, guardians, coaches, admin, board).
     ABSENCE: (item) => ({ title: item.detail ? `${item.title} – ${item.detail}` : item.title, label: 'Abwesend' }),

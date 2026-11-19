@@ -11,20 +11,21 @@
   import BudgetSection from './BudgetSection.svelte';
   import FeesSection from './FeesSection.svelte';
   import { FINANCE_CHANGED } from './events';
-  import { FINANCE_SECTIONS, seasonLabel, seasonOf } from './model';
+  import { yearLabel, yearOf } from '../../lib/time/clubYear';
+  import { FINANCE_SECTIONS } from './model';
   import { accounts, financeApi, financeMay, money } from './services';
 
   /**
-   * One section of the Buchhaltung in the window: balances, open invoices, Kassenprüfungen, or a season's budget or fees (`budget:2026`,
-   * `fees:2026`). Entries open in the same window, with the way back.
+   * One section of the Buchhaltung in the window: balances, open invoices, Kassenprüfungen, a fiscal year's budget (`budget:2026`) or a
+   * season's fees (`fees:2026`). Entries open in the same window, with the way back.
    */
   let { id, handle }: { id: string; handle: WindowHandle } = $props();
 
-  const startMonth = session.club?.seasonStartMonth ?? 7;
   // svelte-ignore state_referenced_locally
   const [part, year] = id.split(':');
-  const season = Number(year) || seasonOf(session.clock.today(), startMonth);
-  const label = seasonLabel(season, startMonth);
+  const startMonth = part === 'budget' ? (session.club?.fiscalYearStartMonth ?? 1) : (session.club?.seasonStartMonth ?? 7);
+  const season = Number(year) || yearOf(session.clock.today(), startMonth);
+  const label = yearLabel(season, startMonth);
   $effect(() =>
     handle.setTitle(part === 'budget' || part === 'fees' ? `${FINANCE_SECTIONS[part]} ${label}` : (FINANCE_SECTIONS[part] ?? 'Buchhaltung')),
   );
@@ -110,7 +111,7 @@
     <ErrorNote error={audits.error} />
   </Detail>
 {:else if part === 'budget'}
-  <BudgetSection {season} {label} />
+  <BudgetSection year={season} {label} />
 {:else if part === 'fees'}
   <FeesSection {season} {label} {handle} />
 {/if}

@@ -8,15 +8,21 @@
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
   import type { AppointmentDetailModel } from './AppointmentDetailModel.svelte';
-  import { RESPONSE_OPTIONS, type ResponseStatus } from './model';
+  import { RESPONSE_OPTIONS, type AppointmentTypeInfo, type ResponseStatus } from './model';
 
-  /** The answer for oneself or, for guardians, one of their minors in the team (`respondents`, oneself first). */
-  let { detail, respondents }: { detail: AppointmentDetailModel; respondents: { id: string; name: string }[] } = $props();
+  /** The answer for oneself or, for guardians, one of their minors in the team (`respondents`, oneself first); `type` sets the answer rules. */
+  let {
+    detail,
+    respondents,
+    type,
+  }: { detail: AppointmentDetailModel; respondents: { id: string; name: string }[]; type: AppointmentTypeInfo | undefined } = $props();
 
   // svelte-ignore state_referenced_locally
   let memberId = $state(respondents[0]?.id ?? '');
   let status = $state<ResponseStatus | null>(null);
   let reason = $state('');
+  const options = $derived(type?.allowMaybe === false ? RESPONSE_OPTIONS.filter((o) => o.value !== 'MAYBE') : RESPONSE_OPTIONS);
+  const reasonNeeded = $derived(status === 'NO' && !!type?.reasonOnNo);
   const entry = $derived(detail.entryOf(memberId));
   const person = $derived(respondents.find((r) => r.id === memberId));
   const self = $derived(person?.name === 'Ich');
@@ -32,7 +38,8 @@
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (status && (await detail.respond(status, reason, memberId))) bus.publish(TOAST, { text: 'Antwort gespeichert.' });
+    if (status && !(reasonNeeded && !reason.trim()) && (await detail.respond(status, reason, memberId)))
+      bus.publish(TOAST, { text: 'Antwort gespeichert.' });
   }
 </script>
 
@@ -49,13 +56,13 @@
   {:else if entry?.unconfirmed}
     <p class="note warn">Die Zeit hat sich geändert. Bitte die Antwort bestätigen oder ändern.</p>
   {/if}
-  <ChoiceGroup name="response" label="Antwort" options={RESPONSE_OPTIONS} bind:value={status} />
-  <Field label="Begründung (optional)" hint="Sehen nur Trainer:innen des Teams, Vorstand und Admins.">
-    <input bind:value={reason} maxlength={settings.calendar.reasonMaxLength} />
+  <ChoiceGroup name="response" label="Antwort" {options} bind:value={status} />
+  <Field label={reasonNeeded ? 'Begründung' : 'Begründung (optional)'} hint="Sehen nur Trainer:innen des Teams, Vorstand und Admins.">
+    <input bind:value={reason} maxlength={settings.calendar.reasonMaxLength} required={reasonNeeded} />
   </Field>
   <ErrorNote error={detail.respondAction.error} />
   <div>
-    <Button type="submit" variant="primary" busy={detail.respondAction.busy} disabled={!status}
+    <Button type="submit" variant="primary" busy={detail.respondAction.busy} disabled={!status || (reasonNeeded && !reason.trim())}
       >{entry?.unconfirmed ? 'Antwort bestätigen' : 'Antwort speichern'}</Button
     >
   </div>

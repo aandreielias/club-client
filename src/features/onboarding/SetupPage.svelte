@@ -55,6 +55,7 @@
         website: club.website ?? '',
         contactEmail: club.contactEmail ?? '',
         seasonStartMonth: club.seasonStartMonth,
+        fiscalYearStartMonth: club.fiscalYearStartMonth,
       });
     });
   }

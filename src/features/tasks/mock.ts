@@ -6,7 +6,7 @@ import { itemUseSources, MockLinks, type ItemUse } from '../../lib/mock/MockLink
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import type { Member } from '../../lib/types';
-import { ZonedClock } from '../../lib/time/ZonedClock';
+import { repeatAt, type Rhythm } from '../../lib/time/repeat';
 import type { NewTask, Task, TaskComment, TaskPatch, TaskSettings, TaskSource, TaskStatus } from './model';
 import type { MockEvent } from '../../lib/mock/MockEventBus';
 import { ADMIN_BOARD, coaches } from '../../lib/types';
@@ -58,7 +58,7 @@ export class MockTasks {
   /** taskId → source (server: tasks_source) */
   readonly sources = new MockTable<Record<string, TaskSource>>('task-sources', () => ({}));
   /** server: tasks_setting */
-  readonly settings = new MockTable<TaskSettings>('task-settings', () => ({ remindHours: 24 }));
+  readonly settings = new MockTable<TaskSettings>('task-settings', () => ({ remindHours: 24, overdueRepeatDays: 0, escalateAfterDays: 0 }));
 
   constructor(private readonly people: MockDirectory) {
     this.tasks = new MockTable('tasks', () => this.seedTasks());
@@ -66,17 +66,18 @@ export class MockTasks {
     mockServer.events.subscribe((event) => this.onEvent(event));
   }
 
-  taskSettings(member: Member): TaskSettings {
-    this.people.requireRole(member, ADMIN_BOARD);
+  /** server: every member reads it ("Bald fällig" uses the same lead). */
+  taskSettings(): TaskSettings {
     return { ...this.settings.data };
   }
 
-  /** server: TaskHandlers.saveSettings */
+  /** server: TaskHandlers.saveSettings (the overdue repeat and escalation run on the server's schedule only) */
   saveTaskSettings(member: Member, body: Record<string, unknown>): TaskSettings {
     this.people.requirePrivileged(member, ADMIN_BOARD);
-    const remindHours = Number(body.remindHours);
-    if (!Number.isInteger(remindHours) || remindHours < 1 || remindHours > 336) fail(400, 'task-settings.invalid');
-    this.settings.data.remindHours = remindHours;
+    const [remindHours, overdueRepeatDays, escalateAfterDays] = [body.remindHours, body.overdueRepeatDays, body.escalateAfterDays].map(Number);
+    const within = (n: number, min: number, max: number) => Number.isInteger(n) && n >= min && n <= max;
+    if (!within(remindHours, 1, 336) || !within(overdueRepeatDays, 0, 30) || !within(escalateAfterDays, 0, 90)) fail(400, 'task-settings.invalid');
+    Object.assign(this.settings.data, { remindHours, overdueRepeatDays, escalateAfterDays });
     this.settings.save();
     return { ...this.settings.data };
   }
@@ -102,6 +103,8 @@ export class MockTasks {
         createdAt: new Date().toISOString(),
         completedAt: null,
         repeatWeeks: null,
+        repeatMonths: null,
+        repeatByWeekday: false,
       };
       this.tasks.data.push(task);
       this.sources.data[task.id] = { kind: 'CHANGE_REQUEST', id: data.requestId };
@@ -138,6 +141,8 @@ export class MockTasks {
         createdAt: new Date().toISOString(),
         completedAt: null,
         repeatWeeks: null,
+        repeatMonths: null,
+        repeatByWeekday: false,
       };
       this.tasks.data.push(task);
       this.sources.data[task.id] = { kind, id: sourceId };
@@ -188,6 +193,8 @@ export class MockTasks {
       createdAt: new Date().toISOString(),
       completedAt: null,
       repeatWeeks: null,
+      repeatMonths: null,
+      repeatByWeekday: false,
     };
     this.tasks.data.push(task);
     this.sources.data[task.id] = { kind: 'MEETING_REMINDER', id: key };
@@ -333,7 +340,7 @@ export class MockTasks {
       checklist: MockTasks.items(body.checklist ?? []),
       createdAt: now,
       completedAt: null,
-      repeatWeeks: body.repeatWeeks ?? null,
+      ...MockTasks.rhythm(body.repeatWeeks, body.repeatMonths, body.repeatByWeekday),
     });
     this.tasks.data.push(task);
     this.tasks.save();
@@ -358,7 +365,11 @@ export class MockTasks {
       dueAt: patch.clearDue ? null : (patch.dueAt ?? current.dueAt),
       assignees: patch.assignees ? [...new Set(patch.assignees)] : current.assignees,
       checklist: patch.checklist ? MockTasks.items(patch.checklist) : current.checklist,
-      repeatWeeks: patch.clearRepeat ? null : (patch.repeatWeeks ?? current.repeatWeeks ?? null),
+      ...(patch.clearRepeat
+        ? MockTasks.rhythm(null, null, false)
+        : patch.repeatWeeks != null || patch.repeatMonths != null
+          ? MockTasks.rhythm(patch.repeatWeeks, patch.repeatMonths, patch.repeatByWeekday)
+          : {}),
     });
     Object.assign(current, next);
     this.tasks.save();
@@ -372,13 +383,13 @@ export class MockTasks {
     if (!STATUSES.includes(status as TaskStatus)) return fail(400, 'request.invalid');
     const task = this.workable(this.viewer(member), id);
     // server: finishing a repeating task creates the next one, same local time n weeks later.
-    if (status === 'DONE' && task.status !== 'DONE' && task.repeatWeeks && task.dueAt) {
+    if (status === 'DONE' && task.status !== 'DONE' && (task.repeatWeeks || task.repeatMonths) && task.dueAt) {
       const next: StoredTask = {
         ...task,
         id: crypto.randomUUID(),
         appointmentId: null,
         status: 'OPEN',
-        dueAt: MockTasks.nextDue(task.dueAt, task.repeatWeeks),
+        dueAt: MockTasks.nextDue(task.dueAt, { weeks: task.repeatWeeks ?? 0, months: task.repeatMonths ?? 0, byWeekday: task.repeatByWeekday }),
         checklist: MockTasks.items(task.checklist.map((i) => i.text)),
         createdAt: new Date().toISOString(),
         completedAt: null,
@@ -390,7 +401,7 @@ export class MockTasks {
         this.links.table.data[next.id] = structuredClone(links);
         this.links.table.save();
       }
-      task.repeatWeeks = null;
+      Object.assign(task, MockTasks.rhythm(null, null, false));
       this.changed(next, 'CREATED');
       MockActivity.record('TASK', next.id, member, 'CREATED', { title: next.title, teamIds: next.teamId ? [next.teamId] : [] });
       this.assigned(next, []);
@@ -518,22 +529,31 @@ export class MockTasks {
     if (task.checklist.length > limits.maxChecklistItems) fail(400, 'task.checklist-too-long');
     if (task.checklist.some((i) => !i.text.trim() || i.text.length > limits.checklistItemMaxLength)) fail(400, 'task.checklist-item-invalid');
     if (task.dueAt !== null && isNaN(Date.parse(task.dueAt))) fail(400, 'request.invalid');
-    if (task.repeatWeeks != null && (task.repeatWeeks < 1 || task.repeatWeeks > 12)) fail(400, 'task.repeat-invalid');
-    if (task.repeatWeeks != null && task.dueAt === null) fail(400, 'task.repeat-needs-due');
+    const { repeatWeeks: weeks, repeatMonths: months } = task;
+    if (weeks != null && (weeks < 1 || weeks > 12 || task.repeatByWeekday)) fail(400, 'task.repeat-invalid');
+    if (months != null && (months < 1 || months > 12)) fail(400, 'task.repeat-invalid');
+    if ((weeks ?? months) != null && task.dueAt === null) fail(400, 'task.repeat-needs-due');
     return { ...task, title: task.title.trim(), description: task.description || null };
   }
 
-  /** Same local wall time (club zone) n weeks later. */
-  /** server: Task.nextOccurrence — the first due date in the rhythm still ahead (done late: not an overdue one). */
-  private static nextDue(dueAt: string, weeks: number): string {
-    let next = MockTasks.weeksLater(dueAt, weeks);
-    while (Date.parse(next) <= Date.now()) next = MockTasks.weeksLater(next, weeks);
-    return next;
+  /** server: Task.repeat — weeks or months, not both. */
+  private static rhythm(weeks: unknown, months: unknown, byWeekday: unknown): Pick<Task, 'repeatWeeks' | 'repeatMonths' | 'repeatByWeekday'> {
+    if (weeks != null && months != null) fail(400, 'task.repeat-invalid');
+    return {
+      repeatWeeks: (weeks as number) ?? null,
+      repeatMonths: (months as number) ?? null,
+      repeatByWeekday: months != null && byWeekday === true,
+    };
   }
 
-  private static weeksLater(dueAt: string, weeks: number): string {
+  /** server: Task.nextOccurrence — the first due date in the rhythm still ahead (done late: not an overdue one), same local time. */
+  private static nextDue(dueAt: string, rhythm: Rhythm): string {
     const clock = directory.clock;
-    return clock.toInstant(ZonedClock.addMinutes(clock.toLocal(dueAt), weeks * 7 * 24 * 60));
+    const anchor = clock.toLocal(dueAt);
+    for (let i = 1; ; i++) {
+      const next = clock.toInstant(repeatAt(anchor, rhythm, i));
+      if (Date.parse(next) > Date.now()) return next;
+    }
   }
 
   /** By date, undated last. */
@@ -557,7 +577,14 @@ export class MockTasks {
   private seedTasks(): StoredTask[] {
     const day = 86_400_000;
     const at = (days: number) => new Date(Date.now() + days * day).toISOString();
-    const base = { appointmentId: null, completedAt: null, createdAt: at(-5), repeatWeeks: null as number | null };
+    const base = {
+      appointmentId: null,
+      completedAt: null,
+      createdAt: at(-5),
+      repeatWeeks: null as number | null,
+      repeatMonths: null as number | null,
+      repeatByWeekday: false,
+    };
     const items = (...entries: [string, boolean][]) => entries.map(([text, done], i) => ({ id: `ci-${text.length}-${i}`, text, done }));
     return [
       {
@@ -663,7 +690,7 @@ const actor = (req: MockRequest) => directory.actor(req);
 const flag = (req: MockRequest, name: string) => req.query.get(name) === 'true';
 
 mockServer
-  .on('GET', '/api/v1/tasks/settings', (req) => tasks.taskSettings(actor(req)))
+  .on('GET', '/api/v1/tasks/settings', (req) => (actor(req), tasks.taskSettings()))
   .on('PUT', '/api/v1/tasks/settings', (req) => tasks.saveTaskSettings(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/tasks/:id/activity', (req) => activity.list(actor(req), 'TASK', tasks.get(actor(req), req.params.id).id))
   .on('GET', '/api/v1/tasks', (req) => {

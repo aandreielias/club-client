@@ -25,14 +25,53 @@ export const STATUS_TONES: Readonly<Record<MeetingStatus, Hue>> = {
   CANCELLED: 'red',
 };
 
-/** server: MeetingsApi.Quorum — of the electorate present: at least half, more than half, at least three quarters, all. */
-export type Quorum = 'AT_LEAST_HALF' | 'MORE_THAN_HALF' | 'AT_LEAST_THREE_QUARTERS' | 'ALL';
-export const QUORUM_LABELS: Readonly<Record<Quorum, string>> = {
-  AT_LEAST_HALF: 'mindestens die Hälfte',
-  MORE_THAN_HALF: 'mehr als die Hälfte',
-  AT_LEAST_THREE_QUARTERS: 'mindestens drei Viertel',
-  ALL: 'alle',
+/**
+ * server: MeetingsApi.Quorum — of the electorate present at least (`moreThan`: more than) numerator/denominator, and at least `minimum`
+ * people (null: no headcount). 0/1: anyone present; 1/1: all.
+ */
+export interface Quorum {
+  numerator: number;
+  denominator: number;
+  moreThan: boolean;
+  minimum: number | null;
+}
+
+const SHARE_WORDS: Readonly<Record<string, string>> = {
+  '1/2': 'die Hälfte',
+  '1/3': 'ein Drittel',
+  '2/3': 'zwei Drittel',
+  '1/4': 'ein Viertel',
+  '3/4': 'drei Viertel',
 };
+
+export const quorum = (numerator: number, denominator: number, moreThan = false, minimum: number | null = null): Quorum => ({
+  numerator,
+  denominator,
+  moreThan,
+  minimum,
+});
+
+/** The quorum in words: "mehr als die Hälfte", "mindestens 2/5, mindestens 10 Personen". */
+export function quorumLabel(q: Quorum): string {
+  const share =
+    q.numerator === 0
+      ? 'beliebig viele'
+      : q.numerator === q.denominator
+        ? 'alle'
+        : `${q.moreThan ? 'mehr als' : 'mindestens'} ${SHARE_WORDS[`${q.numerator}/${q.denominator}`] ?? `${q.numerator}/${q.denominator}`}`;
+  return q.minimum ? `${share}, mindestens ${q.minimum} Personen` : share;
+}
+
+/** server: Quorum.valid — a share from 0/1 to 1/1 (denominator up to 100, never "more than all"), a headcount from 1 to 10000. */
+export const quorumValid = (q: Quorum): boolean =>
+  Number.isInteger(q.numerator) &&
+  Number.isInteger(q.denominator) &&
+  q.denominator >= 1 &&
+  q.denominator <= 100 &&
+  q.numerator >= 0 &&
+  q.numerator <= q.denominator &&
+  !(q.moreThan && q.numerator === q.denominator) &&
+  (q.minimum === null || (Number.isInteger(q.minimum) && q.minimum >= 1 && q.minimum <= 10000));
 
 /**
  * server: MeetingsApi.StepAnchor — before the last day to invite (drafts), before the start (once invited), after the end, after the
@@ -107,6 +146,15 @@ export interface MeetingType {
   /** Not quorate at the hour → this many minutes later whoever is there decides. */
   graceMinutes: number | null;
   majorities: Majority[];
+  majorityBase: MajorityBase;
+  /** server: MeetingsApi.ProtocolRules — who approves the final protocol, how many approvals it needs, who reads it once final. */
+  protocol: ProtocolRules;
+  /** Board members who do not convene the type see its drafts. */
+  boardSeesDrafts: boolean;
+  /** A meeting of the type lasts at most this many days (1–30). */
+  maxDays: number;
+  /** Its colour in the calendar. */
+  hue: Hue;
   /** Offices that convene it; admins always may. */
   conveners: OfficeKind[];
   /** States the reason of its urgency in the invitation. */
@@ -154,19 +202,18 @@ export const latestInvite = (type: MeetingType, startsAt: string): string =>
 
 /** The quorum rule in words, next to the presence list. */
 export const quorumText = (type: MeetingType): string =>
-  QUORUM_LABELS[type.quorum] + (type.graceMinutes ? `; ${type.graceMinutes} Minuten nach Beginn unabhängig von der Anzahl` : '');
+  quorumLabel(type.quorum) + (type.graceMinutes ? `; ${type.graceMinutes} Minuten nach Beginn unabhängig von der Anzahl` : '');
 
 /** server: MeetingType.mayConvene — admins act for the conveners. */
 export const mayConvene = (type: MeetingType, admin: boolean, offices: readonly OfficeKind[]): boolean =>
   admin || type.conveners.some((o) => offices.includes(o));
 
-/** server: Quorum.reached — `count` of `total` reach the share; nobody of nobody does not. */
-export function quorumReached(quorum: Quorum, count: number, total: number): boolean {
-  if (!count || !total) return false;
-  if (quorum === 'AT_LEAST_HALF') return count * 2 >= total;
-  if (quorum === 'MORE_THAN_HALF') return count * 2 > total;
-  if (quorum === 'ALL') return count >= total;
-  return count * 4 >= total * 3;
+/** server: Quorum.reached — `count` of `total` reach the share and the headcount; nobody of nobody does not. */
+export function quorumReached(q: Quorum, count: number, total: number): boolean {
+  if (!count || !total || (q.minimum !== null && count < q.minimum)) return false;
+  const have = count * q.denominator;
+  const need = total * q.numerator;
+  return q.moreThan ? have > need : have >= need;
 }
 
 /** server: MeetingType.isQuorate; `present` counts only the electorate. */
@@ -336,11 +383,23 @@ export type MeetingPatch = Partial<Omit<NewMeeting, 'kind' | 'items'>> & { proto
 
 // --- resolutions (server: MeetingsApi.ResolutionDto) ---
 
-/** Of the valid votes (yes + no; abstentions don't count). */
+/** Of the votes its MajorityBase counts. */
 export type Majority = 'SIMPLE' | 'TWO_THIRDS' | 'THREE_QUARTERS';
+/** server: MeetingsApi.MajorityBase — what a majority is counted of. */
+export type MajorityBase = 'VALID' | 'CAST' | 'PRESENT';
+export const MAJORITY_BASE_LABELS: Readonly<Record<MajorityBase, string>> = {
+  VALID: 'der gültigen Stimmen',
+  CAST: 'aller abgegebenen Stimmen',
+  PRESENT: 'der Anwesenden',
+};
+export const MAJORITY_BASE_HINTS: Readonly<Record<MajorityBase, string>> = {
+  VALID: 'Ja und Nein zählen, Enthaltungen nicht.',
+  CAST: 'Enthaltungen zählen mit, also wie Nein.',
+  PRESENT: 'Alle anwesenden Stimmberechtigten zählen, auch wer nicht abstimmt; bei Umlaufbeschlüssen der ganze Vorstand.',
+};
 export type ResolutionStatus = 'DRAFT' | 'OPEN' | 'CLOSED';
 export type Choice = 'YES' | 'NO' | 'ABSTAIN';
-/** NOT_QUORATE: a circular vote in which no more than half of the board took part. */
+/** NOT_QUORATE: a circular vote in which fewer of the board took part than the circular quorum asks. */
 export type Result = 'PASSED' | 'FAILED' | 'NOT_QUORATE';
 
 export const MAJORITY_LABELS: Readonly<Record<Majority, string>> = {
@@ -354,22 +413,60 @@ export const CHOICE_LABELS: Readonly<Record<Choice, string>> = { YES: 'Ja', NO: 
 export const RESULT_LABELS: Readonly<Record<Result, string>> = { PASSED: 'Angenommen', FAILED: 'Abgelehnt', NOT_QUORATE: 'Zu wenig Beteiligung' };
 export const RESULT_TONES: Readonly<Record<Result, Hue>> = { PASSED: 'green', FAILED: 'red', NOT_QUORATE: 'orange' };
 
-/** server: Resolution.majorities — `null` = circular vote. */
-export function majorities(type: MeetingType | null): Majority[] {
-  return type ? (['SIMPLE', 'TWO_THIRDS', 'THREE_QUARTERS'] as const).filter((m) => type.majorities.includes(m)) : ['SIMPLE'];
+/** The majorities a Beschluss may ask for, in order: its meeting type's, or for circular votes the circular rules'. */
+export function majorities(allowed: readonly Majority[]): Majority[] {
+  return (['SIMPLE', 'TWO_THIRDS', 'THREE_QUARTERS'] as const).filter((m) => allowed.includes(m));
 }
 
-/** server: MeetingsApi.CircularRules — shortest voting time of a circular vote, and the share of the board that must take part. */
+/**
+ * server: MeetingsApi.CircularRules — shortest voting time of a circular vote, the share of the board that must take part, the majorities
+ * it may ask for and what they count of, and how many hours before the end those who have not voted are reminded.
+ */
+export type ProtocolReaders = 'INVITED' | 'ALL_MEMBERS';
+export interface ProtocolRules {
+  /** CHAIR and/or SECRETARY: the meeting's Vorsitz and Schriftführer:in, without a pick the office holders. */
+  approvers: OfficeKind[];
+  /** 0 with no approvers. */
+  approvalsNeeded: number;
+  readers: ProtocolReaders;
+}
+export const PROTOCOL_READERS_LABELS: Readonly<Record<ProtocolReaders, string>> = {
+  INVITED: 'Wer die Sitzung sieht',
+  ALL_MEMBERS: 'Alle Mitglieder',
+};
+export const DEFAULT_PROTOCOL: ProtocolRules = { approvers: ['CHAIR', 'SECRETARY'], approvalsNeeded: 2, readers: 'INVITED' };
+/** server: ProtocolRules.valid plus the CHOSEN rule of MeetingType. */
+export const protocolValid = (p: ProtocolRules, invitees: Invitees): boolean =>
+  p.approvers.every((a) => a === 'CHAIR' || a === 'SECRETARY') &&
+  Number.isInteger(p.approvalsNeeded) &&
+  p.approvalsNeeded >= (p.approvers.length ? 1 : 0) &&
+  p.approvalsNeeded <= new Set(p.approvers).size &&
+  !(invitees === 'CHOSEN' && p.readers === 'ALL_MEMBERS');
+
 export interface CircularRules {
   minHours: number;
   quorum: Quorum;
+  majorities: Majority[];
+  majorityBase: MajorityBase;
+  remindHours: number;
 }
 
-export const SEEDED_CIRCULAR: CircularRules = { minHours: 72, quorum: 'MORE_THAN_HALF' };
+export const SEEDED_CIRCULAR: CircularRules = {
+  minHours: 72,
+  quorum: { numerator: 1, denominator: 2, moreThan: true, minimum: null },
+  majorities: ['SIMPLE'],
+  majorityBase: 'VALID',
+  remindHours: 24,
+};
 
-/** server: MeetingsApi.ResolutionRules — how circular votes of the board run. */
+/** server: MeetingsApi.TaskFallback — who carries out a passed Beschluss nobody was named for. */
+export type TaskFallback = 'BOARD' | 'CHAIR';
+export const TASK_FALLBACK_LABELS: Readonly<Record<TaskFallback, string>> = { BOARD: 'Der Vorstand', CHAIR: 'Der Vorsitz (sonst der Vorstand)' };
+
+/** server: MeetingsApi.ResolutionRules — how circular votes of the board run, and who carries out a Beschluss without assignees. */
 export interface ResolutionRules {
   circular: CircularRules;
+  taskFallback: TaskFallback;
 }
 
 export interface Resolution {

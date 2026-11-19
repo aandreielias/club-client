@@ -17,7 +17,9 @@
     ACTION_KIND_LABELS,
     AUDIENCE_LABELS,
     INVITEES_LABELS,
+    MAJORITY_BASE_LABELS,
     MAJORITY_LABELS,
+    PROTOCOL_READERS_LABELS,
     majorities,
     noticeText,
     quorumText,
@@ -91,10 +93,21 @@
         <dd>{type.conveners.map((o) => boardSettings.label(o)).join(', ')}</dd>
         <dt>Mehrheiten</dt>
         <dd>
-          {majorities(type)
+          {majorities(type.majorities)
             .map((m) => MAJORITY_LABELS[m])
             .join(', ')}
+          {MAJORITY_BASE_LABELS[type.majorityBase]}
         </dd>
+        <dt>Protokoll</dt>
+        <dd>
+          {type.protocol.approvalsNeeded
+            ? `${type.protocol.approvalsNeeded} Genehmigung(en) von ${type.protocol.approvers.map((a) => (a === 'CHAIR' ? 'Vorsitz' : 'Schriftführung')).join(' oder ')}`
+            : 'ohne Genehmigung'}; lesen: {PROTOCOL_READERS_LABELS[type.protocol.readers]}
+        </dd>
+        {#if type.maxDays > 1}<dt>Dauer</dt>
+          <dd>bis {type.maxDays} Tage</dd>{/if}
+        {#if !type.boardSeesDrafts}<dt>Entwürfe</dt>
+          <dd>nur für Einberufende und Admins</dd>{/if}
         {#if type.dueBy}<dt>Jährlich</dt>
           <dd>geplant bis {session.format.shortDate(`2000-${type.dueBy}`)}</dd>{/if}
         {#if type.needsReason}<dt>Dringlichkeit</dt>

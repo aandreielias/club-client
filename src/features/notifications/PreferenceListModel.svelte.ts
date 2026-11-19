@@ -9,7 +9,8 @@ export interface PreferenceRow {
 
 /** The kinds of notifications in their fixed order, with push and e-mail columns (the switches are cells of the section). */
 export class PreferenceListModel extends ListModel<PreferenceRow> {
-  constructor(load: () => Promise<readonly NotificationKind[]>) {
+  /** {@code club}: the club's rules, with a column "Wichtig" first. */
+  constructor(load: () => Promise<readonly NotificationKind[]>, club = false) {
     super({
       id: 'notification-preferences',
       load: async () => {
@@ -20,6 +21,7 @@ export class PreferenceListModel extends ListModel<PreferenceRow> {
       defaultSort: { key: '', dir: 'asc' },
       columns: [
         { key: 'label', label: 'Art', value: (row) => row.label, sortable: false },
+        ...(club ? [{ key: 'important', label: 'Wichtig', value: () => null, sortable: false, width: '7rem' }] : []),
         { key: 'push', label: 'Push (App)', value: () => null, sortable: false, width: '7rem' },
         { key: 'email', label: 'E-Mail', value: () => null, sortable: false, width: '7rem' },
       ],

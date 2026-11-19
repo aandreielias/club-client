@@ -21,7 +21,7 @@ export class FilePolicy {
   }
 
   rootScopes(): readonly FolderScope[] {
-    return this.permissions.isManager ? ['CLUB', 'TEAM', 'BOARD', 'ASSEMBLY'] : ['TEAM'];
+    return this.permissions.isManager ? ['CLUB', 'TEAM', 'BOARD', 'ASSEMBLY', 'COACHES', 'OFFICE'] : ['TEAM'];
   }
 
   rootTeams(): readonly Team[] {

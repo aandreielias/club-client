@@ -6,8 +6,10 @@ import ResolutionRulesSection from '../meetings/ResolutionRulesSection.svelte';
 import TemplatesSection from '../meetings/TemplatesSection.svelte';
 import BoardSettingsSection from '../members/BoardSettingsSection.svelte';
 import MembershipSection from '../members/MembershipSection.svelte';
+import NotificationRulesSection from '../notifications/NotificationRulesSection.svelte';
 import NotificationSettingsSection from '../notifications/NotificationSettingsSection.svelte';
 import HolidaysSection from '../calendar/HolidaysSection.svelte';
+import CalendarSettingsSection from '../calendar/CalendarSettingsSection.svelte';
 import FileSettingsSection from '../files/FileSettingsSection.svelte';
 import FeeSettingsSection from '../finance/FeeSettingsSection.svelte';
 import FinanceSettingsSection from '../finance/FinanceSettingsSection.svelte';
@@ -42,7 +44,9 @@ export const SETTINGS_SECTIONS: Record<SectionId, Component<any>> = {
   'resolution-rules': ResolutionRulesSection,
   'appointment-types': AppointmentTypesSection,
   holidays: HolidaysSection,
+  'calendar-rules': CalendarSettingsSection,
   notifications: NotificationSettingsSection,
+  'notification-rules': NotificationRulesSection,
   files: FileSettingsSection,
   tasks: TaskSettingsSection,
   mailboxes: MailboxesSection,

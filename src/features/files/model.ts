@@ -1,4 +1,4 @@
-import type { Hue } from '../../lib/types';
+import type { Hue, Role } from '../../lib/types';
 
 // Mirrors of the club-server files DTOs.
 
@@ -6,8 +6,8 @@ import type { Hue } from '../../lib/types';
 export type FolderKind = 'DOCUMENTS' | 'PHOTOS';
 
 /** CLUB: all members. TEAM: the team, guardians of its members, admin and board. BOARD: admin and board. */
-/** MEETING: a meeting's own folder (e.g. arbitration), seen by who sees the meeting. */
-export type FolderScope = 'CLUB' | 'TEAM' | 'BOARD' | 'ASSEMBLY' | 'MEETING';
+/** MEETING: a meeting's own folder (e.g. arbitration), seen by who sees the meeting. COACHES: the COACH role. OFFICE: one office's holders. */
+export type FolderScope = 'CLUB' | 'TEAM' | 'BOARD' | 'ASSEMBLY' | 'MEETING' | 'COACHES' | 'OFFICE';
 
 /** Folder colours: the hues of the tags. */
 export type FolderColor = 'GRAY' | 'BROWN' | 'ORANGE' | 'YELLOW' | 'GREEN' | 'BLUE' | 'PURPLE' | 'RED';
@@ -20,6 +20,8 @@ export interface Folder {
   scope: FolderScope;
   /** TEAM folders: one or more teams; empty otherwise. */
   teamIds: string[];
+  /** OFFICE folders: the office key; null otherwise. */
+  office: string | null;
   membersCanUpload: boolean;
   color: FolderColor | null;
   /** A photo of this folder shown on its gallery tile. */
@@ -42,6 +44,7 @@ export interface NewFolder {
   kind: FolderKind;
   scope: FolderScope | null;
   teamIds: string[];
+  office: string | null;
   membersCanUpload: boolean;
 }
 
@@ -50,6 +53,7 @@ export interface FolderPatch {
   name?: string;
   scope?: FolderScope;
   teamIds?: string[];
+  office?: string | null;
   color?: FolderColor;
   clearColor?: boolean;
   coverFileId?: string;
@@ -125,8 +129,10 @@ export const FOLDER_SCOPES: readonly { value: FolderScope; label: string; hint: 
   {
     value: 'ASSEMBLY',
     label: 'Stimmberechtigte',
-    hint: 'Außerordentliche und Ehrenmitglieder, Vorstand und Admins (wie die Mitgliederversammlung).',
+    hint: 'Mitglieder mit Stimmrecht, Vorstand und Admins (wie die Mitgliederversammlung).',
   },
+  { value: 'COACHES', label: 'Trainer:innen', hint: 'Alle mit der Rolle Trainer:in, Vorstand und Admins.' },
+  { value: 'OFFICE', label: 'Amt', hint: 'Wer das gewählte Amt gerade innehat, Vorstand und Admins.' },
   // Made by the meetings module only (e.g. Schlichtungseinrichtung): never offered as a choice.
   { value: 'MEETING', label: 'Sitzung', hint: 'Wer die Sitzung sieht: Eingeladene, wer einberuft, Admins.' },
 ];
@@ -146,9 +152,32 @@ export const FOLDER_COLORS: readonly { value: FolderColor; label: string; hue: H
 
 export const colorHue = (color: FolderColor | null): Hue | null => FOLDER_COLORS.find((c) => c.value === color)?.hue ?? null;
 
-/** server: FilesApi.FileSettings — what one member who manages no folder may upload in total. */
+/** server: FileType names — what a club may allow members to upload. */
+export type FileTypeName = 'JPEG' | 'PNG' | 'HEIC' | 'SVG' | 'PDF' | 'DOCX' | 'DOTX' | 'XLSX' | 'PPTX';
+
+export const FILE_TYPES: readonly { value: FileTypeName; label: string; hint: string }[] = [
+  { value: 'JPEG', label: 'JPEG', hint: 'Fotos (.jpg)' },
+  { value: 'PNG', label: 'PNG', hint: 'Bilder, Grafiken' },
+  { value: 'HEIC', label: 'HEIC', hint: 'iPhone-Fotos, werden zu JPEG' },
+  { value: 'SVG', label: 'SVG', hint: 'Vektorgrafiken, z. B. Logos' },
+  { value: 'PDF', label: 'PDF', hint: 'Dokumente' },
+  { value: 'DOCX', label: 'Word', hint: '.docx ohne Makros' },
+  { value: 'DOTX', label: 'Word-Vorlage', hint: '.dotx, z. B. für Einladung und Protokoll' },
+  { value: 'XLSX', label: 'Excel', hint: '.xlsx ohne Makros' },
+  { value: 'PPTX', label: 'PowerPoint', hint: '.pptx ohne Makros' },
+];
+
+/**
+ * server: FilesApi.FileSettings — upload quota of a member who manages no folder (per role, the highest counts; else `quotaMb`), the
+ * types members may upload, the longest image side and how many versions a file keeps (0 = all).
+ */
 export interface FileSettings {
   quotaMb: number;
+  roleQuotaMb: Partial<Record<Role, number>>;
+  /** FileTypeName values (the server sends plain strings). */
+  types: string[];
+  maxImageSide: number;
+  keepVersions: number;
 }
 
 /** What the club settings use a file for (server: FilesApi.SettingSlot). */

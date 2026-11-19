@@ -197,6 +197,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["settings_1"];
+        put: operations["saveSettings_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/membership-kinds/{key}": {
         parameters: {
             query?: never;
@@ -460,8 +476,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["settings_1"];
-        put: operations["saveSettings_1"];
+        get: operations["settings_2"];
+        put: operations["saveSettings_2"];
         post?: never;
         delete?: never;
         options?: never;
@@ -652,8 +668,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["settings_2"];
-        put: operations["saveSettings_2"];
+        get: operations["settings_3"];
+        put: operations["saveSettings_3"];
         post?: never;
         delete?: never;
         options?: never;
@@ -720,6 +736,22 @@ export interface paths {
         put: operations["updateType_1"];
         post?: never;
         delete: operations["deleteType_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calendar/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["settings_4"];
+        put: operations["saveSettings_4"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3222,6 +3254,9 @@ export interface components {
             completedAt: string;
             /** Format: int32 */
             repeatWeeks: number;
+            /** Format: int32 */
+            repeatMonths: number;
+            repeatByWeekday: boolean;
             source: components["schemas"]["at.clubserver.tasks.api.TasksApi.Source"];
         };
         "at.clubserver.gateway.rest.LinksBody": {
@@ -3275,10 +3310,18 @@ export interface components {
         "at.clubserver.gateway.rest.TasksController.SettingsBody": {
             /** Format: int32 */
             remindHours: number;
+            /** Format: int32 */
+            overdueRepeatDays: number;
+            /** Format: int32 */
+            escalateAfterDays: number;
         };
         "at.clubserver.tasks.api.TasksApi.TaskSettings": {
             /** Format: int32 */
             remindHours: number;
+            /** Format: int32 */
+            overdueRepeatDays: number;
+            /** Format: int32 */
+            escalateAfterDays: number;
         };
         "at.clubserver.gateway.rest.CalendarController.PassengerBody": {
             /** Format: uuid */
@@ -3384,6 +3427,28 @@ export interface components {
         };
         "at.clubserver.gateway.rest.ResolutionsController.AssigneesBody": {
             assigneeIds: string[];
+        };
+        "at.clubserver.gateway.rest.NotificationsController.SettingsBody": {
+            importantKinds: ("TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "CHANGE_DECIDED" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM" | "FEE")[];
+            defaults: components["schemas"]["at.clubserver.notifications.api.NotificationsApi.Preference"][];
+            /** Format: int32 */
+            inboxRetentionDays: number;
+            /** Format: int32 */
+            activityRetentionDays: number;
+        };
+        "at.clubserver.notifications.api.NotificationsApi.Preference": {
+            /** @enum {string} */
+            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "CHANGE_DECIDED" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM" | "FEE";
+            push: boolean;
+            email: boolean;
+        };
+        "at.clubserver.notifications.api.NotificationsApi.NotificationSettings": {
+            importantKinds: ("TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "CHANGE_DECIDED" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM" | "FEE")[];
+            defaults: components["schemas"]["at.clubserver.notifications.api.NotificationsApi.Preference"][];
+            /** Format: int32 */
+            inboxRetentionDays: number;
+            /** Format: int32 */
+            activityRetentionDays: number;
         };
         "at.clubserver.gateway.rest.MembersController.MembershipKindBody": {
             label: string;
@@ -3556,11 +3621,17 @@ export interface components {
             voting: "ALL_INVITED" | "VOTERS_ONLY";
             /** Format: int32 */
             noticeHours: number;
-            /** @enum {string} */
-            quorum: "AT_LEAST_HALF" | "MORE_THAN_HALF" | "AT_LEAST_THREE_QUARTERS" | "ALL";
+            quorum: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Quorum"];
             /** Format: int32 */
             graceMinutes: number;
             majorities: ("SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS")[];
+            /** @enum {string} */
+            majorityBase: "VALID" | "CAST" | "PRESENT";
+            protocol: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.ProtocolRules"];
+            boardSeesDrafts: boolean;
+            /** Format: int32 */
+            maxDays: number;
+            hue: string;
             conveners: string[];
             needsReason: boolean;
             dueBy: string;
@@ -3575,6 +3646,22 @@ export interface components {
             minInvitees: number;
             /** Format: int32 */
             maxInvitees: number;
+        };
+        "at.clubserver.meetings.api.MeetingsApi.ProtocolRules": {
+            approvers: string[];
+            /** Format: int32 */
+            approvalsNeeded: number;
+            /** @enum {string} */
+            readers: "INVITED" | "ALL_MEMBERS";
+        };
+        "at.clubserver.meetings.api.MeetingsApi.Quorum": {
+            /** Format: int32 */
+            numerator: number;
+            /** Format: int32 */
+            denominator: number;
+            moreThan: boolean;
+            /** Format: int32 */
+            minimum: number;
         };
         "at.clubserver.meetings.api.MeetingsApi.StepDto": {
             /** Format: uuid */
@@ -3605,11 +3692,17 @@ export interface components {
             voting: "ALL_INVITED" | "VOTERS_ONLY";
             /** Format: int32 */
             noticeHours: number;
-            /** @enum {string} */
-            quorum: "AT_LEAST_HALF" | "MORE_THAN_HALF" | "AT_LEAST_THREE_QUARTERS" | "ALL";
+            quorum: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Quorum"];
             /** Format: int32 */
             graceMinutes: number;
             majorities: ("SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS")[];
+            /** @enum {string} */
+            majorityBase: "VALID" | "CAST" | "PRESENT";
+            protocol: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.ProtocolRules"];
+            boardSeesDrafts: boolean;
+            /** Format: int32 */
+            maxDays: number;
+            hue: string;
             conveners: string[];
             needsReason: boolean;
             dueBy: string;
@@ -3628,15 +3721,23 @@ export interface components {
         };
         "at.clubserver.gateway.rest.MeetingsController.ResolutionRulesBody": {
             circular: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.CircularRules"];
+            /** @enum {string} */
+            taskFallback: "BOARD" | "CHAIR";
         };
         "at.clubserver.meetings.api.MeetingsApi.CircularRules": {
             /** Format: int32 */
             minHours: number;
+            quorum: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Quorum"];
+            majorities: ("SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS")[];
             /** @enum {string} */
-            quorum: "AT_LEAST_HALF" | "MORE_THAN_HALF" | "AT_LEAST_THREE_QUARTERS" | "ALL";
+            majorityBase: "VALID" | "CAST" | "PRESENT";
+            /** Format: int32 */
+            remindHours: number;
         };
         "at.clubserver.meetings.api.MeetingsApi.ResolutionRules": {
             circular: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.CircularRules"];
+            /** @enum {string} */
+            taskFallback: "BOARD" | "CHAIR";
         };
         "at.clubserver.gateway.rest.NotificationsController.PushTokenBody": {
             token: string;
@@ -3645,12 +3746,6 @@ export interface components {
         };
         "at.clubserver.gateway.rest.NotificationsController.PreferencesBody": {
             items: components["schemas"]["at.clubserver.notifications.api.NotificationsApi.Preference"][];
-        };
-        "at.clubserver.notifications.api.NotificationsApi.Preference": {
-            /** @enum {string} */
-            kind: "TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "CHANGE_DECIDED" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM" | "FEE";
-            push: boolean;
-            email: boolean;
         };
         "at.clubserver.notifications.api.NotificationsApi.Preferences": {
             items: components["schemas"]["at.clubserver.notifications.api.NotificationsApi.Preference"][];
@@ -3700,6 +3795,10 @@ export interface components {
             dailyLimit: number;
             /** @enum {string} */
             personalFor: "ALL" | "CLUB_MEMBERS" | "NONE";
+            /** @enum {string} */
+            addressPattern: "FIRSTLAST" | "FIRST_DOT_LAST" | "INITIAL_DOT_LAST";
+            /** Format: int32 */
+            maxRecipients: number;
         };
         "at.clubserver.mail.api.MailApi.MailSettingsDto": {
             domain: string;
@@ -3708,14 +3807,24 @@ export interface components {
             keepsMail: boolean;
             /** @enum {string} */
             personalFor: "ALL" | "CLUB_MEMBERS" | "NONE";
+            /** @enum {string} */
+            addressPattern: "FIRSTLAST" | "FIRST_DOT_LAST" | "INITIAL_DOT_LAST";
+            /** Format: int32 */
+            maxRecipients: number;
         };
         "at.clubserver.gateway.rest.MailController.MailboxBody": {
             address: string;
             name: string;
             /** Format: uuid */
             memberId: string;
-            /** @enum {string} */
-            role: "ADMIN" | "BOARD" | "COACH" | "PLAYER" | "PARENT" | "VOLUNTEER" | "GUEST";
+            owners: components["schemas"]["at.clubserver.mail.api.MailApi.Owners"];
+        };
+        "at.clubserver.mail.api.MailApi.Owners": {
+            roles: ("ADMIN" | "BOARD" | "COACH" | "PLAYER" | "PARENT" | "VOLUNTEER" | "GUEST")[];
+            offices: string[];
+            teamIds: string[];
+            memberIds: string[];
+            empty: boolean;
         };
         "at.clubserver.mail.api.MailApi.MailboxAdminDto": {
             /** Format: uuid */
@@ -3725,8 +3834,7 @@ export interface components {
             /** Format: uuid */
             memberId: string;
             memberName: string;
-            /** @enum {string} */
-            role: "ADMIN" | "BOARD" | "COACH" | "PLAYER" | "PARENT" | "VOLUNTEER" | "GUEST";
+            owners: components["schemas"]["at.clubserver.mail.api.MailApi.Owners"];
         };
         "at.clubserver.gateway.rest.InventoryController.StockBody": {
             entries: components["schemas"]["at.clubserver.inventory.api.InventoryApi.StockInput"][];
@@ -3877,7 +3985,7 @@ export interface components {
         };
         "at.clubserver.finance.api.FinanceApi.Budget": {
             /** Format: int32 */
-            season: number;
+            year: number;
             items: components["schemas"]["at.clubserver.finance.api.FinanceApi.BudgetLine"][];
         };
         "at.clubserver.finance.api.FinanceApi.BudgetLine": {
@@ -3975,10 +4083,26 @@ export interface components {
         "at.clubserver.gateway.rest.FilesController.SettingsBody": {
             /** Format: int32 */
             quotaMb: number;
+            roleQuotaMb: {
+                [key: string]: number;
+            };
+            types: string[];
+            /** Format: int32 */
+            maxImageSide: number;
+            /** Format: int32 */
+            keepVersions: number;
         };
         "at.clubserver.files.api.FilesApi.FileSettings": {
             /** Format: int32 */
             quotaMb: number;
+            roleQuotaMb: {
+                [key: string]: number;
+            };
+            types: string[];
+            /** Format: int32 */
+            maxImageSide: number;
+            /** Format: int32 */
+            keepVersions: number;
         };
         "at.clubserver.gateway.rest.FilesController.PickBody": {
             /** Format: uuid */
@@ -4002,6 +4126,8 @@ export interface components {
             registerNumber: string;
             /** Format: int32 */
             seasonStartMonth: number;
+            /** Format: int32 */
+            fiscalYearStartMonth: number;
         };
         "at.clubserver.platform.club.Brand": {
             primary: string;
@@ -4045,6 +4171,8 @@ export interface components {
             registerNumber: string;
             /** Format: int32 */
             seasonStartMonth: number;
+            /** Format: int32 */
+            fiscalYearStartMonth: number;
             brand: components["schemas"]["at.clubserver.platform.club.Brand"];
             assets: components["schemas"]["at.clubserver.platform.club.BrandSettings.BrandAssets"];
             configured: boolean;
@@ -4059,6 +4187,25 @@ export interface components {
             archived: boolean;
             /** Format: int32 */
             remindHours: number;
+            hasResult: boolean;
+            planLabel: string;
+            defaultStart: string;
+            /** Format: int32 */
+            defaultMinutes: number;
+            /** Format: int32 */
+            maxDays: number;
+            /** Format: int32 */
+            answerDeadlineHours: number;
+            allowMaybe: boolean;
+            reasonOnNo: boolean;
+            /** @enum {string} */
+            expectAnswers: "TEAM" | "CLUB" | "NONE";
+            notifyChanges: boolean;
+            /** Format: int32 */
+            minShiftMinutes: number;
+            selfCheckIn: boolean;
+            /** Format: int32 */
+            remindAgainHours: number;
         };
         "at.clubserver.calendar.api.CalendarApi.AppointmentTypeDto": {
             key: string;
@@ -4072,6 +4219,43 @@ export interface components {
             inUse: boolean;
             /** Format: int32 */
             remindHours: number;
+            hasResult: boolean;
+            planLabel: string;
+            defaultStart: string;
+            /** Format: int32 */
+            defaultMinutes: number;
+            /** Format: int32 */
+            maxDays: number;
+            /** Format: int32 */
+            answerDeadlineHours: number;
+            allowMaybe: boolean;
+            reasonOnNo: boolean;
+            /** @enum {string} */
+            expectAnswers: "TEAM" | "CLUB" | "NONE";
+            notifyChanges: boolean;
+            /** Format: int32 */
+            minShiftMinutes: number;
+            selfCheckIn: boolean;
+            /** Format: int32 */
+            remindAgainHours: number;
+        };
+        "at.clubserver.gateway.rest.CalendarController.CalendarSettingsBody": {
+            cabinLabels: string[];
+            /** Format: int32 */
+            itemRemindHours: number;
+            /** Format: int32 */
+            openAnswerDays: number;
+            /** Format: int32 */
+            maxRideSeats: number;
+        };
+        "at.clubserver.calendar.api.CalendarApi.CalendarSettings": {
+            cabinLabels: string[];
+            /** Format: int32 */
+            itemRemindHours: number;
+            /** Format: int32 */
+            openAnswerDays: number;
+            /** Format: int32 */
+            maxRideSeats: number;
         };
         "at.clubserver.gateway.rest.CalendarItemsController.MoveBody": {
             /** Format: date-time */
@@ -4278,6 +4462,9 @@ export interface components {
             checklist: string[];
             /** Format: int32 */
             repeatWeeks: number;
+            /** Format: int32 */
+            repeatMonths: number;
+            repeatByWeekday: boolean;
         };
         "at.clubserver.gateway.rest.TasksController.CommentBody": {
             text: string;
@@ -4291,6 +4478,8 @@ export interface components {
             /** Format: date */
             implementDue: string;
             open: boolean;
+            /** @enum {string} */
+            majority: "SIMPLE" | "TWO_THIRDS" | "THREE_QUARTERS";
         };
         "at.clubserver.gateway.rest.ResolutionsController.VoteBody": {
             /** @enum {string} */
@@ -4471,8 +4660,9 @@ export interface components {
             /** @enum {string} */
             kind: "DOCUMENTS" | "PHOTOS";
             /** @enum {string} */
-            scope: "CLUB" | "TEAM" | "BOARD" | "ASSEMBLY" | "MEETING";
+            scope: "CLUB" | "TEAM" | "BOARD" | "ASSEMBLY" | "MEETING" | "COACHES" | "OFFICE";
             teamIds: string[];
+            office: string;
             membersCanUpload: boolean;
         };
         "at.clubserver.files.api.FilesApi.FolderDto": {
@@ -4484,8 +4674,9 @@ export interface components {
             /** @enum {string} */
             kind: "DOCUMENTS" | "PHOTOS";
             /** @enum {string} */
-            scope: "CLUB" | "TEAM" | "BOARD" | "ASSEMBLY" | "MEETING";
+            scope: "CLUB" | "TEAM" | "BOARD" | "ASSEMBLY" | "MEETING" | "COACHES" | "OFFICE";
             teamIds: string[];
+            office: string;
             membersCanUpload: boolean;
             /** @enum {string} */
             color: "GRAY" | "BROWN" | "ORANGE" | "YELLOW" | "GREEN" | "BLUE" | "PURPLE" | "RED";
@@ -4604,8 +4795,7 @@ export interface components {
             location: string;
             /** Format: uuid */
             locationId: string;
-            cabinMen: string;
-            cabinWomen: string;
+            cabins: string[];
             /** Format: date-time */
             startsAt: string;
             /** Format: date-time */
@@ -4614,6 +4804,9 @@ export interface components {
             repeatUntil: string;
             /** Format: int32 */
             intervalWeeks: number;
+            /** Format: int32 */
+            intervalMonths: number;
+            byWeekday: boolean;
             rides: boolean;
         };
         "at.clubserver.calendar.api.CalendarApi.AppointmentDto": {
@@ -4629,8 +4822,7 @@ export interface components {
             location: string;
             /** Format: uuid */
             locationId: string;
-            cabinMen: string;
-            cabinWomen: string;
+            cabins: string[];
             /** Format: date-time */
             startsAt: string;
             /** Format: date-time */
@@ -4705,6 +4897,9 @@ export interface components {
             clearDue: boolean;
             /** Format: int32 */
             repeatWeeks: number;
+            /** Format: int32 */
+            repeatMonths: number;
+            repeatByWeekday: boolean;
             clearRepeat: boolean;
         };
         "at.clubserver.gateway.rest.ResolutionsController.ResolutionPatch": {
@@ -4765,8 +4960,9 @@ export interface components {
         "at.clubserver.gateway.rest.FilesController.FolderPatch": {
             name: string;
             /** @enum {string} */
-            scope: "CLUB" | "TEAM" | "BOARD" | "ASSEMBLY" | "MEETING";
+            scope: "CLUB" | "TEAM" | "BOARD" | "ASSEMBLY" | "MEETING" | "COACHES" | "OFFICE";
             teamIds: string[];
+            office: string;
             /** @enum {string} */
             color: "GRAY" | "BROWN" | "ORANGE" | "YELLOW" | "GREEN" | "BLUE" | "PURPLE" | "RED";
             clearColor: boolean;
@@ -4791,8 +4987,7 @@ export interface components {
             /** Format: uuid */
             locationId: string;
             clearLocationId: boolean;
-            cabinMen: string;
-            cabinWomen: string;
+            cabins: string[];
             /** Format: date-time */
             startsAt: string;
             /** Format: date-time */
@@ -5124,8 +5319,7 @@ export interface components {
             name: string;
             /** Format: uuid */
             memberId: string;
-            /** @enum {string} */
-            role: "ADMIN" | "BOARD" | "COACH" | "PLAYER" | "PARENT" | "VOLUNTEER" | "GUEST";
+            owners: components["schemas"]["at.clubserver.mail.api.MailApi.Owners"];
         };
         "at.clubserver.locations.api.LocationsApi.LocationList": {
             items: components["schemas"]["at.clubserver.locations.api.LocationsApi.LocationDto"][];
@@ -5669,6 +5863,50 @@ export interface operations {
             };
         };
     };
+    settings_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.notifications.api.NotificationsApi.NotificationSettings"];
+                };
+            };
+        };
+    };
+    saveSettings_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.NotificationsController.SettingsBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.notifications.api.NotificationsApi.NotificationSettings"];
+                };
+            };
+        };
+    };
     updateMembershipKind: {
         parameters: {
             query?: never;
@@ -6154,7 +6392,7 @@ export interface operations {
             };
         };
     };
-    settings_1: {
+    settings_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -6174,7 +6412,7 @@ export interface operations {
             };
         };
     };
-    saveSettings_1: {
+    saveSettings_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -6547,7 +6785,7 @@ export interface operations {
     budget: {
         parameters: {
             query: {
-                season: number;
+                year: number;
             };
             header?: never;
             path?: never;
@@ -6569,7 +6807,7 @@ export interface operations {
     saveBudget: {
         parameters: {
             query: {
-                season: number;
+                year: number;
             };
             header?: never;
             path?: never;
@@ -6732,7 +6970,7 @@ export interface operations {
             };
         };
     };
-    settings_2: {
+    settings_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -6752,7 +6990,7 @@ export interface operations {
             };
         };
     };
-    saveSettings_2: {
+    saveSettings_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -6982,6 +7220,50 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    settings_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.calendar.api.CalendarApi.CalendarSettings"];
+                };
+            };
+        };
+    };
+    saveSettings_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.CalendarController.CalendarSettingsBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.calendar.api.CalendarApi.CalendarSettings"];
+                };
             };
         };
     };
@@ -9062,7 +9344,7 @@ export interface operations {
     bookings: {
         parameters: {
             query: {
-                season: number;
+                year: number;
                 account?: string;
             };
             header?: never;
@@ -11092,7 +11374,7 @@ export interface operations {
     export_1: {
         parameters: {
             query: {
-                season: number;
+                year: number;
                 format?: "CSV" | "XLSX";
             };
             header?: never;

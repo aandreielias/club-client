@@ -1,5 +1,6 @@
 // Mock of the club-server finance module (FinanceHandlers, AuditHandlers): the books by finance level, transfers, Storno, receipts,
 // Kassenprüfungen that lock the checked period, the journal export (InvoiceHandlers too: budget and open invoices with their tasks).
+import { yearLabel, yearOf } from '../../lib/time/clubYear';
 import { settings } from '../../settings';
 import { directory, MockDirectory, personalData } from '../../lib/mock/core';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
@@ -13,8 +14,6 @@ import { tasks } from '../tasks/mock';
 import {
   formatMoney,
   reaches,
-  seasonLabel,
-  seasonOf,
   type Account,
   type Audit,
   type Booking,
@@ -155,9 +154,9 @@ export class MockFinance {
     this.changed(null);
   }
 
-  /** server: FinanceHandlers.list — one season from the club's start month, newest first. */
-  list(season: number): { items: Booking[]; truncated: boolean } {
-    const { from, to } = this.season(season);
+  /** server: FinanceHandlers.list — one fiscal year from the club's start month, newest first. */
+  list(year: number): { items: Booking[]; truncated: boolean } {
+    const { from, to } = this.fiscalYear(year);
     const rows = this.bookings.data
       .filter((b) => b.bookedOn >= from && b.bookedOn < to)
       .sort((a, b) => b.bookedOn.localeCompare(a.bookedOn) || b.createdAt.localeCompare(a.createdAt));
@@ -381,10 +380,10 @@ export class MockFinance {
       .slice(0, limit);
   }
 
-  /** server: FinanceHandlers.export + JournalExport — the season oldest first, labels resolved. */
-  async exportJournal(season: number, format: ExportFormat): Promise<Blob> {
+  /** server: FinanceHandlers.export + JournalExport — the fiscal year oldest first, labels resolved. */
+  async exportJournal(year: number, format: ExportFormat): Promise<Blob> {
     const label = (key: string | null) => (key ? (this.accounts.data.find((a) => a.key === key)?.label ?? key) : null);
-    const items = this.list(season).items.reverse();
+    const items = this.list(year).items.reverse();
     const category = (key: string | null) => (key ? (this.categories.data.find((c) => c.key === key)?.label ?? key) : null);
     const lines = items.map((b) => [b.bookedOn, label(b.account), category(b.category), label(b.transferAccount), b.text, b.note]);
     const amounts = items.map((b) => b.amountCents / 100);
@@ -423,21 +422,21 @@ export class MockFinance {
     return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   }
 
-  /** server: FinanceHandlers.budget — categories planned or booked in the season, actual signed by direction. */
-  budget(season: number): Budget {
-    const planned = this.budgets.data[season] ?? {};
-    const { from, to } = this.season(season);
+  /** server: FinanceHandlers.budget — categories planned or booked in the fiscal year, actual signed by direction. */
+  budget(year: number): Budget {
+    const planned = this.budgets.data[year] ?? {};
+    const { from, to } = this.fiscalYear(year);
     const actual: Record<string, number> = {};
     for (const b of this.bookings.data)
       if (b.category && b.bookedOn >= from && b.bookedOn < to) actual[b.category] = (actual[b.category] ?? 0) + b.amountCents;
     const items = this.categoryList()
       .filter((c) => c.key in planned || c.key in actual)
       .map((c) => ({ category: c.key, plannedCents: planned[c.key] ?? 0, actualCents: (c.direction === 'IN' ? 1 : -1) * (actual[c.key] ?? 0) }));
-    return { season, items };
+    return { year, items };
   }
 
   /** server: FinanceHandlers.saveBudget */
-  saveBudget(season: number, body: Record<string, any>): Budget {
+  saveBudget(year: number, body: Record<string, any>): Budget {
     const planned: Record<string, number> = {};
     for (const item of Array.isArray(body.items) ? body.items : []) {
       const cents = Number(item?.plannedCents);
@@ -452,10 +451,10 @@ export class MockFinance {
         fail(400, 'finance.budget-invalid');
       if (cents) planned[item.category] = cents;
     }
-    this.budgets.data[season] = planned;
+    this.budgets.data[year] = planned;
     this.budgets.save();
     this.changed(null);
-    return this.budget(season);
+    return this.budget(year);
   }
 
   /** server: InvoiceHandlers.list — open first (soonest due), then paid (latest due). */
@@ -705,7 +704,7 @@ export class MockFinance {
     if (charge.status !== 'OPEN' && charge.status !== 'PARTIAL') fail(400, 'finance.fee-invalid');
     row.remindedAt = new Date().toISOString();
     this.charges.save();
-    const season = seasonLabel(row.season, directory.clubInfo().seasonStartMonth);
+    const season = yearLabel(row.season, directory.clubInfo().seasonStartMonth);
     mockServer.events.publish({
       type: 'finance.fee-reminder',
       data: {
@@ -734,7 +733,7 @@ export class MockFinance {
       account,
       category: this.feeSettings.data.category,
       amountCents: amount,
-      text: `Mitgliedsbeitrag ${seasonLabel(row.season, directory.clubInfo().seasonStartMonth)}`,
+      text: `Mitgliedsbeitrag ${yearLabel(row.season, directory.clubInfo().seasonStartMonth)}`,
       note: null,
       transferId: null,
       reversesId: null,
@@ -798,7 +797,7 @@ export class MockFinance {
             `EUR${((row.amountCents - paidCents) / 100).toFixed(2)}`,
             '',
             '',
-            `Mitgliedsbeitrag ${seasonLabel(row.season, club.seasonStartMonth)} ${directory.name(row.memberId) ?? ''}`.slice(0, 140),
+            `Mitgliedsbeitrag ${yearLabel(row.season, club.seasonStartMonth)} ${directory.name(row.memberId) ?? ''}`.slice(0, 140),
           ].join('\n')
         : null;
     return { ...rest, paidCents, status, payments, payUrl: null, bankQr };
@@ -838,9 +837,9 @@ export class MockFinance {
     );
   }
 
-  private season(season: number): { from: string; to: string } {
-    const month = String(directory.clubInfo().seasonStartMonth).padStart(2, '0');
-    return { from: `${season}-${month}-01`, to: `${season + 1}-${month}-01` };
+  private fiscalYear(year: number): { from: string; to: string } {
+    const month = String(directory.clubInfo().fiscalYearStartMonth).padStart(2, '0');
+    return { from: `${year}-${month}-01`, to: `${year + 1}-${month}-01` };
   }
 
   /** Due at 23:59 club time, like a resolution's task. */
@@ -1034,7 +1033,7 @@ export class MockFinance {
 
   /** A few bookings of the running season, so the journal has something to show. */
   private static seedBookings(): StoredBooking[] {
-    const season = seasonOf(directory.clock.today(), directory.club.seasonStartMonth);
+    const season = yearOf(directory.clock.today(), directory.club.seasonStartMonth);
     const at = new Date().toISOString();
     const b = (id: string, bookedOn: string, account: string, category: string, amountCents: number, text: string): StoredBooking => ({
       id,
@@ -1063,7 +1062,7 @@ export class MockFinance {
         { ...b('b-fee-spieler', '09-02', 'CASH', 'FEES', 3000, 'Mitgliedsbeitrag'), member: 'spieler' },
       ].map(({ member, ...booking }) => ({
         ...booking,
-        text: `Mitgliedsbeitrag ${seasonLabel(season, directory.club.seasonStartMonth)}`,
+        text: `Mitgliedsbeitrag ${yearLabel(season, directory.club.seasonStartMonth)}`,
         refs: [{ kind: 'MEMBER' as const, id: member, title: directory.name(member) ?? member, parentId: null }],
       })),
     ];
@@ -1071,7 +1070,7 @@ export class MockFinance {
 
   /** Rates of the running season: ordinary 120 (minors 60), extraordinary 150, honorary free. */
   private static seedRates(): Record<string, FeeRate[]> {
-    const season = seasonOf(directory.clock.today(), directory.club.seasonStartMonth);
+    const season = yearOf(directory.clock.today(), directory.club.seasonStartMonth);
     return {
       [season]: [
         { kind: 'EXTRAORDINARY', cents: 15_000, minorCents: null },
@@ -1082,7 +1081,7 @@ export class MockFinance {
 
   /** The running season's charges, as `generate` makes them from the seeded rates. */
   private static seedCharges(): StoredCharge[] {
-    const season = seasonOf(directory.clock.today(), directory.club.seasonStartMonth);
+    const season = yearOf(directory.clock.today(), directory.club.seasonStartMonth);
     const rates = new Map(MockFinance.seedRates()[season].map((r) => [r.kind, r]));
     const due = new Date(`${season}-${String(directory.club.seasonStartMonth).padStart(2, '0')}-01T12:00:00Z`);
     due.setUTCDate(due.getUTCDate() + 30);
@@ -1113,10 +1112,11 @@ export class MockFinance {
 export const finance = new MockFinance();
 
 const reader = (req: MockRequest, min: FinanceLevel = 'READ') => finance.require(directory.actor(req), min);
-const seasonParam = (req: MockRequest): number => {
-  const season = Number(req.query.get('season'));
-  return Number.isInteger(season) && season >= 2000 && season <= 2100 ? season : fail(400, 'request.invalid');
+const yearParam = (req: MockRequest, name: 'season' | 'year'): number => {
+  const year = Number(req.query.get(name));
+  return Number.isInteger(year) && year >= 2000 && year <= 2100 ? year : fail(400, 'request.invalid');
 };
+const seasonParam = (req: MockRequest): number => yearParam(req, 'season');
 
 mockServer
   .on('GET', '/api/v1/finance/accounts', (req) => (reader(req), { items: finance.accountList() }))
@@ -1129,17 +1129,15 @@ mockServer
   .on('DELETE', '/api/v1/finance/categories/:key', (req) => (reader(req, 'WRITE'), finance.deleteCategory(req.params.key)))
   .on('GET', '/api/v1/finance/bookings', (req) => {
     reader(req);
-    const season = Number(req.query.get('season'));
-    if (!Number.isInteger(season) || season < 2000 || season > 2100) fail(400, 'request.invalid');
-    return finance.list(season);
+    return finance.list(yearParam(req, 'year'));
   })
   .on('POST', '/api/v1/finance/bookings', (req) => finance.create(reader(req, 'WRITE'), req.body ?? {}))
   .on('GET', '/api/v1/finance/bookings/export', (req) => {
     reader(req);
-    const season = Number(req.query.get('season'));
+    const year = yearParam(req, 'year');
     const format = req.query.get('format') ?? 'CSV';
-    if (!Number.isInteger(season) || (format !== 'CSV' && format !== 'XLSX')) fail(400, 'request.invalid');
-    return finance.exportJournal(season, format as ExportFormat);
+    if (format !== 'CSV' && format !== 'XLSX') fail(400, 'request.invalid');
+    return finance.exportJournal(year, format as ExportFormat);
   })
   .on('GET', '/api/v1/finance/bookings/:id', (req) => (reader(req), finance.get(req.params.id)))
   .on('PUT', '/api/v1/finance/bookings/:id', (req) => finance.update(reader(req, 'WRITE'), req.params.id, req.body ?? {}))
@@ -1156,8 +1154,8 @@ mockServer
   .on('GET', '/api/v1/finance/audits', (req) => finance.auditList(reader(req)))
   .on('POST', '/api/v1/finance/audits', (req) => finance.confirmAudit(reader(req), req.body ?? {}))
   .on('GET', '/api/v1/finance/audits/:id', (req) => finance.audit(directory.actor(req), req.params.id))
-  .on('GET', '/api/v1/finance/budget', (req) => (reader(req), finance.budget(seasonParam(req))))
-  .on('PUT', '/api/v1/finance/budget', (req) => (reader(req, 'WRITE'), finance.saveBudget(seasonParam(req), req.body ?? {})))
+  .on('GET', '/api/v1/finance/budget', (req) => (reader(req), finance.budget(yearParam(req, 'year'))))
+  .on('PUT', '/api/v1/finance/budget', (req) => (reader(req, 'WRITE'), finance.saveBudget(yearParam(req, 'year'), req.body ?? {})))
   .on('GET', '/api/v1/finance/invoices', (req) => (reader(req), finance.invoiceList()))
   .on('POST', '/api/v1/finance/invoices', (req) => finance.saveInvoice(reader(req, 'WRITE'), null, req.body ?? {}))
   .on('GET', '/api/v1/finance/invoices/:id', (req) => (reader(req), finance.invoice(req.params.id)))

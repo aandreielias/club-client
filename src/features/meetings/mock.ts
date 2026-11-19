@@ -7,7 +7,8 @@ import { resolveRef } from '../../lib/mock/recordRefs';
 import { files, meetingFolderRights } from '../files/mock';
 import { defaultTemplate, fill, PROTOCOL_TEMPLATE_NAME, protocolTemplate, TEMPLATE_NAME } from './invitationDocument';
 import type { LinkedRef, RefKind } from '../../lib/records/refs';
-import { ADMIN_BOARD, type Member, type Role } from '../../lib/types';
+import { ADMIN_BOARD, guestOnly, type Hue, type Member, type Role } from '../../lib/types';
+import { HUES } from '../calendar/model';
 import type { OfficeKind } from '../members/MembersApi';
 import { officeUses } from '../members/mock';
 import { tasks } from '../tasks/mock';
@@ -29,6 +30,7 @@ import {
   type CircularRules,
   type ResolutionSummary,
   type ResolutionRules,
+  type TaskFallback,
   isDayOfYear,
   isQuorate,
   latestInvite,
@@ -41,7 +43,11 @@ import {
   type MeetingSummary,
   type MeetingType,
   type MeetingStep,
-  type Quorum,
+  type MajorityBase,
+  quorumValid,
+  protocolValid,
+  DEFAULT_PROTOCOL,
+  type ProtocolRules,
   type Invitees,
   type Voting,
   type Resolution,
@@ -115,7 +121,7 @@ function checkedSteps(value: unknown): MeetingStep[] {
   return steps;
 }
 
-const QUORUMS: readonly Quorum[] = ['AT_LEAST_HALF', 'MORE_THAN_HALF', 'AT_LEAST_THREE_QUARTERS', 'ALL'];
+const BASES: readonly MajorityBase[] = ['VALID', 'CAST', 'PRESENT'];
 const INVITEES: readonly Invitees[] = ['BOARD', 'VOTERS', 'BOARD_AND_VOTERS', 'CHOSEN'];
 const VOTINGS: readonly Voting[] = ['ALL_INVITED', 'VOTERS_ONLY'];
 const text = (value: unknown, max: number, code: string): string | null => {
@@ -127,7 +133,11 @@ const text = (value: unknown, max: number, code: string): string | null => {
 
 export class MockMeetings {
   /** server: meetings_setting */
-  readonly circular = new MockTable<CircularRules>('circular-rules', () => ({ ...SEEDED_CIRCULAR }));
+  /** The resolution rules: the circular ones plus the task fallback (server: meetings_setting). */
+  readonly circular = new MockTable<CircularRules & { taskFallback: TaskFallback }>('circular-rules', () => ({
+    ...SEEDED_CIRCULAR,
+    taskFallback: 'BOARD',
+  }));
   readonly types = new MockTable<StoredType[]>('meeting-types', () => structuredClone([...SEEDED_TYPES]));
   readonly meetings = new MockTable<StoredMeeting[]>('meetings', () => seedMeetings());
   readonly resolutions = new MockTable<StoredResolution[]>('resolutions', () => seedResolutions());
@@ -162,16 +172,40 @@ export class MockMeetings {
 
   // --- resolution rules (server: MeetingTypeHandlers.saveRules) ---
 
-  /** Circular votes run 1 hour to 30 days and need a quorum. */
+  /** server: CircularRules.valid — 1 hour to 30 days, a quorum, at least one majority, a base, reminded 1 to 720 hours ahead. */
   saveRules(viewer: Member, body: Record<string, any>): ResolutionRules {
     this.people.requirePrivileged(viewer, ADMIN_BOARD);
     const c = body.circular as CircularRules | undefined;
-    if (!c || !Number.isInteger(c.minHours) || c.minHours < 1 || c.minHours > 720 || !QUORUMS.includes(c.quorum))
+    const hours = (v: unknown) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 720;
+    if (
+      !c ||
+      !hours(c.minHours) ||
+      !hours(c.remindHours) ||
+      !c.quorum ||
+      !quorumValid(c.quorum) ||
+      !Array.isArray(c.majorities) ||
+      !c.majorities.length ||
+      !c.majorities.every((m) => ALL_MAJORITIES.includes(m)) ||
+      !BASES.includes(c.majorityBase)
+    )
       fail(400, 'resolution-rules.circular-invalid');
-    Object.assign(this.circular.data, { minHours: c!.minHours, quorum: c!.quorum });
+    if (body.taskFallback != null && !['BOARD', 'CHAIR'].includes(body.taskFallback)) fail(400, 'request.invalid');
+    Object.assign(this.circular.data, {
+      minHours: c!.minHours,
+      quorum: c!.quorum,
+      majorities: [...new Set(c!.majorities)],
+      majorityBase: c!.majorityBase,
+      remindHours: c!.remindHours,
+      taskFallback: body.taskFallback ?? 'BOARD',
+    });
     this.circular.save();
     mockServer.events.publish({ type: 'meetings.resolution-rules-changed', data: {}, audience: { everyone: true } });
-    return { circular: this.circular.data };
+    return this.rules();
+  }
+
+  rules(): ResolutionRules {
+    const { taskFallback, ...circular } = this.circular.data;
+    return { circular, taskFallback };
   }
 
   private name(id: string): string {
@@ -216,9 +250,9 @@ export class MockMeetings {
     return ids;
   }
 
-  /** server: Resolution.majorityFor — the requested one if the type allows it, else the simple one where allowed, else the lowest. */
+  /** server: Resolution.majorityFor — the requested one if allowed (the meeting's type, else the circular rules), else simple where allowed, else the lowest. */
   private majorityFor(type: MeetingType | null, requested: unknown): Majority {
-    const allowed = majorities(type);
+    const allowed = majorities(type ? type.majorities : this.circular.data.majorities);
     if (requested == null) return allowed.includes('SIMPLE') ? 'SIMPLE' : allowed[0];
     return allowed.includes(requested as Majority) ? (requested as Majority) : fail(400, 'resolution.majority-invalid');
   }
@@ -383,7 +417,7 @@ export class MockMeetings {
     if (body.protocol != null) {
       if (meeting.status !== 'OPEN' && meeting.status !== 'CLOSED') fail(409, 'meeting.protocol-not-yet');
       if (this.protocolFinalAt(meeting)) fail(409, 'meeting.protocol-final');
-      if (String(body.protocol).length > 20000) fail(400, 'meeting.protocol-too-long');
+      if (String(body.protocol).length > 100000) fail(400, 'meeting.protocol-too-long');
     }
     if (typeof body.location === 'string' && body.location.length > 200) fail(400, 'meeting.location-too-long');
     const before = { Titel: meeting.title, Tagesordnung: meeting.agenda, Ort: meeting.location, Videolink: meeting.videoUrl };
@@ -537,6 +571,7 @@ export class MockMeetings {
     if (!this.protocolFinalAt(meeting)) fail(409, 'meeting.protocol-not-final');
     // server: the meeting's Vorsitz and Schriftführer:in; without a pick the office holders
     const offices = this.offices(viewer);
+    const approvers = this.type(meeting.kind).protocol.approvers;
     const office =
       viewer.id === meeting.chairId
         ? 'CHAIR'
@@ -547,6 +582,7 @@ export class MockMeetings {
             : !meeting.secretaryId && offices.includes('SECRETARY')
               ? 'SECRETARY'
               : fail(403, 'meeting.approve-not-allowed');
+    if (!approvers.includes(office)) fail(403, 'meeting.approve-not-allowed');
     meeting.approvals ??= [];
     if (meeting.approvals.some((a) => a.memberId === viewer.id)) fail(409, 'meeting.protocol-approved');
     meeting.approvals.push({ memberId: viewer.id, name: this.name(viewer.id), office, at: new Date().toISOString() });
@@ -1053,10 +1089,14 @@ export class MockMeetings {
   /** server: Resolution.closed */
   private closeNow(r: StoredResolution): StoredResolution {
     if (r.status !== 'OPEN') fail(409, 'resolution.not-open');
+    const meetingType = r.meetingId ? this.type(this.meetings.data.find((m) => m.id === r.meetingId)!.kind) : null;
+    const base = meetingType ? meetingType.majorityBase : this.circular.data.majorityBase;
     const yes = r.yes + (r.analogYes ?? 0);
     const valid = yes + r.no + (r.analogNo ?? 0);
+    const counted =
+      base === 'VALID' ? valid : base === 'CAST' ? valid + r.abstain + (r.analogAbstain ?? 0) : r.meetingId ? this.presentVoters(r) : (r.voters ?? 0);
     const passes =
-      valid > 0 && (r.majority === 'SIMPLE' ? yes * 2 > valid : r.majority === 'TWO_THIRDS' ? yes * 3 >= valid * 2 : yes * 4 >= valid * 3);
+      counted > 0 && (r.majority === 'SIMPLE' ? yes * 2 > counted : r.majority === 'TWO_THIRDS' ? yes * 3 >= counted * 2 : yes * 4 >= counted * 3);
     const result =
       !r.meetingId && !quorumReached(this.circular.data.quorum, r.ballots.length, r.voters ?? 0) ? 'NOT_QUORATE' : passes ? 'PASSED' : 'FAILED';
     Object.assign(r, { status: 'CLOSED', closedAt: new Date().toISOString(), result });
@@ -1086,15 +1126,22 @@ export class MockMeetings {
       `Beschluss: ${r.title} – ${word} (${counts}; ${majority}, ${r.voteMode === 'HAND' ? 'Handzeichen' : 'in der App'})` +
       (r.text ? `\nAntrag: ${r.text}` : '');
     const protocol = m.protocol ? `${m.protocol}\n\n${line}` : line;
-    if ((m.status !== 'OPEN' && m.status !== 'CLOSED') || this.protocolFinalAt(m) || protocol.length > 20000) return;
+    if ((m.status !== 'OPEN' && m.status !== 'CLOSED') || this.protocolFinalAt(m) || protocol.length > 100000) return;
     m.protocol = protocol;
     this.changed(m, 'UPDATED');
   }
 
-  /** server: ResolutionTasks.passed — the task "<Titel> umsetzen" for the named active members, else the board. */
+  /** server: ResolutionTasks.passed — the task "<Titel> umsetzen" for the named active members, else the club's task fallback. */
   private passed(r: StoredResolution, meeting: StoredMeeting | null): void {
     const named = (r.assigneeIds ?? []).filter((id) => this.people.members.data.some((m) => m.id === id && m.active));
-    const assignees = named.length ? named : this.people.electorate('BOARD').slice(0, 30);
+    const chairs =
+      this.circular.data.taskFallback === 'CHAIR'
+        ? this.people
+            .running()
+            .filter((o) => o.office === 'CHAIR')
+            .map((o) => o.memberId)
+        : [];
+    const assignees = named.length ? named : chairs.length ? chairs : this.people.electorate('BOARD').slice(0, 30);
     const context = `Beschlossen ${meeting ? `in „${meeting.title}“` : 'im Umlaufverfahren'}.`;
     mockServer.events.publish({
       type: 'meetings.resolution-passed',
@@ -1213,11 +1260,11 @@ export class MockMeetings {
     if (body.urgency !== undefined) m.urgency = text(body.urgency, 1000, 'meeting.urgency-invalid');
     if (body.location !== undefined) m.location = text(body.location, 200, 'meeting.location-too-long');
     if (body.videoUrl !== undefined) m.videoUrl = text(body.videoUrl, 500, 'meeting.video-url-invalid');
-    if (body.protocol !== undefined) m.protocol = text(body.protocol, 20000, 'meeting.protocol-too-long');
+    if (body.protocol !== undefined) m.protocol = text(body.protocol, 100000, 'meeting.protocol-too-long');
     if (body.startsAt) m.startsAt = new Date(body.startsAt).toISOString();
     if (body.endsAt) m.endsAt = new Date(body.endsAt).toISOString();
     if (!m.startsAt || !m.endsAt || m.endsAt <= m.startsAt) fail(400, 'meeting.times-invalid');
-    if (Date.parse(m.endsAt) - Date.parse(m.startsAt) > DAY) fail(400, 'meeting.too-long');
+    if (Date.parse(m.endsAt) - Date.parse(m.startsAt) > this.type(m.kind).maxDays * DAY) fail(400, 'meeting.too-long');
     if (m.videoUrl && !m.videoUrl.startsWith('https://')) fail(400, 'meeting.video-url-invalid');
     // server: MeetingType.videoFor — a meeting of an online kind needs its own link or the kind's standing one
     const type = this.type(m.kind);
@@ -1272,9 +1319,24 @@ export class MockMeetings {
     );
     if (!INVITEES.includes(body.invitees) || !VOTINGS.includes(body.voting)) fail(400, 'meeting-type.electorate-invalid');
     if (!Number.isInteger(body.noticeHours) || body.noticeHours < 0 || body.noticeHours > 8760) fail(400, 'meeting-type.notice-invalid');
-    if (!QUORUMS.includes(body.quorum)) fail(400, 'meeting-type.quorum-invalid');
+    if (!body.quorum || !quorumValid(body.quorum)) fail(400, 'meeting-type.quorum-invalid');
+    if (body.majorityBase != null && !BASES.includes(body.majorityBase)) fail(400, 'request.invalid');
+    if (body.protocol != null && !Array.isArray(body.protocol.approvers)) fail(400, 'meeting-type.protocol-invalid');
+    const protocol: ProtocolRules = body.protocol
+      ? {
+          approvers: [...new Set(body.protocol.approvers as ProtocolRules['approvers'])],
+          approvalsNeeded: body.protocol.approvalsNeeded,
+          readers: body.protocol.readers,
+        }
+      : { ...DEFAULT_PROTOCOL, approvers: [...DEFAULT_PROTOCOL.approvers] };
+    if (!['INVITED', 'ALL_MEMBERS'].includes(protocol.readers) || !protocolValid(protocol, body.invitees)) fail(400, 'meeting-type.protocol-invalid');
     if (body.graceMinutes != null && (!Number.isInteger(body.graceMinutes) || body.graceMinutes < 1 || body.graceMinutes > 1440))
       fail(400, 'meeting-type.grace-invalid');
+    // server: MeetingType — 1 to 30 days; colour from the calendar's, by default blue for general meetings
+    const maxDays = body.maxDays ?? 1;
+    if (!Number.isInteger(maxDays) || maxDays < 1 || maxDays > 30) fail(400, 'meeting-type.max-days-invalid');
+    const hue: Hue = body.hue ?? (body.invitees === 'VOTERS' || body.invitees === 'BOARD_AND_VOTERS' ? 'blue' : 'purple');
+    if (!HUES.includes(hue)) fail(400, 'meeting-type.hue-invalid');
     if (!majorities.length) fail(400, 'meeting-type.majorities-missing');
     if (!conveners.length) fail(400, 'meeting-type.conveners-invalid');
     const dueBy = body.dueBy || null;
@@ -1304,9 +1366,19 @@ export class MockMeetings {
       minInvitees,
       maxInvitees,
       noticeHours: body.noticeHours,
-      quorum: body.quorum,
+      quorum: {
+        numerator: body.quorum.numerator,
+        denominator: body.quorum.denominator,
+        moreThan: !!body.quorum.moreThan,
+        minimum: body.quorum.minimum ?? null,
+      },
       graceMinutes: body.graceMinutes ?? null,
       majorities,
+      majorityBase: body.majorityBase ?? 'VALID',
+      protocol,
+      boardSeesDrafts: body.boardSeesDrafts !== false,
+      maxDays,
+      hue,
       conveners,
       needsReason: !!body.needsReason,
       dueBy,
@@ -1389,7 +1461,11 @@ export class MockMeetings {
       return (
         !(m.parties ?? []).includes(viewer.id) && (this.mayConvene(viewer, m.kind) || (m.status !== 'DRAFT' && this.invited(m).includes(viewer.id)))
       );
-    if (this.people.hasRole(viewer, ADMIN_BOARD)) return true;
+    const type = this.type(m.kind);
+    // server: protocol readers ALL_MEMBERS show a meeting with a final protocol to every member (not guests)
+    if (type.protocol.readers === 'ALL_MEMBERS' && this.protocolFinalAt(m) && !guestOnly(viewer.roles)) return true;
+    // server: boardSeesDrafts false keeps drafts with the conveners and admins
+    if (this.people.hasRole(viewer, ADMIN_BOARD)) return m.status !== 'DRAFT' || type.boardSeesDrafts || this.mayConvene(viewer, m.kind);
     // server: MeetingAccess.maySee — voters see a general meeting from its invitation on
     return invitesVoters(this.type(m.kind)) && viewer.voter && m.status !== 'DRAFT';
   }
@@ -1516,7 +1592,7 @@ const actor = (req: MockRequest) => directory.actor(req);
 mockServer
   .on('GET', '/api/v1/meetings', (req) => meetings.list(actor(req), req.query.get('from'), req.query.get('to')))
   .on('POST', '/api/v1/meetings/templates', (req) => meetings.seedTemplates(actor(req)))
-  .on('GET', '/api/v1/meetings/resolution-rules', (req) => (actor(req), { circular: meetings.circular.data }))
+  .on('GET', '/api/v1/meetings/resolution-rules', (req) => (actor(req), meetings.rules()))
   .on('PUT', '/api/v1/meetings/resolution-rules', (req) => meetings.saveRules(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/meetings/types', (req) => (actor(req), meetings.listTypes()))
   .on('POST', '/api/v1/meetings/types', (req) => meetings.saveType(actor(req), null, req.body ?? {}))

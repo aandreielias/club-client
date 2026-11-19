@@ -1,7 +1,11 @@
 <script lang="ts">
   import { settings as limits } from '../../settings';
   import EditorForm from '../../ui/EditorForm.svelte';
-  import { directory } from '../../lib/container';
+  import { directory, store } from '../../lib/container';
+  import { boardSettings } from '../members/services';
+  import OptionList from '../../ui/OptionList.svelte';
+  import PeoplePicker from '../../ui/PeoplePicker.svelte';
+  import { PersonListModel } from '../../lib/directory/PersonListModel.svelte';
   import type { Action } from '../../lib/state/Action.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
   import { displayName, ROLE_LABELS, type Role } from '../../lib/types';
@@ -13,7 +17,7 @@
   import { personalLocal } from './model';
   import { mailApi } from './services';
 
-  /** Form of a mailbox: address, sender name and who reads it (one member, or everyone with a role). */
+  /** Form of a mailbox: address, sender name and who reads it (one member, or everyone with one of the roles, offices or coached teams, plus named members). */
   let {
     form,
     action,
@@ -24,13 +28,27 @@
 
   const owners: { value: MailboxOwner; label: string }[] = [
     { value: 'member', label: 'Persönlich' },
-    { value: 'role', label: 'Geteilt (Rolle)' },
+    { value: 'shared', label: 'Geteilt' },
   ];
   const roles = (Object.keys(ROLE_LABELS) as Role[]).filter((r) => r !== 'GUEST').map((r) => ({ value: r, label: ROLE_LABELS[r] }));
   const members = new Resource(() => directory.allMembers());
   void members.load();
   const settings = new Resource(() => mailApi.settings());
   void settings.load();
+  void boardSettings.load();
+  void directory.loadTeams();
+  const offices = $derived(boardSettings.enabled.map((k) => ({ value: k, label: boardSettings.label(k) })));
+  const people = new PersonListModel(
+    () => directory.candidates(null),
+    directory,
+    (id) => form.memberIds.includes(id),
+    store,
+    'mailbox-members',
+  );
+  void people.load();
+  const toggleMember = (id: string) =>
+    (form.memberIds = form.memberIds.includes(id) ? form.memberIds.filter((m) => m !== id) : [...form.memberIds, id]);
+  const teams = $derived(directory.teams.filter((t) => !t.archived || form.teamIds.includes(t.id)).map((t) => ({ value: t.id, label: t.name })));
 
   /** Picking a member fills in the usual address and the name, as long as they are still empty. */
   function pickMember(id: string) {
@@ -39,7 +57,8 @@
     const domain = settings.value?.domain;
     if (!member) return;
     if (!form.name.trim()) form.name = displayName(member);
-    if (!form.address.trim() && domain) form.address = `${personalLocal(member.firstName, member.lastName)}@${domain}`;
+    if (!form.address.trim() && domain)
+      form.address = `${personalLocal(member.firstName, member.lastName, settings.value?.addressPattern)}@${domain}`;
   }
   const memberOptions = $derived(
     (members.value ?? [])
@@ -51,8 +70,8 @@
 
 <EditorForm {action} {submitLabel} {oncancel} {onsubmit} validate={form}>
   <ChoiceGroup name="mailbox-owner" label="Wer liest es" options={owners} bind:value={form.owner} />
-  <Field label={form.owner === 'member' ? 'Mitglied' : 'Rolle'} error={form.error('owner')}>
-    {#if form.owner === 'member'}
+  {#if form.owner === 'member'}
+    <Field label="Mitglied" error={form.error('owner')}>
       {#if members.error}
         <ErrorNote error={members.error} />
       {:else}
@@ -63,10 +82,26 @@
           bind:value={() => form.memberId, pickMember}
         />
       {/if}
-    {:else}
-      <Select options={roles} placeholder="Rolle wählen" bind:value={form.role} />
-    {/if}
-  </Field>
+    </Field>
+  {:else}
+    <Field
+      group
+      label="Rollen"
+      hint="Gelesen von allen mit einer der Rollen, einem laufenden der Ämter, als Trainer:in einer der Mannschaften oder als gewähltes Mitglied."
+      error={form.error('owner')}
+    >
+      <OptionList label="Rollen" options={roles} bind:value={form.roles} />
+    </Field>
+    <Field group label="Ämter">
+      <OptionList label="Ämter" options={offices} bind:value={form.offices} />
+    </Field>
+    <Field group label="Mannschaften (Trainer:innen)">
+      <OptionList label="Mannschaften" options={teams} bind:value={form.teamIds} />
+    </Field>
+    <Field group label="Mitglieder" hint="Einzelne Mitglieder, die das Postfach zusätzlich lesen.">
+      <PeoplePicker list={people} chosen={form.memberIds} ontoggle={toggleMember} max={20} emptyText="Keine Mitglieder." />
+    </Field>
+  {/if}
   <Field
     label="Adresse"
     hint={settings.value?.domain ? `Endet auf @${settings.value.domain}.` : 'Zuerst die Mail-Domain des Vereins eintragen.'}

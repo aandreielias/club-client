@@ -16,6 +16,7 @@
     website: string;
     contactEmail: string;
     seasonStartMonth: string;
+    fiscalYearStartMonth: string;
   }
 
   const limits = settings.club;
@@ -27,13 +28,18 @@
     website: club.website ?? '',
     contactEmail: club.contactEmail ?? '',
     seasonStartMonth: String(club.seasonStartMonth),
+    fiscalYearStartMonth: String(club.fiscalYearStartMonth),
   });
   const draft = new SettingsDraft<ClubForm>(formOf(session.club!));
 
   const months = session.format.monthNames().map((label, i) => ({ value: String(i + 1), label }));
 
   async function save(value: ClubForm): Promise<ClubForm> {
-    await session.updateClub({ ...value, seasonStartMonth: Number(value.seasonStartMonth) });
+    await session.updateClub({
+      ...value,
+      seasonStartMonth: Number(value.seasonStartMonth),
+      fiscalYearStartMonth: Number(value.fiscalYearStartMonth),
+    });
     return formOf(session.club!);
   }
 </script>
@@ -60,8 +66,13 @@
       <Field label="Registernummer" hint="Nummer im Vereinsregister">
         <input bind:value={draft.value.registerNumber} maxlength={limits.registerNumberMaxLength} pattern={limits.registerNumberPattern} />
       </Field>
-      <Field label="Saison beginnt im">
+      <Field label="Saison beginnt im" hint="Teams und Mitgliedsbeiträge laufen pro Saison.">
         <Select bind:value={draft.value.seasonStartMonth} options={months} aria-label="Saison beginnt im" />
+      </Field>
+    </div>
+    <div class="grid-2">
+      <Field label="Geschäftsjahr beginnt im" hint="Journal, Budget und Kassenprüfung laufen pro Geschäftsjahr, unabhängig von der Saison.">
+        <Select bind:value={draft.value.fiscalYearStartMonth} options={months} aria-label="Geschäftsjahr beginnt im" />
       </Field>
     </div>
     <div class="grid-2">

@@ -24,6 +24,8 @@ const existing: Task = {
   createdAt: '2026-06-01T10:00:00.000Z',
   completedAt: null,
   repeatWeeks: null,
+  repeatMonths: null,
+  repeatByWeekday: false,
   source: null,
 };
 
@@ -56,6 +58,8 @@ describe('TaskForm', () => {
       assignees: ['m1'],
       checklist: ['Pumpe holen'],
       repeatWeeks: null,
+      repeatMonths: null,
+      repeatByWeekday: false,
     });
   });
 
@@ -98,5 +102,7 @@ describe('TaskForm', () => {
     expect(form.error('repeat')).toBe('Wiederholen geht nur mit Fälligkeit.');
     form.due = '2026-01-10T18:00';
     expect(form.toNew().repeatWeeks).toBe(2);
+    form.repeat = 'm1w';
+    expect(form.toNew()).toMatchObject({ repeatWeeks: null, repeatMonths: 1, repeatByWeekday: true });
   });
 });

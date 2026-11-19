@@ -10,7 +10,28 @@
   /** New appointment type in the window; afterwards the window shows it. */
   let { handle }: { id: string; handle: WindowHandle } = $props();
 
-  const form = $state<AppointmentTypeInput>({ label: '', hue: 'blue', rides: false, cabins: true, sort: 10, archived: false, remindHours: null });
+  const form = $state<AppointmentTypeInput>({
+    label: '',
+    hue: 'blue',
+    rides: false,
+    cabins: true,
+    sort: 10,
+    archived: false,
+    remindHours: null,
+    hasResult: false,
+    planLabel: null,
+    defaultStart: '18:00',
+    defaultMinutes: 90,
+    maxDays: 7,
+    answerDeadlineHours: 0,
+    allowMaybe: true,
+    reasonOnNo: false,
+    expectAnswers: 'TEAM',
+    notifyChanges: true,
+    minShiftMinutes: 0,
+    selfCheckIn: false,
+    remindAgainHours: null,
+  });
   // svelte-ignore state_referenced_locally
   const create = new CreateController(bus, handle, 'Neue Terminart');
 

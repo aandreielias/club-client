@@ -3,7 +3,7 @@ import type { MessageCatalog } from '../../lib/errors/ErrorMessages';
 export const MEETING_MESSAGES: MessageCatalog = {
   'meeting.check-in-off': 'Bei dieser Sitzungsart trägt die Sitzungsleitung die Anwesenheit ein.',
   'meeting.agenda-invalid': 'Höchstens 50 Punkte mit je bis 200 Zeichen; verknüpfte Anträge müssen zu dieser Sitzung gehören.',
-  'meeting.approve-not-allowed': 'Das Protokoll genehmigen Vorsitz und Schriftführung.',
+  'meeting.approve-not-allowed': 'Das Protokoll genehmigt, wer bei dieser Sitzungsart dafür vorgesehen ist (Vorsitz, Schriftführung).',
   'meeting.protocol-approved': 'Du hast das Protokoll schon genehmigt.',
   'meeting.protocol-not-final': 'Erst das Protokoll abschließen, dann genehmigen.',
   'resolution.analog-missing': 'Zuerst das Ergebnis der Handzeichen eintragen.',
@@ -41,7 +41,9 @@ export const MEETING_MESSAGES: MessageCatalog = {
   'meeting-type.invitation-label-invalid': 'Text für die Einladung mit 1 bis 120 Zeichen angeben.',
   'meeting-type.electorate-invalid': 'Vorstand oder stimmberechtigte Mitglieder wählen.',
   'meeting-type.notice-invalid': 'Die Einladungsfrist liegt zwischen 0 Stunden und einem Jahr.',
-  'meeting-type.quorum-invalid': 'Die Beschlussfähigkeit wählen.',
+  'meeting-type.quorum-invalid': 'Beschlussfähigkeit: Anteil von 0/1 bis 1/1 (Nenner höchstens 100), Mindestzahl 1 bis 10000.',
+  'meeting-type.protocol-invalid':
+    'Protokoll: Genehmigungen von 1 bis zur Zahl der Genehmigenden (0 ohne); „alle Mitglieder“ nicht bei ausgewählten Personen.',
   'meeting-type.grace-invalid': 'Die Wartezeit liegt zwischen 1 und 1440 Minuten.',
   'meeting-type.invitees-in-use': 'Es gibt Sitzungen dieser Art. Ob sie gewählte Personen einlädt, bleibt deshalb wie es ist.',
   'meeting-type.invitees-invalid': 'Mindest- und Höchstzahl der Eingeladenen liegen zwischen 1 und 50, die Mindestzahl nicht über der Höchstzahl.',
@@ -59,8 +61,10 @@ export const MEETING_MESSAGES: MessageCatalog = {
   'meeting.video-missing':
     'Diese Sitzungsart ist online: Link zur Videokonferenz eintragen (oder bei der Sitzungsart einen ständigen Link hinterlegen).',
   'meeting.times-invalid': 'Das Ende liegt nach dem Beginn.',
-  'meeting.too-long': 'Eine Sitzung dauert höchstens einen Tag.',
-  'meeting.protocol-too-long': 'Das Protokoll hat höchstens 20000 Zeichen.',
+  'meeting.too-long': 'Die Sitzung dauert länger, als ihre Art erlaubt.',
+  'meeting-type.max-days-invalid': 'Eine Sitzung dauert 1 bis 30 Tage.',
+  'meeting-type.hue-invalid': 'Unbekannte Farbe.',
+  'meeting.protocol-too-long': 'Das Protokoll hat höchstens 100000 Zeichen.',
   'meeting.may-not-convene': 'Diese Art von Sitzung berufen nur bestimmte Funktionen ein (Einstellungen › Sitzungen).',
   'meeting.notice-too-short': 'Für diese Sitzung ist die Einladungsfrist nicht mehr einzuhalten. Bitte den Termin verschieben.',
   'meeting.already-invited': 'Zu dieser Sitzung wurde schon eingeladen.',
@@ -80,7 +84,8 @@ export const MEETING_MESSAGES: MessageCatalog = {
   'resolution.title-invalid': 'Titel mit 1 bis 200 Zeichen angeben.',
   'resolution.text-too-long': 'Der Antrag hat höchstens 4000 Zeichen.',
   'meeting.agenda-motion-voted': 'Abgestimmte Beschlüsse bleiben auf der Tagesordnung.',
-  'resolution-rules.circular-invalid': 'Umlaufbeschlüsse laufen 1 bis 720 Stunden und brauchen eine Beteiligung.',
+  'resolution-rules.circular-invalid':
+    'Umlaufbeschlüsse: Laufzeit und Erinnerung 1 bis 720 Stunden, eine gültige Beteiligung und mindestens eine Mehrheit.',
   'resolution.majority-invalid': 'Diese Mehrheit gibt es für diese Sitzung nicht.',
   'resolution.deadline-invalid': 'Nur Umlaufbeschlüsse haben eine Frist.',
   'resolution.deadline-too-short': 'Ein Umlaufbeschluss braucht mehr Zeit zum Abstimmen (Einstellungen › Beschlüsse).',

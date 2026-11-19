@@ -11,6 +11,8 @@ const draft = (teamId: string | null, assignees: string[]): NewTask => ({
   teamId,
   appointmentId: null,
   repeatWeeks: null,
+  repeatMonths: null,
+  repeatByWeekday: false,
   title: 'Neue Aufgabe',
   description: null,
   dueAt: null,

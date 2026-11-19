@@ -21,7 +21,8 @@
   import { settings } from '../../settings';
   import { membershipKinds } from '../members/services';
   import { FINANCE_CHANGED } from './events';
-  import { chargeStatus, moneyInput, parseMoney, seasonLabel, type Charge } from './model';
+  import { yearLabel } from '../../lib/time/clubYear';
+  import { chargeStatus, moneyInput, parseMoney, type Charge } from './model';
   import { accounts, financeApi, money } from './services';
 
   /** One member's fee of a season: payments (each a booking), reducing or waiving with a note, deleting while unpaid. Window only. */
@@ -43,7 +44,7 @@
   void charge.load();
   void accounts.load();
   void membershipKinds.load();
-  view.title(() => (charge.value ? `Beitrag ${seasonLabel(charge.value.season, startMonth)}` : undefined));
+  view.title(() => (charge.value ? `Beitrag ${yearLabel(charge.value.season, startMonth)}` : undefined));
   useBus(bus, FINANCE_CHANGED, () => {
     if (!edit.editing && !write.busy) void charge.load();
   });
@@ -117,7 +118,7 @@
 
 <AsyncView resource={charge}>
   {#snippet children(c)}
-    <Detail title={edit.form ? 'Beitrag anpassen' : `Beitrag ${seasonLabel(c.season, startMonth)}`}>
+    <Detail title={edit.form ? 'Beitrag anpassen' : `Beitrag ${yearLabel(c.season, startMonth)}`}>
       {#snippet meta()}
         {#if !edit.form}{@const tag = chargeStatus(c, session.clock.today())}<Tag tone={tag.tone}>{tag.label}</Tag>{/if}
       {/snippet}

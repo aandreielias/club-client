@@ -11,13 +11,13 @@
   import { moneyInput, parseMoney } from './model';
   import { categories, financeApi, financeMay, money } from './services';
 
-  /** Planned against booked per category for one season; WRITE holders plan. */
-  let { season, label }: { season: number; label: string } = $props();
+  /** Planned against booked per category for one fiscal year; WRITE holders plan. */
+  let { year, label }: { year: number; label: string } = $props();
 
   // svelte-ignore state_referenced_locally
-  const budget = new Resource(() => financeApi.budget(season));
+  const budget = new Resource(() => financeApi.budget(year));
   $effect(() => {
-    void season;
+    void year;
     void budget.load();
   });
   useBus(bus, FINANCE_CHANGED, () => {
@@ -50,7 +50,7 @@
 
   async function submit() {
     const items = Object.entries(plan!).map(([category, v]) => ({ category, plannedCents: parseMoney(v) ?? 0 }));
-    if (await save.run(async () => budget.set(await financeApi.saveBudget(season, items)))) plan = null;
+    if (await save.run(async () => budget.set(await financeApi.saveBudget(year, items)))) plan = null;
   }
 </script>
 

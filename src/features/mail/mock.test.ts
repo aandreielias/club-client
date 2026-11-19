@@ -94,10 +94,10 @@ describe('mock mail links and mailbox admin', () => {
   it('lets admin and board assign mailboxes', () => {
     const admin = member('admin');
     expect(() => mail.all(member('spieler'))).toThrow(expect.objectContaining({ code: 'access.denied' }));
-    const box = mail.save(admin, null, { address: 'Trainer@mein-verein.at', name: 'Trainer', role: 'COACH' });
+    const box = mail.save(admin, null, { address: 'Trainer@mein-verein.at', name: 'Trainer', owners: { roles: ['COACH'] } });
     expect(box.address).toBe('trainer@mein-verein.at');
     expect(shared('trainer')?.id).toBe(box.id);
-    expect(() => mail.save(admin, null, { address: 'trainer@mein-verein.at', name: 'X', role: 'BOARD' })).toThrow(
+    expect(() => mail.save(admin, null, { address: 'trainer@mein-verein.at', name: 'X', owners: { roles: ['BOARD'] } })).toThrow(
       expect.objectContaining({ code: 'mail.address-taken' }),
     );
     expect(() => mail.save(admin, null, { address: 'z@mein-verein.at', name: 'X', memberId: 'spieler' })).toThrow(
@@ -105,6 +105,32 @@ describe('mock mail links and mailbox admin', () => {
     );
     mail.remove(admin, box.id);
     expect(shared('trainer')).toBeUndefined();
+  });
+
+  it('lets office holders and team coaches read shared mailboxes', () => {
+    const admin = member('admin');
+    const save = (owners: unknown) => () => mail.save(admin, null, { address: 'kasse@mein-verein.at', name: 'Kasse', owners });
+    expect(save({})).toThrow(expect.objectContaining({ code: 'mail.mailbox-owner-invalid' }));
+    expect(save({ offices: ['OFFICE_NOPE'] })).toThrow(expect.objectContaining({ code: 'mail.mailbox-owner-invalid' }));
+    expect(save({ roles: ['GUEST'] })).toThrow(expect.objectContaining({ code: 'mail.mailbox-owner-invalid' }));
+    const box = save({ offices: ['TREASURER'], teamIds: ['t-damen'] })();
+    expect(shared('kassier')?.id).toBe(box.id);
+    expect(shared('trainer')?.id).toBe(box.id);
+    expect(shared('spieler')).toBeUndefined();
+    mail.remove(admin, box.id);
+  });
+
+  it('lets named members read a shared mailbox until they leave', () => {
+    const admin = member('admin');
+    expect(() => mail.save(admin, null, { address: 'fest@mein-verein.at', name: 'Fest', owners: { memberIds: ['nope'] } })).toThrow(
+      expect.objectContaining({ code: 'mail.member-unknown' }),
+    );
+    const box = mail.save(admin, null, { address: 'fest@mein-verein.at', name: 'Fest', owners: { memberIds: ['spieler'] } });
+    expect(shared('spieler')?.id).toBe(box.id);
+    expect(shared('trainer')).toBeUndefined();
+    mockServer.events.publish({ type: 'members.member-deactivated', data: { memberId: 'spieler' } });
+    expect(mail.all(admin).some((b) => b.id === box.id)).toBe(false);
+    mockServer.events.publish({ type: 'members.member-reactivated', data: { memberId: 'spieler' } });
   });
 });
 
@@ -124,7 +150,7 @@ describe('mock mail drafts, signatures and address book', () => {
     const board = shared('kassier')!;
     expect(board.signatureEditable).toBe(true);
     expect(() => mail.setSignature(member('trainer'), board.id, '<p>x</p>')).toThrow(expect.objectContaining({ code: 'mail.mailbox-not-found' }));
-    expect(mail.addressBook().some((e) => e.address === 'vorstand@mein-verein.at' && e.role === 'BOARD')).toBe(true);
+    expect(mail.addressBook().some((e) => e.address === 'vorstand@mein-verein.at' && e.owners.roles.includes('BOARD'))).toBe(true);
   });
 });
 
@@ -160,6 +186,26 @@ describe('mock mail: read state, paging, limits, lifecycle', () => {
     mail.send(member('neu'), box, { to: ['a@b.at', 'c@d.at'], subject: 'x' });
     expect(() => mail.send(member('neu'), box, { to: ['e@f.at'], subject: 'y' })).toThrow(expect.objectContaining({ code: 'mail.daily-limit' }));
     mail.settings.data.dailyLimit = 200;
+  });
+
+  it('caps recipients per mail by the club setting', () => {
+    const admin = member('admin');
+    const settings = (body: Record<string, unknown>) => () => mail.saveMailSettings(admin, { ...mail.mailSettings(admin), ...body });
+    expect(settings({ maxRecipients: 201 })).toThrow(expect.objectContaining({ code: 'mail.max-recipients-invalid' }));
+    settings({ maxRecipients: 1 })();
+    expect(() => mail.send(member('neu'), own('neu').id, { to: ['a@b.at', 'c@d.at'], subject: 'x' })).toThrow(
+      expect.objectContaining({ code: 'mail.too-many-recipients' }),
+    );
+    settings({ maxRecipients: 50 })();
+  });
+
+  it('builds new personal addresses by the club pattern', () => {
+    const admin = member('admin');
+    mail.saveMailSettings(admin, { ...mail.mailSettings(admin), addressPattern: 'INITIAL_DOT_LAST' });
+    mockServer.events.publish({ type: 'members.member-deactivated', data: { memberId: 'spielerin' } });
+    mockServer.events.publish({ type: 'members.member-reactivated', data: { memberId: 'spielerin' } });
+    expect(own('spielerin').address).toBe('l.spielerin@mein-verein.at');
+    mail.saveMailSettings(admin, { ...mail.mailSettings(admin), addressPattern: 'FIRSTLAST' });
   });
 
   it('gives invited and reactivated members vornamenachname@ and takes it on deactivation', () => {

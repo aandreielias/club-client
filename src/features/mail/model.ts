@@ -53,12 +53,22 @@ export interface Mail {
   read: boolean;
 }
 
-/** A club address for the recipient suggestions: personal (`memberId`) or shared by a role. */
+/** Who reads a shared mailbox (server: MailApi.Owners): everyone with one of the roles, a running office (key) or coaching one of the teams, and the members named. */
+export interface MailboxOwners {
+  roles: Role[];
+  offices: string[];
+  teamIds: string[];
+  memberIds: string[];
+}
+
+export const NO_OWNERS: MailboxOwners = { roles: [], offices: [], teamIds: [], memberIds: [] };
+
+/** A club address for the recipient suggestions: personal (`memberId`) or shared (`owners`). */
 export interface AddressEntry {
   address: string;
   name: string;
   memberId: string | null;
-  role: Role | null;
+  owners: MailboxOwners;
 }
 
 /**
@@ -78,21 +88,21 @@ export interface OutgoingMail extends DraftInput {
   draftId: string | null;
 }
 
-/** A mailbox as admin and board manage it: personal (`memberId`) or shared by everyone holding `role`. */
+/** A mailbox as admin and board manage it: personal (`memberId`) or shared (`owners`). */
 export interface MailboxAdmin {
   id: string;
   address: string;
   name: string;
   memberId: string | null;
   memberName: string | null;
-  role: Role | null;
+  owners: MailboxOwners;
 }
 
 export interface MailboxInput {
   address: string;
   name: string;
   memberId: string | null;
-  role: Role | null;
+  owners: MailboxOwners | null;
 }
 
 /** A record linked in a mail by its code, as the reader sees it; not `visible`: unknown, or a record the reader may not open. */
@@ -120,20 +130,43 @@ export interface MailSettings {
   keepsMail: boolean;
   /** Who gets a personal mailbox automatically: everyone with a login, club members only, or nobody (admins assign by hand). */
   personalFor: PersonalFor;
+  /** How personal addresses are built. */
+  addressPattern: AddressPattern;
+  /** Recipients of one mail, 1 to `dailyLimit`. */
+  maxRecipients: number;
 }
 
 export type PersonalFor = 'ALL' | 'CLUB_MEMBERS' | 'NONE';
 
-/** server: MailSettings.personalAddress — "Jürgen Groß" → "juergengross", ASCII only. */
-export function personalLocal(firstName: string, lastName: string): string {
-  return (
-    `${firstName} ${lastName}`
-      .toLowerCase()
-      .replace(/ä/g, 'ae')
-      .replace(/ö/g, 'oe')
-      .replace(/ü/g, 'ue')
-      .replace(/ß/g, 'ss')
-      .normalize('NFD')
-      .replace(/[^a-z0-9]/g, '') || 'mitglied'
-  );
+export type AddressPattern = 'FIRSTLAST' | 'FIRST_DOT_LAST' | 'INITIAL_DOT_LAST';
+
+export const ADDRESS_PATTERNS: { value: AddressPattern; label: string }[] = [
+  { value: 'FIRSTLAST', label: 'vornamenachname@' },
+  { value: 'FIRST_DOT_LAST', label: 'vorname.nachname@' },
+  { value: 'INITIAL_DOT_LAST', label: 'v.nachname@' },
+];
+
+const ascii = (name: string): string =>
+  name
+    .toLowerCase()
+    .replace(/ä/g, 'ae')
+    .replace(/ö/g, 'oe')
+    .replace(/ü/g, 'ue')
+    .replace(/ß/g, 'ss')
+    .normalize('NFD')
+    .replace(/[^a-z0-9]/g, '');
+
+/** server: MailSettings.personalAddress — "Jürgen Groß" → "juergengross", "juergen.gross" or "j.gross", ASCII only. */
+export function personalLocal(firstName: string, lastName: string, pattern: AddressPattern = 'FIRSTLAST'): string {
+  const first = ascii(firstName);
+  const last = ascii(lastName);
+  const local =
+    !first || !last
+      ? ascii(`${firstName} ${lastName}`)
+      : pattern === 'FIRST_DOT_LAST'
+        ? `${first}.${last}`
+        : pattern === 'INITIAL_DOT_LAST'
+          ? `${first[0]}.${last}`
+          : first + last;
+  return local || 'mitglied';
 }

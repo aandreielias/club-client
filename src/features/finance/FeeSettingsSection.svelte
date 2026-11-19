@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { settings } from '../../settings';
   import { Action } from '../../lib/state/Action.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
@@ -40,11 +41,11 @@
     onsave={(value) => financeApi.saveFeeSettings(value)}
   >
     <Field label="Kategorie der Zahlungen"><Select bind:value={fees.value.category} options={incomeOptions} /></Field>
-    <Field label="Fällig nach Saisonbeginn" hint="Tage, 0 bis 365">
-      <input type="number" min="0" max="365" bind:value={fees.value.dueDays} class="short" />
+    <Field label="Fällig nach Saisonbeginn" hint="Tage, 0 bis {settings.finance.fee.maxDays}">
+      <input type="number" min="0" max={settings.finance.fee.maxDays} bind:value={fees.value.dueDays} class="short" />
     </Field>
     <Field label="Erinnern alle" hint="Tage, solange nach der Fälligkeit etwas offen ist; 0 = keine Erinnerung">
-      <input type="number" min="0" max="365" bind:value={fees.value.remindDays} class="short" />
+      <input type="number" min="0" max={settings.finance.fee.maxDays} bind:value={fees.value.remindDays} class="short" />
     </Field>
   </SettingsForm>
 {:else if id === 'payment'}
@@ -57,12 +58,16 @@
     <Field label="So wird bezahlt" hint="Etwa wann und wie überwiesen wird.">
       <textarea
         rows="3"
-        maxlength="2000"
+        maxlength={settings.finance.fee.instructionsMaxLength}
         value={fees.value.instructions ?? ''}
         oninput={(e) => (fees.value.instructions = text(e.currentTarget.value))}></textarea>
     </Field>
-    <Field label="Kontoinhaber" hint="Höchstens 70 Zeichen; leer = kein QR-Code">
-      <input maxlength="70" value={fees.value.holder ?? ''} oninput={(e) => (fees.value.holder = text(e.currentTarget.value))} />
+    <Field label="Kontoinhaber" hint="Höchstens {settings.finance.fee.holderMaxLength} Zeichen; leer = kein QR-Code">
+      <input
+        maxlength={settings.finance.fee.holderMaxLength}
+        value={fees.value.holder ?? ''}
+        oninput={(e) => (fees.value.holder = text(e.currentTarget.value))}
+      />
     </Field>
     <div class="grid-2">
       <Field label="IBAN">

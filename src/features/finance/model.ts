@@ -106,13 +106,13 @@ export type ExportFormat = 'CSV' | 'XLSX';
 export interface BudgetLine {
   category: string;
   plannedCents: number;
-  /** Booked in the season, positive in the category's direction (a Storno lowers it). */
+  /** Booked in the fiscal year, positive in the category's direction (a Storno lowers it). */
   actualCents: number;
 }
 
-/** Every category planned or booked in the season. */
+/** Every category planned or booked in the fiscal year. */
 export interface Budget {
-  season: number;
+  year: number;
   items: BudgetLine[];
 }
 
@@ -257,13 +257,3 @@ export function parseMoney(text: string): number | null {
 
 /** 12,50 for an amount field (without currency). */
 export const moneyInput = (cents: number): string => (Math.abs(cents) / 100).toFixed(2).replace('.', ',');
-
-/** The season `today` falls in, named by its first year (server: ListBookings.season). */
-export function seasonOf(today: string, startMonth: number): number {
-  const [year, month] = today.split('-').map(Number);
-  return month >= startMonth ? year : year - 1;
-}
-
-/** 2026 → '2026/27'; with start month 1 the season is the calendar year. */
-export const seasonLabel = (season: number, startMonth: number): string =>
-  startMonth === 1 ? String(season) : `${season}/${String((season + 1) % 100).padStart(2, '0')}`;

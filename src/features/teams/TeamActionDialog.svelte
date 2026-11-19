@@ -2,12 +2,12 @@
   import { settings } from '../../settings';
   import { session } from '../../lib/container';
   import { Action } from '../../lib/state/Action.svelte';
+  import { yearLabel, yearOf } from '../../lib/time/clubYear';
   import type { RosterEntry, Team } from '../../lib/types';
   import Button from '../../ui/Button.svelte';
   import Dialog from '../../ui/Dialog.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Field from '../../ui/Field.svelte';
-  import { TeamForm } from './TeamForm.svelte';
   import { teamsApi } from './services';
 
   /**
@@ -37,12 +37,9 @@
   let captain = $state(!!entry?.captain);
   /** The season after the team's: 2026/27 → 2027/28 (or after the current one when the team's is older). */
   function following(current: string): string {
-    const first =
-      Math.max(
-        Number(current.slice(0, 4)),
-        Number(TeamForm.currentSeason(session.clock.today(), session.club?.seasonStartMonth ?? 7).slice(0, 4)) - 1,
-      ) + 1;
-    return `${first}/${String((first + 1) % 100).padStart(2, '0')}`;
+    const startMonth = session.club?.seasonStartMonth ?? 7;
+    const first = Math.max(Number(current.slice(0, 4)), yearOf(session.clock.today(), startMonth) - 1) + 1;
+    return yearLabel(first, startMonth);
   }
   // svelte-ignore state_referenced_locally
   let season = $state(following(team.season));
@@ -51,9 +48,9 @@
   const titles = $derived({ player: `Spieler:in: ${entry?.name ?? ''}`, season: 'Neue Saison', request: 'Spieler:in anfragen' });
   const valid = $derived(
     kind === 'player'
-      ? jersey === '' || (Number.isInteger(jersey) && jersey >= 0 && jersey <= 99)
+      ? jersey === '' || (Number.isInteger(jersey) && jersey >= 0 && jersey <= settings.teams.maxJersey)
       : kind === 'season'
-        ? /^\d{4}\/\d{2}$/.test(season)
+        ? new RegExp(settings.teams.seasonPattern).test(season)
         : !!note.trim(),
   );
 

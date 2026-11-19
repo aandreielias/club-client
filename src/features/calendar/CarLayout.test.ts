@@ -36,4 +36,11 @@ describe('CarLayout', () => {
     const spots = big.seats.map((s) => `${s.x}/${s.y}`);
     expect(new Set(spots).size).toBe(spots.length);
   });
+
+  it('draws every offered seat of a bus', () => {
+    expect(CarLayout.rows(21)).toHaveLength(7);
+    const bus = CarLayout.shape(20);
+    expect(bus.seats.filter((s) => s.offered && !s.driver)).toHaveLength(20);
+    expect(CarLayout.shape(50).seats.filter((s) => s.offered)).toHaveLength(51);
+  });
 });

@@ -1,15 +1,8 @@
 <script lang="ts">
   import { settings } from '../../settings';
-  import { bus, preferences } from '../../lib/container';
+  import { bus } from '../../lib/container';
   import { CONFIRM } from '../../channels';
   import Button from '../../ui/Button.svelte';
-  import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
-  import Field from '../../ui/Field.svelte';
-
-  const VIEWS = [
-    { value: 'month', label: 'Monat' },
-    { value: 'week', label: 'Woche' },
-  ] as const;
 
   const mockMode = settings.runtime.apiMode === 'mock';
 
@@ -28,15 +21,6 @@
 </script>
 
 <div class="stack">
-  <Field label="Kalender öffnet mit" group>
-    <ChoiceGroup
-      name="calendar-view-pref"
-      label="Kalender öffnet mit"
-      options={VIEWS}
-      bind:value={() => preferences.values.calendarView, (v) => v && preferences.set('calendarView', v)}
-    />
-  </Field>
-
   {#if mockMode}
     <h3>Testmodus</h3>
     <p class="muted">Die Website läuft ohne Server mit Beispieldaten in diesem Browser.</p>
