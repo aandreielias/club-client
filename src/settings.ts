@@ -379,6 +379,8 @@ export const settings = {
     /** Dragging the call window's inner edge: smallest side width and bottom height. */
     callMinSidePx: 280,
     callMinBottomPx: 200,
+    /** How far the header of the docked call is dragged before it undocks into the middle. */
+    callUndockPx: 8,
     protocolMaxLength: 100_000,
     guestNameMaxLength: 100,
     guestEmailMaxLength: 200,

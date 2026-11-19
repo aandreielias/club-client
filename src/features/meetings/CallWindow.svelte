@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, tick } from 'svelte';
   import { innerHeight, innerWidth } from 'svelte/reactivity/window';
   import { WindowService } from '../../lib/window/WindowService.svelte';
   import { settings } from '../../settings';
@@ -65,6 +65,8 @@
 
   let element: HTMLElement | undefined = $state();
   let fullscreen = $state(false);
+  /** Measures the middle size (theme value or the browser's) before undocking into it. */
+  let probe: HTMLElement | undefined = $state();
 
   // The page makes room for the docked call and the bar (App.svelte, WindowHost.svelte).
   $effect(() => {
@@ -95,32 +97,61 @@
     if (element) element.style.width = element.style.height = element.style.top = element.style.left = '';
   });
 
-  /** In the middle, the header drags the window anywhere on the screen (not off it). */
+  /**
+   * The header and the empty space around the tiles drag the window anywhere on the screen (not off it). Docked, a drag
+   * first undocks it: the window shrinks to its middle size under the pointer (animated), then follows it.
+   */
   function startMove(event: PointerEvent) {
-    const header = event.currentTarget as HTMLElement;
-    if (!element || dock !== 'center' || fullscreen || event.button !== 0) return;
-    if ((event.target as Element).closest('button, input, label') || document.documentElement.dataset.layout === 'compact') return;
+    const target = event.currentTarget as HTMLElement;
+    if (!element || fullscreen || calls.minimized || event.button !== 0) return;
+    if ((event.target as Element).closest('button, input, label, figure, .resize') || document.documentElement.dataset.layout === 'compact') return;
     const box = element.getBoundingClientRect();
-    const [dx, dy] = [event.clientX - box.left, event.clientY - box.top];
+    // The browser's own resize handle in the bottom right corner of the middle placement.
+    if (dock === 'center' && box.right - event.clientX < 18 && box.bottom - event.clientY < 18) return;
+    const start = { x: event.clientX, y: event.clientY };
+    let size = { width: box.width, height: box.height };
+    let grab = dock === 'center' ? { dx: start.x - box.left, dy: start.y - box.top } : null;
+    let dragging = true;
+    let undocking = false;
+    let last = start;
     event.preventDefault();
-    header.setPointerCapture(event.pointerId);
+    target.setPointerCapture(event.pointerId);
     const root = document.documentElement;
-    root.dataset.windowResizing = '';
+    if (grab) root.dataset.windowResizing = '';
+    const follow = () => {
+      if (!element || !grab) return;
+      element.style.left = `${Math.max(0, Math.min(last.x - grab.dx, window.innerWidth - size.width))}px`;
+      element.style.top = `${Math.max(0, Math.min(last.y - grab.dy, window.innerHeight - size.height))}px`;
+    };
+    const undock = async () => {
+      if (!probe) return;
+      size = { width: probe.offsetWidth, height: probe.offsetHeight };
+      // Same spot of the window under the pointer, scaled to the middle size.
+      const at = { dx: ((start.x - box.left) / box.width) * size.width, dy: ((start.y - box.top) / box.height) * size.height };
+      calls.place('center');
+      await tick();
+      grab = at;
+      follow();
+      setTimeout(() => dragging && (root.dataset.windowResizing = ''), settings.motion.window);
+    };
     const move = (e: PointerEvent) => {
-      if (!element) return;
-      const { width, height } = element.getBoundingClientRect();
-      element.style.left = `${Math.max(0, Math.min(e.clientX - dx, window.innerWidth - width))}px`;
-      element.style.top = `${Math.max(0, Math.min(e.clientY - dy, window.innerHeight - height))}px`;
+      last = { x: e.clientX, y: e.clientY };
+      if (grab) follow();
+      else if (!undocking && Math.hypot(last.x - start.x, last.y - start.y) > settings.meetings.callUndockPx) {
+        undocking = true;
+        void undock();
+      }
     };
     const end = () => {
+      dragging = false;
       delete root.dataset.windowResizing;
-      header.removeEventListener('pointermove', move);
-      header.removeEventListener('pointerup', end);
-      header.removeEventListener('pointercancel', end);
+      target.removeEventListener('pointermove', move);
+      target.removeEventListener('pointerup', end);
+      target.removeEventListener('pointercancel', end);
     };
-    header.addEventListener('pointermove', move);
-    header.addEventListener('pointerup', end);
-    header.addEventListener('pointercancel', end);
+    target.addEventListener('pointermove', move);
+    target.addEventListener('pointerup', end);
+    target.addEventListener('pointercancel', end);
   }
 
   function media(video: HTMLVideoElement, stream: MediaStream) {
@@ -203,6 +234,7 @@
     class:bar={calls.minimized}
     aria-label="Videokonferenz: {calls.meeting.title}"
     onclick={(e) => calls.minimized && !(e.target as Element).closest('button') && (calls.minimized = false)}
+    onpointerdown={startMove}
   >
     {#if calls.minimized}
       <span class="live" aria-hidden="true"></span>
@@ -229,8 +261,7 @@
           {@attach tooltip('Ziehen zum Ändern der Größe, Doppelklick: Standardgröße')}
         ></div>
       {/if}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <header onpointerdown={startMove}>
+      <header>
         <h2>{calls.meeting.title}</h2>
         <div class="controls">
           <ChoiceGroup
@@ -296,6 +327,7 @@
       <ErrorNote error={calls.error} />
     {/if}
   </section>
+  <div class="probe" bind:this={probe} aria-hidden="true"></div>
 {/if}
 
 {#snippet tile(t: Tile)}
@@ -351,6 +383,15 @@
       width var(--motion-window) var(--motion-easing),
       height var(--motion-window) var(--motion-easing),
       border-radius var(--motion-window) var(--motion-easing);
+  }
+  .probe {
+    position: fixed;
+    width: var(--call-center-width);
+    height: var(--call-center-height);
+    min-width: 320px;
+    min-height: 240px;
+    visibility: hidden;
+    pointer-events: none;
   }
   .center {
     top: calc((100dvh - var(--call-center-height)) / 2);
@@ -460,8 +501,17 @@
     outline: none;
   }
 
-  .center header {
+  .call:not(.bar) {
     cursor: move;
+  }
+  .call:fullscreen,
+  .call figure,
+  :global([data-layout='compact']) .call {
+    cursor: auto;
+  }
+  header,
+  .stage,
+  footer {
     touch-action: none;
   }
   header {
