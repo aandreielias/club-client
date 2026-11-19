@@ -27,6 +27,8 @@ import {
   quorumReached,
   SEEDED_CIRCULAR,
   type AgendaItem,
+  type CallState,
+  type CallTracksAnswer,
   type CircularRules,
   type ResolutionSummary,
   type ResolutionRules,
@@ -561,6 +563,51 @@ export class MockMeetings {
     meeting.presence[viewer.id] = true;
     this.changed(meeting, 'PRESENCE');
     return this.dto(viewer, meeting);
+  }
+
+  /**
+   * server: CallHandlers — the call state per meeting, in memory. shortcut: the browser mock has no SFU, so tracks are answered empty and
+   * two other people present appear as joined without video; enough to see the call's layout, not its media.
+   */
+  private readonly calls = new Map<string, Map<string, string>>();
+
+  joinCall(viewer: Member, id: string): CallState {
+    const meeting = this.callable(viewer, id);
+    const call = this.calls.get(id) ?? new Map<string, string>();
+    this.calls.set(id, call);
+    const others = Object.keys(meeting.presence).filter((m) => meeting.presence[m] && m !== viewer.id);
+    others.slice(0, 2).forEach((m) => call.has(m) || call.set(m, `mock-${m}`));
+    call.set(viewer.id, `mock-${viewer.id}-${Date.now()}`);
+    return this.callState(viewer, id);
+  }
+
+  callState(viewer: Member, id: string): CallState {
+    this.visible(viewer, id);
+    const call = this.calls.get(id) ?? new Map<string, string>();
+    return {
+      sessionId: call.get(viewer.id) ?? null,
+      participants: [...call].map(([memberId, sessionId]) => ({ memberId, name: this.name(memberId), sessionId, trackNames: [] })),
+    };
+  }
+
+  leaveCall(viewer: Member, id: string): void {
+    this.visible(viewer, id);
+    this.calls.get(id)?.delete(viewer.id);
+  }
+
+  callTracks(viewer: Member, id: string): CallTracksAnswer {
+    this.callable(viewer, id);
+    if (!this.calls.get(id)?.has(viewer.id)) fail(409, 'meeting.call-not-joined');
+    return { requiresImmediateRenegotiation: false, sessionDescription: null, tracks: [] };
+  }
+
+  /** server: CallHandlers.requireOpen — online types only, from an hour before the start while invited, and while open. */
+  private callable(viewer: Member, id: string): StoredMeeting {
+    const meeting = this.visible(viewer, id);
+    if (!this.type(meeting.kind).online) fail(409, 'meeting.call-off');
+    const soon = Date.parse(meeting.startsAt) - Date.now() <= 60 * 60_000;
+    if (!(meeting.status === 'OPEN' || (meeting.status === 'INVITED' && soon))) fail(409, 'meeting.call-closed');
+    return meeting;
   }
 
   /** server: MeetingHandlers.approveProtocol — chair and secretary, once each, after it is final. */
@@ -1597,12 +1644,11 @@ mockServer
   .on('POST', '/api/v1/meetings/:id/cancel', (req) => meetings.cancel(actor(req), req.params.id))
   .on('PUT', '/api/v1/meetings/:id/agenda', (req) => meetings.setAgenda(actor(req), req.params.id, req.body?.items))
   .on('PUT', '/api/v1/meetings/:id/presence/me', (req) => meetings.checkIn(actor(req), req.params.id))
-  // server: CALLS_MODE=disabled — the browser mock has no video service
-  .on('POST', '/api/v1/meetings/:id/call', () => fail(503, 'meeting.call-unavailable'))
-  .on('GET', '/api/v1/meetings/:id/call', () => ({ sessionId: null, participants: [] }))
-  .on('DELETE', '/api/v1/meetings/:id/call', () => undefined)
-  .on('POST', '/api/v1/meetings/:id/call/tracks', () => fail(409, 'meeting.call-not-joined'))
-  .on('PUT', '/api/v1/meetings/:id/call/renegotiate', () => fail(409, 'meeting.call-not-joined'))
+  .on('POST', '/api/v1/meetings/:id/call', (req) => meetings.joinCall(actor(req), req.params.id))
+  .on('GET', '/api/v1/meetings/:id/call', (req) => meetings.callState(actor(req), req.params.id))
+  .on('DELETE', '/api/v1/meetings/:id/call', (req) => meetings.leaveCall(actor(req), req.params.id))
+  .on('POST', '/api/v1/meetings/:id/call/tracks', (req) => meetings.callTracks(actor(req), req.params.id))
+  .on('PUT', '/api/v1/meetings/:id/call/renegotiate', (req) => meetings.callTracks(actor(req), req.params.id))
   .on('PUT', '/api/v1/meetings/:id/presence', (req) => meetings.setPresenceMany(actor(req), req.params.id, req.body?.memberIds, req.body?.present))
   .on('PUT', '/api/v1/meetings/:id/invitees', (req) => meetings.setInvitees(actor(req), req.params.id, req.body ?? {}))
   .on('PUT', '/api/v1/meetings/:id/roles', (req) => meetings.setRoles(actor(req), req.params.id, req.body ?? {}))

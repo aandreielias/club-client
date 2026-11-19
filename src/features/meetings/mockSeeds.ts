@@ -398,7 +398,7 @@ export type StoredResolution = Pick<
 };
 
 /**
- * To try everything: a general meeting running now (quorate, two members without the app, one vote open), one to invite, an
+ * To try everything: an online board meeting running now (video call), a general meeting running now (quorate, two members without the app, one vote open), one to invite, an
  * invited board meeting, a closed board meeting with its protocol.
  */
 export function seedMeetings(): StoredMeeting[] {
@@ -429,6 +429,20 @@ export function seedMeetings(): StoredMeeting[] {
         { kind: 'MEETING', id: 'mt-past', title: 'Ordentliche Vorstandssitzung', parentId: null },
         { kind: 'TEAM', id: 't-damen', title: 'Damen 1', parentId: null },
       ],
+    },
+    {
+      ...base,
+      id: 'mt-online',
+      kind: 'BOARD',
+      title: 'Online-Vorstandssitzung',
+      agenda: '1. Hallenzeiten Wintersaison\n2. Allfälliges',
+      startsAt: ago(5),
+      endsAt: ago(-85),
+      location: null,
+      status: 'OPEN',
+      invitedAt: ago(7 * 24 * 60),
+      openedAt: ago(5),
+      presence: { vorstand: true, kassier: true, schrift: true },
     },
     {
       ...base,

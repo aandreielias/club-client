@@ -12,6 +12,11 @@ describe('deepLink', () => {
     expect(deepLink('/r/K7Q2M9XW4P', resolve)).toBe('/#/r/K7Q2M9XW4P');
   });
 
+  it('keeps the app below its base path (GitHub Pages)', () => {
+    expect(deepLink('/club-client/tasks/t-1', resolve, '/club-client/')).toBe('/club-client/#/?open=task/t-1');
+    expect(deepLink('/club-client/', resolve, '/club-client/')).toBeNull();
+  });
+
   it('leaves the app itself alone', () => {
     expect(deepLink('/index.html', resolve)).toBeNull();
     expect(deepLink('/', resolve)).toBeNull();

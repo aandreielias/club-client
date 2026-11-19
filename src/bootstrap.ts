@@ -13,6 +13,6 @@ export function bootstrap(): void {
   features.registerHome(homeSections);
   features.registerNavigation(navCatalog);
   // A link from a mail or e-mail notice (`<app>/tasks/<id>`) becomes the route it stands for.
-  const hash = location.hash ? null : deepLink(location.pathname, (link) => links.resolve(link));
+  const hash = location.hash ? null : deepLink(location.pathname, (link) => links.resolve(link), import.meta.env.BASE_URL);
   if (hash) history.replaceState(null, '', hash);
 }
