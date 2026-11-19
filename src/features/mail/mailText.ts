@@ -1,5 +1,5 @@
 // Club records linked into a mail (server: mail.application.MailRefs). The mail carries only a random code per record,
-// `Verweis K7Q2M9XW4P` linking to `<website>/app/r/<code>` (or `club:r/<code>` without a website), so outside mail programs
+// `Verweis K7Q2M9XW4P` linking to `<app>/r/<code>` (or `club:r/<code>` without the app's address), so outside mail programs
 // show nothing about it. The app asks the server what each code stands for, as the reader sees it.
 
 import type { PickedRef } from '../../lib/records/RefList.svelte';
@@ -8,7 +8,7 @@ import type { MailRef } from './model';
 /** A piece of a mail's plain text: text, or a linked record's code. */
 export type MailSegment = { text: string } | { code: string };
 
-const LINK = '(?:https?://[^\\s()]+?/app/r/|club:r/)([A-Z0-9]{10})';
+const LINK = '(?:https?://[^\\s()]+?/r/|club:r/)([A-Z0-9]{10})';
 const HREF = new RegExp(`^${LINK}$`);
 const WRITTEN = new RegExp(`Verweis ([A-Z0-9]{10}) \\(${LINK}\\)`, 'g');
 const ANY = new RegExp(LINK, 'g');

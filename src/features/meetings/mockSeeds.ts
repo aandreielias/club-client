@@ -45,7 +45,6 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     sort: 1,
     archived: false,
     online: false,
-    videoUrl: null,
     inUse: false,
     steps: [],
   },
@@ -72,7 +71,6 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     sort: 2,
     archived: false,
     online: true,
-    videoUrl: 'https://meet.example.at/mv',
     inUse: false,
     steps: [],
   },
@@ -99,7 +97,6 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     sort: 3,
     archived: false,
     online: false,
-    videoUrl: null,
     inUse: false,
     steps: [],
   },
@@ -126,7 +123,6 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     sort: 4,
     archived: false,
     online: false,
-    videoUrl: null,
     inUse: false,
     steps: [],
   },
@@ -153,7 +149,6 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     sort: 5,
     archived: false,
     online: true,
-    videoUrl: 'https://meet.example.at/vorstand',
     inUse: false,
     steps: [],
   },
@@ -180,7 +175,6 @@ export const SEEDED_TYPES: readonly StoredType[] = [
     sort: 6,
     archived: false,
     online: false,
-    videoUrl: null,
     inUse: false,
     steps: [],
   },
@@ -300,7 +294,6 @@ const nominate = step(
   sort: 20,
   archived: false,
   online: false,
-  videoUrl: null,
   selfCheckIn: false,
   inUse: false,
   steps: [
@@ -415,7 +408,7 @@ export function seedMeetings(): StoredMeeting[] {
     return d.toISOString();
   };
   const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
-  const base = { urgency: null, videoUrl: null, openedAt: null, closedAt: null, protocol: null, presence: {}, links: [] };
+  const base = { urgency: null, openedAt: null, closedAt: null, protocol: null, presence: {}, links: [] };
   return [
     {
       ...base,
@@ -426,7 +419,6 @@ export function seedMeetings(): StoredMeeting[] {
       startsAt: ago(15),
       endsAt: ago(-105),
       location: 'Vereinsheim',
-      videoUrl: 'https://meet.example.at/mv',
       status: 'OPEN',
       invitedAt: ago(20 * 24 * 60),
       openedAt: ago(10),
@@ -476,7 +468,6 @@ export function seedMeetings(): StoredMeeting[] {
       startsAt: at(10, 18),
       endsAt: at(10, 19),
       location: null,
-      videoUrl: 'https://meet.example.at/vorstand',
       status: 'INVITED',
       invitedAt: new Date().toISOString(),
     },

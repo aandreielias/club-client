@@ -373,6 +373,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/meetings/{id}/call/renegotiate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["callRenegotiate"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/meetings/{id}/agenda": {
         parameters: {
             query?: never;
@@ -1455,6 +1471,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meetings/{id}/call": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["call"];
+        put?: never;
+        post: operations["joinCall"];
+        delete: operations["leaveCall"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meetings/{id}/call/tracks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["callTracks"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3587,7 +3635,6 @@ export interface components {
             endsAt: string;
             location: string;
             online: boolean;
-            videoUrl: string;
             /** @enum {string} */
             status: "DRAFT" | "INVITED" | "OPEN" | "CLOSED" | "CANCELLED";
             /** Format: date-time */
@@ -3630,6 +3677,10 @@ export interface components {
             firstName: string;
             lastName: string;
             email: string;
+        };
+        "at.clubserver.gateway.rest.MeetingsController.SdpBody": {
+            type: string;
+            sdp: string;
         };
         "at.clubserver.gateway.rest.MeetingsController.AgendaBody": {
             items: components["schemas"]["at.clubserver.gateway.rest.MeetingsController.AgendaItemBody"][];
@@ -3678,7 +3729,6 @@ export interface components {
             sort: number;
             archived: boolean;
             online: boolean;
-            videoUrl: string;
             steps: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.StepDto"][];
             selfCheckIn: boolean;
             /** Format: int32 */
@@ -3749,7 +3799,6 @@ export interface components {
             sort: number;
             archived: boolean;
             online: boolean;
-            videoUrl: string;
             selfCheckIn: boolean;
             /** Format: int32 */
             minInvitees: number;
@@ -4600,7 +4649,6 @@ export interface components {
             /** Format: date-time */
             endsAt: string;
             location: string;
-            videoUrl: string;
         };
         "at.clubserver.gateway.rest.MeetingsController.ResolutionBody": {
             title: string;
@@ -4613,6 +4661,42 @@ export interface components {
         };
         "at.clubserver.gateway.rest.MeetingsController.CloseBody": {
             protocol: string;
+        };
+        "at.clubserver.meetings.api.MeetingsApi.CallParticipant": {
+            /** Format: uuid */
+            memberId: string;
+            name: string;
+            sessionId: string;
+            trackNames: string[];
+        };
+        "at.clubserver.meetings.api.MeetingsApi.CallState": {
+            sessionId: string;
+            participants: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.CallParticipant"][];
+        };
+        "at.clubserver.gateway.rest.MeetingsController.CallTrackBody": {
+            location: string;
+            mid: string;
+            trackName: string;
+            sessionId: string;
+        };
+        "at.clubserver.gateway.rest.MeetingsController.CallTracksBody": {
+            sessionDescription: components["schemas"]["at.clubserver.gateway.rest.MeetingsController.SdpBody"];
+            tracks: components["schemas"]["at.clubserver.gateway.rest.MeetingsController.CallTrackBody"][];
+        };
+        "at.clubserver.meetings.api.MeetingsApi.CallTrack": {
+            location: string;
+            mid: string;
+            trackName: string;
+            sessionId: string;
+        };
+        "at.clubserver.meetings.api.MeetingsApi.CallTracksAnswer": {
+            requiresImmediateRenegotiation: boolean;
+            sessionDescription: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.Sdp"];
+            tracks: components["schemas"]["at.clubserver.meetings.api.MeetingsApi.CallTrack"][];
+        };
+        "at.clubserver.meetings.api.MeetingsApi.Sdp": {
+            type: string;
+            sdp: string;
         };
         "at.clubserver.gateway.rest.CalendarController.FeedUrl": {
             url: string;
@@ -4977,7 +5061,6 @@ export interface components {
             /** Format: date-time */
             endsAt: string;
             location: string;
-            videoUrl: string;
             protocol: string;
         };
         "at.clubserver.gateway.rest.NotificationsController.ReadBody": {
@@ -6226,6 +6309,30 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.MeetingDto"];
                 };
+            };
+        };
+    };
+    callRenegotiate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.MeetingsController.SdpBody"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -8687,6 +8794,96 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.MeetingDto"];
+                };
+            };
+        };
+    };
+    call: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.CallState"];
+                };
+            };
+        };
+    };
+    joinCall: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.CallState"];
+                };
+            };
+        };
+    };
+    leaveCall: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    callTracks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.MeetingsController.CallTracksBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.meetings.api.MeetingsApi.CallTracksAnswer"];
                 };
             };
         };

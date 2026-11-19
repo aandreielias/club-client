@@ -64,32 +64,20 @@ describe('MeetingForm', () => {
     expect(form.toNew()).toMatchObject({ kind: 'BOARD', startsAt: '2026-11-21T08:00:00.000Z', location: null, urgency: null });
   });
 
-  it('needs a reason for urgent types, an end after the start and https video links', () => {
+  it('needs a reason for urgent types and an end after the start', () => {
     const form = new MeetingForm(clock, '2026-11-20T18:00');
     form.setType(type('EXTRA_BOARD'));
     expect(form.errors.urgency).toBeDefined();
     form.urgency = 'Halle gekündigt';
     form.end = form.start;
-    form.setType({ ...type('EXTRA_BOARD'), online: true });
-    form.videoUrl = 'http://meet.example';
-    expect(Object.keys(form.errors).sort()).toEqual(['end', 'videoUrl']);
+    expect(Object.keys(form.errors)).toEqual(['end']);
   });
 });
 
 describe('MeetingPlaceForm', () => {
-  it('needs a https link for online kinds, unless the kind has a standing one', () => {
-    expect(MeetingPlaceForm.of({ location: 'Halle', online: false, videoUrl: null }, undefined).valid).toBe(true);
-    const online = MeetingPlaceForm.of({ location: 'Halle', online: true, videoUrl: null }, { ...type('ASSEMBLY'), online: true, videoUrl: null });
-    expect(online.errors.videoUrl).toBe('Link zur Videokonferenz angeben.');
-    online.videoUrl = 'http://x.at';
-    expect(online.errors.videoUrl).toBe('Link mit https:// angeben.');
-    online.videoUrl = 'https://meet.example/mv';
-    expect(online.toPatch()).toEqual({ location: 'Halle', videoUrl: 'https://meet.example/mv' });
-
-    // The kind's standing link shows as the default; an own link replaces it, empty falls back.
-    const standing = { ...type('SIMPLE_BOARD'), online: true, videoUrl: 'https://meet.example/vorstand' };
-    const form = MeetingPlaceForm.of({ location: null, online: true, videoUrl: 'https://meet.example/vorstand' }, standing);
-    expect(form.videoUrl).toBe('');
+  it('keeps only the place (online kinds have their call in the app)', () => {
+    const form = MeetingPlaceForm.of({ location: ' Halle ' });
     expect(form.valid).toBe(true);
+    expect(form.toPatch()).toEqual({ location: 'Halle' });
   });
 });

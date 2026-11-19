@@ -17,6 +17,10 @@ import type {
   VoteMode,
   InviteesInput,
   Majority,
+  CallState,
+  CallTrack,
+  CallTracksAnswer,
+  Sdp,
 } from './model';
 
 /** Typed access to the meetings endpoints. */
@@ -108,6 +112,28 @@ export class MeetingsApi {
   /** CHOSEN types: who is invited (members, guests from outside) and the parties in dispute; until the meeting opens. */
   setInvitees(id: string, invitees: InviteesInput): Promise<Meeting> {
     return this.api.put<Meeting>(`${this.path(id)}/invitees`, invitees);
+  }
+
+  /** Video call of an online meeting: join (a new call session), state (also the heartbeat), leave. */
+  joinCall(id: string): Promise<CallState> {
+    return this.api.post<CallState>(`${this.path(id)}/call`);
+  }
+
+  call(id: string): Promise<CallState> {
+    return this.api.get<CallState>(`${this.path(id)}/call`);
+  }
+
+  leaveCall(id: string): Promise<void> {
+    return this.api.delete(`${this.path(id)}/call`);
+  }
+
+  /** Sends own tracks (with an offer) or pulls others' (the answer may carry an offer to renegotiate). */
+  callTracks(id: string, sessionDescription: Sdp | null, tracks: CallTrack[]): Promise<CallTracksAnswer> {
+    return this.api.post<CallTracksAnswer>(`${this.path(id)}/call/tracks`, { sessionDescription, tracks });
+  }
+
+  renegotiateCall(id: string, sessionDescription: Sdp): Promise<void> {
+    return this.api.put(`${this.path(id)}/call/renegotiate`, { sessionDescription });
   }
 
   approveProtocol(id: string): Promise<Meeting> {

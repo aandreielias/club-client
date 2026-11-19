@@ -5,15 +5,16 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 const MAP_TILES = 'https://tiles.openfreemap.org';
 
 /**
- * Content Security Policy as a meta tag (GitHub Pages sends no headers), built only: the dev server needs its own
- * HMR socket and inline helpers. API, Supabase (auth + file links) and map tiles are the only other origins.
+ * Content Security Policy as a meta tag (kept with the build; Cloudflare Pages could send it as a header too), built only: the dev server needs its own
+ * HMR socket and inline helpers. API, Supabase (auth), the file storage (presigned R2 links) and map tiles are the only other origins.
  */
 function csp(env: Record<string, string>): Plugin {
   const api = env.VITE_API_URL ?? '';
   const supabase = env.VITE_SUPABASE_URL ?? '';
+  const storage = env.VITE_STORAGE_URL ?? '';
   // blob: document previews read the content they downloaded as an object URL (mock links are object URLs too).
-  const connect = ["'self'", 'blob:', api, api.replace(/^http/, 'ws'), supabase, MAP_TILES].filter(Boolean).join(' ');
-  const images = ["'self'", 'blob:', 'data:', supabase, MAP_TILES].filter(Boolean).join(' ');
+  const connect = ["'self'", 'blob:', api, api.replace(/^http/, 'ws'), supabase, storage, MAP_TILES].filter(Boolean).join(' ');
+  const images = ["'self'", 'blob:', 'data:', storage, MAP_TILES].filter(Boolean).join(' ');
   const policy = [
     "default-src 'self'",
     "script-src 'self'",
@@ -35,9 +36,9 @@ function csp(env: Record<string, string>): Plugin {
   };
 }
 
-// Relative base: the same build works under GitHub Pages' /<repo>/ path and at a domain root.
+// Root base: the app lives at app.<domain>/, and deep links (`/tasks/<id>`) load the same index.html and assets.
 export default defineConfig(({ mode }) => ({
-  base: './',
+  base: '/',
   plugins: [svelte(), csp(loadEnv(mode, '.', 'VITE_'))],
   // MapLibre's worker is a module (src/ui/LocationMap.svelte loads it by URL).
   worker: { format: 'es' },

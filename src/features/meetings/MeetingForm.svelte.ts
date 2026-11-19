@@ -3,51 +3,29 @@ import { ZonedClock, type LocalDateTime } from '../../lib/time/ZonedClock';
 import { agendaError, toInputs, type AgendaRow } from './agenda';
 import type { Meeting, MeetingPatch, MeetingType, NewMeeting } from './model';
 
-export type MeetingField = 'title' | 'items' | 'urgency' | 'start' | 'end' | 'videoUrl';
+export type MeetingField = 'title' | 'items' | 'urgency' | 'start' | 'end';
 type Errors = Partial<Record<MeetingField, string>>;
 
-/** server: MeetingType.videoFor — a meeting of an online kind needs a https link, its own or the kind's standing one. */
-function videoError(online: boolean, videoUrl: string, standing: string | null = null): string | undefined {
-  const video = videoUrl.trim();
-  if (!online) return undefined;
-  if (!video) return standing ? undefined : 'Link zur Videokonferenz angeben.';
-  if (!video.startsWith('https://') || video.length > 500) return 'Link mit https:// angeben.';
-  return undefined;
-}
-
-/** Place and video link of an existing meeting (changeable until it closes); online participation comes from its kind. */
+/** Place of an existing meeting (changeable until it closes); online kinds have their call in the app. */
 export class MeetingPlaceForm extends FormState<Errors> {
   location = $state('');
-  videoUrl = $state('');
 
-  constructor(
-    readonly online: boolean,
-    readonly standing: string | null,
-  ) {
-    super();
-  }
-
-  static of(meeting: { location: string | null; online: boolean; videoUrl: string | null }, type: MeetingType | undefined): MeetingPlaceForm {
-    const form = new MeetingPlaceForm(meeting.online, type?.videoUrl ?? null);
+  static of(meeting: { location: string | null }): MeetingPlaceForm {
+    const form = new MeetingPlaceForm();
     form.location = meeting.location ?? '';
-    form.videoUrl = meeting.videoUrl && meeting.videoUrl !== form.standing ? meeting.videoUrl : '';
     return form;
   }
 
-  /** An empty link falls back to the kind's standing one. */
-  toPatch(): { location: string; videoUrl: string } {
-    return { location: this.location.trim(), videoUrl: this.online ? this.videoUrl.trim() : '' };
+  toPatch(): { location: string } {
+    return { location: this.location.trim() };
   }
 
   protected validate(): Errors {
-    const errors: Errors = {};
-    const video = videoError(this.online, this.videoUrl, this.standing);
-    if (video) errors.videoUrl = video;
-    return errors;
+    return {};
   }
 }
 
-/** A new meeting: type, title (follows the type until typed), time in the club zone, place or video link, the Tagesordnung with its Beschlüsse. */
+/** A new meeting: type, title (follows the type until typed), time in the club zone, place, the Tagesordnung with its Beschlüsse. */
 export class MeetingForm extends FormState<Errors> {
   type = $state.raw<MeetingType | null>(null);
   title = $state('');
@@ -56,7 +34,6 @@ export class MeetingForm extends FormState<Errors> {
   start = $state<LocalDateTime>('');
   end = $state<LocalDateTime>('');
   location = $state('');
-  videoUrl = $state('');
 
   constructor(
     private readonly clock: ZonedClock,
@@ -96,11 +73,6 @@ export class MeetingForm extends FormState<Errors> {
     this.type = type;
   }
 
-  /** The kind lets members join online: the meeting shows a link. */
-  get online(): boolean {
-    return !!this.type?.online;
-  }
-
   /** Moving the start keeps the duration. */
   setStart(start: LocalDateTime): void {
     const minutes = (Date.parse(this.end) - Date.parse(this.start)) / 60_000;
@@ -121,7 +93,6 @@ export class MeetingForm extends FormState<Errors> {
       startsAt: this.startsAt,
       endsAt: this.clock.toInstant(this.end),
       location: this.location.trim() || null,
-      videoUrl: this.online ? this.videoUrl.trim() || null : null,
     };
   }
 
@@ -135,8 +106,6 @@ export class MeetingForm extends FormState<Errors> {
     if (this.type?.needsReason && !this.urgency.trim()) errors.urgency = 'Grund der Dringlichkeit angeben.';
     if (!this.start) errors.start = 'Beginn angeben.';
     if (!this.end || this.end <= this.start) errors.end = 'Das Ende liegt nach dem Beginn.';
-    const video = videoError(this.online, this.videoUrl, this.type?.videoUrl ?? null);
-    if (video) errors.videoUrl = video;
     return errors;
   }
 }

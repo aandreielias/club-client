@@ -78,10 +78,10 @@ describe('mock mail links and mailbox admin', () => {
     const [inline] = refCodes(sent.html!);
     const attached = inline;
     expect(sent.html).toBe(
-      `<p>Mit <a href="https://mein-verein.at/app/r/${inline}" rel="noopener noreferrer nofollow">Verweis ${inline}</a> heute</p>` +
-        `<p>Verknüpft:</p><ul><li><a href="https://mein-verein.at/app/r/${attached}" rel="noopener noreferrer nofollow">Verweis ${attached}</a></li></ul>`,
+      `<p>Mit <a href="club:r/${inline}" rel="noopener noreferrer nofollow">Verweis ${inline}</a> heute</p>` +
+        `<p>Verknüpft:</p><ul><li><a href="club:r/${attached}" rel="noopener noreferrer nofollow">Verweis ${attached}</a></li></ul>`,
     );
-    expect(sent.body).toContain(`Mit Verweis ${inline} (https://mein-verein.at/app/r/${inline}) heute`);
+    expect(sent.body).toContain(`Mit Verweis ${inline} (club:r/${inline}) heute`);
     expect(mail.resolveRefs(member('spieler'), [inline, 'ZZZZZZZZZZ'])).toEqual([
       { code: inline, visible: true, kind: 'TEAM', windowId: team.id, title: team.name },
       { code: 'ZZZZZZZZZZ', visible: false, kind: null, windowId: null, title: null },

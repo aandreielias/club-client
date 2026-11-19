@@ -231,7 +231,7 @@ export class MockNotifications {
       }
       case 'meetings.meeting-invited': {
         const where = data.location ? ` in ${data.location}` : '';
-        const video = data.videoUrl ? ` Videokonferenz: ${data.videoUrl}.` : '';
+        const video = data.online ? ' Videokonferenz in der App.' : '';
         const agenda =
           (data.agenda ? `\n\nTagesordnung:\n${data.agenda}` : '') + (data.motions?.length ? `\n\nAnträge:\n${data.motions.join('\n')}` : '');
         this.notify(

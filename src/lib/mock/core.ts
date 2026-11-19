@@ -595,7 +595,8 @@ export class MockDirectory {
     const sample = text('text') || MockBrand.SAMPLE_BODY;
     if (title.length > 200 || /[\r\n]/.test(title) || sample.length > 2000) fail(400, 'brand.invalid');
     const club = this.clubInfo();
-    const link = club.website ? `${club.website.replace(/\/+$/, '')}/app/tasks` : null;
+    const app = globalThis.location?.origin; // server: club-server.app-url
+    const link = app ? `${app}/tasks` : null;
     return mailHtml(brand, club, member.firstName, this.brand.mailLogo(), link, title, sample);
   }
 

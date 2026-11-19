@@ -31,6 +31,11 @@ import Inbox from '@lucide/svelte/icons/inbox';
 import ListChecks from '@lucide/svelte/icons/list-checks';
 import LogOut from '@lucide/svelte/icons/log-out';
 import Menu from '@lucide/svelte/icons/menu';
+import Mic from '@lucide/svelte/icons/mic';
+import MicOff from '@lucide/svelte/icons/mic-off';
+import PhoneOff from '@lucide/svelte/icons/phone-off';
+import Video from '@lucide/svelte/icons/video';
+import VideoOff from '@lucide/svelte/icons/video-off';
 import Ellipsis from '@lucide/svelte/icons/ellipsis';
 import Package from '@lucide/svelte/icons/package';
 import Wallet from '@lucide/svelte/icons/wallet';
@@ -152,6 +157,11 @@ export const ICONS = {
   dockBottom: PanelBottom,
   sidebar: PanelLeft,
   activity: History,
+  mic: Mic,
+  micOff: MicOff,
+  camera: Video,
+  cameraOff: VideoOff,
+  hangUp: PhoneOff,
 } as const;
 
 export type IconName = keyof typeof ICONS;

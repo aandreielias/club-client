@@ -21,19 +21,7 @@ import {
 } from './model';
 
 export type MeetingTypeField =
-  | 'label'
-  | 'invitationLabel'
-  | 'notice'
-  | 'quorum'
-  | 'grace'
-  | 'majorities'
-  | 'conveners'
-  | 'dueBy'
-  | 'steps'
-  | 'videoUrl'
-  | 'invitees'
-  | 'protocol'
-  | 'maxDays';
+  'label' | 'invitationLabel' | 'notice' | 'quorum' | 'grace' | 'majorities' | 'conveners' | 'dueBy' | 'steps' | 'invitees' | 'protocol' | 'maxDays';
 type Errors = Partial<Record<MeetingTypeField, string>>;
 
 export type NoticeUnit = 'hours' | 'days';
@@ -68,7 +56,6 @@ export class MeetingTypeForm extends FormState<Errors> {
   /** Online participation for every meeting of the type, with an optional standing link (e.g. the board's video room). */
   online = $state(false);
   selfCheckIn = $state(true);
-  videoUrl = $state('');
   /** What happens around each meeting; a new type starts with the server's two reminders. */
   steps = $state<MeetingStep[]>([
     {
@@ -124,7 +111,6 @@ export class MeetingTypeForm extends FormState<Errors> {
     this.archived = type.archived;
     this.online = type.online;
     this.selfCheckIn = type.selfCheckIn !== false;
-    this.videoUrl = type.videoUrl ?? '';
     this.steps = type.steps.map((s) => ({ ...s }));
   }
 
@@ -186,7 +172,6 @@ export class MeetingTypeForm extends FormState<Errors> {
       archived: this.archived,
       online: this.online,
       selfCheckIn: this.selfCheckIn,
-      videoUrl: this.online ? this.videoUrl.trim() || null : null,
       steps: this.steps.map((s) =>
         s.system
           ? { ...s, title: null, body: null, office: null }
@@ -219,8 +204,6 @@ export class MeetingTypeForm extends FormState<Errors> {
     if (this.yearly && !isDayOfYear(this.dueMonth, this.dueDay)) {
       errors.dueBy = 'Diesen Tag gibt es nicht.';
     }
-    const video = this.videoUrl.trim();
-    if (this.online && video && (!video.startsWith('https://') || video.length > 500)) errors.videoUrl = 'Link mit https:// angeben.';
     if (this.steps.length > 30) errors.steps = 'Höchstens 30 Schritte.';
     else if (this.steps.some((s) => !s.system && (!s.title?.trim() || s.title.trim().length > 150 || (s.body?.length ?? 0) > 1000))) {
       errors.steps = 'Jeder Schritt braucht einen Titel (bis 150 Zeichen, Text bis 1000).';

@@ -405,10 +405,11 @@ export class MockMail {
     };
     const codes = new Map(unique.map((ref) => [`${ref.kind}:${ref.id}`, codeFor(ref)]));
     this.refCodes.save();
-    const website = this.people.clubInfo().website?.trim().replace(/\/+$/, '');
+    // server: club-server.app-url; the mock app's own address (none in tests)
+    const app = globalThis.location?.origin;
     const link = (kind: RefKind, id: string) => {
       const code = codes.get(`${kind}:${id}`)!;
-      return `<a href="${website ? `${website}/app/r/` : 'club:r/'}${code}" rel="noopener noreferrer nofollow">Verweis ${code}</a>`;
+      return `<a href="${app ? `${app}/r/` : 'club:r/'}${code}" rel="noopener noreferrer nofollow">Verweis ${code}</a>`;
     };
     let out = html.replace(CHIP, (_, kind: string, id: string) => link(kind.toUpperCase() as RefKind, id));
     const listed = attached.filter((r, i) => attached.findIndex((o) => o.kind === r.kind && o.id === r.id) === i);

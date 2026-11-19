@@ -163,9 +163,8 @@ export interface MeetingType {
   dueBy: string | null;
   sort: number;
   archived: boolean;
-  /** Members may join its meetings online; each shows its own link or the type's standing `videoUrl`. */
+  /** Its meetings have a video call in the app. */
   online: boolean;
-  videoUrl: string | null;
   /** Voters check themselves in while a meeting is open; off: who runs it enters presence. Missing on old data: on. */
   selfCheckIn?: boolean;
   /** CHOSEN only: how many people (members and guests) a meeting invites at least and at most; checked at the invitation. */
@@ -279,9 +278,8 @@ export interface Meeting {
   startsAt: string;
   endsAt: string;
   location: string | null;
-  /** Its type has online participation: `videoUrl` is the link members join by (its own, or the type's). */
+  /** Its type has online participation: the meeting has a video call in the app. */
   online: boolean;
-  videoUrl: string | null;
   status: MeetingStatus;
   invitedAt: string | null;
   openedAt: string | null;
@@ -344,8 +342,6 @@ export interface NewMeeting {
   startsAt: string;
   endsAt: string;
   location: string | null;
-  /** Its own link; empty: the type's standing one. */
-  videoUrl: string | null;
 }
 
 /** server: MeetingsApi.AgendaItemDto — `resolutionId`: the motion voted on under this item. */
@@ -380,6 +376,39 @@ export type ResolutionPatch = Partial<Omit<NewResolution, 'majority'>> & { major
 
 /** Omitted fields stay, '' clears a text. Times only before the invitation, the protocol from the opening until it is final. */
 export type MeetingPatch = Partial<Omit<NewMeeting, 'kind' | 'items'>> & { protocol?: string };
+
+// --- video call of an online meeting (server: MeetingsApi.Call*, media through Cloudflare Realtime) ---
+
+/** server: MeetingsApi.Sdp */
+export interface Sdp {
+  type: 'offer' | 'answer';
+  sdp: string;
+}
+/** server: MeetingsApi.CallTrack — `local`: one the browser sends; `remote`: another participant's, by their session. */
+export interface CallTrack {
+  location: 'local' | 'remote';
+  mid: string | null;
+  trackName: string;
+  sessionId: string | null;
+}
+/** server: MeetingsApi.CallParticipant */
+export interface CallParticipant {
+  memberId: string;
+  name: string;
+  sessionId: string;
+  trackNames: string[];
+}
+/** server: MeetingsApi.CallState — `sessionId`: the actor's own, null while not in the call. */
+export interface CallState {
+  sessionId: string | null;
+  participants: CallParticipant[];
+}
+/** server: MeetingsApi.CallTracksAnswer */
+export interface CallTracksAnswer {
+  requiresImmediateRenegotiation: boolean;
+  sessionDescription: Sdp | null;
+  tracks: CallTrack[];
+}
 
 // --- resolutions (server: MeetingsApi.ResolutionDto) ---
 

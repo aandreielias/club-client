@@ -2,6 +2,7 @@
   import { untrack } from 'svelte';
   import { settings } from '../../settings';
   import MeetingDetailsEditor from './MeetingDetailsEditor.svelte';
+  import MeetingCall from './MeetingCall.svelte';
   import MeetingDraftEditor from './MeetingDraftEditor.svelte';
   import AgendaEditor from './AgendaEditor.svelte';
   import MotionAdd from './MotionAdd.svelte';
@@ -160,15 +161,13 @@
         <dd>{session.format.dateTime(m.startsAt)} – {session.format.time(m.endsAt)}</dd>
         {#if m.location}<dt>Ort</dt>
           <dd>{m.location}</dd>{/if}
-        {#if m.online && m.videoUrl}<dt>Online</dt>
-          <dd class="join">
-            <Button
-              size="sm"
-              icon="page"
-              tooltip="Videokonferenz in einem neuen Tab öffnen"
-              onclick={() => window.open(m.videoUrl!, '_blank', 'noopener,noreferrer')}>Beitreten</Button
-            >
-            <a href={m.videoUrl} target="_blank" rel="noopener noreferrer" class="muted small">{m.videoUrl}</a>
+        {#if m.online && (m.status === 'INVITED' || m.status === 'OPEN')}<dt>Online</dt>
+          <dd>
+            {#if m.status === 'OPEN' || Date.parse(m.startsAt) - Date.now() <= settings.meetings.callOpensBeforeMs}
+              <MeetingCall meetingId={m.id} />
+            {:else}
+              <span class="muted">Videokonferenz in der App, ab einer Stunde vor Beginn</span>
+            {/if}
           </dd>{/if}
         {#if m.status === 'DRAFT'}
           <dt>Einladen bis</dt>
@@ -352,12 +351,6 @@
 </AsyncView>
 
 <style>
-  .join {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    flex-wrap: wrap;
-  }
   .text {
     margin: 0;
     white-space: pre-wrap;

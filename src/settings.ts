@@ -359,7 +359,8 @@ export const settings = {
     titleMaxLength: 120,
     urgencyMaxLength: 1000,
     locationMaxLength: 200,
-    videoUrlMaxLength: 500,
+    /** server: CallHandlers.OPENS_BEFORE */
+    callOpensBeforeMs: 60 * 60_000,
     protocolMaxLength: 100_000,
     guestNameMaxLength: 100,
     guestEmailMaxLength: 200,

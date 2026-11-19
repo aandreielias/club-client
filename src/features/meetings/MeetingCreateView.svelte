@@ -113,13 +113,7 @@
               {late ? 'Die Einladungsfrist ist für diesen Termin schon vorbei: ' : 'Einladen spätestens am '}{session.format.dateTime(deadline)}.
             </p>
           {/if}
-          <MeetingPlaceFields
-            bind:location={form.location}
-            bind:videoUrl={form.videoUrl}
-            online={form.online}
-            standing={form.type?.videoUrl ?? null}
-            error={form.error('videoUrl')}
-          />
+          <MeetingPlaceFields bind:location={form.location} online={!!form.type?.online} />
           <fieldset class="stack">
             <legend>Tagesordnung</legend>
             <AgendaItemsEditor

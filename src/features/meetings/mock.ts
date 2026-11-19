@@ -386,7 +386,6 @@ export class MockMeetings {
       startsAt: '',
       endsAt: '',
       location: null,
-      videoUrl: null,
       status: 'DRAFT',
       invitedAt: null,
       openedAt: null,
@@ -410,7 +409,7 @@ export class MockMeetings {
     const meeting = this.managed(viewer, id);
     // server: Meeting.withDetails
     if (meeting.status === 'CANCELLED') fail(409, 'meeting.cancelled');
-    const details = ['title', 'urgency', 'startsAt', 'endsAt', 'location', 'videoUrl'].some((k) => body[k] != null);
+    const details = ['title', 'urgency', 'startsAt', 'endsAt', 'location'].some((k) => body[k] != null);
     if (details && meeting.status === 'CLOSED') fail(409, 'meeting.closed');
     const moves = (body.startsAt && body.startsAt !== meeting.startsAt) || (body.endsAt && body.endsAt !== meeting.endsAt);
     if (moves && meeting.status !== 'DRAFT') fail(409, 'meeting.invited-time-fixed');
@@ -420,9 +419,9 @@ export class MockMeetings {
       if (String(body.protocol).length > 100000) fail(400, 'meeting.protocol-too-long');
     }
     if (typeof body.location === 'string' && body.location.length > 200) fail(400, 'meeting.location-too-long');
-    const before = { Titel: meeting.title, Tagesordnung: meeting.agenda, Ort: meeting.location, Videolink: meeting.videoUrl };
+    const before = { Titel: meeting.title, Tagesordnung: meeting.agenda, Ort: meeting.location };
     this.apply(meeting, body);
-    const after = { Titel: meeting.title, Tagesordnung: meeting.agenda, Ort: meeting.location, Videolink: meeting.videoUrl };
+    const after = { Titel: meeting.title, Tagesordnung: meeting.agenda, Ort: meeting.location };
     const changedFields = (Object.keys(before) as (keyof typeof before)[]).filter((k) => before[k] !== after[k]);
     if (changedFields.length) this.noticeChange(meeting, changedFields);
     this.changed(meeting, 'UPDATED');
@@ -454,7 +453,7 @@ export class MockMeetings {
         items: this.invitedItems(meeting),
         startsAt: meeting.startsAt,
         location: meeting.location,
-        videoUrl: meeting.videoUrl,
+        online: this.type(meeting.kind).online,
       },
     });
     return this.dto(viewer, meeting);
@@ -473,11 +472,10 @@ export class MockMeetings {
     if (meeting.status !== 'INVITED') fail(409, 'meeting.not-invited');
     Object.assign(meeting, { status: 'OPEN', openedAt: new Date().toISOString(), frozenElectorate: this.electorate(meeting) });
     this.changed(meeting, 'OPENED');
-    const video = this.type(meeting.kind).online ? (meeting.videoUrl ?? this.type(meeting.kind).videoUrl ?? null) : null;
     this.notice(
       this.meetingInvited(meeting),
       `Sitzung eröffnet: ${meeting.title}`,
-      video ? `Online dabei: ${video}` : 'Die Sitzung hat begonnen.',
+      this.type(meeting.kind).online ? 'Die Sitzung hat begonnen. Die Videokonferenz läuft in der App.' : 'Die Sitzung hat begonnen.',
       `/meetings/${id}`,
     );
     return this.dto(viewer, meeting);
@@ -645,7 +643,7 @@ export class MockMeetings {
           items: this.invitedItems(meeting),
           startsAt: meeting.startsAt,
           location: meeting.location,
-          videoUrl: meeting.videoUrl,
+          online: this.type(meeting.kind).online,
         },
       });
     if (invited && dropped.length)
@@ -762,7 +760,7 @@ export class MockMeetings {
         Titel: meeting.title.toLowerCase() === type.label.toLowerCase() ? null : meeting.title,
         Wann: this.when(meeting),
         Ort: meeting.location,
-        Video: type.online ? (meeting.videoUrl ?? type.videoUrl ?? null) : null,
+        Video: type.online ? 'In der App' : null,
         Dringlichkeit: meeting.urgency,
         // A placeholder older templates still carry (server: AgendaDocument); empty, so its paragraph is dropped.
         Statuten: null,
@@ -1259,16 +1257,11 @@ export class MockMeetings {
     if (body.title !== undefined) m.title = text(body.title, 120, 'meeting.title-invalid') ?? fail(400, 'meeting.title-invalid');
     if (body.urgency !== undefined) m.urgency = text(body.urgency, 1000, 'meeting.urgency-invalid');
     if (body.location !== undefined) m.location = text(body.location, 200, 'meeting.location-too-long');
-    if (body.videoUrl !== undefined) m.videoUrl = text(body.videoUrl, 500, 'meeting.video-url-invalid');
     if (body.protocol !== undefined) m.protocol = text(body.protocol, 100000, 'meeting.protocol-too-long');
     if (body.startsAt) m.startsAt = new Date(body.startsAt).toISOString();
     if (body.endsAt) m.endsAt = new Date(body.endsAt).toISOString();
     if (!m.startsAt || !m.endsAt || m.endsAt <= m.startsAt) fail(400, 'meeting.times-invalid');
     if (Date.parse(m.endsAt) - Date.parse(m.startsAt) > this.type(m.kind).maxDays * DAY) fail(400, 'meeting.too-long');
-    if (m.videoUrl && !m.videoUrl.startsWith('https://')) fail(400, 'meeting.video-url-invalid');
-    // server: MeetingType.videoFor — a meeting of an online kind needs its own link or the kind's standing one
-    const type = this.type(m.kind);
-    if (type.online && !m.videoUrl && !type.videoUrl) fail(400, 'meeting.video-missing');
     if (this.type(m.kind).needsReason !== !!m.urgency) fail(400, 'meeting.urgency-invalid');
     this.meetings.save();
   }
@@ -1342,8 +1335,6 @@ export class MockMeetings {
     const dueBy = body.dueBy || null;
     if (dueBy && (!/^\d{2}-\d{2}$/.test(dueBy) || !isDayOfYear(Number(dueBy.slice(0, 2)), Number(dueBy.slice(3)))))
       fail(400, 'meeting-type.due-by-invalid');
-    if (body.online && typeof body.videoUrl === 'string' && body.videoUrl.trim() && !body.videoUrl.trim().startsWith('https://'))
-      fail(400, 'meeting.video-url-invalid');
     const chosen = body.invitees === 'CHOSEN';
     const bound = (v: unknown): number | null =>
       v == null
@@ -1385,7 +1376,6 @@ export class MockMeetings {
       sort: Number.isInteger(body.sort) ? body.sort : 0,
       archived: !!body.archived,
       online: !!body.online,
-      videoUrl: body.online && typeof body.videoUrl === 'string' && body.videoUrl.trim() ? body.videoUrl.trim() : null,
       selfCheckIn: body.selfCheckIn !== false,
       inUse: false,
       steps: checkedSteps(body.steps),
@@ -1519,9 +1509,7 @@ export class MockMeetings {
     const type = this.type(m.kind);
     return {
       ...rest,
-      // server: MeetingType.shownVideo
       online: !!type.online,
-      videoUrl: type.online ? (m.videoUrl ?? type.videoUrl ?? null) : null,
       links: m.links ?? [],
       protocolFinalAt: this.protocolFinalAt(m),
       agendaItems: agendaItems ?? [],
@@ -1609,6 +1597,12 @@ mockServer
   .on('POST', '/api/v1/meetings/:id/cancel', (req) => meetings.cancel(actor(req), req.params.id))
   .on('PUT', '/api/v1/meetings/:id/agenda', (req) => meetings.setAgenda(actor(req), req.params.id, req.body?.items))
   .on('PUT', '/api/v1/meetings/:id/presence/me', (req) => meetings.checkIn(actor(req), req.params.id))
+  // server: CALLS_MODE=disabled — the browser mock has no video service
+  .on('POST', '/api/v1/meetings/:id/call', () => fail(503, 'meeting.call-unavailable'))
+  .on('GET', '/api/v1/meetings/:id/call', () => ({ sessionId: null, participants: [] }))
+  .on('DELETE', '/api/v1/meetings/:id/call', () => undefined)
+  .on('POST', '/api/v1/meetings/:id/call/tracks', () => fail(409, 'meeting.call-not-joined'))
+  .on('PUT', '/api/v1/meetings/:id/call/renegotiate', () => fail(409, 'meeting.call-not-joined'))
   .on('PUT', '/api/v1/meetings/:id/presence', (req) => meetings.setPresenceMany(actor(req), req.params.id, req.body?.memberIds, req.body?.present))
   .on('PUT', '/api/v1/meetings/:id/invitees', (req) => meetings.setInvitees(actor(req), req.params.id, req.body ?? {}))
   .on('PUT', '/api/v1/meetings/:id/roles', (req) => meetings.setRoles(actor(req), req.params.id, req.body ?? {}))

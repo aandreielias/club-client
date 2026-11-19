@@ -324,18 +324,7 @@
   <fieldset>
     <legend>Online-Teilnahme</legend>
     <label class="check"><input type="checkbox" bind:checked={form.selfCheckIn} /> Stimmberechtigte melden sich in der App selbst als anwesend</label>
-    <label class="check"><input type="checkbox" bind:checked={form.online} /> Online-Teilnahme möglich (Link in jeder Sitzung dieser Art)</label>
-    {#if form.online}
-      <div class="nested">
-        <Field
-          label="Ständiger Link zur Videokonferenz (optional)"
-          hint="Etwa der feste Videoraum des Vorstands; einzelne Sitzungen können einen eigenen haben. Ohne ständigen Link braucht jede Sitzung einen."
-          error={form.error('videoUrl')}
-        >
-          <input type="url" bind:value={form.videoUrl} maxlength={settings.meetings.videoUrlMaxLength} placeholder="https://" />
-        </Field>
-      </div>
-    {/if}
+    <label class="check"><input type="checkbox" bind:checked={form.online} /> Online-Teilnahme möglich (Videokonferenz in der App)</label>
   </fieldset>
 
   <div class="bar stack">

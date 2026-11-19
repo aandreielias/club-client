@@ -12,7 +12,7 @@ export function bootstrap(): void {
   features.registerCalendarSources(calendarSources);
   features.registerHome(homeSections);
   features.registerNavigation(navCatalog);
-  // A link from a mail or e-mail notice (`/app/tasks/<id>`) becomes the route it stands for.
+  // A link from a mail or e-mail notice (`<app>/tasks/<id>`) becomes the route it stands for.
   const hash = location.hash ? null : deepLink(location.pathname, (link) => links.resolve(link));
   if (hash) history.replaceState(null, '', hash);
 }

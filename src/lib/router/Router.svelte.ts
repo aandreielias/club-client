@@ -6,7 +6,7 @@ export const NAVIGATE = defineEvent<{ path: string; replace?: boolean }>('ui/nav
 export type RouteParams = Record<string, string>;
 
 /**
- * Hash router: GitHub Pages has no SPA fallback, so the route lives after '#'.
+ * Hash router: deep links from outside become hash routes on start (DeepLink), so the route lives after '#'.
  * Patterns use ':name' segments; the first matching route wins, so list specific paths first.
  */
 export class Router {

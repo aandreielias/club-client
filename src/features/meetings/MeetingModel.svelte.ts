@@ -59,7 +59,7 @@ export class MeetingModel {
     return this.write(() => this.api.generateProtocol(this.id));
   }
 
-  savePlace(patch: { location: string; videoUrl: string }): Promise<boolean> {
+  savePlace(patch: { location: string }): Promise<boolean> {
     return this.write(() => this.api.update(this.id, patch));
   }
 
