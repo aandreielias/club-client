@@ -3958,6 +3958,11 @@ export interface components {
             dueOn: string;
             category: string;
             note: string;
+            reference: string;
+            /** Format: date */
+            issuedOn: string;
+            iban: string;
+            bic: string;
         };
         "at.clubserver.finance.api.FinanceApi.InvoiceDto": {
             /** Format: uuid */
@@ -3980,6 +3985,12 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            reference: string;
+            /** Format: date */
+            issuedOn: string;
+            iban: string;
+            bic: string;
+            bankQr: string;
         };
         "at.clubserver.finance.api.FinanceApi.FeeSettings": {
             category: string;
@@ -4099,6 +4110,9 @@ export interface components {
             text: string;
             note: string;
             refs: components["schemas"]["at.clubserver.platform.RecordRefs.RefInput"][];
+            reference: string;
+            counterparty: string;
+            costCenter: components["schemas"]["at.clubserver.platform.RecordRefs.RefInput"];
         };
         "at.clubserver.finance.api.FinanceApi.BookingDto": {
             /** Format: uuid */
@@ -4127,6 +4141,10 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             locked: boolean;
+            voucher: string;
+            reference: string;
+            counterparty: string;
+            costCenter: components["schemas"]["at.clubserver.platform.RecordRefs.RefDto"];
         };
         "at.clubserver.finance.api.FinanceApi.ReceiptDto": {
             /** Format: uuid */

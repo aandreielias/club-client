@@ -55,6 +55,13 @@ export interface Booking {
   updatedAt: string;
   /** On or before the last Kassenprüfung: only a Storno corrects it (server: finance.period-checked). */
   locked: boolean;
+  /** Belegnummer per fiscal year, e.g. "2026-0001" (both legs of a transfer share it). */
+  voucher: string;
+  /** e.g. the invoice number */
+  reference: string | null;
+  counterparty: string | null;
+  /** Kostenstelle: one linked record */
+  costCenter: LinkedRef | null;
 }
 
 export interface BookingList {
@@ -70,6 +77,9 @@ export interface BookingInput {
   text: string;
   note: string | null;
   refs: { kind: RefKind; id: string }[];
+  reference: string | null;
+  counterparty: string | null;
+  costCenter: { kind: RefKind; id: string } | null;
 }
 
 export interface TransferInput {
@@ -133,9 +143,21 @@ export interface Invoice {
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
+  /** its number, copied onto the booking that pays it */
+  reference: string | null;
+  /** YYYY-MM-DD, the invoice's date */
+  issuedOn: string | null;
+  /** the payee's account (invoices to pay) */
+  iban: string | null;
+  bic: string | null;
+  /** SEPA QR text: open invoices to pay with an IBAN, in euro */
+  bankQr: string | null;
 }
 
-export type InvoiceInput = Pick<Invoice, 'counterparty' | 'text' | 'amountCents' | 'dueOn' | 'category' | 'note'>;
+export type InvoiceInput = Pick<
+  Invoice,
+  'counterparty' | 'text' | 'amountCents' | 'dueOn' | 'category' | 'note' | 'reference' | 'issuedOn' | 'iban' | 'bic'
+>;
 
 export interface InvoiceList {
   items: Invoice[];

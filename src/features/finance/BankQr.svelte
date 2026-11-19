@@ -2,7 +2,7 @@
   import { renderSVG } from 'uqr';
   import { money } from './services';
 
-  /** The SEPA QR code (EPC "GiroCode") of an open fee, with its transfer data for typing it in by hand. */
+  /** The SEPA QR code (EPC "GiroCode") of an open fee or invoice, with its transfer data for typing it in by hand. */
   let { payload }: { payload: string } = $props();
 
   // EPC lines: BCD, 002, 1, SCT, BIC, holder, IBAN, EUR<amount>, purpose, reference, text

@@ -62,6 +62,23 @@ export class Motion {
     };
   };
 
+  /** Grows from `from` (e.g. the dragged window) into the node's own box: the dock preview. */
+  morph(node: HTMLElement, from: DOMRect): void {
+    const to = node.getBoundingClientRect();
+    if (!this.ms('window') || !to.width || !to.height) return;
+    const shift = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`;
+    node.animate(
+      [
+        { transformOrigin: '0 0', transform: shift },
+        { transformOrigin: '0 0', transform: 'none' },
+      ],
+      {
+        duration: this.ms('window'),
+        easing: getComputedStyle(node).getPropertyValue('--motion-easing').trim() || 'ease-out',
+      },
+    );
+  }
+
   /** Plain cross-fade: backdrops. */
   fade = (_node?: Element): TransitionConfig => ({ duration: this.ms('base'), easing: cubicInOut, css: (t) => `opacity: ${t};` });
 

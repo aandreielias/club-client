@@ -37,7 +37,7 @@ type StoredAccount = Omit<Account, 'inUse' | 'balanceCents'>;
 type StoredCategory = Omit<Category, 'inUse'>;
 type StoredBooking = Omit<Booking, 'transferAccount' | 'reversedBy' | 'locked'>;
 type StoredAudit = Omit<Audit, 'title'>;
-type StoredInvoice = Omit<Invoice, 'taskId'>;
+type StoredInvoice = Omit<Invoice, 'taskId' | 'bankQr'>;
 type StoredCharge = Omit<Charge, 'paidCents' | 'status' | 'payments' | 'payUrl' | 'bankQr'> & {
   waived: boolean;
   createdAt: string;
@@ -86,7 +86,12 @@ export class MockFinance {
     mockServer.events.subscribe((event) => {
       if (event.type !== 'members.member-erased') return;
       const memberId = (event.data as { memberId: string }).memberId;
-      for (const b of this.bookings.data) for (const r of b.refs) if (r.kind === 'MEMBER' && r.id === memberId) r.title = MockDirectory.ERASED_NAME;
+      for (const b of this.bookings.data)
+        for (const r of [...b.refs, ...(b.costCenter ? [b.costCenter] : [])])
+          if (r.kind === 'MEMBER' && r.id === memberId) {
+            if (b.counterparty === r.title) b.counterparty = MockDirectory.ERASED_NAME;
+            r.title = MockDirectory.ERASED_NAME;
+          }
       this.bookings.save();
       // server: FeeHandlers, charge notes may name the member
       for (const c of this.charges.data) if (c.memberId === memberId) c.note = null;
@@ -177,6 +182,7 @@ export class MockFinance {
     const row: StoredBooking = {
       id: crypto.randomUUID(),
       ...checked,
+      voucher: this.voucher(checked.bookedOn, null),
       transferId: null,
       reversesId: null,
       receipts: [],
@@ -195,7 +201,7 @@ export class MockFinance {
     if (this.fixed(row)) fail(409, 'finance.booking-fixed');
     const checked = this.checked(viewer, body, row);
     this.requireOpen(row.bookedOn, checked.bookedOn);
-    Object.assign(row, checked, { updatedAt: new Date().toISOString() });
+    Object.assign(row, checked, { voucher: this.voucher(checked.bookedOn, row.voucher), updatedAt: new Date().toISOString() });
     this.bookings.save();
     this.changed(row.id);
     return this.dto(row);
@@ -228,14 +234,19 @@ export class MockFinance {
     this.requireOpen(bookedOn);
     const transferId = crypto.randomUUID();
     const now = new Date().toISOString();
+    const voucher = this.voucher(bookedOn, null);
     const leg = (account: string, amountCents: number): StoredBooking => ({
       id: crypto.randomUUID(),
+      voucher,
       bookedOn,
       account,
       category: null,
       amountCents,
       text: MockFinance.text(body.text),
       note: MockFinance.note(body.note),
+      reference: null,
+      counterparty: null,
+      costCenter: null,
       transferId,
       reversesId: null,
       refs: [],
@@ -260,9 +271,12 @@ export class MockFinance {
     this.requireOpen(directory.clock.today());
     const transferId = row.transferId ? crypto.randomUUID() : null;
     const now = new Date().toISOString();
+    const voucher = this.voucher(directory.clock.today(), null);
     const reversals = legs.map((leg): StoredBooking => ({
       ...leg,
       id: crypto.randomUUID(),
+      voucher,
+      costCenter: null,
       bookedOn: directory.clock.today(),
       amountCents: -leg.amountCents,
       transferId,
@@ -312,7 +326,7 @@ export class MockFinance {
   search(viewer: Member, needle: string, limit: number): Booking[] {
     if (!reaches(directory.financeLevel(viewer), 'READ')) return [];
     return this.bookings.data
-      .filter((b) => b.text.toLocaleLowerCase().includes(needle) || !!b.note?.toLocaleLowerCase().includes(needle))
+      .filter((b) => [b.text, b.note, b.reference, b.counterparty, b.voucher].some((t) => !!t?.toLocaleLowerCase().includes(needle)))
       .sort((a, b) => b.bookedOn.localeCompare(a.bookedOn))
       .slice(0, limit)
       .map((b) => this.dto(b));
@@ -388,9 +402,20 @@ export class MockFinance {
     const label = (key: string | null) => (key ? (this.accounts.data.find((a) => a.key === key)?.label ?? key) : null);
     const items = this.list(year).items.reverse();
     const category = (key: string | null) => (key ? (this.categories.data.find((c) => c.key === key)?.label ?? key) : null);
-    const lines = items.map((b) => [b.bookedOn, label(b.account), category(b.category), label(b.transferAccount), b.text, b.note]);
+    const lines = items.map((b) => [
+      b.voucher,
+      b.bookedOn,
+      label(b.account),
+      category(b.category),
+      label(b.transferAccount),
+      b.reference,
+      b.counterparty,
+      b.costCenter?.title ?? null,
+      b.text,
+      b.note,
+    ]);
     const amounts = items.map((b) => b.amountCents / 100);
-    const header = ['Datum', 'Konto', 'Kategorie', 'Gegenkonto', 'Text', 'Notiz', 'Betrag'];
+    const header = ['Beleg', 'Datum', 'Konto', 'Kategorie', 'Gegenkonto', 'Referenz', 'Gegenpartei', 'Kostenstelle', 'Text', 'Notiz', 'Betrag'];
     if (format === 'CSV') {
       const cell = (v: string | null) => (v === null ? '' : `"${(/^[=+\-@\t\r]/.test(v) ? `'${v}` : v).replace(/"/g, '""')}"`);
       const rows = lines.map((l, i) => [...l.map(cell), amounts[i].toFixed(2).replace('.', ',')].join(';'));
@@ -487,6 +512,8 @@ export class MockFinance {
     };
     const amount = Number(body.amountCents);
     if (!Number.isInteger(amount) || amount <= 0 || amount > limits.maxCents) fail(400, 'finance.amount-invalid');
+    const { iban, bic } = MockFinance.bank(body.iban, body.bic);
+    if (bic && !iban) fail(400, 'finance.bank-invalid');
     const now = new Date().toISOString();
     const row: StoredInvoice = {
       id: old?.id ?? crypto.randomUUID(),
@@ -496,6 +523,10 @@ export class MockFinance {
       dueOn: typeof body.dueOn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.dueOn) ? body.dueOn : fail(400, 'request.invalid'),
       category: category.key,
       note: str(body.note, limits.noteMaxLength, false),
+      reference: str(body.reference, limits.referenceMaxLength, false),
+      issuedOn: body.issuedOn == null ? null : MockFinance.date(body.issuedOn),
+      iban,
+      bic,
       bookingId: null,
       createdBy: old?.createdBy ?? viewer.id,
       createdAt: old?.createdAt ?? now,
@@ -550,8 +581,12 @@ export class MockFinance {
       account,
       category: category.key,
       amountCents: category.direction === 'IN' ? row.amountCents : -row.amountCents,
-      text: `${row.counterparty}: ${row.text}`.slice(0, limits.textMaxLength),
+      voucher: this.voucher(on, null),
+      text: row.text,
       note: null,
+      reference: row.reference,
+      counterparty: row.counterparty,
+      costCenter: null,
       transferId: null,
       reversesId: null,
       refs: [],
@@ -573,7 +608,7 @@ export class MockFinance {
   searchInvoices(viewer: Member, needle: string, limit: number): Invoice[] {
     if (!reaches(directory.financeLevel(viewer), 'READ')) return [];
     const rows = this.invoices.data
-      .filter((i) => [i.counterparty, i.text, i.note ?? ''].some((t) => t.toLocaleLowerCase().includes(needle)))
+      .filter((i) => [i.counterparty, i.text, i.note ?? '', i.reference ?? ''].some((t) => t.toLocaleLowerCase().includes(needle)))
       .sort((a, b) => Number(!!a.bookingId) - Number(!!b.bookingId) || b.dueOn.localeCompare(a.dueOn))
       .slice(0, limit);
     return this.invoiceDtos(rows);
@@ -600,16 +635,8 @@ export class MockFinance {
       fail(400, 'finance.fee-invalid');
     const text = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
     const holder = text(body.holder);
-    const iban = text(body.iban)?.replaceAll(' ', '').toUpperCase() ?? null;
-    const bic = text(body.bic)?.replaceAll(' ', '').toUpperCase() ?? null;
-    if (
-      (holder?.length ?? 0) > 70 ||
-      (iban !== null && !ibanValid(iban)) ||
-      (bic !== null && !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(bic)) ||
-      (holder === null) !== (iban === null) ||
-      (iban === null && bic !== null)
-    )
-      fail(400, 'finance.bank-invalid');
+    const { iban, bic } = MockFinance.bank(body.iban, body.bic);
+    if ((holder?.length ?? 0) > 70 || (holder === null) !== (iban === null) || (iban === null && bic !== null)) fail(400, 'finance.bank-invalid');
     Object.assign(this.feeSettings.data, {
       category: category!.key,
       dueDays,
@@ -767,8 +794,12 @@ export class MockFinance {
       account,
       category: this.feeSettings.data.category,
       amountCents: amount,
+      voucher: this.voucher(on, null),
       text: `Mitgliedsbeitrag ${yearLabel(row.season, directory.clubInfo().seasonStartMonth)}`,
       note: null,
+      reference: null,
+      counterparty: name,
+      costCenter: null,
       transferId: null,
       reversesId: null,
       refs: name ? [{ kind: 'MEMBER', id: row.memberId, title: name, parentId: null }] : [],
@@ -819,20 +850,14 @@ export class MockFinance {
     const { holder, iban, bic } = this.feeSettings.data;
     const club = directory.clubInfo();
     const bankQr =
-      (status === 'OPEN' || status === 'PARTIAL') && iban && club.currency === 'EUR'
-        ? [
-            'BCD',
-            '002',
-            '1',
-            'SCT',
-            bic ?? '',
+      (status === 'OPEN' || status === 'PARTIAL') && iban && holder && club.currency === 'EUR'
+        ? MockFinance.qr(
             holder,
             iban,
-            `EUR${((row.amountCents - paidCents) / 100).toFixed(2)}`,
-            '',
-            '',
-            `Mitgliedsbeitrag ${yearLabel(row.season, club.seasonStartMonth)} ${directory.name(row.memberId) ?? ''}`.slice(0, 140),
-          ].join('\n')
+            bic,
+            row.amountCents - paidCents,
+            `Mitgliedsbeitrag ${yearLabel(row.season, club.seasonStartMonth)} ${directory.name(row.memberId) ?? ''}`,
+          )
         : null;
     return { ...rest, paidCents, status, payments, payUrl: null, bankQr };
   }
@@ -856,7 +881,17 @@ export class MockFinance {
       'FINANCE_INVOICE',
       rows.map((i) => i.id),
     );
-    return rows.map((i) => ({ ...i, taskId: found[i.id]?.taskId ?? null }));
+    const eur = directory.clubInfo().currency === 'EUR';
+    const out = (i: StoredInvoice) => this.categories.data.find((c) => c.key === i.category)?.direction === 'OUT';
+    return rows.map((i) => ({
+      ...i,
+      taskId: found[i.id]?.taskId ?? null,
+      // server: InvoiceHandlers.dtos — an open OUT invoice with an IBAN, in euro
+      bankQr:
+        eur && !i.bookingId && i.iban && out(i)
+          ? MockFinance.qr(i.counterparty.slice(0, 70), i.iban, i.bic, i.amountCents, i.reference ?? i.text)
+          : null,
+    }));
   }
 
   private invoiceRow(id: string): StoredInvoice {
@@ -963,6 +998,7 @@ export class MockFinance {
     const refs = Array.isArray(body.refs) ? (body.refs as { kind: RefKind; id: string }[]) : [];
     if (refs.length > limits.maxRefs) fail(400, 'finance.too-many-refs');
     const kept = before?.refs ?? [];
+    const keptCost = before?.costCenter ?? null;
     return {
       bookedOn: MockFinance.date(body.bookedOn),
       account,
@@ -970,6 +1006,13 @@ export class MockFinance {
       amountCents,
       text: MockFinance.text(body.text),
       note: MockFinance.note(body.note),
+      reference: MockFinance.optional(body.reference, limits.referenceMaxLength),
+      counterparty: MockFinance.optional(body.counterparty, limits.counterpartyMaxLength),
+      costCenter: !body.costCenter
+        ? null
+        : keptCost && keptCost.kind === body.costCenter.kind && keptCost.id === body.costCenter.id
+          ? keptCost
+          : resolveRef(viewer, body.costCenter, 'finance'),
       refs: refs.map((r): LinkedRef => kept.find((k) => k.kind === r.kind && k.id === r.id) ?? resolveRef(viewer, r, 'finance')),
     };
   }
@@ -1035,6 +1078,34 @@ export class MockFinance {
     return note.length > limits.noteMaxLength ? fail(400, 'finance.booking-invalid') : note || null;
   }
 
+  private static optional(value: unknown, max: number): string | null {
+    const text = typeof value === 'string' ? value.trim() : '';
+    return text.length > max ? fail(400, 'finance.booking-invalid') : text || null;
+  }
+
+  /** server: BankQr.iban / bic — blank is none, spaces dropped, upper case. */
+  private static bank(ibanValue: unknown, bicValue: unknown): { iban: string | null; bic: string | null } {
+    const clean = (v: unknown) => (typeof v === 'string' && v.trim() ? v.replaceAll(' ', '').toUpperCase() : null);
+    const iban = clean(ibanValue);
+    const bic = clean(bicValue);
+    if ((iban !== null && !ibanValid(iban)) || (bic !== null && !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(bic))) fail(400, 'finance.bank-invalid');
+    return { iban, bic };
+  }
+
+  /** server: BankQr.payload (EPC). */
+  private static qr(holder: string, iban: string, bic: string | null, cents: number, reference: string): string {
+    return ['BCD', '002', '1', 'SCT', bic ?? '', holder, iban, `EUR${(cents / 100).toFixed(2)}`, '', '', reference.slice(0, 140)].join('\n');
+  }
+
+  /** server: JdbcFinanceRepository.saveBooking — "<fiscal year>-0001", kept while the year stays; transfer legs and Storno pairs share one. */
+  private voucher(bookedOn: string, kept: string | null): string {
+    const start = directory.clubInfo().fiscalYearStartMonth;
+    const prefix = `${yearLabel(yearOf(bookedOn, start), start)}-`;
+    if (kept?.startsWith(prefix)) return kept;
+    const used = this.bookings.data.filter((b) => b.voucher.startsWith(prefix)).map((b) => Number(b.voucher.slice(prefix.length)));
+    return `${prefix}${String(Math.max(0, ...used) + 1).padStart(4, '0')}`;
+  }
+
   private static seedAccounts(): StoredAccount[] {
     return [
       { key: 'BANK', label: 'Bankkonto', sort: 0, archived: false },
@@ -1077,6 +1148,10 @@ export class MockFinance {
       amountCents,
       text,
       note: null,
+      reference: null,
+      counterparty: null,
+      costCenter: null,
+      voucher: '',
       transferId: null,
       reversesId: null,
       refs: [],
@@ -1085,9 +1160,9 @@ export class MockFinance {
       createdAt: at,
       updatedAt: at,
     });
-    return [
+    const rows = [
       b('b-fees', '09-15', 'BANK', 'FEES', 240_000, 'Mitgliedsbeiträge September'),
-      b('b-hall', '09-30', 'BANK', 'HALL', -85_000, 'Hallenmiete September'),
+      { ...b('b-hall', '09-30', 'BANK', 'HALL', -85_000, 'Hallenmiete September'), reference: 'RE-2026-0142', counterparty: 'Sportamt' },
       b('b-balls', '10-04', 'BANK', 'EQUIPMENT', -32_990, 'Volleybälle Mikasa'),
       b('b-buffet', '10-12', 'CASH', 'EVENTS_IN', 41_250, 'Buffet Heimspieltag'),
       // payments of the seeded fees: Lena paid in full, David (a minor) in part
@@ -1097,9 +1172,19 @@ export class MockFinance {
       ].map(({ member, ...booking }) => ({
         ...booking,
         text: `Mitgliedsbeitrag ${yearLabel(season, directory.club.seasonStartMonth)}`,
+        counterparty: directory.name(member),
         refs: [{ kind: 'MEMBER' as const, id: member, title: directory.name(member) ?? member, parentId: null }],
       })),
     ];
+    // vouchers per fiscal year in date order, like V151's backfill
+    const start = directory.club.fiscalYearStartMonth;
+    const seq: Record<string, number> = {};
+    for (const row of [...rows].sort((x, y) => x.bookedOn.localeCompare(y.bookedOn))) {
+      const year = yearLabel(yearOf(row.bookedOn, start), start);
+      seq[year] = (seq[year] ?? 0) + 1;
+      row.voucher = `${year}-${String(seq[year]).padStart(4, '0')}`;
+    }
+    return rows;
   }
 
   /** Rates of the running season: ordinary 120 (minors 60), extraordinary 150, honorary free. */

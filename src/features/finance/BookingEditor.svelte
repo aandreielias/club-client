@@ -53,6 +53,17 @@
   <Field label="Text" error={form.error('text')}>
     <input bind:value={form.text} maxlength={limits.textMaxLength} required />
   </Field>
+  {#if !form.transfer}
+    <div class="grid-2">
+      <Field label="Referenz (optional)" error={form.error('reference')} hint="z. B. die Rechnungsnummer">
+        <input bind:value={form.reference} maxlength={limits.referenceMaxLength} />
+      </Field>
+      <Field label="Gegenpartei (optional)" error={form.error('counterparty')}>
+        <input bind:value={form.counterparty} maxlength={limits.counterpartyMaxLength} />
+      </Field>
+    </div>
+    <RefPicker form={form.costCenter} label="Kostenstelle (optional)" />
+  {/if}
   <Field label="Notiz (optional)" error={form.error('note')}>
     <textarea bind:value={form.note} rows="3" maxlength={limits.noteMaxLength}></textarea>
   </Field>

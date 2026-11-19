@@ -30,10 +30,22 @@ export class JournalListModel extends ListModel<Booking> {
           return list.items;
         },
         defaultSort: { key: 'date', dir: 'desc' },
-        searchText: (b) => `${b.text} ${b.note ?? ''} ${look.account(b.account)} ${b.category ? look.category(b.category) : 'Umbuchung'}`,
+        searchText: (b) =>
+          `${b.voucher} ${b.reference ?? ''} ${b.counterparty ?? ''} ${b.costCenter?.title ?? ''} ${b.text} ${b.note ?? ''} ${look.account(b.account)} ${b.category ? look.category(b.category) : 'Umbuchung'}`,
         columns: [
+          { key: 'voucher', label: 'Beleg', value: (b) => b.voucher, width: '7rem', hideOnCompact: true },
           { key: 'date', label: 'Datum', value: (b) => b.bookedOn, format: (b) => look.date(b.bookedOn), width: '7rem' },
           { key: 'text', label: 'Text', value: (b) => b.text },
+          { key: 'reference', label: 'Referenz', value: (b) => b.reference, hideWhenEmpty: true, width: '9rem', hideOnCompact: true },
+          { key: 'counterparty', label: 'Gegenpartei', value: (b) => b.counterparty, hideWhenEmpty: true, width: '10rem', hideOnCompact: true },
+          {
+            key: 'costCenter',
+            label: 'Kostenstelle',
+            value: (b) => b.costCenter?.title ?? null,
+            hideWhenEmpty: true,
+            width: '10rem',
+            hideOnCompact: true,
+          },
           {
             key: 'category',
             label: 'Kategorie',

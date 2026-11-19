@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onDestroy, tick } from 'svelte';
   import { innerHeight, innerWidth } from 'svelte/reactivity/window';
+  import { motion, preferences } from '../../lib/container';
   import { WindowService } from '../../lib/window/WindowService.svelte';
+  import { dragWindow, type Box } from '../../lib/window/windowDrag';
   import { settings } from '../../settings';
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup, { type Choice } from '../../ui/ChoiceGroup.svelte';
@@ -33,7 +35,7 @@
   const call = $derived(calls.session);
   const dock = $derived(calls.dock);
   const placements = $derived<Choice<CallPlacement>[]>([
-    { value: 'center', label: 'Mitte', icon: 'dockCenter', hint: 'Videokonferenz in die Mitte' },
+    { value: 'center', label: 'Mitte', icon: 'dockCenter', hint: 'Videokonferenz in die Mitte (beim Ziehen mit Alt: nicht andocken)' },
     { value: 'side', label: 'Seite', icon: 'dockSide', hint: 'Videokonferenz an die Seite' },
     {
       value: 'bottom',
@@ -65,8 +67,11 @@
 
   let element: HTMLElement | undefined = $state();
   let fullscreen = $state(false);
+  const fade = motion.fade;
   /** Measures the middle size (theme value or the browser's) before undocking into it. */
   let probe: HTMLElement | undefined = $state();
+  /** The window's box when the dock preview appeared: the preview grows from there. */
+  let snapFrom: DOMRect | null = null;
 
   // The page makes room for the docked call and the bar (App.svelte, WindowHost.svelte).
   $effect(() => {
@@ -97,61 +102,43 @@
     if (element) element.style.width = element.style.height = element.style.top = element.style.left = '';
   });
 
-  /**
-   * The header and the empty space around the tiles drag the window anywhere on the screen (not off it). Docked, a drag
-   * first undocks it: the window shrinks to its middle size under the pointer (animated), then follows it.
-   */
+  /** The header and the empty space around the tiles drag the window (lib/window/windowDrag), docked ones undock first. */
   function startMove(event: PointerEvent) {
-    const target = event.currentTarget as HTMLElement;
     if (!element || fullscreen || calls.minimized || event.button !== 0) return;
     if ((event.target as Element).closest('button, input, label, figure, .resize') || document.documentElement.dataset.layout === 'compact') return;
     const box = element.getBoundingClientRect();
     // The browser's own resize handle in the bottom right corner of the middle placement.
     if (dock === 'center' && box.right - event.clientX < 18 && box.bottom - event.clientY < 18) return;
-    const start = { x: event.clientX, y: event.clientY };
-    let size = { width: box.width, height: box.height };
-    let grab = dock === 'center' ? { dx: start.x - box.left, dy: start.y - box.top } : null;
-    let dragging = true;
-    let undocking = false;
-    let last = start;
-    event.preventDefault();
-    target.setPointerCapture(event.pointerId);
-    const root = document.documentElement;
-    if (grab) root.dataset.windowResizing = '';
-    const follow = () => {
-      if (!element || !grab) return;
-      element.style.left = `${Math.max(0, Math.min(last.x - grab.dx, window.innerWidth - size.width))}px`;
-      element.style.top = `${Math.max(0, Math.min(last.y - grab.dy, window.innerHeight - size.height))}px`;
-    };
-    const undock = async () => {
-      if (!probe) return;
-      size = { width: probe.offsetWidth, height: probe.offsetHeight };
-      // Same spot of the window under the pointer, scaled to the middle size.
-      const at = { dx: ((start.x - box.left) / box.width) * size.width, dy: ((start.y - box.top) / box.height) * size.height };
-      calls.place('center');
-      await tick();
-      grab = at;
-      follow();
-      setTimeout(() => dragging && (root.dataset.windowResizing = ''), settings.motion.window);
-    };
-    const move = (e: PointerEvent) => {
-      last = { x: e.clientX, y: e.clientY };
-      if (grab) follow();
-      else if (!undocking && Math.hypot(last.x - start.x, last.y - start.y) > settings.meetings.callUndockPx) {
-        undocking = true;
-        void undock();
-      }
-    };
-    const end = () => {
-      dragging = false;
-      delete root.dataset.windowResizing;
-      target.removeEventListener('pointermove', move);
-      target.removeEventListener('pointerup', end);
-      target.removeEventListener('pointercancel', end);
-    };
-    target.addEventListener('pointermove', move);
-    target.addEventListener('pointerup', end);
-    target.addEventListener('pointercancel', end);
+    const node = element;
+    dragWindow(event, {
+      element: node,
+      docked: dock !== 'center',
+      middle: () => (probe ? { width: probe.offsetWidth, height: probe.offsetHeight } : { width: box.width, height: box.height }),
+      undock: async () => {
+        calls.place('center');
+        await tick();
+      },
+      snapAt,
+      preview: (next) => {
+        snapFrom = node.getBoundingClientRect();
+        calls.snap = next;
+      },
+      drop: (placement) => calls.place(placement),
+    });
+  }
+
+  /**
+   * Near the bottom, or near the side, which is the left edge while the detail window holds the right one, counted from the
+   * sidebar as the member keeps it (expanded or collapsed): the preview's own collapse of it must not move the edge.
+   */
+  function snapAt(box: Box): CallPlacement | null {
+    const near = settings.window.drag.snapPx;
+    const sidebar = getComputedStyle(document.documentElement)
+      .getPropertyValue(preferences.values.sidebarCollapsed ? '--layout-sidebar-collapsed-width' : '--layout-sidebar-width')
+      .trim();
+    if (calls.sideTaken ? box.left <= (parseFloat(sidebar) || 0) + near : box.left + box.width >= window.innerWidth - near) return 'side';
+    if (!calls.bottomTaken && box.top + box.height >= window.innerHeight - near) return 'bottom';
+    return null;
   }
 
   function media(video: HTMLVideoElement, stream: MediaStream) {
@@ -226,6 +213,12 @@
 <svelte:document onfullscreenchange={() => (fullscreen = !!element && document.fullscreenElement === element)} />
 
 {#if call && calls.meeting}
+  {#key calls.snap}
+    {#if calls.snap}
+      {@const at = calls.dockFor(calls.snap)}
+      <div class="preview {at}" aria-hidden="true" {@attach (node) => void (snapFrom && motion.morph(node, snapFrom))} out:fade|global></div>
+    {/if}
+  {/key}
   <!-- The bar opens the call again on a click anywhere but its buttons; keyboard users have the restore button. -->
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
   <section
@@ -264,6 +257,7 @@
       <header>
         <h2>{calls.meeting.title}</h2>
         <div class="controls">
+          <div class="toggles">{@render toggles()}</div>
           <ChoiceGroup
             name="call-layout"
             label="Ansicht"
@@ -284,6 +278,7 @@
               />
             </div>
           {/if}
+          <Button size="sm" variant="danger" icon="hangUp" onclick={() => void calls.leave()}>Verlassen</Button>
           <span class="wide">
             <Button
               size="sm"
@@ -320,10 +315,6 @@
     </div>
 
     {#if !calls.minimized}
-      <footer>
-        {@render toggles()}
-        <Button size="sm" variant="danger" icon="hangUp" onclick={() => void calls.leave()}>Verlassen</Button>
-      </footer>
       <ErrorNote error={calls.error} />
     {/if}
   </section>
@@ -364,11 +355,11 @@
   .call {
     /* Brand-tinted dark stage in light and dark mode; the shared controls read their colours from these. */
     --call-bg: color-mix(in oklab, var(--color-accent) var(--call-tint), black);
-    --color-text: var(--color-on-accent);
-    --color-text-muted: color-mix(in oklab, var(--color-on-accent) 72%, transparent);
-    --color-hover: color-mix(in oklab, var(--color-on-accent) 12%, transparent);
-    --color-elevated: color-mix(in oklab, var(--color-on-accent) 22%, var(--call-bg));
-    --color-border: color-mix(in oklab, var(--color-on-accent) 16%, transparent);
+    --color-text: white;
+    --color-text-muted: color-mix(in oklab, white 72%, transparent);
+    --color-hover: color-mix(in oklab, white 12%, transparent);
+    --color-elevated: color-mix(in oklab, white 22%, var(--call-bg));
+    --color-border: color-mix(in oklab, white 16%, transparent);
     position: fixed;
     z-index: 32;
     display: flex;
@@ -383,6 +374,13 @@
       width var(--motion-window) var(--motion-easing),
       height var(--motion-window) var(--motion-easing),
       border-radius var(--motion-window) var(--motion-easing);
+  }
+  .preview {
+    position: fixed;
+    z-index: 32;
+    background: color-mix(in oklab, var(--color-accent) 22%, transparent);
+    backdrop-filter: blur(2px);
+    pointer-events: none;
   }
   .probe {
     position: fixed;
@@ -510,12 +508,12 @@
     cursor: auto;
   }
   header,
-  .stage,
-  footer {
+  .stage {
     touch-action: none;
   }
   header {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
     gap: var(--space-md);
@@ -530,11 +528,19 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* Narrow docks: the controls wrap below the title instead of running out of the window. */
   .controls {
     display: flex;
-    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     align-items: center;
     gap: var(--space-xs);
+  }
+  .toggles {
+    display: flex;
+    gap: var(--space-xs);
+    padding-right: var(--space-xs);
+    border-right: 1px solid var(--color-border);
   }
   .docks {
     padding: 0 var(--space-xs);
@@ -633,12 +639,6 @@
     border-radius: var(--radius-sm);
     background: color-mix(in oklab, var(--call-bg) 70%, transparent);
     font-size: var(--font-size-small);
-  }
-  footer {
-    display: flex;
-    justify-content: center;
-    gap: var(--space-xs);
-    padding: var(--space-sm);
   }
 
   .live {

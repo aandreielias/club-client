@@ -27,6 +27,8 @@ export class CallService {
   size = $state<CallSizes>({ side: null, bottom: null });
   minimized = $state(false);
   error = $state<unknown>(null);
+  /** The edge a drag would dock the call to when released now (its preview shows, CallWindow). */
+  snap = $state<CallPlacement | null>(null);
 
   constructor(
     private readonly api: MeetingsApi,
@@ -49,10 +51,26 @@ export class CallService {
     return !!this.windows.current && this.windows.dock === 'bottom';
   }
 
+  /** The detail window docked at the side: the call's side placement takes the left edge. */
+  get sideTaken(): boolean {
+    return !!this.windows.current && this.windows.dock === 'side';
+  }
+
+  /** The call holds the left edge, or its drag preview does: the sidebar collapses meanwhile. */
+  get takesLeft(): boolean {
+    const docked = !!this.session && !this.minimized && this.dock === 'left';
+    return docked || (!!this.snap && this.dockFor(this.snap) === 'left');
+  }
+
   /** Same edge as the docked detail window: the call takes the left edge instead. */
   get dock(): CallDock {
-    if (this.placement === 'center') return 'center';
-    return this.windows.current && this.windows.dock === this.placement ? 'left' : this.placement;
+    return this.dockFor(this.placement);
+  }
+
+  /** Where a placement would be drawn now (the snap preview while dragging). */
+  dockFor(placement: CallPlacement): CallDock {
+    if (placement === 'center') return 'center';
+    return this.windows.current && this.windows.dock === placement ? 'left' : placement;
   }
 
   /** Joins a meeting's call, leaving another one first; the same meeting only brings the window back. */

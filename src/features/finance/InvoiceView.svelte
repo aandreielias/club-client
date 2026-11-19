@@ -20,6 +20,7 @@
   import Select from '../../ui/Select.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { settings } from '../../settings';
+  import BankQr from './BankQr.svelte';
   import { FINANCE_CHANGED } from './events';
   import { moneyInput, parseMoney, type Invoice, type InvoiceInput } from './model';
   import { accounts, categories, financeApi, money } from './services';
@@ -37,6 +38,10 @@
     dueOn: string;
     category: string;
     note: string;
+    reference: string;
+    issuedOn: string;
+    iban: string;
+    bic: string;
   }
 
   const limits = settings.finance;
@@ -58,7 +63,18 @@
     if (!isNew && !edit.editing && !write.busy) void invoice.load();
   });
 
-  const blank = $state<InvoiceForm>({ counterparty: '', text: '', amount: '', dueOn: session.clock.today(), category: '', note: '' });
+  const blank = $state<InvoiceForm>({
+    counterparty: '',
+    text: '',
+    amount: '',
+    dueOn: session.clock.today(),
+    category: '',
+    note: '',
+    reference: '',
+    issuedOn: '',
+    iban: '',
+    bic: '',
+  });
   const form = $derived(isNew ? blank : edit.form);
   let submitted = $state(false);
   const errors = $derived({
@@ -88,6 +104,10 @@
     dueOn: f.dueOn,
     category: f.category,
     note: f.note.trim() || null,
+    reference: f.reference.trim() || null,
+    issuedOn: f.issuedOn || null,
+    iban: f.iban.trim() || null,
+    bic: f.bic.trim() || null,
   });
   const categoryOptions = (kept: string | null) => [
     { value: '', label: 'Kategorie wählen' },
@@ -138,6 +158,10 @@
       dueOn: i.dueOn,
       category: i.category,
       note: i.note ?? '',
+      reference: i.reference ?? '',
+      issuedOn: i.issuedOn ?? '',
+      iban: i.iban ?? '',
+      bic: i.bic ?? '',
     });
   useCommands(commands, {
     'record.edit': { run: () => invoice.value && startEdit(invoice.value), when: () => act.has('record.edit') },
@@ -163,6 +187,18 @@
     <div class="grid-2">
       <Field label="Text" error={error('text')}><input bind:value={f.text} maxlength={limits.textMaxLength} required /></Field>
       <Field label="Fällig am" error={error('dueOn')}><DateInput bind:value={f.dueOn} required /></Field>
+    </div>
+    <div class="grid-2">
+      <Field label="Rechnungsnummer (optional)" hint="Kommt als Referenz auf die Buchung.">
+        <input bind:value={f.reference} maxlength={limits.referenceMaxLength} />
+      </Field>
+      <Field label="Rechnungsdatum (optional)"><DateInput bind:value={f.issuedOn} /></Field>
+    </div>
+    <div class="grid-2">
+      <Field label="IBAN (optional)" hint="Konto des Empfängers: offene Rechnungen zeigen dann einen QR-Code zum Bezahlen.">
+        <input bind:value={f.iban} maxlength="40" autocomplete="off" />
+      </Field>
+      <Field label="BIC (optional)"><input bind:value={f.bic} maxlength="20" autocomplete="off" /></Field>
     </div>
     <Field label="Notiz (optional)"><textarea bind:value={f.note} rows="3" maxlength={limits.noteMaxLength}></textarea></Field>
   </EditorForm>
@@ -207,8 +243,17 @@
             <dd>{money(i.amountCents)}</dd>
             <dt>Kategorie</dt>
             <dd>{categories.label(i.category)}</dd>
+            {#if i.reference}<dt>Rechnungsnummer</dt>
+              <dd>{i.reference}</dd>{/if}
+            {#if i.issuedOn}<dt>Rechnungsdatum</dt>
+              <dd>{session.format.date(i.issuedOn)}</dd>{/if}
             <dt>Fällig am</dt>
             <dd>{session.format.date(i.dueOn)}</dd>
+            {#if i.iban}<dt>IBAN</dt>
+              <dd>
+                {i.iban}{#if i.bic}
+                  · {i.bic}{/if}
+              </dd>{/if}
             {#if i.bookingId}
               <dt>Buchung</dt>
               <dd><RecordLink kind="booking" id={i.bookingId}>Zur Buchung</RecordLink></dd>
@@ -222,6 +267,7 @@
               {session.format.dateTime(i.createdAt)}{#if i.createdBy}, <MemberName memberId={i.createdBy} />{/if}
             </dd>
           </dl>
+          {#if i.bankQr}<BankQr payload={i.bankQr} />{/if}
           {#if i.note}<p class="prose">{i.note}</p>{/if}
         {/if}
       </Detail>

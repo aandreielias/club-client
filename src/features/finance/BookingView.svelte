@@ -114,8 +114,16 @@
         <dl class="props">
           <dt>Betrag</dt>
           <dd class="amount" class:negative={b.amountCents < 0}>{money(b.amountCents)}</dd>
+          <dt>Beleg</dt>
+          <dd>{b.voucher}</dd>
           <dt>Datum</dt>
           <dd>{session.format.date(b.bookedOn)}</dd>
+          {#if b.reference}<dt>Referenz</dt>
+            <dd>{b.reference}</dd>{/if}
+          {#if b.counterparty}<dt>Gegenpartei</dt>
+            <dd>{b.counterparty}</dd>{/if}
+          {#if b.costCenter}<dt>Kostenstelle</dt>
+            <dd><LinkedRecords refs={[b.costCenter]} /></dd>{/if}
           <dt>Konto</dt>
           <dd>{accounts.label(b.account)}</dd>
           {#if b.category}

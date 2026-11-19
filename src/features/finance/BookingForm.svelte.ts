@@ -3,7 +3,7 @@ import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import { moneyInput, parseMoney, type Booking, type BookingInput, type Direction, type TransferInput } from './model';
 
-export type BookingField = 'bookedOn' | 'account' | 'to' | 'category' | 'amount' | 'text' | 'note';
+export type BookingField = 'bookedOn' | 'account' | 'to' | 'category' | 'amount' | 'text' | 'note' | 'reference' | 'counterparty';
 
 type BookingErrors = Partial<Record<BookingField, string>>;
 
@@ -22,7 +22,11 @@ export class BookingForm extends FormState<BookingErrors> {
   amount = $state('');
   text = $state('');
   note = $state('');
+  reference = $state('');
+  counterparty = $state('');
   readonly refs: RefList;
+  /** Kostenstelle: at most one record. */
+  readonly costCenter: RefList;
 
   private constructor(
     readonly transfer: boolean,
@@ -31,6 +35,7 @@ export class BookingForm extends FormState<BookingErrors> {
   ) {
     super();
     this.refs = new RefList(limits.maxRefs, original?.refs ?? []);
+    this.costCenter = new RefList(1, original?.costCenter ? [original.costCenter] : []);
   }
 
   static blank(transfer: boolean, today: string, direction: (category: string) => Direction | undefined): BookingForm {
@@ -47,6 +52,8 @@ export class BookingForm extends FormState<BookingErrors> {
     form.amount = moneyInput(booking.amountCents);
     form.text = booking.text;
     form.note = booking.note ?? '';
+    form.reference = booking.reference ?? '';
+    form.counterparty = booking.counterparty ?? '';
     return form;
   }
 
@@ -61,6 +68,9 @@ export class BookingForm extends FormState<BookingErrors> {
       text: this.text.trim(),
       note: this.note.trim() || null,
       refs: this.refs.refs.map((r) => ({ kind: r.kind, id: r.id })),
+      reference: this.reference.trim() || null,
+      counterparty: this.counterparty.trim() || null,
+      costCenter: this.costCenter.refs.map((r) => ({ kind: r.kind, id: r.id }))[0] ?? null,
     };
   }
 
@@ -85,6 +95,8 @@ export class BookingForm extends FormState<BookingErrors> {
     if (!cents || cents > limits.maxCents) errors.amount = 'Betrag über 0 angeben, z. B. 12,50.';
     const text = this.text.trim();
     if (!text || text.length > limits.textMaxLength) errors.text = `Text mit 1 bis ${limits.textMaxLength} Zeichen angeben.`;
+    if (this.reference.trim().length > limits.referenceMaxLength) errors.reference = `Höchstens ${limits.referenceMaxLength} Zeichen.`;
+    if (this.counterparty.trim().length > limits.counterpartyMaxLength) errors.counterparty = `Höchstens ${limits.counterpartyMaxLength} Zeichen.`;
     if (this.note.trim().length > limits.noteMaxLength) errors.note = `Höchstens ${limits.noteMaxLength} Zeichen.`;
     return errors;
   }

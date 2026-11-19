@@ -149,7 +149,7 @@
       connection={live.status}
       onlogout={logout}
       settingsBack={inSettings ? appPath : null}
-      forceCollapsed={!!calls.session && !calls.minimized && calls.dock === 'left'}
+      forceCollapsed={calls.takesLeft}
     />
     <main style:view-transition-name="page">
       {#if split.isOpen}

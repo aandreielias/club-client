@@ -379,8 +379,6 @@ export const settings = {
     /** Dragging the call window's inner edge: smallest side width and bottom height. */
     callMinSidePx: 280,
     callMinBottomPx: 200,
-    /** How far the header of the docked call is dragged before it undocks into the middle. */
-    callUndockPx: 8,
     protocolMaxLength: 100_000,
     guestNameMaxLength: 100,
     guestEmailMaxLength: 200,
@@ -455,6 +453,11 @@ export const settings = {
     defaultDock: 'center' as 'center' | 'side' | 'bottom',
     /** Dragging the inner edge of a docked window: its smallest size, what the page keeps, arrow-key step. */
     resize: { minSidePx: 320, minBottomPx: 200, pageMinWidthPx: 360, pageMinHeightPx: 160, stepPx: 24 },
+    /**
+     * Dragging the detail window or the call by its header (lib/window/windowDrag): how far a docked one moves before it
+     * undocks, how close its edge comes to the screen's to dock there, how far ahead (ms at the drag's speed) that is judged.
+     */
+    drag: { undockPx: 8, snapPx: 100, leadMs: 150 },
   },
 
   /** Key handling; the shortcuts themselves are in src/shortcuts.ts. */
@@ -612,6 +615,8 @@ export const settings = {
     labelMaxLength: 60,
     textMaxLength: 200,
     noteMaxLength: 2000,
+    referenceMaxLength: 60,
+    counterpartyMaxLength: 120,
     maxCents: 1_000_000_000,
     maxRefs: 20,
     maxReceipts: 10,

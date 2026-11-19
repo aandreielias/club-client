@@ -6,6 +6,7 @@
   import { menu, openMenuAt, recordMenu } from './contextMenu';
   import { WINDOW_CLOSE } from '../channels';
   import { WindowService, type Dock } from '../lib/window/WindowService.svelte';
+  import { dragWindow, type Box } from '../lib/window/windowDrag';
   import { innerHeight, innerWidth } from 'svelte/reactivity/window';
   import { settings } from '../settings';
   import Button from './Button.svelte';
@@ -18,7 +19,7 @@
    * centered it is modal, docked it leaves the page usable next to it.
    */
   const HINTS = {
-    center: withKeys('Fenster in die Mitte', 'window.center'),
+    center: withKeys('Fenster in die Mitte (beim Ziehen mit Alt: nicht andocken)', 'window.center'),
     side: withKeys('Fenster an die Seite', 'window.side'),
     bottom: withKeys('Fenster nach unten', 'window.bottom'),
   } satisfies Record<Dock, string>;
@@ -37,6 +38,11 @@
   let element: HTMLElement | undefined = $state();
   let moreButton: HTMLElement | undefined = $state();
   let opener: HTMLElement | null = null;
+  /** Measures the middle size before a docked window undocks into it. */
+  let probe: HTMLElement | undefined = $state();
+  /** The dock a drag would take when released now (its preview shows), and the window's box when that preview appeared. */
+  let snap = $state<Dock | null>(null);
+  let snapFrom: DOMRect | null = null;
 
   // A command asked for with the opening (e.g. "Bearbeiten" from a context menu) runs once the view handles it.
   $effect(() => {
@@ -92,6 +98,43 @@
       else style.setProperty(property, `${WindowService.clampSize(dock, px, viewport, settings.window.resize)}px`);
     }
   });
+
+  // A position dragged in the middle holds only until the window moves, shows another record or closes.
+  $effect(() => {
+    void windows.dock;
+    void target?.kind;
+    void target?.id;
+    if (element) element.style.top = element.style.left = '';
+  });
+
+  /** The header drags the window (lib/window/windowDrag); a docked one undocks into the middle first. */
+  function startMove(event: PointerEvent) {
+    if (!element || event.button !== 0 || document.documentElement.dataset.layout === 'compact') return;
+    if ((event.target as Element).closest('button, input, label, a')) return;
+    const node = element;
+    dragWindow(event, {
+      element: node,
+      docked: windows.dock !== 'center',
+      middle: () => ({ width: probe?.offsetWidth ?? node.offsetWidth, height: probe?.offsetHeight ?? node.offsetHeight }),
+      undock: async () => {
+        windows.setDock('center');
+        await tick();
+      },
+      snapAt,
+      preview: (next) => {
+        snapFrom = node.getBoundingClientRect();
+        snap = next;
+      },
+      drop: (dock) => windows.setDock(dock),
+    });
+  }
+
+  function snapAt(box: Box): Dock | null {
+    const near = settings.window.drag.snapPx;
+    if (box.left + box.width >= window.innerWidth - near) return 'side';
+    if (box.top + box.height >= window.innerHeight - near) return 'bottom';
+    return null;
+  }
 
   /** Dragging the inner edge (left at the side, top at the bottom); the page follows without animating. */
   function startResize(event: PointerEvent) {
@@ -207,6 +250,12 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="backdrop" onclick={() => bus.publish(WINDOW_CLOSE)} transition:motion.fade></div>
   {/if}
+  {#key snap}
+    {#if snap}
+      <div class="preview {snap}" aria-hidden="true" {@attach (node) => void (snapFrom && motion.morph(node, snapFrom))} out:motion.fade|global></div>
+    {/if}
+  {/key}
+  <div class="probe" bind:this={probe} aria-hidden="true"></div>
   <div
     bind:this={element}
     class="window {windows.dock}"
@@ -234,7 +283,8 @@
         {@attach tooltip('Ziehen zum Ändern der Größe, Doppelklick: Standardgröße')}
       ></div>
     {/if}
-    <header>
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <header onpointerdown={startMove}>
       <div class="heading">
         {#if windows.trailDepth}
           <Button
@@ -321,6 +371,21 @@
       opacity var(--motion-base) var(--motion-easing),
       scale var(--motion-base) var(--motion-easing);
   }
+  .preview {
+    position: fixed;
+    z-index: 31;
+    /* Neutral grey: grey on a white page, light on a dark one. */
+    background: color-mix(in oklab, var(--color-text) 14%, transparent);
+    backdrop-filter: blur(2px);
+    pointer-events: none;
+  }
+  .probe {
+    position: fixed;
+    width: var(--window-center-width);
+    height: var(--window-center-height);
+    visibility: hidden;
+    pointer-events: none;
+  }
   .center {
     top: calc((100dvh - var(--window-center-height)) / 2);
     left: calc((100vw - var(--window-center-width)) / 2);
@@ -400,6 +465,8 @@
     gap: var(--space-md);
     min-height: 46px;
     padding: var(--space-xs) var(--space-sm) var(--space-xs) var(--space-xl);
+    cursor: grab;
+    touch-action: none;
     border-bottom: 1px solid var(--color-border);
   }
   .heading {
