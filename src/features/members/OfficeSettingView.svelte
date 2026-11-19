@@ -70,7 +70,11 @@
         <dt>In Sitzungen</dt>
         <dd>{office.duty === 'CHAIR' ? 'wie der Vorsitz' : office.duty === 'SECRETARY' ? 'wie die Schriftführung' : '–'}</dd>
         <dt>Buchhaltung</dt>
-        <dd>{{ NONE: '–', READ: 'lesen', AUDIT: 'lesen und prüfen', WRITE: 'buchen' }[office.finance]}</dd>
+        <dd>
+          {office.board && office.finance === 'NONE' && boardSettings.value?.boardFinance === 'READ'
+            ? 'lesen (als Vorstand)'
+            : { NONE: '–', READ: 'lesen', AUDIT: 'lesen und prüfen', WRITE: 'buchen' }[office.finance]}
+        </dd>
         <dt>Vorstand</dt>
         <dd>{office.board ? 'gehört zum Vorstand' : 'außerhalb des Vorstands'}</dd>
         <dt>In Verwendung</dt>

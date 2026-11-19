@@ -29,6 +29,7 @@ export type SectionId =
   | 'mailboxes'
   | 'finance'
   | 'fees-due'
+  | 'fees-calc'
   | 'fees-payment';
 
 export interface SettingsTab {
@@ -129,6 +130,13 @@ const TABS: { [K in SectionId]: Omit<SettingsTab, 'id'> } = {
     keywords: 'mitgliedsbeitrag erinnerung tage',
     finance: 'WRITE',
   },
+  'fees-calc': {
+    label: 'Berechnung',
+    hint: 'Bis zu welchem Alter der Jugendtarif gilt und was zahlt, wer mehrere Mitgliedsarten hat.',
+    icon: 'finance',
+    keywords: 'mitgliedsbeitrag jugend jugendtarif alter stichtag mehrere arten summe',
+    finance: 'WRITE',
+  },
   'fees-payment': {
     label: 'Zahlung',
     hint: 'Wie Mitglieder ihre Beiträge bezahlen: Text und Bankverbindung für den QR-Code.',
@@ -181,7 +189,7 @@ const SETTINGS_TREE: readonly NavDef[] = [
         id: 'finance',
         label: 'Buchhaltung',
         icon: 'finance',
-        children: ['finance', { id: 'fees', label: 'Mitgliedsbeiträge', icon: 'finance', children: ['fees-due', 'fees-payment'] }],
+        children: ['finance', { id: 'fees', label: 'Mitgliedsbeiträge', icon: 'finance', children: ['fees-due', 'fees-calc', 'fees-payment'] }],
       },
       { id: 'operations', label: 'Betrieb', icon: 'settings', children: ['tasks', 'notification-rules', 'files', 'mailboxes'] },
     ],

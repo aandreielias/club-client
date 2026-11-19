@@ -37,7 +37,7 @@ import { LocalStore } from './storage/LocalStore';
 import { CommandRegistry } from './keyboard/CommandRegistry.svelte';
 import { KeyboardService } from './keyboard/KeyboardService.svelte';
 import { Keymap } from './keyboard/Keymap.svelte';
-import { PreferencesService } from './preferences/PreferencesService.svelte';
+import { PreferencesService, type PreferencesRemote, type RemotePreferences } from './preferences/PreferencesService.svelte';
 import { ThemeService } from './theme/ThemeService';
 import { Motion } from './motion/Motion.svelte';
 import { WindowService } from './window/WindowService.svelte';
@@ -61,7 +61,13 @@ export const theme = new ThemeService(settings.theme, settings.compactBelowPx, s
 
 export const preferences = new PreferencesService(
   settings.appearance,
-  { scheme: settings.theme.scheme, calendarView: settings.calendar.defaultView, filesView: settings.files.defaultView },
+  {
+    scheme: settings.theme.scheme,
+    calendarView: settings.calendar.defaultView,
+    filesView: settings.files.defaultView,
+    weekStartHour: settings.calendar.weekStartHour,
+    weekEndHour: settings.calendar.weekEndHour,
+  },
   store,
   () => theme.apply(preferences.themeOverrides()),
 );
@@ -92,6 +98,13 @@ const transport: Transport =
 
 // 401: the login is gone (expired, revoked); AppController sees the signed-out state and clears the session.
 export const api: ApiClient = new ApiClient(transport, () => void auth.signOut());
+
+/** The member's preferences on the server (any device) and the club's defaults for them. */
+export const preferencesRemote: PreferencesRemote = {
+  load: () => api.get<RemotePreferences>('/api/v1/me/preferences'),
+  save: (values) => api.put('/api/v1/me/preferences', { values }),
+  saveDefaults: (values) => api.put<RemotePreferences>('/api/v1/preferences/defaults', { values }),
+};
 
 export const session = new SessionStore(api, runtime.apiUrl);
 

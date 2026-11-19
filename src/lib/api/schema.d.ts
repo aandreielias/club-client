@@ -197,6 +197,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/preferences/defaults": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["savePreferenceDefaults"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notifications/settings": {
         parameters: {
             query?: never;
@@ -421,7 +437,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/me/notification-preferences": {
+    "/api/v1/me/preferences": {
         parameters: {
             query?: never;
             header?: never;
@@ -429,6 +445,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["preferences"];
+        put: operations["savePreferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/notification-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["preferences_1"];
         put: operations["setPreferences"];
         post?: never;
         delete?: never;
@@ -3428,6 +3460,13 @@ export interface components {
         "at.clubserver.gateway.rest.ResolutionsController.AssigneesBody": {
             assigneeIds: string[];
         };
+        "at.clubserver.gateway.rest.MembersController.PreferencesBody": {
+            values: string;
+        };
+        "at.clubserver.members.api.MembersApi.Preferences": {
+            values: string;
+            clubDefaults: string;
+        };
         "at.clubserver.gateway.rest.NotificationsController.SettingsBody": {
             importantKinds: ("TASK_ASSIGNED" | "TASK_DUE" | "APPOINTMENT_CANCELLED" | "CHANGE_DECIDED" | "ITEM_REMINDER" | "MEETING" | "MAIL" | "APPOINTMENT_CHANGED" | "ATTENDANCE" | "RIDE" | "TASK_ACTIVITY" | "TEAM" | "FEE")[];
             defaults: components["schemas"]["at.clubserver.notifications.api.NotificationsApi.Preference"][];
@@ -3903,6 +3942,12 @@ export interface components {
             holder: string;
             iban: string;
             bic: string;
+            /** Format: int32 */
+            youthUntilAge: number;
+            /** @enum {string} */
+            youthCutoff: "GENERATION" | "SEASON_START" | "JANUARY_1";
+            /** @enum {string} */
+            combine: "HIGHEST" | "SUM";
         };
         "at.clubserver.finance.api.FinanceApi.FeeRate": {
             kind: string;
@@ -3932,7 +3977,7 @@ export interface components {
             season: number;
             /** Format: uuid */
             memberId: string;
-            kind: string;
+            kinds: string[];
             /** Format: int64 */
             amountCents: number;
             /** Format: int64 */
@@ -4315,6 +4360,9 @@ export interface components {
             guardianUntilAge: number;
             /** Format: int32 */
             ownConsentAge: number;
+            /** @enum {string} */
+            boardFinance: "NONE" | "READ" | "AUDIT" | "WRITE";
+            adminsConfirmAudit: boolean;
         };
         "at.clubserver.members.api.MembersApi.OfficePair": {
             a: string;
@@ -5863,6 +5911,30 @@ export interface operations {
             };
         };
     };
+    savePreferenceDefaults: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.MembersController.PreferencesBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.Preferences"];
+                };
+            };
+        };
+    };
     settings_1: {
         parameters: {
             query?: never;
@@ -6296,6 +6368,50 @@ export interface operations {
         };
     };
     preferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.Preferences"];
+                };
+            };
+        };
+    };
+    savePreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.MembersController.PreferencesBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.members.api.MembersApi.Preferences"];
+                };
+            };
+        };
+    };
+    preferences_1: {
         parameters: {
             query?: never;
             header?: never;

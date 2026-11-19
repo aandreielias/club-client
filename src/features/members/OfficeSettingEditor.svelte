@@ -36,6 +36,16 @@
     { value: 'on', label: 'Wird besetzt' },
     { value: 'off', label: 'Nicht besetzt' },
   ] as const;
+  // The board-wide Buchhaltung settings (Einstellungen › Vorstand) decide what holding a board office adds.
+  const boardReads = $derived(boardSettings.value?.boardFinance === 'READ');
+  const boardHint = $derived(
+    `Wer eine Funktion im Vorstand innehat, bekommt die Vorstandsrolle und zählt zur Größe des Vorstands. In der Buchhaltung ${boardReads ? 'liest der Vorstand mit' : 'sieht der Vorstand nichts'} (Einstellung unter Vorstand).`,
+  );
+  const financeHint = $derived(
+    'Was wer diese Funktion innehat in der Buchhaltung tun darf; „Lesen und prüfen“ bestätigt Kassenprüfungen' +
+      (boardSettings.value?.adminsConfirmAudit ? ', das dürfen auch Admins.' : '.') +
+      (form.board && boardReads ? ' Als Vorstand liest sie ohnehin mit.' : ''),
+  );
   const others = $derived(
     (boardSettings.value?.offices ?? []).filter((o) => o.enabled && o.office !== form.office).map((o) => ({ value: o.office, label: o.label })),
   );
@@ -59,22 +69,20 @@
       />
     </Field>
   {/if}
-  {#if !form.seeded}
-    <Field group label="Vorstand" hint="Wer eine Funktion im Vorstand innehat, bekommt die Vorstandsrolle und zählt zur Größe des Vorstands.">
-      <ChoiceGroup
-        name="office-board"
-        label="Vorstand"
-        options={BOARD}
-        bind:value={() => (form.board ? 'on' : 'off'), (v) => (form.board = v === 'on')}
-      />
-    </Field>
-    <Field group label="In Sitzungen" hint="Wer diese Funktion innehat, übernimmt diese Aufgaben in Sitzungen.">
-      <ChoiceGroup name="office-duty" label="In Sitzungen" options={DUTIES} bind:value={form.duty} />
-    </Field>
-    <Field group label="Buchhaltung" hint="Was wer diese Funktion innehat in der Buchhaltung tun darf. Der Vorstand liest immer mit.">
-      <ChoiceGroup name="office-finance" label="Buchhaltung" options={FINANCE} bind:value={form.finance} />
-    </Field>
-  {/if}
+  <Field group label="Vorstand" hint={boardHint}>
+    <ChoiceGroup
+      name="office-board"
+      label="Vorstand"
+      options={BOARD}
+      bind:value={() => (form.board ? 'on' : 'off'), (v) => (form.board = v === 'on')}
+    />
+  </Field>
+  <Field group label="In Sitzungen" hint="Wer diese Funktion innehat, übernimmt diese Aufgaben in Sitzungen.">
+    <ChoiceGroup name="office-duty" label="In Sitzungen" options={DUTIES} bind:value={form.duty} />
+  </Field>
+  <Field group label="Buchhaltung" hint={financeHint}>
+    <ChoiceGroup name="office-finance" label="Buchhaltung" options={FINANCE} bind:value={form.finance} />
+  </Field>
   {#if form.enabled}
     <div class="grid-2">
       <Field label="Personen mindestens" hint="Weniger zeigt einen Hinweis auf der Vorstandsseite." error={form.error('holders')}>

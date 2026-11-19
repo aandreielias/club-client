@@ -1,5 +1,5 @@
 import { FormState } from '../../lib/state/FormState.svelte';
-import { SEEDED_OFFICES, type BoardSettings, type OfficeDuty, type OfficeInput, type OfficeKind, type OfficeSetting } from './MembersApi';
+import { type BoardSettings, type OfficeDuty, type OfficeInput, type OfficeKind, type OfficeSetting } from './MembersApi';
 import { settings } from '../../settings';
 import type { FinanceLevel } from '../../lib/types';
 
@@ -49,11 +49,6 @@ export class OfficeSettingForm extends FormState<Errors> {
   /** The chair always exists: the board needs someone to convene. */
   get fixed(): boolean {
     return this.office === 'CHAIR';
-  }
-
-  /** The seeded offices keep their place on or off the board. */
-  get seeded(): boolean {
-    return SEEDED_OFFICES.includes(this.office);
   }
 
   get isNew(): boolean {

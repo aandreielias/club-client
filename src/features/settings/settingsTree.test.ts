@@ -30,7 +30,7 @@ describe('settings tree', () => {
   it('shows the fee settings from WRITE on; a group left with one tab shows that tab', () => {
     const finance = (level?: 'READ' | 'WRITE') =>
       visibleSettings({ ...board, finance: level }).tree.find((e) => e.key === 'settings:club')!.children!;
-    expect(keys(finance('WRITE'))).toContainEqual(['settings:finance', ['finance', ['settings:fees', ['fees-due', 'fees-payment']]]]);
+    expect(keys(finance('WRITE'))).toContainEqual(['settings:finance', ['finance', ['settings:fees', ['fees-due', 'fees-calc', 'fees-payment']]]]);
     expect(keys(finance('READ'))).toContain('finance');
     expect(visibleSettings({ ...board, finance: 'READ' }).tabs.map((t) => t.id)).not.toContain('fees-due');
   });

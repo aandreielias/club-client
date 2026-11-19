@@ -8,7 +8,7 @@ import type { ErrorMessages } from './lib/errors/ErrorMessages';
 import type { CommandRegistry } from './lib/keyboard/CommandRegistry.svelte';
 import type { KeyboardService } from './lib/keyboard/KeyboardService.svelte';
 import type { LiveUpdates } from './lib/live/LiveUpdates.svelte';
-import type { PreferencesService } from './lib/preferences/PreferencesService.svelte';
+import type { PreferencesRemote, PreferencesService } from './lib/preferences/PreferencesService.svelte';
 import type { WindowService } from './lib/window/WindowService.svelte';
 import { SHORTCUTS, type CommandId } from './shortcuts';
 import type { EventBus } from './lib/bus';
@@ -44,6 +44,8 @@ export interface AppDependencies {
   keyboard: KeyboardService;
   windows: WindowService;
   preferences: PreferencesService;
+  /** server: GET/PUT /me/preferences */
+  preferencesRemote: PreferencesRemote;
   backStack: BackStack;
   split: SplitView;
   splitPane: Pane;
@@ -104,11 +106,12 @@ export class AppController {
    * sign-out (also when the sign-out did not come from `logout`). Call from an effect.
    */
   syncMember(): void {
-    const { auth, session, directory, bus } = this.deps;
+    const { auth, session, directory, bus, preferences, preferencesRemote } = this.deps;
     if (!auth.signedIn) {
       if (session.me) {
         session.clear();
         directory.clear();
+        preferences.disconnect();
       }
       return;
     }
@@ -116,6 +119,7 @@ export class AppController {
     this.#loadingMe = true;
     session
       .loadMe()
+      .then(() => background(preferences.connect(preferencesRemote)))
       .catch((error) => {
         bus.publish(APP_ERROR, error);
         // Only a refused login ends the session; a network blip or a 5xx keeps it (the error says to retry).

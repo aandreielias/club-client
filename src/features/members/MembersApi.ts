@@ -102,11 +102,11 @@ export interface OfficeSetting {
   minHolders: number;
   maxHolders: number | null;
   termYears: number;
-  /** Its holders are on the Vorstand (BOARD role, board size); fixed for the seeded ones (all but AUDITOR). */
+  /** Its holders are on the Vorstand (BOARD role, board size); seeded: all but AUDITOR. */
   board: boolean;
-  /** What it does in meetings: the chair's part, the secretary's, or none (fixed for the seeded chair and secretary). */
+  /** What it does in meetings: the chair's part, the secretary's, or none (seeded: the chair's and the secretary's own). */
   duty: OfficeDuty;
-  /** What its holders do in the Buchhaltung (fixed for the seeded ones: treasurer WRITE, auditors AUDIT). */
+  /** What its holders do in the Buchhaltung (seeded: treasurer WRITE, auditors AUDIT). */
   finance: FinanceLevel;
 }
 
@@ -132,6 +132,10 @@ export interface BoardSettings {
   guardianUntilAge: number;
   /** From this age the member alone gives or withdraws photo consent. */
   ownConsentAge: number;
+  /** What the BOARD role itself gives in the Buchhaltung: NONE or READ only; offices add their own level. */
+  boardFinance: FinanceLevel;
+  /** Admins confirm Kassenprüfungen besides the offices with AUDIT. */
+  adminsConfirmAudit: boolean;
 }
 
 /** Running offices; warnings are codes like 'board.too-small' (texts in BOARD_WARNINGS). */

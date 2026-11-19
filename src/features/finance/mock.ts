@@ -68,6 +68,9 @@ export class MockFinance {
     holder: 'SV Muster',
     iban: 'AT611904300234573201',
     bic: null,
+    youthUntilAge: null,
+    youthCutoff: 'GENERATION',
+    combine: 'HIGHEST',
   }));
   /** season → rates */
   readonly feeRates = new MockTable<Record<string, FeeRate[]>>('finance-fee-rates', () => MockFinance.seedRates());
@@ -327,9 +330,9 @@ export class MockFinance {
     return MockFinance.audit(this.audits.data.find((a) => a.id === id) ?? fail(404, 'finance.not-found'));
   }
 
-  /** server: FinanceAccess.confirmsAudits — an office with level AUDIT, or an admin; the Kassier does not check themselves. */
+  /** server: FinanceAccess.confirmsAudits — an office with level AUDIT, or an admin while the club lets them; the Kassier does not check themselves. */
   mayConfirm(viewer: Member): boolean {
-    if (viewer.roles.includes('ADMIN')) return true;
+    if (viewer.roles.includes('ADMIN') && directory.boardSettings.data.adminsConfirmAudit) return true;
     const held = directory.officesOf(viewer.id);
     return directory.boardSettings.data.offices.some((o) => held.includes(o.office) && o.finance === 'AUDIT');
   }
@@ -583,7 +586,17 @@ export class MockFinance {
     const remindDays = Number(body.remindDays);
     const category = this.categories.data.find((c) => c.key === body.category && c.direction === 'IN');
     const instructions = typeof body.instructions === 'string' ? body.instructions.trim() : '';
-    if (!category || ![dueDays, remindDays].every((n) => Number.isInteger(n) && n >= 0 && n <= 365) || instructions.length > 2000)
+    const youthUntilAge = body.youthUntilAge ?? null;
+    const youthCutoff = body.youthCutoff ?? 'GENERATION';
+    const combine = body.combine ?? 'HIGHEST';
+    if (
+      !category ||
+      ![dueDays, remindDays].every((n) => Number.isInteger(n) && n >= 0 && n <= 365) ||
+      instructions.length > 2000 ||
+      (youthUntilAge !== null && !(Number.isInteger(youthUntilAge) && youthUntilAge >= 1 && youthUntilAge <= 99)) ||
+      !['GENERATION', 'SEASON_START', 'JANUARY_1'].includes(youthCutoff) ||
+      !['HIGHEST', 'SUM'].includes(combine)
+    )
       fail(400, 'finance.fee-invalid');
     const text = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
     const holder = text(body.holder);
@@ -597,7 +610,18 @@ export class MockFinance {
       (iban === null && bic !== null)
     )
       fail(400, 'finance.bank-invalid');
-    Object.assign(this.feeSettings.data, { category: category!.key, dueDays, remindDays, instructions: instructions || null, holder, iban, bic });
+    Object.assign(this.feeSettings.data, {
+      category: category!.key,
+      dueDays,
+      remindDays,
+      instructions: instructions || null,
+      holder,
+      iban,
+      bic,
+      youthUntilAge,
+      youthCutoff,
+      combine,
+    });
     this.feeSettings.save();
     this.changed(null);
     return { ...this.feeSettings.data };
@@ -640,37 +664,47 @@ export class MockFinance {
     return this.chargeDto(this.chargeRow(id));
   }
 
-  /** The highest rate among the member's kinds; minors pay the minor rate where set. Members charged already keep theirs. */
+  /**
+   * server: FeeHandlers.generate — the highest rate among the member's kinds, or all added up; younger than the youth age on the cutoff
+   * day (or without a birth date) the minor rate where set. Members charged already keep theirs.
+   */
   generate(season: number): { items: Charge[] } {
     const rates = new Map((this.feeRates.data[season] ?? []).map((r) => [r.kind, r]));
+    const fee = this.feeSettings.data;
     const month = String(directory.clubInfo().seasonStartMonth).padStart(2, '0');
-    const due = new Date(`${season}-${month}-01T12:00:00Z`);
-    due.setUTCDate(due.getUTCDate() + this.feeSettings.data.dueDays);
+    const start = `${season}-${month}-01`;
+    const due = new Date(`${start}T12:00:00Z`);
+    due.setUTCDate(due.getUTCDate() + fee.dueDays);
+    const cutoff = { GENERATION: directory.clock.today(), SEASON_START: start, JANUARY_1: `${season}-01-01` }[fee.youthCutoff];
+    const youthAge = fee.youthUntilAge ?? directory.boardSettings.data.guardianUntilAge;
+    const youngBornAfter = `${Number(cutoff.slice(0, 4)) - youthAge}${cutoff.slice(4)}`;
     const now = new Date().toISOString();
     for (const m of directory.members.data) {
       if (!m.active || !m.membershipTypes.length || this.charges.data.some((c) => c.season === season && c.memberId === m.id)) continue;
-      const minor = directory.underAge(m.id);
-      let kind: string | null = null;
-      let amount = 0;
-      for (const k of m.membershipTypes) {
-        const r = rates.get(k);
-        const cents = !r ? 0 : minor && r.minorCents !== null ? r.minorCents : r.cents;
-        if (cents > amount) [kind, amount] = [k, cents];
-      }
-      if (kind)
-        this.charges.data.push({
-          id: crypto.randomUUID(),
-          season,
-          memberId: m.id,
-          kind,
-          amountCents: amount,
-          waived: false,
-          dueOn: due.toISOString().slice(0, 10),
-          note: null,
-          remindedAt: null,
-          createdAt: now,
-          updatedAt: now,
-        });
+      const minor = !m.birthDate || m.birthDate > youngBornAfter;
+      const owed = [...m.membershipTypes]
+        .sort()
+        .map((k) => {
+          const r = rates.get(k);
+          return [k, !r ? 0 : minor && r.minorCents !== null ? r.minorCents : r.cents] as const;
+        })
+        .filter(([, cents]) => cents > 0);
+      if (!owed.length) continue;
+      const highest = owed.reduce((a, b) => (b[1] > a[1] ? b : a));
+      const [kinds, amount] = fee.combine === 'SUM' ? [owed.map(([k]) => k), owed.reduce((sum, [, c]) => sum + c, 0)] : [[highest[0]], highest[1]];
+      this.charges.data.push({
+        id: crypto.randomUUID(),
+        season,
+        memberId: m.id,
+        kinds,
+        amountCents: amount,
+        waived: false,
+        dueOn: due.toISOString().slice(0, 10),
+        note: null,
+        remindedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      });
     }
     this.charges.save();
     this.changed(null);
@@ -1095,7 +1129,7 @@ export class MockFinance {
           id: `fee-${m.id}`,
           season,
           memberId: m.id,
-          kind: r.kind,
+          kinds: [r.kind],
           amountCents,
           waived: false,
           dueOn: due.toISOString().slice(0, 10),
@@ -1183,7 +1217,7 @@ personalData.set('finance', (memberId) => {
   return {
     fee_charges: charges.map((c) => ({
       season: c.season,
-      kind: c.kind,
+      kinds: c.kinds,
       amount_cents: c.amountCents,
       waived: c.waived,
       due_on: c.dueOn,

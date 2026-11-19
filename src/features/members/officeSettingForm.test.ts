@@ -27,6 +27,8 @@ const settings = (): BoardSettings => ({
   multipleKinds: false,
   guardianUntilAge: 18,
   ownConsentAge: 14,
+  boardFinance: 'READ',
+  adminsConfirmAudit: true,
 });
 
 describe('OfficeSettingForm', () => {

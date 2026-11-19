@@ -14,6 +14,9 @@ export interface Preferences {
   density: keyof Appearance['densities'];
   reduceMotion: boolean;
   calendarView: CalendarViewPreference;
+  /** Hours the week view shows (end exclusive). */
+  weekStartHour: number;
+  weekEndHour: number;
   /** Paths of the main sidebar entries in the user's order; [] = default order. */
   navOrder: string[];
   /** Sidebar shows icons only. */
@@ -29,18 +32,46 @@ export interface Preferences {
 
 const STORE_KEY = 'preferences';
 
+/** What the club may preset for its members (admin/board); the look stays the brand's and the member's. */
+export const CLUB_DEFAULT_KEYS = ['calendarView', 'weekStartHour', 'weekEndHour', 'filesView', 'navOrder', 'homeOrder', 'homeShown'] as const;
+
+/** server: GET/PUT /me/preferences (JSON text each, null = none). */
+export interface RemotePreferences {
+  values: string | null;
+  clubDefaults: string | null;
+}
+
+export interface PreferencesRemote {
+  load(): Promise<RemotePreferences>;
+  save(values: string | null): Promise<unknown>;
+  /** Admin/board: the club's defaults (null = removed). */
+  saveDefaults(values: string | null): Promise<RemotePreferences>;
+}
+
 /**
- * The user's personal settings (per browser): appearance and a few defaults. Every change is
- * stored and handed to `onChange` (the app re-applies the theme there).
+ * The member's personal settings: appearance and a few defaults. What the member chose (`#own`) lies over the club's
+ * defaults, which lie over the app's. Every change is stored in this browser (the cache), sent to the server and handed
+ * to `onChange` (the app re-applies the theme there).
  */
 export class PreferencesService {
   values = $state<Preferences>() as Preferences;
+  /** The club's defaults as last loaded (admin/board see them in Einstellungen). */
+  club = $state<Partial<Preferences>>({});
 
   readonly #defaults: Preferences;
+  #own: Partial<Preferences>;
+  #remote: PreferencesRemote | null = null;
+  #timer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
     readonly appearance: Appearance,
-    defaults: { scheme: ColorScheme; calendarView: CalendarViewPreference; filesView: FilesViewPreference },
+    defaults: {
+      scheme: ColorScheme;
+      calendarView: CalendarViewPreference;
+      filesView: FilesViewPreference;
+      weekStartHour: number;
+      weekEndHour: number;
+    },
     private readonly store: LocalStore | null,
     private readonly onChange: (preferences: Preferences) => void = () => {},
   ) {
@@ -50,6 +81,8 @@ export class PreferencesService {
       density: PreferencesService.first(appearance.densities),
       reduceMotion: false,
       calendarView: defaults.calendarView,
+      weekStartHour: defaults.weekStartHour,
+      weekEndHour: defaults.weekEndHour,
       navOrder: [],
       sidebarCollapsed: false,
       navClosed: [],
@@ -57,19 +90,84 @@ export class PreferencesService {
       homeOrder: [],
       homeShown: {},
     };
-    this.values = this.sanitize({ ...this.#defaults, ...(store?.get<Partial<Preferences>>(STORE_KEY) ?? {}) });
+    // Older browsers stored every value; one equal to the app's default was no choice, so the club's default may apply.
+    const stored = PreferencesService.object(store?.get<unknown>(STORE_KEY));
+    this.#own = Object.fromEntries(
+      Object.entries(stored).filter(([key, value]) => JSON.stringify(value) !== JSON.stringify(this.#defaults[key as keyof Preferences])),
+    );
+    this.values = this.sanitize({ ...this.#defaults, ...this.#own });
   }
 
   set<K extends keyof Preferences>(key: K, value: Preferences[K]): void {
-    this.values = this.sanitize({ ...this.values, [key]: value });
-    this.store?.set(STORE_KEY, this.values);
+    this.#own = { ...this.#own, [key]: value };
+    this.#changed();
+  }
+
+  /** Everything back to the club's defaults (and the app's where the club set none). */
+  reset(): void {
+    this.#own = {};
+    this.#changed();
+  }
+
+  /**
+   * After sign-in: the member's choices from the server win over this browser's; a member with none yet keeps what
+   * this browser holds and sends it up once.
+   */
+  async connect(remote: PreferencesRemote): Promise<void> {
+    this.#remote = remote;
+    const loaded = await remote.load();
+    this.club = PreferencesService.parse(loaded.clubDefaults);
+    if (loaded.values != null) this.#own = PreferencesService.parse(loaded.values);
+    else if (Object.keys(this.#own).length) this.#push();
+    this.#apply();
+  }
+
+  /** Signed out: changes stay in this browser only. */
+  disconnect(): void {
+    clearTimeout(this.#timer);
+    this.#remote = null;
+  }
+
+  /** The current values of what the club may preset (to save them as its defaults). */
+  clubDefaults(): Partial<Preferences> {
+    return Object.fromEntries(CLUB_DEFAULT_KEYS.map((key) => [key, this.values[key]]));
+  }
+
+  /** Admin/board: the member's current start page, sidebar order, calendar and file views become the club's defaults. */
+  async saveClubDefaults(): Promise<void> {
+    await this.#setClub(JSON.stringify(this.clubDefaults()));
+  }
+
+  async removeClubDefaults(): Promise<void> {
+    await this.#setClub(null);
+  }
+
+  async #setClub(values: string | null): Promise<void> {
+    if (!this.#remote) throw new Error('Not signed in');
+    this.club = PreferencesService.parse((await this.#remote.saveDefaults(values)).clubDefaults);
+    this.#apply();
+  }
+
+  #changed(): void {
+    this.#apply();
+    this.#push();
+  }
+
+  #apply(): void {
+    this.values = this.sanitize({ ...this.#defaults, ...this.club, ...this.#own });
+    this.store?.set(STORE_KEY, this.#own);
     this.onChange(this.values);
   }
 
-  reset(): void {
-    this.values = { ...this.#defaults };
-    this.store?.set(STORE_KEY, this.values);
-    this.onChange(this.values);
+  /** Quick changes in a row (closing sidebar groups) go out as one request. */
+  #push(): void {
+    clearTimeout(this.#timer);
+    const remote = this.#remote;
+    if (!remote) return;
+    this.#timer = setTimeout(() => {
+      const own = Object.keys(this.#own).length ? JSON.stringify(this.#own) : null;
+      remote.save(own).catch(() => {}); // kept in this browser; sent again with the next change
+    }, 500);
   }
 
   /** Light ↔ dark; from "system" it switches to the opposite of what the device shows now. */
@@ -98,6 +196,7 @@ export class PreferencesService {
       density: values.density in this.appearance.densities ? values.density : d.density,
       reduceMotion: values.reduceMotion === true,
       calendarView: ['month', 'week'].includes(values.calendarView) ? values.calendarView : d.calendarView,
+      ...PreferencesService.hours(values, d),
       navOrder: PreferencesService.strings(values.navOrder),
       sidebarCollapsed: values.sidebarCollapsed === true,
       navClosed: PreferencesService.strings(values.navClosed),
@@ -107,6 +206,26 @@ export class PreferencesService {
         Object.entries(values.homeShown && typeof values.homeShown === 'object' ? values.homeShown : {}).filter(([, on]) => typeof on === 'boolean'),
       ),
     };
+  }
+
+  /** Whole hours 0–24, at least 4 shown; otherwise the defaults. */
+  private static hours(values: Preferences, d: Preferences): Pick<Preferences, 'weekStartHour' | 'weekEndHour'> {
+    const { weekStartHour: start, weekEndHour: end } = values;
+    return Number.isInteger(start) && Number.isInteger(end) && start >= 0 && end <= 24 && end - start >= 4
+      ? { weekStartHour: start, weekEndHour: end }
+      : { weekStartHour: d.weekStartHour, weekEndHour: d.weekEndHour };
+  }
+
+  private static parse(json: string | null): Partial<Preferences> {
+    try {
+      return json ? PreferencesService.object(JSON.parse(json)) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  private static object(value: unknown): Partial<Preferences> {
+    return value && typeof value === 'object' && !Array.isArray(value) ? (value as Partial<Preferences>) : {};
   }
 
   private static strings(value: unknown): string[] {

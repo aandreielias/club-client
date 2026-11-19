@@ -52,6 +52,7 @@ export const SETTINGS_SECTIONS: Record<SectionId, Component<any>> = {
   mailboxes: MailboxesSection,
   finance: FinanceSettingsSection,
   'fees-due': FeeSettingsSection,
+  'fees-calc': FeeSettingsSection,
   'fees-payment': FeeSettingsSection,
 };
 
@@ -61,5 +62,6 @@ export const SECTION_PROPS: Partial<Record<SectionId, { id: string }>> = {
   'brand-logos': { id: 'logos' },
   'brand-mail': { id: 'mail' },
   'fees-due': { id: 'due' },
+  'fees-calc': { id: 'calc' },
   'fees-payment': { id: 'payment' },
 };

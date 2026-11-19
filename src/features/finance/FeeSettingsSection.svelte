@@ -6,10 +6,10 @@
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
   import SettingsForm from '../../ui/SettingsForm.svelte';
-  import { FEE_PARTS, type FeeSettings } from './model';
+  import { FEE_COMBINES, FEE_PARTS, YOUTH_CUTOFFS, type FeeSettings } from './model';
   import { categories, financeApi } from './services';
 
-  /** One part of the fee settings (Einstellungen › Verein › Buchhaltung › Mitgliedsbeiträge, WRITE): when fees fall due and are reminded, or how members pay. */
+  /** One part of the fee settings (Einstellungen › Verein › Buchhaltung › Mitgliedsbeiträge, WRITE): when fees fall due and are reminded, how they are reckoned, or how members pay. */
   let { id }: { id: string } = $props();
 
   const fees = new SettingsDraft<FeeSettings>({
@@ -20,6 +20,9 @@
     holder: null,
     iban: null,
     bic: null,
+    youthUntilAge: null,
+    youthCutoff: 'GENERATION',
+    combine: 'HIGHEST',
   });
   const load = new Action();
   void load.run(async () => fees.load(await financeApi.feeSettings()));
@@ -47,6 +50,25 @@
     <Field label="Erinnern alle" hint="Tage, solange nach der Fälligkeit etwas offen ist; 0 = keine Erinnerung">
       <input type="number" min="0" max={settings.finance.fee.maxDays} bind:value={fees.value.remindDays} class="short" />
     </Field>
+  </SettingsForm>
+{:else if id === 'calc'}
+  <SettingsForm
+    title={FEE_PARTS.calc}
+    intro="Gilt für die Beiträge, die ab jetzt erstellt werden; bestehende bleiben."
+    draft={fees}
+    onsave={(value) => financeApi.saveFeeSettings(value)}
+  >
+    <Field label="Jugendtarif unter" hint="Jahren; leer = solange Erziehungsberechtigte handeln (Mitglieder-Einstellungen)">
+      <input
+        type="number"
+        min="1"
+        max={settings.finance.fee.maxYouthAge}
+        class="short"
+        bind:value={() => fees.value.youthUntilAge ?? '', (v) => (fees.value.youthUntilAge = v === '' || v == null ? null : Number(v))}
+      />
+    </Field>
+    <Field label="Das Alter zählt"><Select bind:value={fees.value.youthCutoff} options={YOUTH_CUTOFFS} /></Field>
+    <Field label="Mit mehreren Mitgliedsarten zahlt man"><Select bind:value={fees.value.combine} options={FEE_COMBINES} /></Field>
   </SettingsForm>
 {:else if id === 'payment'}
   <SettingsForm

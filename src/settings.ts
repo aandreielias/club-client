@@ -596,7 +596,7 @@ export const settings = {
     maxReceipts: 10,
     listCap: 2000,
     /** server: FeeSettings (due and reminder days, how to pay, account holder) */
-    fee: { maxDays: 365, instructionsMaxLength: 2000, holderMaxLength: 70 },
+    fee: { maxDays: 365, instructionsMaxLength: 2000, holderMaxLength: 70, maxYouthAge: 99 },
   },
   inventory: {
     /** server: inventory module (Item) */

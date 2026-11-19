@@ -184,6 +184,50 @@ describe('mock finance fees', () => {
   });
 });
 
+describe('mock finance fee rules', () => {
+  it('adds up all kinds with SUM and counts the youth age on the cutoff day', () => {
+    const season = 2031;
+    const kid = directory.members.data.find((m) => m.active && m.membershipTypes.length && directory.underAge(m.id) && m.birthDate)!;
+    const saved = structuredClone(kid.membershipTypes);
+    kid.membershipTypes = ['HONORARY', 'ORDINARY'];
+    const settings = { ...finance.feeSettings.data };
+    try {
+      expect(() => finance.saveFeeSettings({ ...settings, youthUntilAge: 0 })).toThrow(code('finance.fee-invalid'));
+      expect(() => finance.saveFeeSettings({ ...settings, combine: 'MOST' })).toThrow(code('finance.fee-invalid'));
+      finance.saveRates(season, {
+        items: [
+          { kind: 'ORDINARY', cents: 12_000, minorCents: 6000 },
+          { kind: 'HONORARY', cents: 1000, minorCents: null },
+        ],
+      });
+      // youth only below 1: everyone pays the full rates, added up
+      finance.saveFeeSettings({ ...settings, youthUntilAge: 1, youthCutoff: 'SEASON_START', combine: 'SUM' });
+      expect(finance.generate(season).items.find((c) => c.memberId === kid.id)).toMatchObject({
+        kinds: ['HONORARY', 'ORDINARY'],
+        amountCents: 13_000,
+      });
+    } finally {
+      kid.membershipTypes = saved;
+      finance.saveFeeSettings(settings);
+    }
+  });
+
+  it('lets the club take the books from the board and audits from admins', () => {
+    const board = directory.boardSettings.data;
+    const vorstand = directory.members.data.find((m) => m.roles.includes('BOARD') && directory.financeLevel(m) === 'READ')!;
+    // the seeded admin is also an auditor; an admin holding no office
+    const admin = { ...member('admin'), id: 'admin-without-office' };
+    expect(finance.mayConfirm(admin)).toBe(true);
+    Object.assign(board, { boardFinance: 'NONE', adminsConfirmAudit: false });
+    try {
+      expect(directory.financeLevel(vorstand)).toBe('NONE');
+      expect(finance.mayConfirm(admin)).toBe(false);
+    } finally {
+      Object.assign(board, { boardFinance: 'READ', adminsConfirmAudit: true });
+    }
+  });
+});
+
 describe('mock finance seeded fees', () => {
   it('shows players and parents their fees with payments', () => {
     const own = finance.myFees(member('spielerin')).items.find((c) => c.id === 'fee-spielerin');

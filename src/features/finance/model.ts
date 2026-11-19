@@ -155,7 +155,26 @@ export interface FeeSettings {
   holder: string | null;
   iban: string | null;
   bic: string | null;
+  /** younger members pay the minor rate; null = the club's guardianUntilAge */
+  youthUntilAge: number | null;
+  /** the day the age counts */
+  youthCutoff: YouthCutoff;
+  /** what a member with several kinds pays */
+  combine: FeeCombine;
 }
+
+export type YouthCutoff = 'GENERATION' | 'SEASON_START' | 'JANUARY_1';
+export type FeeCombine = 'HIGHEST' | 'SUM';
+
+export const YOUTH_CUTOFFS: { value: YouthCutoff; label: string }[] = [
+  { value: 'GENERATION', label: 'am Tag der Erstellung' },
+  { value: 'SEASON_START', label: 'zu Saisonbeginn' },
+  { value: 'JANUARY_1', label: 'am 1. Jänner des Saisonjahrs' },
+];
+export const FEE_COMBINES: { value: FeeCombine; label: string }[] = [
+  { value: 'HIGHEST', label: 'den höchsten Beitrag ihrer Arten' },
+  { value: 'SUM', label: 'die Beiträge aller Arten zusammen' },
+];
 
 /** The sections of the Buchhaltung page, each a window (`finance-section`). */
 export const FINANCE_SECTIONS: Record<string, string> = {
@@ -167,7 +186,7 @@ export const FINANCE_SECTIONS: Record<string, string> = {
 };
 
 /** The windows of the fee settings in Einstellungen › Buchhaltung. */
-export const FEE_PARTS: Record<string, string> = { due: 'Fälligkeit und Erinnerung', payment: 'Bezahlen' };
+export const FEE_PARTS: Record<string, string> = { due: 'Fälligkeit und Erinnerung', calc: 'Berechnung', payment: 'Bezahlen' };
 
 /** GET /me/fees */
 export interface MyFees {
@@ -203,7 +222,8 @@ export interface Charge {
   id: string;
   season: number;
   memberId: string;
-  kind: string;
+  /** the membership kinds the amount comes from */
+  kinds: string[];
   amountCents: number;
   paidCents: number;
   status: ChargeStatus;

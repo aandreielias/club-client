@@ -4,6 +4,7 @@
   import { Action } from '../../lib/state/Action.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
   import Field from '../../ui/Field.svelte';
+  import Select from '../../ui/Select.svelte';
   import SettingsForm from '../../ui/SettingsForm.svelte';
   import SettingsList from '../../ui/SettingsList.svelte';
   import type { BoardSettings } from './MembersApi';
@@ -11,16 +12,33 @@
   import { boardSettings } from './services';
 
   /** Einstellungen › Funktionen (admin/board): the board-wide rules, then the offices; each opens in the window. */
-  type BoardRules = Pick<BoardSettings, 'minBoardSize' | 'oddBoardSize' | 'cooptWeeks' | 'termWarningDays' | 'byElectionDays'>;
-  const rulesOf = ({ minBoardSize, oddBoardSize, cooptWeeks, termWarningDays, byElectionDays }: BoardSettings): BoardRules => ({
-    minBoardSize,
-    oddBoardSize,
-    cooptWeeks,
-    termWarningDays,
-    byElectionDays,
+  type BoardRules = Pick<
+    BoardSettings,
+    'minBoardSize' | 'oddBoardSize' | 'cooptWeeks' | 'termWarningDays' | 'byElectionDays' | 'boardFinance' | 'adminsConfirmAudit'
+  >;
+  const rulesOf = (s: BoardSettings): BoardRules => ({
+    minBoardSize: s.minBoardSize,
+    oddBoardSize: s.oddBoardSize,
+    cooptWeeks: s.cooptWeeks,
+    termWarningDays: s.termWarningDays,
+    byElectionDays: s.byElectionDays,
+    boardFinance: s.boardFinance,
+    adminsConfirmAudit: s.adminsConfirmAudit,
   });
+  const BOARD_FINANCE = [
+    { value: 'READ', label: 'liest die Buchhaltung' },
+    { value: 'NONE', label: 'sieht sie nicht' },
+  ] as const;
 
-  const draft = new SettingsDraft<BoardRules>({ minBoardSize: 3, oddBoardSize: false, cooptWeeks: 4, termWarningDays: 60, byElectionDays: 30 });
+  const draft = new SettingsDraft<BoardRules>({
+    minBoardSize: 3,
+    oddBoardSize: false,
+    cooptWeeks: 4,
+    termWarningDays: 60,
+    byElectionDays: 30,
+    boardFinance: 'READ',
+    adminsConfirmAudit: true,
+  });
   const load = new Action();
   const reload = () =>
     void load.run(async () => {
@@ -82,6 +100,12 @@
     </div>
     <label class="check"
       ><input type="checkbox" bind:checked={draft.value.oddBoardSize} /> Ungerade Zahl an Personen im Vorstand (Hinweis bei gerader)</label
+    >
+    <Field label="Der Vorstand als solcher" hint="Funktionen mit eigener Buchhaltungs-Stufe (Kassier:in, Rechnungsprüfung) behalten sie.">
+      <Select bind:value={draft.value.boardFinance} options={BOARD_FINANCE} />
+    </Field>
+    <label class="check"
+      ><input type="checkbox" bind:checked={draft.value.adminsConfirmAudit} /> Admins bestätigen Kassenprüfungen (neben der Rechnungsprüfung)</label
     >
   </SettingsForm>
 

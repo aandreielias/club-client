@@ -2,6 +2,7 @@
 // `npm run api:sync`) must satisfy the client's own DTO types, so a renamed, removed or retyped field fails the build.
 // Not checked: whether a field may be null (the server's records write every field; nullability is not in the document).
 import type { components } from './schema';
+import type { RemotePreferences } from '../preferences/PreferencesService.svelte';
 import type { Absence, AbsenceList, Appointment, AppointmentList, Attendance, CalendarSettings, Ride, RideList } from '../../features/calendar/model';
 import type { DownloadLink, FileHits, FileList, FilePatch, FileSettings, FolderList, FolderPatch, SettingFileList } from '../../features/files/model';
 import type {
@@ -130,6 +131,7 @@ export type Contract = [
   Satisfies<S['at.clubserver.notifications.api.NotificationsApi.NotificationList'], NotificationList>,
   Satisfies<S['at.clubserver.notifications.api.NotificationsApi.Preference'], Preference>,
   Satisfies<S['at.clubserver.notifications.api.NotificationsApi.Preferences'], Preferences>,
+  Satisfies<S['at.clubserver.members.api.MembersApi.Preferences'], RemotePreferences>,
   Satisfies<S['at.clubserver.gateway.rest.SearchController.SearchHit'], SearchHit>,
   Satisfies<S['at.clubserver.gateway.rest.SearchController.SearchResult'], SearchResult>,
   Satisfies<S['at.clubserver.tasks.api.TasksApi.TaskDto'], Task>,

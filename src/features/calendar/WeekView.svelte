@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { settings } from '../../settings';
-  import { session } from '../../lib/container';
+  import { preferences, session } from '../../lib/container';
   import type { CalendarModel } from './CalendarModel.svelte';
   import type { CalendarDrag } from './CalendarDrag';
   import type { CalendarResize } from './CalendarResize';
@@ -31,8 +30,9 @@
     resizer?: CalendarResize;
   } = $props();
 
-  const { weekStartHour: startHour, weekEndHour: endHour } = settings.calendar;
-  const hours = Array.from({ length: endHour - startHour }, (_, i) => startHour + i);
+  const startHour = $derived(preferences.values.weekStartHour);
+  const endHour = $derived(preferences.values.weekEndHour);
+  const hours = $derived(Array.from({ length: endHour - startHour }, (_, i) => startHour + i));
   const bars = $derived(model.spans(model.days));
 </script>
 

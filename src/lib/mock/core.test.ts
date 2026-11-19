@@ -23,6 +23,20 @@ describe('mock core', () => {
     expect(mockServer.handle('GET', '/api/v1/me', undefined, as('neu'))).toMatchObject({ missing: [] });
   });
 
+  it('keeps preferences per member and the club defaults for admin/board', () => {
+    const body = { values: '{"calendarView":"week"}' };
+    expect(() => mockServer.handle('PUT', '/api/v1/preferences/defaults', body, as('spieler'))).toThrow(expect.objectContaining({ status: 403 }));
+    mockServer.handle('PUT', '/api/v1/preferences/defaults', body, as('vorstand'));
+    mockServer.handle('PUT', '/api/v1/me/preferences', { values: '{"scheme":"dark"}' }, as('neu'));
+    expect(mockServer.handle('GET', '/api/v1/me/preferences', undefined, as('neu'))).toEqual({
+      values: '{"scheme":"dark"}',
+      clubDefaults: '{"calendarView":"week"}',
+    });
+    mockServer.handle('PUT', '/api/v1/me/preferences', { values: '' }, as('neu'));
+    mockServer.handle('PUT', '/api/v1/preferences/defaults', { values: null }, as('vorstand'));
+    expect(mockServer.handle('GET', '/api/v1/me/preferences', undefined, as('neu'))).toEqual({ values: null, clubDefaults: null });
+  });
+
   it('lets privileged members change club data with their role alone', () => {
     const trainer = directory.members.data.find((m) => m.id === 'trainer')!;
     expect(() => directory.requirePrivileged(trainer)).not.toThrow();

@@ -169,6 +169,8 @@ const SEEDED_BOARD_SETTINGS: BoardSettings = {
   multipleKinds: false,
   guardianUntilAge: 18,
   ownConsentAge: 14,
+  boardFinance: 'READ',
+  adminsConfirmAudit: true,
 };
 
 /** Members and teams of the mock club, plus the server's authorization helpers. */
@@ -282,6 +284,22 @@ export class MockDirectory {
 
   /** memberId → teamId → role in that team */
   readonly memberships = new MockTable<Record<string, Record<string, TeamRole>>>('memberships', () => MockDirectory.seedMemberships());
+  /** server: members_preference by member id, and members_preference_default under '' (JSON text, as the client sent it) */
+  readonly preferences = new MockTable<Record<string, string>>('preferences', () => ({}));
+
+  /** server: MemberHandlers.preferences */
+  preferencesOf(member: Member): { values: string | null; clubDefaults: string | null } {
+    return { values: this.preferences.data[member.id] ?? null, clubDefaults: this.preferences.data[''] ?? null };
+  }
+
+  /** server: PreferencesBody (at most 16000 characters; blank = none) */
+  savePreferences(key: string, body: { values?: unknown }): void {
+    const values = body.values;
+    if (values != null && (typeof values !== 'string' || values.length > 16_000)) fail(400, 'request.invalid');
+    if (typeof values === 'string' && values.trim()) this.preferences.data[key] = values;
+    else delete this.preferences.data[key];
+    this.preferences.save();
+  }
 
   private static seedMemberships(): Record<string, Record<string, TeamRole>> {
     return {
@@ -490,6 +508,7 @@ export class MockDirectory {
     const path = request.path ?? '';
     const get = request.method === 'GET';
     return (
+      path === '/api/v1/me/preferences' ||
       (get && (path === '/api/v1/me' || path === '/api/v1/tournaments' || path.startsWith('/api/v1/tournaments/'))) ||
       // meeting guests: their meetings, check-in and votes
       (get &&
@@ -715,6 +734,8 @@ export class MockDirectory {
       memberSince: null,
     });
     delete this.wards.data[memberId];
+    delete this.preferences.data[memberId];
+    this.preferences.save();
     for (const wards of Object.values(this.wards.data)) wards.splice(0, wards.length, ...wards.filter((id) => id !== memberId));
     this.saveMembers();
     this.wards.save();
@@ -763,13 +784,17 @@ export class MockDirectory {
       .map((o) => o.office);
   }
 
-  /** server: FinanceAccess.level — the highest level of the offices held; admins keep the books, the board reads. */
+  /** server: FinanceAccess.level — the highest level of the offices held; admins keep the books, the board as the club sets. */
   financeLevel(member: Member): FinanceLevel {
     if (guestOnly(member.roles)) return 'NONE';
     const order: FinanceLevel[] = ['NONE', 'READ', 'AUDIT', 'WRITE'];
     const held = this.officesOf(member.id);
     const levels = this.boardSettings.data.offices.filter((o) => held.includes(o.office)).map((o) => o.finance);
-    const base: FinanceLevel = member.roles.includes('ADMIN') ? 'WRITE' : member.roles.includes('BOARD') ? 'READ' : 'NONE';
+    const base: FinanceLevel = member.roles.includes('ADMIN')
+      ? 'WRITE'
+      : member.roles.includes('BOARD')
+        ? this.boardSettings.data.boardFinance
+        : 'NONE';
     return [base, ...levels].reduce((a, b) => (order.indexOf(b) > order.indexOf(a) ? b : a));
   }
 
@@ -1033,6 +1058,7 @@ export const personalData = new Map<string, (memberId: string) => Record<string,
           .filter(([, minors]) => minors.includes(memberId))
           .map(([id]) => ({ guardianId: id, name: directory.displayName(id) })),
         wards: directory.wardsOf(memberId).map((id) => ({ minorId: id, name: directory.displayName(id) })),
+        preferences: memberId in directory.preferences.data ? [{ data: directory.preferences.data[memberId] }] : [],
       };
     },
   ],
@@ -1124,6 +1150,18 @@ mockServer
       guestAreas: guestOnly(member.roles) ? guestAreas(req.email) : [],
       financeAccess: directory.financeLevel(member),
     };
+  })
+  .on('GET', '/api/v1/me/preferences', (req) => directory.preferencesOf(directory.actor(req, true)))
+  .on('PUT', '/api/v1/me/preferences', (req) => {
+    const member = directory.actor(req, true);
+    directory.savePreferences(member.id, req.body ?? {});
+    return directory.preferencesOf(member);
+  })
+  .on('PUT', '/api/v1/preferences/defaults', (req) => {
+    const member = directory.actor(req);
+    directory.requirePrivileged(member, ADMIN_BOARD);
+    directory.savePreferences('', req.body ?? {});
+    return directory.preferencesOf(member);
   })
   // Own profile also works before onboarding is complete (birth date step).
   .on('PATCH', '/api/v1/members/:id', (req) => {

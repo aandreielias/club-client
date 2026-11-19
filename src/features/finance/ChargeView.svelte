@@ -155,8 +155,8 @@
         <dl class="props">
           <dt>Mitglied</dt>
           <dd><MemberName memberId={c.memberId} /></dd>
-          <dt>Mitgliedsart</dt>
-          <dd>{membershipKinds.label(c.kind)}</dd>
+          <dt>{c.kinds.length === 1 ? 'Mitgliedsart' : 'Mitgliedsarten'}</dt>
+          <dd>{c.kinds.map((k) => membershipKinds.label(k)).join(', ')}</dd>
           <dt>Beitrag</dt>
           <dd>{money(c.amountCents)}</dd>
           <dt>Bezahlt</dt>

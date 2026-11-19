@@ -161,16 +161,12 @@ export class MockBoard {
     }
     const int = (v: unknown, min: number, max: number) => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
     const offices = list.map((o) => {
-      // the seeded ones keep their place on or off the board
-      if (OFFICES.includes(o.office) && o.board !== undefined && !!o.board !== (o.office !== 'AUDITOR')) fail(400, 'board-settings.offices-invalid');
+      // server: OfficeDuty.seeded / FinanceLevel.seeded fill a missing value; the club may change every one of them
       const seededDuty = o.office === 'CHAIR' ? 'CHAIR' : o.office === 'SECRETARY' ? 'SECRETARY' : 'NONE';
-      if (OFFICES.includes(o.office) && o.duty !== undefined && o.duty !== seededDuty) fail(400, 'board-settings.offices-invalid');
-      const duty = OFFICES.includes(o.office) ? seededDuty : ['CHAIR', 'SECRETARY'].includes(o.duty) ? o.duty : 'NONE';
-      // server: FinanceLevel.seeded — the treasurer keeps the books, the auditors check them
+      const duty = ['NONE', 'CHAIR', 'SECRETARY'].includes(o.duty) ? o.duty : seededDuty;
       const seededFinance = o.office === 'TREASURER' ? 'WRITE' : o.office === 'AUDITOR' ? 'AUDIT' : 'NONE';
-      if (OFFICES.includes(o.office) && o.finance !== undefined && o.finance !== seededFinance) fail(400, 'board-settings.offices-invalid');
-      const finance = OFFICES.includes(o.office) ? seededFinance : FINANCE_LEVELS.includes(o.finance) ? o.finance : 'NONE';
-      return MockBoard.office(o, o.office, OFFICES.includes(o.office) ? o.office !== 'AUDITOR' : !!o.board, duty, finance);
+      const finance = FINANCE_LEVELS.includes(o.finance) ? o.finance : seededFinance;
+      return MockBoard.office(o, o.office, !!o.board, duty, finance);
     });
     const combinations: OfficePair[] = Array.isArray(body.combinations) ? body.combinations : fail(400, 'board-settings.combination-invalid');
     if (combinations.some((p) => !p || !keys.includes(p.a) || !keys.includes(p.b) || p.a === p.b)) {
@@ -184,6 +180,7 @@ export class MockBoard {
     if (!int(body.guardianUntilAge, ages.guardianMin, ages.guardianMax) || !int(body.ownConsentAge, ages.consentMin, body.guardianUntilAge)) {
       fail(400, 'board-settings.ages-invalid');
     }
+    if (!['NONE', 'READ'].includes(body.boardFinance)) fail(400, 'board-settings.board-invalid');
     if (!body.multipleKinds && this.people.members.data.some((m) => m.membershipTypes.length > 1)) fail(409, 'member.several-kinds');
     this.people.requireHoldersEligible(this.people.membershipKinds.data);
     Object.assign(this.people.boardSettings.data, {
@@ -197,6 +194,8 @@ export class MockBoard {
       multipleKinds: !!body.multipleKinds,
       guardianUntilAge: body.guardianUntilAge,
       ownConsentAge: body.ownConsentAge,
+      boardFinance: body.boardFinance,
+      adminsConfirmAudit: !!body.adminsConfirmAudit,
     });
     this.people.boardSettings.save();
     // an office moved on or off the board changes its holders' BOARD role
