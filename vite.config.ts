@@ -41,5 +41,6 @@ export default defineConfig(({ mode }) => ({
   plugins: [svelte(), csp(loadEnv(mode, '.', 'VITE_'))],
   // MapLibre's worker is a module (src/ui/LocationMap.svelte loads it by URL).
   worker: { format: 'es' },
-  test: { include: ['src/**/*.test.ts'] },
+  // the mock-server flows take ~1 s locally and several on CI runners
+  test: { include: ['src/**/*.test.ts'], testTimeout: 20_000 },
 }));
