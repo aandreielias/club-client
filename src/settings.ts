@@ -253,6 +253,17 @@ export const settings = {
       sideWidth: 'min(580px, 46vw)',
       bottomHeight: '50vh',
     },
+    /** Video call window sizes per placement; `left` is the side placement moved next to the sidebar. */
+    call: {
+      centerWidth: 'min(760px, calc(100vw - 48px))',
+      centerHeight: 'min(70vh, 600px)',
+      sideWidth: 'min(420px, 34vw)',
+      bottomHeight: '42vh',
+      /** The minimized call: one bar along the bottom. */
+      barHeight: '56px',
+      /** Share of the brand's primary colour in the call's dark background. */
+      tint: '30%',
+    },
     /** CSS side of `settings.motion` (same numbers, as custom properties). */
     motion: {
       fast: `${motionMs.fast}ms`,
@@ -361,6 +372,13 @@ export const settings = {
     locationMaxLength: 200,
     /** server: CallHandlers.OPENS_BEFORE */
     callOpensBeforeMs: 60 * 60_000,
+    /** Speaker highlight: loudness (0–1, RMS) that counts as speaking, how long it holds after silence, how often it is measured. */
+    callSpeakingLevel: 0.04,
+    callSpeakingHoldMs: 900,
+    callMeterMs: 200,
+    /** Dragging the call window's inner edge: smallest side width and bottom height. */
+    callMinSidePx: 280,
+    callMinBottomPx: 200,
     protocolMaxLength: 100_000,
     guestNameMaxLength: 100,
     guestEmailMaxLength: 200,

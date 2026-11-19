@@ -7,6 +7,8 @@
     icon?: IconName;
     /** Tooltip; defaults to the label for icon-only choices. */
     hint?: string;
+    /** Not available right now (shown greyed out). */
+    disabled?: boolean;
   }
 </script>
 
@@ -74,8 +76,15 @@
       style:height="{pill.height}px"
     ></span>{/if}
   {#each options as option (option.value)}
-    <label class:checked={value === option.value} {@attach tooltip(option.hint ?? (iconOnly ? option.label : null))}>
-      <input type="radio" {name} value={option.value} bind:group={value} aria-label={iconOnly ? option.label : undefined} />
+    <label class:checked={value === option.value} class:off={option.disabled} {@attach tooltip(option.hint ?? (iconOnly ? option.label : null))}>
+      <input
+        type="radio"
+        {name}
+        value={option.value}
+        bind:group={value}
+        disabled={option.disabled}
+        aria-label={iconOnly ? option.label : undefined}
+      />
       {#if option.icon}<Icon name={option.icon} small={size === 'sm'} />{/if}
       {#if !iconOnly}{option.label}{/if}
     </label>
@@ -163,7 +172,8 @@
     flex: 1 1 auto;
     justify-content: center;
   }
-  .segmented:disabled label {
+  .segmented:disabled label,
+  label.off {
     opacity: 0.5;
     cursor: default;
   }

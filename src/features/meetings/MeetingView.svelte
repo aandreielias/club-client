@@ -164,7 +164,7 @@
         {#if m.online && (m.status === 'INVITED' || m.status === 'OPEN')}<dt>Online</dt>
           <dd>
             {#if m.status === 'OPEN' || Date.parse(m.startsAt) - Date.now() <= settings.meetings.callOpensBeforeMs}
-              <MeetingCall meetingId={m.id} />
+              <MeetingCall meeting={{ id: m.id, title: m.title }} />
             {:else}
               <span class="muted">Videokonferenz in der App, ab einer Stunde vor Beginn</span>
             {/if}

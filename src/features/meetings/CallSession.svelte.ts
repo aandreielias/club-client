@@ -1,4 +1,5 @@
 import type { MeetingsApi } from './MeetingsApi';
+import { settings } from '../../settings';
 import type { CallParticipant, CallTrack, Sdp } from './model';
 
 /** Another participant as shown: their name and the media pulled from them so far. */
@@ -10,6 +11,8 @@ export interface CallPeer {
 
 const STUN: RTCIceServer[] = [{ urls: 'stun:stun.cloudflare.com:3478' }];
 const POLL_MS = 4_000;
+/** The member's own tile in `speaking`/`featured`. */
+export const SELF = 'self';
 
 /**
  * The member's side of a meeting's video call: one peer connection to Cloudflare's SFU (Realtime), signalling through the server.
@@ -23,6 +26,10 @@ export class CallSession {
   micOn = $state(true);
   cameraOn = $state(true);
   joined = $state(false);
+  /** Who is talking now (memberId or SELF), null in silence. */
+  speaking = $state<string | null>(null);
+  /** The last one who talked, for the speaker layout. */
+  featured = $state<string | null>(null);
 
   private pc: RTCPeerConnection | null = null;
   private sessionId: string | null = null;
@@ -33,6 +40,10 @@ export class CallSession {
   private timer: ReturnType<typeof setInterval> | null = null;
   /** Negotiations run one after another on the one connection. */
   private queue: Promise<unknown> = Promise.resolve();
+  private audio: AudioContext | null = null;
+  private readonly meters = new Map<string, AnalyserNode>();
+  private meterTimer: ReturnType<typeof setInterval> | null = null;
+  private loudAt = 0;
 
   constructor(
     private readonly api: MeetingsApi,
@@ -53,6 +64,8 @@ export class CallSession {
     this.cameraOn = !!this.local?.getVideoTracks().length;
     this.micOn = !!this.local?.getAudioTracks().length;
     if (this.local?.getTracks().length) await this.run(() => this.push(this.local!));
+    if (this.local) this.meter(SELF, this.local);
+    this.meterTimer = setInterval(() => this.listen(), settings.meetings.callMeterMs);
     this.update(state.participants);
     this.timer = setInterval(() => void this.poll(), POLL_MS);
   }
@@ -70,7 +83,12 @@ export class CallSession {
   /** Stops everything; `notify` false when the page goes away and the server will forget the member anyway. */
   async leave(notify = true): Promise<void> {
     if (this.timer) clearInterval(this.timer);
-    this.timer = null;
+    if (this.meterTimer) clearInterval(this.meterTimer);
+    this.timer = this.meterTimer = null;
+    this.meters.clear();
+    void this.audio?.close();
+    this.audio = null;
+    this.speaking = this.featured = null;
     this.local?.getTracks().forEach((t) => t.stop());
     this.pc?.close();
     this.pc = null;
@@ -136,7 +154,37 @@ export class CallSession {
     const memberId = e.transceiver.mid ? this.owners.get(e.transceiver.mid) : undefined;
     if (!memberId) return;
     this.stream(memberId).addTrack(e.track);
+    if (e.track.kind === 'audio') this.meter(memberId, this.stream(memberId));
     this.peers = this.peers.map((p) => (p.memberId === memberId ? { ...p, stream: this.stream(memberId) } : p));
+  }
+
+  /** Measures a stream's loudness for the speaker highlight. */
+  private meter(id: string, stream: MediaStream): void {
+    if (this.meters.has(id) || !stream.getAudioTracks().length || typeof AudioContext === 'undefined') return;
+    this.audio ??= new AudioContext();
+    const analyser = this.audio.createAnalyser();
+    analyser.fftSize = 512;
+    this.audio.createMediaStreamSource(stream).connect(analyser);
+    this.meters.set(id, analyser);
+  }
+
+  /** The loudest one above the level speaks; the highlight holds a moment after silence so it does not flicker. */
+  private listen(): void {
+    const samples = new Uint8Array(256);
+    let loudest: string | null = null;
+    let max: number = settings.meetings.callSpeakingLevel;
+    for (const [id, analyser] of this.meters) {
+      if (id === SELF && !this.micOn) continue;
+      analyser.getByteTimeDomainData(samples);
+      const level = Math.sqrt(samples.reduce((sum, v) => sum + (v - 128) ** 2, 0) / samples.length) / 128;
+      if (level > max) [max, loudest] = [level, id];
+    }
+    const now = Date.now();
+    if (loudest) {
+      this.loudAt = now;
+      if (this.speaking !== loudest) this.speaking = loudest;
+      if (this.featured !== loudest) this.featured = loudest;
+    } else if (this.speaking && now - this.loudAt > settings.meetings.callSpeakingHoldMs) this.speaking = null;
   }
 
   private stream(memberId: string): MediaStream {

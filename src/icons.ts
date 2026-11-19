@@ -40,6 +40,12 @@ import Ellipsis from '@lucide/svelte/icons/ellipsis';
 import Package from '@lucide/svelte/icons/package';
 import Wallet from '@lucide/svelte/icons/wallet';
 import PanelBottom from '@lucide/svelte/icons/panel-bottom';
+import LayoutGrid from '@lucide/svelte/icons/layout-grid';
+import Maximize from '@lucide/svelte/icons/maximize';
+import Maximize2 from '@lucide/svelte/icons/maximize-2';
+import Minimize from '@lucide/svelte/icons/minimize';
+import Minus from '@lucide/svelte/icons/minus';
+import SquareUser from '@lucide/svelte/icons/square-user';
 import PanelLeft from '@lucide/svelte/icons/panel-left';
 import PanelRight from '@lucide/svelte/icons/panel-right';
 import Pencil from '@lucide/svelte/icons/pencil';
@@ -162,6 +168,12 @@ export const ICONS = {
   camera: Video,
   cameraOff: VideoOff,
   hangUp: PhoneOff,
+  minimize: Minus,
+  restore: Maximize2,
+  fullscreen: Maximize,
+  fullscreenExit: Minimize,
+  gallery: LayoutGrid,
+  speaker: SquareUser,
 } as const;
 
 export type IconName = keyof typeof ICONS;

@@ -29,6 +29,7 @@
     connection,
     onlogout,
     settingsBack = null,
+    forceCollapsed = false,
   }: {
     title: string;
     /** The club's logo; without one the mark shows the first letter. */
@@ -40,6 +41,8 @@
     onlogout: () => void;
     /** On Einstellungen: the settings tree replaces the app navigation; "Zurück" leads to this path. */
     settingsBack?: string | null;
+    /** Collapsed whatever the member chose, e.g. while the video call takes the left edge. */
+    forceCollapsed?: boolean;
   } = $props();
 
   // --- settings mode: the tree of Einstellungen, filtered by the search field ---
@@ -74,7 +77,7 @@
 
   let open = $state(false);
   // Icons only (desktop); the phone layout always shows the full overlay.
-  const collapsed = $derived(preferences.values.sidebarCollapsed);
+  const collapsed = $derived(preferences.values.sidebarCollapsed || forceCollapsed);
 
   /** From the collapsed sidebar: expand it and put the cursor into the search field. */
   async function keyboardSearch() {
@@ -629,6 +632,10 @@
   }
   .collapse {
     margin-left: auto;
+  }
+  /* Its flyouts open over the video call (CallWindow), which floats above the page. */
+  :global(:root[data-call]:not([data-layout='compact'])) nav.collapsed {
+    z-index: 33;
   }
   :global(:root:not([data-layout='compact'])) nav.collapsed {
     width: var(--layout-sidebar-collapsed-width);

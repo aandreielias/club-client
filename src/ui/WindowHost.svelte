@@ -342,6 +342,20 @@
     height: var(--window-bottom-height);
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   }
+  /* Room for the video call (CallWindow): docked at the side or left edge, or minimized to its bar. */
+  :global(:root[data-call='side']:not([data-layout='compact'])) .bottom {
+    width: calc(100vw - var(--layout-sidebar-width) - var(--call-side-width));
+  }
+  :global(:root[data-call='left']:not([data-layout='compact'])) .bottom {
+    left: calc(var(--layout-sidebar-collapsed-width) + var(--call-side-width));
+    width: calc(100vw - var(--layout-sidebar-collapsed-width) - var(--call-side-width));
+  }
+  :global(:root[data-call='bar']:not([data-layout='compact'])) .side {
+    height: calc(100dvh - var(--call-bar-height));
+  }
+  :global(:root[data-call='bar']:not([data-layout='compact'])) .bottom {
+    top: calc(100dvh - var(--window-bottom-height) - var(--call-bar-height));
+  }
   :global([data-layout='compact']) .window {
     top: 0;
     left: 0;

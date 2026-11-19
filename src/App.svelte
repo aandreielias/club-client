@@ -38,6 +38,8 @@
   import Centered from './ui/Centered.svelte';
   import ConfirmDialog from './ui/ConfirmDialog.svelte';
   import WindowHost from './ui/WindowHost.svelte';
+  import CallWindow from './features/meetings/CallWindow.svelte';
+  import { calls } from './features/meetings/services';
   import CommandPalette from './ui/CommandPalette.svelte';
   import SequenceHint from './ui/SequenceHint.svelte';
   import Empty from './ui/Empty.svelte';
@@ -147,6 +149,7 @@
       connection={live.status}
       onlogout={logout}
       settingsBack={inSettings ? appPath : null}
+      forceCollapsed={!!calls.session && !calls.minimized && calls.dock === 'left'}
     />
     <main style:view-transition-name="page">
       {#if split.isOpen}
@@ -186,6 +189,7 @@
 
 {#if app.screen === 'shell'}
   <WindowHost />
+  <CallWindow />
   <CommandPalette />
   <SequenceHint />
 {/if}
@@ -210,6 +214,22 @@
   }
   :global(:root[data-window='bottom']:not([data-layout='compact'])) main {
     margin-bottom: var(--window-bottom-height);
+  }
+  /* The same for the docked video call (CallWindow) and its bar. */
+  :global(:root[data-call='side']:not([data-layout='compact'])) main {
+    margin-right: var(--call-side-width);
+  }
+  :global(:root[data-call='left']:not([data-layout='compact'])) main {
+    margin-left: var(--call-side-width);
+  }
+  :global(:root[data-call='bottom']:not([data-layout='compact'])) main {
+    margin-bottom: var(--call-bottom-height);
+  }
+  :global(:root[data-call='bar']) main {
+    margin-bottom: var(--call-bar-height);
+  }
+  :global(:root[data-call='bar'][data-window='bottom']:not([data-layout='compact'])) main {
+    margin-bottom: calc(var(--window-bottom-height) + var(--call-bar-height));
   }
   /* Split view: two scrolling panes side by side; on phones only the main page shows. */
   .panes {
