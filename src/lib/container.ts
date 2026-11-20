@@ -128,9 +128,6 @@ export const links = new LinkResolver();
 
 /** A second page next to the main one (`?split=` in the URL). */
 export const split = new SplitView(router, store, bus, settings.split);
-export const mainPane = new MainPane(router, split);
-export const splitPane = new SplitPane(split);
-
 export const windows = new WindowService(
   router,
   store,
@@ -139,8 +136,10 @@ export const windows = new WindowService(
   () => backStack.mayLeave(),
   (roles) => session.hasRole(...roles),
 );
+export const mainPane = new MainPane(router, split, windows);
+export const splitPane = new SplitPane(split);
 /** Page switches from the sidebar and shortcuts: the split and a docked window stay. */
-export const pageNavigator = new PageNavigator(split, mainPane, splitPane, windows);
+export const pageNavigator = new PageNavigator(split, mainPane, splitPane);
 
 /** Scroll position per page, restored when coming back. */
 export const scrollMemory = new ScrollMemory(settings.scrollRestoreMs);

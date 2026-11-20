@@ -28,8 +28,9 @@ function setup(start: string) {
     carry: (path: string) => (router.query.has('open') ? `${path}?open=${router.query.getAll('open').join('&open=')}` : path),
     keepAcrossNavigation: vi.fn(),
   };
-  const navigator = new PageNavigator(split, new MainPane(router, split), new SplitPane(split), windows);
-  return { navigator, split, windows, url: () => decodeURIComponent(url) };
+  const main = new MainPane(router, split, windows);
+  const navigator = new PageNavigator(split, main, new SplitPane(split));
+  return { navigator, main, split, windows, url: () => decodeURIComponent(url) };
 }
 
 describe('PageNavigator', () => {
@@ -48,5 +49,11 @@ describe('PageNavigator', () => {
     navigator.go('/teams');
     expect(url()).toBe('/teams?open=task/t1@side&open=task/t2@center');
     expect(windows.keepAcrossNavigation).toHaveBeenCalled();
+  });
+
+  it('keeps the open windows when a page navigates inside its pane (e.g. into a folder)', () => {
+    const { main, url } = setup('/files?open=task/t1@side');
+    main.navigate('/files/f1');
+    expect(url()).toBe('/files/f1?open=task/t1@side');
   });
 });

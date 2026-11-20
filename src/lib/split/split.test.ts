@@ -20,7 +20,14 @@ function setup() {
   const memory = new Map<string, unknown>();
   const store = { get: (k: string) => memory.get(k), set: (k: string, v: unknown) => memory.set(k, v) } as unknown as LocalStore;
   const split = new SplitView(router, store, bus, { minRatio: 0.25, maxRatio: 0.75, step: 0.05, defaultPath: '/calendar' });
-  return { bus, router, split, main: new MainPane(router, split), second: new SplitPane(split), url: () => url };
+  return {
+    bus,
+    router,
+    split,
+    main: new MainPane(router, split, { list: [], carry: (path) => path, keepAcrossNavigation: () => {} }),
+    second: new SplitPane(split),
+    url: () => url,
+  };
 }
 
 describe('SplitView', () => {

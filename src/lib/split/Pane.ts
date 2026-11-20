@@ -1,5 +1,6 @@
 import { getContext, setContext } from 'svelte';
 import type { Router } from '../router/Router.svelte';
+import type { WindowService } from '../window/WindowService.svelte';
 import { parseLocation, SplitView, type PaneId } from './SplitView.svelte';
 
 /**
@@ -24,6 +25,7 @@ export class MainPane implements Pane {
   constructor(
     private readonly router: Router,
     private readonly split: SplitView,
+    private readonly windows: Pick<WindowService, 'list' | 'carry' | 'keepAcrossNavigation'>,
   ) {}
 
   get path(): string {
@@ -38,8 +40,10 @@ export class MainPane implements Pane {
     return !this.split.isOpen || this.split.focused === 'main';
   }
 
-  /** Keeps the split open while the main page changes. */
+  /** Keeps the split and the open windows while the main page changes. */
   navigate(location: string, replace = false): void {
+    if (this.windows.list.length) this.windows.keepAcrossNavigation();
+    location = this.windows.carry(location);
     const split = this.split.location;
     if (split === null) return replace ? this.router.replace(location) : this.router.navigate(location);
     const [path, query] = parseLocation(location);
