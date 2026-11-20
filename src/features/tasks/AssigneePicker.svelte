@@ -1,48 +1,68 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { bus, directory, store } from '../../lib/container';
+  import { bus, directory } from '../../lib/container';
   import { TOAST } from '../../channels';
   import { recordDrop } from '../../ui/recordDrop';
-  import { PersonListModel } from '../../lib/directory/PersonListModel.svelte';
-  import PeoplePicker from '../../ui/PeoplePicker.svelte';
+  import ChipPicker from '../../ui/ChipPicker.svelte';
+  import { audienceOf, hasAudience } from '../../lib/reach';
   import type { TaskForm } from './TaskForm.svelte';
+  import { tasksApi } from './services';
 
   /**
-   * Possible assignees in the standard people list: the team's roster, or every member for club
-   * tasks (admin/board only).
+   * Assignees as chips with a name search: the team's roster, the people the audience reaches (asked from the server),
+   * or every member for the board's club tasks. Names dragged in are assigned when they may be.
    */
   let { form, error }: { form: TaskForm; error: string | null } = $props();
 
-  // svelte-ignore state_referenced_locally
-  const list = new PersonListModel(
-    async () => {
-      await directory.loadRosters();
-      return directory.candidates(form.teamOrNull);
-    },
-    directory,
-    (id) => form.isAssigned(id),
-    store,
-    'task-assignees',
-  );
+  let pool = $state.raw<readonly { memberId: string; name: string }[]>([]);
+  let loaded = $state(false);
+  let sequence = 0;
+
+  async function candidates(): Promise<readonly { memberId: string; name: string }[]> {
+    await directory.loadRosters();
+    if (!form.forChosen) return directory.candidates(form.teamOrNull);
+    const audience = audienceOf(form.audience);
+    if (!hasAudience(audience)) return [];
+    return (await tasksApi.audienceMembers(audience)).map((memberId) => ({ memberId, name: directory.nameOf(memberId) }));
+  }
 
   $effect(() => {
-    void form.teamOrNull; // reload when the team changes
-    untrack(() => list.load().then(() => form.retainAssignees((list.data.value ?? []).map((c) => c.memberId))));
+    void form.teamId;
+    void form.audience.length; // entries are only added or removed
+    untrack(() => {
+      const current = ++sequence;
+      loaded = false;
+      void candidates().then((found) => {
+        if (current !== sequence) return;
+        pool = [...found].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+        loaded = true;
+        form.retainAssignees(found.map((c) => c.memberId));
+      });
+    });
   });
 
-  /** A member dragged in (a name, a list row): assigned when they may be. */
+  const options = $derived(pool.map((p) => ({ value: p.memberId, label: p.name, detail: directory.teamsOf(p.memberId).join(', ') || undefined })));
+
   function drop(memberId: string) {
-    if (!(list.data.value ?? []).some((c) => c.memberId === memberId))
-      bus.publish(TOAST, { text: `${directory.nameOf(memberId)} kann diese Aufgabe nicht bekommen.` });
+    if (!pool.some((c) => c.memberId === memberId)) bus.publish(TOAST, { text: `${directory.nameOf(memberId)} kann diese Aufgabe nicht bekommen.` });
     else if (!form.isAssigned(memberId)) form.toggleAssignee(memberId);
   }
 </script>
 
 <fieldset class="stack" {@attach recordDrop(['member'], (ref) => drop(ref.id))}>
   <legend>Zugewiesen</legend>
-  <PeoplePicker {list} chosen={form.assignees} ontoggle={(id) => form.toggleAssignee(id)} emptyText="Keine passenden Mitglieder." />
+  <ChipPicker
+    label="Zugewiesen"
+    value={form.assignees}
+    {options}
+    onchange={(ids) => (form.assignees = ids)}
+    labelOf={(id) => directory.nameOf(id)}
+    placeholder="Person suchen"
+    emptyText={loaded
+      ? form.forChosen && !pool.length
+        ? 'Zuerst oben wählen, für wen die Aufgabe ist.'
+        : 'Keine passenden Mitglieder.'
+      : 'Wird geladen'}
+  />
   {#if error}<span class="invalid" role="alert">{error}</span>{/if}
 </fieldset>
-
-<style>
-</style>

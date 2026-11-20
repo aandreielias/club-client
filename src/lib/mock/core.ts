@@ -26,6 +26,7 @@ import { MockEventBus, type MockAudience } from './MockEventBus';
 import { MockServer, mockServer, type MockRequest } from './MockServer';
 import { MockBrand, mailHtml } from './MockBrand';
 import { MockTable } from './MockTable';
+import type { Reach } from '../reach';
 
 /** server: MembersApi.Relative */
 interface Relative {
@@ -367,6 +368,46 @@ export class MockDirectory {
   /** Active members an audience reaches (server: MembersApi.AUDIENCE_IDS). */
   audienceIds(audience: MockAudience): string[] {
     return this.members.data.filter((m) => m.active && MockEventBus.includes(audience, m.id, m.roles)).map((m) => m.id);
+  }
+
+  /** server: Reach.reaches — one member by their own roles, running offices, teams and kinds, or named. */
+  reaches(a: Reach, memberId: string): boolean {
+    const m = this.members.data.find((x) => x.id === memberId);
+    if (!m) return false;
+    const offices = this.officesOf(memberId) as string[];
+    const teams = this.teamRoles(memberId);
+    return (
+      a.everyone ||
+      a.memberIds.includes(m.id) ||
+      a.roles.some((r) => m.roles.includes(r)) ||
+      a.offices.some((o) => offices.includes(o)) ||
+      a.kinds.some((k) => m.membershipTypes.includes(k)) ||
+      a.teamIds.some((t) => t in teams)
+    );
+  }
+
+  /** server: MembersApi.REACH_MEMBERS — active members (no guests) the reach covers. */
+  reachPool(a: Reach): string[] {
+    return this.activeIds().filter((id) => this.reaches(a, id));
+  }
+
+  /** server: platform.Reach (null lists = empty) and requireValid(code): everyone alone, no GUEST, at most `maxEntries` each. */
+  static parseReach(body: unknown, code: string): Reach {
+    const raw = (body ?? {}) as Partial<Record<keyof Reach, unknown>>;
+    const list = (v: unknown): string[] => (v == null ? [] : Array.isArray(v) ? [...new Set(v.map(String))] : fail(400, 'request.invalid'));
+    const a: Reach = {
+      roles: list(raw.roles) as Role[],
+      offices: list(raw.offices),
+      teamIds: list(raw.teamIds),
+      kinds: list(raw.kinds),
+      memberIds: list(raw.memberIds),
+      everyone: raw.everyone === true,
+    };
+    const lists = [a.roles, a.offices, a.teamIds, a.kinds, a.memberIds];
+    if ((a.everyone && lists.some((l) => l.length > 0)) || a.roles.includes('GUEST') || lists.some((l) => l.length > settings.audience.maxEntries)) {
+      fail(400, code);
+    }
+    return a;
   }
 
   guardiansOf(memberIds: readonly string[]): string[] {

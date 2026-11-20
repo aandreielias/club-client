@@ -9,6 +9,7 @@ export const CALENDAR_MESSAGES: MessageCatalog = {
   'calendar.not-movable': 'Dieser Eintrag lässt sich im Kalender nicht verschieben.',
   'appointment.type-unknown': 'Diese Terminart gibt es nicht mehr.',
   'appointment.type-archived': 'Diese Terminart ist archiviert; eine andere wählen.',
+  'appointment.audience-invalid': 'Diese Auswahl an Personen und Gruppen geht so nicht.',
   'appointment-type.not-found': 'Terminart nicht gefunden.',
   'appointment-type.in-use': 'Es gibt Termine dieser Art. Archiviere sie statt sie zu löschen.',
   'appointment-type.label-invalid': 'Bezeichnung mit 1 bis 40 Zeichen angeben.',

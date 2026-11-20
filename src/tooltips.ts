@@ -36,6 +36,7 @@ export const BUTTON_TOOLTIPS: Readonly<Record<string, ButtonTooltip>> = {
   Archivieren: { text: 'Aus den Auswahllisten nehmen; der Verlauf bleibt erhalten' },
   'Serie verlängern': { text: 'Die wöchentliche Serie im selben Rhythmus weiterführen; Ferien werden ausgelassen' },
   Zuweisen: { text: 'Die ausgewählten Aufgaben einer Person zuweisen' },
+  Verlassen: { text: 'Den Videoanruf verlassen' },
   'Rolle setzen': { text: 'Den ausgewählten Mitgliedern diese Rolle im Team geben' },
   'Einladung erneut senden': { text: 'Die Einladungs-E-Mail noch einmal schicken; das Mitglied hat sich noch nie angemeldet' },
   'Verein anlegen': { text: 'Namen speichern und die App öffnen; alles Weitere zeigt die Karte „Einrichtung“' },

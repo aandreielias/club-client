@@ -22,7 +22,8 @@
     if (permissions.isManager) await directory.loadTeams().catch(() => {});
     await directory.loadRosters();
     const date = presets.get('date');
-    return AppointmentForm.blank(session.clock, defaultTeam(), date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined, appointmentTypes);
+    const day = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined;
+    return AppointmentForm.blank(session.clock, defaultTeam(), day, appointmentTypes, policy.canCreateClubWide());
   });
   void form.load();
 

@@ -1,3 +1,4 @@
+import type { Reach } from '../../lib/reach';
 import type { Hue } from '../../lib/types';
 
 // Mirrors of the club-server calendar and attendance DTOs. API times are UTC instants.
@@ -176,6 +177,9 @@ export interface Appointment {
   rides: boolean;
   /** Why it was cancelled (only on a single appointment's read). */
   cancelReason?: string | null;
+  /** Without team: `everyone` (Ganzer Verein) or the chosen people and groups (server: platform.Reach). Team appointments: empty. */
+  audience: Reach;
+  createdBy: string | null;
 }
 
 /** server: CalendarApi.CalendarSettings — club-wide calendar rules (Einstellungen › Kalender, admin/board). */
@@ -212,11 +216,13 @@ export interface NewAppointment {
   byWeekday: boolean;
   /** Omitted: what the type offers. */
   rides?: boolean;
+  /** Without team: everyone or the chosen people and groups; omitted or empty = the whole club. Team appointments: none. */
+  audience?: Reach;
 }
 
 /** Changes one occurrence; omitted fields stay unchanged, '' clears a text; clearLocationId unlinks the place. */
 export type AppointmentPatch = Partial<
-  Pick<Appointment, 'type' | 'title' | 'description' | 'location' | 'locationId' | 'cabins' | 'startsAt' | 'endsAt' | 'rides'>
+  Pick<Appointment, 'type' | 'title' | 'description' | 'location' | 'locationId' | 'cabins' | 'startsAt' | 'endsAt' | 'rides' | 'audience'>
 > & { clearLocationId?: boolean; /** The later occurrences of the series change alike (times shift by as much). */ includeFollowing?: boolean };
 
 export interface AttendanceEntry {

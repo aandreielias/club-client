@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { directory } from '../../lib/mock/core';
 import type { Member } from '../../lib/types';
 import { tasks } from './mock';
+import { EVERYONE, NO_AUDIENCE } from '../../lib/reach';
 import type { NewTask } from './model';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
@@ -18,6 +19,7 @@ const draft = (teamId: string | null, assignees: string[]): NewTask => ({
   dueAt: null,
   assignees,
   checklist: ['Eins', 'Zwei'],
+  audience: NO_AUDIENCE,
 });
 
 describe('mock tasks', () => {
@@ -46,6 +48,36 @@ describe('mock tasks', () => {
     );
     expect(() => tasks.create(member('trainer'), draft(null, ['spieler']))).toThrow(expect.objectContaining({ code: 'access.denied' }));
     expect(() => tasks.delete(member('spielerin'), 't-1')).toThrow(expect.objectContaining({ code: 'access.denied' }));
+  });
+
+  it('shows tasks for chosen people to their audience and lets the creating coach manage them', () => {
+    const forCoaches = { ...draft(null, ['trainer']), audience: { ...NO_AUDIENCE, roles: ['COACH' as const] } };
+    expect(() => tasks.create(member('trainer'), { ...forCoaches, assignees: ['spieler'] })).toThrow(
+      expect.objectContaining({ code: 'task.assignee-not-in-audience' }),
+    );
+    expect(() => tasks.create(member('trainer'), { ...forCoaches, teamId: 't-u16' })).toThrow(
+      expect.objectContaining({ code: 'task.audience-invalid' }),
+    );
+    const created = tasks.create(member('trainer'), forCoaches);
+    expect(tasks.audienceMembers(member('trainer'), forCoaches.audience).memberIds).toContain('trainer');
+    expect(ids('spieler')).not.toContain(created.id);
+    expect(tasks.update(member('trainer'), created.id, { audience: { ...NO_AUDIENCE, memberIds: ['trainer'] } }).audience.memberIds).toEqual([
+      'trainer',
+    ]);
+    expect(() => tasks.update(member('trainer'), created.id, { audience: NO_AUDIENCE })).toThrow(
+      expect.objectContaining({ code: 'task.audience-invalid' }),
+    );
+    expect(() => tasks.audienceMembers(member('spieler'), NO_AUDIENCE)).toThrow(expect.objectContaining({ code: 'access.denied' }));
+  });
+
+  it('shows whole-club tasks to every member and lets only the board make them', () => {
+    const forAll = { ...draft(null, ['spieler']), audience: EVERYONE };
+    expect(() => tasks.create(member('trainer'), forAll)).toThrow(expect.objectContaining({ code: 'access.denied' }));
+    expect(() => tasks.create(member('admin'), { ...forAll, audience: { ...EVERYONE, roles: ['COACH' as const] } })).toThrow(
+      expect.objectContaining({ code: 'task.audience-invalid' }),
+    );
+    const created = tasks.create(member('admin'), forAll);
+    expect(ids('spielerin')).toContain(created.id);
   });
 
   it('replaces the checklist on update and keeps omitted fields', () => {

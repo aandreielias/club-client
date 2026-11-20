@@ -3,6 +3,7 @@ import { directory } from '../../lib/mock/core';
 import type { Member } from '../../lib/types';
 import { calendar } from './mock';
 import type { NewAppointment } from './model';
+import { EVERYONE, NO_AUDIENCE } from '../../lib/reach';
 
 const RULES = {
   defaultStart: '18:00',
@@ -58,6 +59,21 @@ describe('mock calendar', () => {
     expect(calendar.create(member('trainer'), draft('t-u16'))).toHaveLength(1);
     expect(() => calendar.create(member('trainer'), draft(null))).toThrow(expect.objectContaining({ code: 'access.denied' }));
     expect(() => calendar.create(member('spielerin'), draft('t-damen'))).toThrow(expect.objectContaining({ code: 'access.denied' }));
+  });
+
+  it('chosen Termine: seen and answered by their people, run by the coach who made them', () => {
+    const [chosen] = calendar.create(member('trainer'), draft(null, { type: 'EVENT', audience: { ...NO_AUDIENCE, memberIds: ['spieler'] } }));
+    for (const id of ['spieler', 'eltern', 'trainer', 'admin']) expect(calendar.visible(member(id), chosen.id).id).toBe(chosen.id);
+    expect(() => calendar.visible(member('spielerin'), chosen.id)).toThrow(expect.objectContaining({ status: 404 }));
+
+    calendar.respond(member('spieler'), chosen.id, { status: 'NO', reason: 'Schule' });
+    expect(calendar.overview(member('trainer'), chosen.id).entries.find((e) => e.memberId === 'spieler')?.reason).toBe('Schule');
+    expect(() => calendar.respond(member('spielerin'), chosen.id, { status: 'YES' })).toThrow();
+
+    expect(() => calendar.update(member('trainer'), chosen.id, { audience: EVERYONE })).toThrow(expect.objectContaining({ code: 'access.denied' }));
+    expect(() => calendar.create(member('admin'), draft('t-u16', { audience: { ...NO_AUDIENCE, memberIds: ['spieler'] } }))).toThrow(
+      expect.objectContaining({ code: 'appointment.audience-invalid' }),
+    );
   });
 
   it('creates weekly series at the same club-local time across DST', () => {

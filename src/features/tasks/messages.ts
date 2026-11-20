@@ -11,6 +11,8 @@ export const TASK_MESSAGES: MessageCatalog = {
   'task.assignees-invalid': `1 bis ${limits.maxAssignees} Personen zuweisen.`,
   'task.assignee-unknown': 'Eine zugewiesene Person ist nicht (mehr) aktiv.',
   'task.assignee-not-in-team': 'Zugewiesene Personen müssen zum Team gehören.',
+  'task.assignee-not-in-audience': 'Zugewiesene Personen müssen zu den gewählten Personen und Gruppen gehören.',
+  'task.audience-invalid': 'Diese Auswahl an Personen und Gruppen geht so nicht.',
   'task.appointment-other-team': 'Der verknüpfte Termin gehört zu einem anderen Team.',
   'task.checklist-too-long': `Höchstens ${limits.maxChecklistItems} Punkte in der Checkliste.`,
   'task.checklist-item-invalid': `Checklistenpunkte mit 1 bis ${limits.checklistItemMaxLength} Zeichen angeben.`,

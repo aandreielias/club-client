@@ -1,3 +1,4 @@
+import { EVERYONE } from '../../lib/reach';
 import { describe, expect, it, vi } from 'vitest';
 import type { CalendarApi } from './CalendarApi';
 import { CalendarExport } from './CalendarExport';
@@ -17,6 +18,8 @@ const appointment = (id: string, startsAt: string): Appointment => ({
   endsAt: startsAt.replace('T16', 'T18'),
   cancelled: false,
   rides: false,
+  audience: EVERYONE,
+  createdBy: null,
 });
 
 describe('CalendarExport', () => {

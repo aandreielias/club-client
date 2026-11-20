@@ -111,6 +111,13 @@ export class TeamDirectory {
     return (await this.allMembers()).filter((m) => m.active && !guestOnly(m.roles)).map((m) => ({ memberId: m.id, name: displayName(m) }));
   }
 
+  /** Everyone whose name is loaded (after loadNames: every member, inactive ones too), by name. */
+  knownPeople(): Pick<RosterEntry, 'memberId' | 'name'>[] {
+    return Object.entries(this.#names)
+      .map(([memberId, name]) => ({ memberId, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  }
+
   nameOf(memberId: string, fallback = 'Mitglied'): string {
     return this.knownName(memberId) ?? fallback;
   }

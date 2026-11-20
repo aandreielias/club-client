@@ -142,10 +142,10 @@ export class MockNotifications {
         );
         break;
       case 'calendar.appointments-changed': {
-        // server: NotificationHandlers.onAppointmentsChanged — team and guardians (not the whole board), club-wide everyone
+        // server: NotificationHandlers.onAppointmentsChanged — the members of its audience (not the whole board), club-wide everyone
         const changed = data.change === 'UPDATED' && (data.moved || data.placeChanged);
         if (data.silent || (data.change !== 'CANCELLED' && data.change !== 'RESTORED' && !changed)) return;
-        const audience = data.teamId ? { members: (event.audience?.members ?? []) as string[] } : { everyone: true };
+        const audience = event.audience?.everyone ? { everyone: true } : { members: (event.audience?.members ?? []) as string[] };
         const recipients = this.people.audienceIds(audience).filter((id) => id !== data.actorId);
         const at = (iso: string) => this.#dateTime.format(new Date(iso));
         const link = `/appointments/${data.appointmentIds[0]}`;

@@ -7,8 +7,10 @@
   import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import Select from '../../ui/Select.svelte';
   import AssigneePicker from './AssigneePicker.svelte';
+  import AudiencePicker from '../../ui/AudiencePicker.svelte';
   import ChecklistEditor from './ChecklistEditor.svelte';
-  import { CLUB_WIDE, type TaskForm } from './TaskForm.svelte';
+  import { BOARD_ONLY, CLUB_WIDE, FOR_CHOSEN, type TaskForm } from './TaskForm.svelte';
+  import { directory } from '../../lib/container';
   import { taskPolicy as policy } from './services';
 
   let {
@@ -20,10 +22,18 @@
   }: { form: TaskForm; action: Action; submitLabel: string; oncancel: () => void; onsubmit: () => void } = $props();
 
   const limits = settings.tasks;
-  const teamOptions = $derived([
-    ...(policy.canCreateClubWide() || form.teamId === CLUB_WIDE ? [{ value: CLUB_WIDE, label: 'Ganzer Verein' }] : []),
-    ...policy.plannableTeams().map((t) => ({ value: t.id, label: t.name })),
-  ]);
+  /** Team tasks and the board's own club tasks keep whom they are for; the others switch between the two choices. */
+  const fixed = $derived(form.isEdit && (form.teamOrNull !== null || form.teamId === BOARD_ONLY));
+  const teamOptions = $derived(
+    form.teamOrNull && form.isEdit
+      ? [{ value: form.teamId, label: directory.teamName(form.teamOrNull) ?? 'Team' }]
+      : form.teamId === BOARD_ONLY
+        ? [{ value: BOARD_ONLY, label: 'Nur Vorstand' }]
+        : [
+            ...(policy.canCreateClubWide() || form.teamId === CLUB_WIDE ? [{ value: CLUB_WIDE, label: 'Ganzer Verein' }] : []),
+            ...(policy.canCreateForChosen() || form.forChosen ? [{ value: FOR_CHOSEN, label: 'Bestimmte Personen und Gruppen' }] : []),
+          ],
+  );
 </script>
 
 <EditorForm {action} {submitLabel} {oncancel} {onsubmit} validate={form}>
@@ -32,13 +42,26 @@
   </Field>
 
   <div class="grid-2">
-    <Field label="Für" hint={form.isEdit ? 'Lässt sich nach dem Anlegen nicht mehr ändern.' : undefined}>
-      <Select bind:value={form.teamId} options={teamOptions} disabled={form.isEdit} />
+    <Field
+      label="Für"
+      hint={fixed
+        ? 'Lässt sich nach dem Anlegen nicht mehr ändern.'
+        : 'Ganzer Verein: alle Mitglieder sehen sie. Eine einzelne Mannschaft allein ergibt eine Mannschaftsaufgabe.'}
+    >
+      <Select bind:value={form.teamId} options={teamOptions} disabled={fixed} />
     </Field>
     <Field label="Fällig am (optional)" error={form.error('dueAt')}>
       <DateTimeInput bind:value={form.due} />
     </Field>
   </div>
+  {#if form.forChosen}
+    <AudiencePicker
+      value={form.audience}
+      onchange={(v) => (form.audience = v)}
+      error={form.error('audience')}
+      hint="Wer eine der gewählten Rollen, Funktionen, Teams oder Mitgliedsarten hat oder genannt ist, sieht die Aufgabe und kann sie bekommen."
+    />
+  {/if}
   <Field label="Wiederholen" hint="Ist die Aufgabe erledigt, entsteht die nächste, fällig entsprechend später." error={form.error('repeat')}>
     <Select bind:value={form.repeat} options={REPEAT_OPTIONS} />
   </Field>

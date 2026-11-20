@@ -1,9 +1,10 @@
 import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import type { ZonedClock, LocalDateTime } from '../../lib/time/ZonedClock';
+import { audienceEntries, audienceError, audienceOf, EVERYONE, hasAudience, NO_AUDIENCE, sameAudience, type Reach } from '../../lib/reach';
 import { rhythmCode, rhythmOf, type NewTask, type Task, type TaskPatch } from './model';
 
-export type TaskField = 'title' | 'description' | 'dueAt' | 'assignees' | 'checklist' | 'repeat';
+export type TaskField = 'audience' | 'title' | 'description' | 'dueAt' | 'assignees' | 'checklist' | 'repeat';
 
 export type TaskFormErrors = Partial<Record<TaskField, string>>;
 
@@ -13,8 +14,12 @@ export interface ChecklistLine {
   text: string;
 }
 
-/** Select value for "club-wide" (no team). */
+/** Select value for "Ganzer Verein": every member sees it. */
 export const CLUB_WIDE = '';
+/** Select value for chosen roles, offices, teams, kinds and members; exactly one team alone makes a team task. */
+export const FOR_CHOSEN = '*';
+/** Select value of an existing club task for the board alone (empty audience; also the tasks the app makes). */
+export const BOARD_ONLY = '-';
 
 const limits = settings.tasks;
 
@@ -31,6 +36,8 @@ export class TaskForm extends FormState<TaskFormErrors> {
   /** The rhythm as select value (`rhythmCode`, '' = once). */
   repeat = $state('');
   assignees = $state<string[]>([]);
+  /** Audience entries (`lib/reach` audienceOf), only with `FOR_CHOSEN`. */
+  audience = $state<string[]>([]);
   checklist = $state<ChecklistLine[]>([]);
 
   #nextKey = 0;
@@ -46,15 +53,18 @@ export class TaskForm extends FormState<TaskFormErrors> {
     return this.original !== null;
   }
 
-  static blank(clock: ZonedClock, teamId: string | null): TaskForm {
+  /** `teamId`: preselected as the only chip; else the whole club when `clubWide`, else an empty choice. */
+  static blank(clock: ZonedClock, teamId: string | null, clubWide: boolean): TaskForm {
     const form = new TaskForm(clock, null);
-    form.teamId = teamId ?? CLUB_WIDE;
+    form.teamId = teamId || !clubWide ? FOR_CHOSEN : CLUB_WIDE;
+    if (teamId) form.audience = [`team:${teamId}`];
     return form;
   }
 
   static edit(clock: ZonedClock, task: Task): TaskForm {
     const form = new TaskForm(clock, task);
-    form.teamId = task.teamId ?? CLUB_WIDE;
+    form.teamId = task.teamId ?? (task.audience.everyone ? CLUB_WIDE : hasAudience(task.audience) ? FOR_CHOSEN : BOARD_ONLY);
+    form.audience = audienceEntries(task.audience);
     form.title = task.title;
     form.description = task.description ?? '';
     form.due = task.dueAt ? clock.toLocal(task.dueAt) : '';
@@ -64,8 +74,21 @@ export class TaskForm extends FormState<TaskFormErrors> {
     return form;
   }
 
+  /** The team of a team task: the existing task's, or on creation the one team chosen alone. */
   get teamOrNull(): string | null {
-    return this.teamId === CLUB_WIDE ? null : this.teamId;
+    if (this.original) return this.original.teamId;
+    const [only, ...rest] = this.audience;
+    return this.forChosen && rest.length === 0 && only?.startsWith('team:') ? only.slice('team:'.length) : null;
+  }
+
+  /** Who the task is for besides team, creator and assignees. */
+  get audienceValue(): Reach {
+    if (this.teamOrNull) return NO_AUDIENCE;
+    return this.forChosen ? audienceOf(this.audience) : this.teamId === CLUB_WIDE ? EVERYONE : NO_AUDIENCE;
+  }
+
+  get forChosen(): boolean {
+    return this.teamId === FOR_CHOSEN;
   }
 
   isAssigned(memberId: string): boolean {
@@ -105,6 +128,7 @@ export class TaskForm extends FormState<TaskFormErrors> {
       assignees: [...this.assignees],
       checklist: this.texts(),
       ...rhythmOf(this.repeat),
+      audience: this.audienceValue,
     };
   }
 
@@ -119,6 +143,9 @@ export class TaskForm extends FormState<TaskFormErrors> {
     if (next.dueAt && next.dueAt !== original.dueAt) patch.dueAt = next.dueAt;
     if (!next.dueAt && original.dueAt) patch.clearDue = true;
     if (!TaskForm.sameSet(next.assignees, original.assignees)) patch.assignees = next.assignees;
+    // Only a task for the whole club or chosen people changes whom it is for (server: TaskHandlers.update).
+    if (hasAudience(original.audience) && hasAudience(next.audience) && !sameAudience(next.audience, original.audience))
+      patch.audience = next.audience;
     if (this.checklistChanged()) patch.checklist = next.checklist;
     if (this.repeat !== rhythmCode(original)) {
       if (next.repeatWeeks) patch.repeatWeeks = next.repeatWeeks;
@@ -147,6 +174,10 @@ export class TaskForm extends FormState<TaskFormErrors> {
     const title = this.title.trim();
     if (!title || title.length > limits.titleMaxLength) errors.title = `Titel mit 1 bis ${limits.titleMaxLength} Zeichen angeben.`;
     if (this.description.length > limits.descriptionMaxLength) errors.description = `Höchstens ${limits.descriptionMaxLength} Zeichen.`;
+    if (this.forChosen) {
+      const audience = audienceError(this.audience);
+      if (audience) errors.audience = audience;
+    }
     if (this.assignees.length === 0 || this.assignees.length > limits.maxAssignees) {
       errors.assignees = `1 bis ${limits.maxAssignees} Personen zuweisen.`;
     }

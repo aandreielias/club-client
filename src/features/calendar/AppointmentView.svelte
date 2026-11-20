@@ -24,6 +24,8 @@
   import RecordLink from '../../ui/RecordLink.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { Lookup } from '../../lib/state/Lookup.svelte';
+  import { audienceEntries, isChosen } from '../../lib/reach';
+  import { audienceLabel, loadAudienceLabels } from '../../ui/audience';
   import { locationsApi } from '../locations/services';
   import AppointmentEditor from './AppointmentEditor.svelte';
   import { AppointmentDetailModel } from './AppointmentDetailModel.svelte';
@@ -40,6 +42,8 @@
 
   /** One appointment: properties, own answer, attendance; edit and cancel for managers. Window and page. */
   let { id, handle }: { id: string; handle?: WindowHandle } = $props();
+
+  loadAudienceLabels();
 
   // svelte-ignore state_referenced_locally
   const detail = new AppointmentDetailModel(calendarApi, id, session.member.id);
@@ -191,7 +195,13 @@
               </dd>
             {/if}
             <dt>Für</dt>
-            <dd>{appointment.teamId ? (directory.teamName(appointment.teamId) ?? 'Team') : 'Ganzer Verein'}</dd>
+            <dd>
+              {appointment.teamId
+                ? (directory.teamName(appointment.teamId) ?? 'Team')
+                : isChosen(appointment.audience)
+                  ? audienceEntries(appointment.audience).map(audienceLabel).join(', ')
+                  : 'Ganzer Verein'}
+            </dd>
           </dl>
           {#if place && place.lat !== null && place.lng !== null}<LocationMap lat={place.lat} lng={place.lng} name={place.name} />{/if}
         </div>

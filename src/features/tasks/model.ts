@@ -1,4 +1,5 @@
 import { TASK_STATUS_LABELS, type Hue } from '../../lib/types';
+import type { Reach } from '../../lib/reach';
 
 // Mirrors of the club-server tasks DTOs. API times are UTC instants.
 
@@ -39,6 +40,8 @@ export interface Task {
   repeatByWeekday: boolean;
   /** The record a system-created task is about, e.g. a member's change request. Only GET /tasks/{id} fills it. */
   source: TaskSource | null;
+  /** Club tasks only: who else sees it and may be assigned. Empty = the board's own task. */
+  audience: Reach;
 }
 
 export interface TaskSource {
@@ -64,6 +67,7 @@ export interface NewTask {
   repeatWeeks: number | null;
   repeatMonths: number | null;
   repeatByWeekday: boolean;
+  audience: Reach;
 }
 
 /** Omitted fields stay unchanged; a given checklist replaces the old one (and resets its ticks). */
@@ -74,6 +78,8 @@ export type TaskPatch = Partial<Pick<NewTask, 'title' | 'description' | 'dueAt' 
   repeatMonths?: number;
   repeatByWeekday?: boolean;
   clearRepeat?: boolean;
+  /** Only for tasks that have one, and never emptied. */
+  audience?: Reach;
 };
 
 /** "Wiederholen" choices; '' = once. */

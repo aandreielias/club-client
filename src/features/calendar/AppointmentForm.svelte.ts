@@ -2,6 +2,7 @@ import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import { ZonedClock, type LocalDate, type LocalDateTime } from '../../lib/time/ZonedClock';
 import { repeatAt } from '../../lib/time/repeat';
+import { audienceEntries, audienceError, audienceOf, EVERYONE, hasAudience, NO_AUDIENCE, sameAudience, type Reach } from '../../lib/reach';
 import {
   SEEDED_APPOINTMENT_TYPES,
   type Appointment,
@@ -11,12 +12,14 @@ import {
   type NewAppointment,
 } from './model';
 
-export type FormField = 'title' | 'team' | 'start' | 'end' | 'description' | 'location' | 'cabins' | 'repeatUntil' | 'interval';
+export type FormField = 'title' | 'audience' | 'start' | 'end' | 'description' | 'location' | 'cabins' | 'repeatUntil' | 'interval';
 
 export type FormErrors = Partial<Record<FormField, string>>;
 
-/** Select value for "club-wide" (no team). */
+/** Select value for "Ganzer Verein": every member sees it. */
 export const CLUB_WIDE = '';
+/** Select value for chosen roles, offices, teams, kinds and members; exactly one team alone makes a team appointment. */
+export const FOR_CHOSEN = '*';
 
 /** The club's types (AppointmentTypesStore; default: the seeded ones). */
 export interface TypeOffers {
@@ -38,7 +41,10 @@ const limits = settings.calendar;
  */
 export class AppointmentForm extends FormState<FormErrors> {
   #type = $state<AppointmentType>('TRAINING');
+  /** CLUB_WIDE, FOR_CHOSEN, or the team of an existing team appointment (fixed). */
   teamId = $state<string>(CLUB_WIDE);
+  /** Audience entries (`lib/reach` audienceOf), only with `FOR_CHOSEN`. */
+  audience = $state<string[]>([]);
   title = $state('');
   description = $state('');
   location = $state('');
@@ -71,9 +77,16 @@ export class AppointmentForm extends FormState<FormErrors> {
   }
 
   /** Empty form for a new appointment on `date` (default today): the club's first type at its default time. */
-  static blank(clock: ZonedClock, teamId: string | null, date: LocalDate = clock.today(), types: TypeOffers = SEEDED_OFFERS): AppointmentForm {
+  static blank(
+    clock: ZonedClock,
+    teamId: string | null,
+    date: LocalDate = clock.today(),
+    types: TypeOffers = SEEDED_OFFERS,
+    clubWide = true,
+  ): AppointmentForm {
     const form = new AppointmentForm(clock, null, types);
-    form.teamId = teamId ?? CLUB_WIDE;
+    form.teamId = teamId || !clubWide ? FOR_CHOSEN : CLUB_WIDE;
+    if (teamId) form.audience = [`team:${teamId}`];
     form.#type = types.items.find((t) => !t.archived)?.key ?? form.#type;
     const info = form.info;
     form.start = `${date}T${info?.defaultStart ?? limits.defaultStartTime}`;
@@ -85,7 +98,8 @@ export class AppointmentForm extends FormState<FormErrors> {
     const form = new AppointmentForm(clock, appointment, types);
     form.rides = appointment.rides;
     form.#type = appointment.type;
-    form.teamId = appointment.teamId ?? CLUB_WIDE;
+    form.teamId = appointment.teamId ?? (hasAudience(appointment.audience) && !appointment.audience.everyone ? FOR_CHOSEN : CLUB_WIDE);
+    form.audience = audienceEntries(appointment.audience);
     form.title = appointment.title;
     form.description = appointment.description ?? '';
     form.location = appointment.location ?? '';
@@ -112,6 +126,23 @@ export class AppointmentForm extends FormState<FormErrors> {
     }
   }
 
+  get forChosen(): boolean {
+    return this.teamId === FOR_CHOSEN;
+  }
+
+  /** The team: fixed when editing; on create exactly one team chip alone. */
+  get teamOrNull(): string | null {
+    if (this.original) return this.original.teamId;
+    const [only, ...rest] = this.audience;
+    return this.forChosen && rest.length === 0 && only?.startsWith('team:') ? only.slice('team:'.length) : null;
+  }
+
+  /** Who sees it besides a team: the whole club or the chosen entries. */
+  get audienceValue(): Reach {
+    if (this.teamOrNull) return NO_AUDIENCE;
+    return this.forChosen ? audienceOf(this.audience) : EVERYONE;
+  }
+
   private get info(): AppointmentTypeInfo | undefined {
     return this.types.get(this.#type);
   }
@@ -135,7 +166,8 @@ export class AppointmentForm extends FormState<FormErrors> {
 
   toNew(): NewAppointment {
     return {
-      teamId: this.teamId === CLUB_WIDE ? null : this.teamId,
+      teamId: this.teamOrNull,
+      audience: this.audienceValue,
       type: this.type,
       title: this.title.trim(),
       description: this.description.trim() || null,
@@ -172,6 +204,7 @@ export class AppointmentForm extends FormState<FormErrors> {
     if (next.startsAt !== original.startsAt) patch.startsAt = next.startsAt;
     if (next.endsAt !== original.endsAt) patch.endsAt = next.endsAt;
     if (next.rides !== original.rides) patch.rides = next.rides;
+    if (original.teamId === null && !sameAudience(this.audienceValue, original.audience)) patch.audience = this.audienceValue;
     if (this.includeFollowing && original.seriesId && Object.keys(patch).length) patch.includeFollowing = true;
     return patch;
   }
@@ -210,6 +243,10 @@ export class AppointmentForm extends FormState<FormErrors> {
     if (this.location.length > limits.locationMaxLength) errors.location = `Höchstens ${limits.locationMaxLength} Zeichen.`;
     if (this.cabins.some((c) => (c ?? '').trim().length > limits.cabinMaxLength)) {
       errors.cabins = `Höchstens ${limits.cabinMaxLength} Zeichen.`;
+    }
+    if (this.forChosen && !this.teamOrNull) {
+      const audience = audienceError(this.audience);
+      if (audience) errors.audience = audience;
     }
     if (!this.start) errors.start = 'Beginn angeben.';
     const duration = this.durationMinutes();

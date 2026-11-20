@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { settings } from '../../settings';
 import { ZonedClock } from '../../lib/time/ZonedClock';
-import { AppointmentForm, CLUB_WIDE } from './AppointmentForm.svelte';
+import { EVERYONE, NO_AUDIENCE } from '../../lib/reach';
+import { AppointmentForm, CLUB_WIDE, FOR_CHOSEN } from './AppointmentForm.svelte';
 import { SEEDED_APPOINTMENT_TYPES, type Appointment } from './model';
 
 const clock = new ZonedClock('Europe/Vienna');
@@ -20,6 +21,8 @@ const existing: Appointment = {
   endsAt: '2026-07-01T18:30:00.000Z',
   cancelled: false,
   rides: false,
+  audience: NO_AUDIENCE,
+  createdBy: null,
 };
 
 describe('AppointmentForm', () => {
@@ -77,6 +80,26 @@ describe('AppointmentForm', () => {
     const form = AppointmentForm.edit(clock, existing);
     form.setStart('2026-07-02T10:00');
     expect(form.end).toBe('2026-07-02T11:30');
+  });
+
+  it('sends the whole club as everyone, one team alone as a team appointment, else the chosen entries', () => {
+    expect(AppointmentForm.blank(clock, null).toNew()).toMatchObject({ teamId: null, audience: EVERYONE });
+    const form = AppointmentForm.blank(clock, 't1');
+    expect(form.teamId).toBe(FOR_CHOSEN);
+    expect(form.toNew()).toMatchObject({ teamId: 't1', audience: NO_AUDIENCE });
+    form.title = 'Elternabend';
+    form.audience = ['team:t1', 'role:PARENT'];
+    expect(form.toNew()).toMatchObject({ teamId: null, audience: { teamIds: ['t1'], roles: ['PARENT'], everyone: false } });
+    form.audience = [];
+    expect(form.errors.audience).toBeDefined();
+
+    const chosen = { ...existing, teamId: null, audience: { ...NO_AUDIENCE, memberIds: ['m1'] }, createdBy: 'm0' };
+    const edit = AppointmentForm.edit(clock, chosen);
+    expect(edit.teamId).toBe(FOR_CHOSEN);
+    expect(edit.toPatch()).toEqual({});
+    edit.teamId = CLUB_WIDE;
+    expect(edit.toPatch()).toEqual({ audience: EVERYONE });
+    expect(AppointmentForm.edit(clock, existing).toPatch()).toEqual({});
   });
 
   it('converts club-local times to UTC instants', () => {

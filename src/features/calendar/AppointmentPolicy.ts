@@ -1,4 +1,5 @@
 import { PlanningPolicy } from '../../lib/policy/PlanningPolicy';
+import { isChosen } from '../../lib/reach';
 import type { Appointment, Attendance } from './model';
 
 /**
@@ -7,7 +8,20 @@ import type { Appointment, Attendance } from './model';
  */
 export class AppointmentPolicy extends PlanningPolicy {
   canEdit(appointment: Appointment): boolean {
-    return !appointment.cancelled && this.permissions.canManage(appointment.teamId);
+    return !appointment.cancelled && this.manages(appointment);
+  }
+
+  /** For chosen people and groups: the board and coaches (server: CalendarHandlers.mayEdit). */
+  canCreateForChosen(): boolean {
+    return this.permissions.isManager || this.permissions.isCoach;
+  }
+
+  /** The board; coaches of the team; a coach the appointment for chosen people they made. */
+  private manages(appointment: Appointment): boolean {
+    if (this.permissions.canManage(appointment.teamId)) return true;
+    return (
+      appointment.teamId === null && isChosen(appointment.audience) && this.permissions.isCoach && appointment.createdBy === this.session.member.id
+    );
   }
 
   /** Car pools where the club and the appointment offer them, not for cancelled ones. */
@@ -45,11 +59,11 @@ export class AppointmentPolicy extends PlanningPolicy {
 
   /** Coaches of the team, admin and board: remind, mark presence, see the team's statistics (server: AttendanceHandlers.requireRunsTeam). */
   runsTeam(appointment: Appointment): boolean {
-    return this.permissions.canManage(appointment.teamId);
+    return this.manages(appointment);
   }
 
   /** Taken back by who may edit it (server: CalendarHandlers.restore). */
   canRestore(appointment: Appointment): boolean {
-    return appointment.cancelled && this.permissions.canManage(appointment.teamId);
+    return appointment.cancelled && this.manages(appointment);
   }
 }

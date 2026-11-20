@@ -1,4 +1,5 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
+import type { Reach } from '../../lib/reach';
 import type { NewTask, Task, TaskList, TaskPatch, TaskQuery, TaskSettings, TaskStatus } from './model';
 
 /** Typed access to the tasks endpoints of club-server. Every write answers with the updated task. */
@@ -14,6 +15,11 @@ export class TasksApi {
 
   saveSettings(settings: TaskSettings): Promise<TaskSettings> {
     return this.api.put<TaskSettings>(`${TasksApi.BASE}/settings`, settings);
+  }
+
+  /** Who an audience reaches, as member ids (admin, board, coaches): the possible assignees. */
+  async audienceMembers(audience: Reach): Promise<string[]> {
+    return (await this.api.post<{ memberIds: string[] }>(`${TasksApi.BASE}/audience-members`, audience)).memberIds;
   }
 
   /** Visible tasks ordered by due date (undated last), without comments. */

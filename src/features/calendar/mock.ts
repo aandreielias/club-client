@@ -2,13 +2,15 @@
 import { generatedKey } from '../../lib/mock/keys';
 import { activity, MockActivity } from '../../lib/mock/MockActivity';
 import { settings } from '../../settings';
-import { personalData, directory, type MockDirectory } from '../../lib/mock/core';
+import { personalData, directory, MockDirectory } from '../../lib/mock/core';
+import { EVERYONE, hasAudience, isChosen, NO_AUDIENCE, type Reach } from '../../lib/reach';
+import type { MockAudience } from '../../lib/mock/MockEventBus';
 import { itemUseSources, MockLinks, type ItemUse } from '../../lib/mock/MockLinks';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import { ZonedClock, type LocalDate } from '../../lib/time/ZonedClock';
 import { repeatAt, type Rhythm } from '../../lib/time/repeat';
-import { coaches, type Member } from '../../lib/types';
+import { ADMIN_BOARD, coaches, type Member } from '../../lib/types';
 import {
   HUES,
   SEEDED_APPOINTMENT_TYPES,
@@ -132,7 +134,7 @@ export class MockCalendar {
 
   setLinks(member: Member, id: string, body: Record<string, unknown>) {
     const appointment = this.visible(member, id);
-    this.requireMayEdit(member, appointment.teamId);
+    this.requireMayEdit(member, appointment);
     const links = this.links.set(member, appointment.id, body);
     this.changed(member, [appointment], 'UPDATED');
     MockActivity.record('APPOINTMENT', appointment.id, member, 'UPDATED', {
@@ -160,10 +162,15 @@ export class MockCalendar {
 
   create(member: Member, body: NewAppointment): Appointment[] {
     if (body.teamId && !this.people.teams.data.some((t) => t.id === body.teamId)) fail(409, 'data.conflict');
-    this.requireMayEdit(member, body.teamId ?? null);
+    // server: CalendarHandlers.create — no team and no chosen entries = the whole club
+    const chosen = MockDirectory.parseReach(body.audience, 'appointment.audience-invalid');
+    const audience = body.teamId || hasAudience(chosen) ? chosen : EVERYONE;
+    this.requireMayEdit(member, { teamId: body.teamId ?? null, audience, createdBy: member.id });
     if (typeOf(body.type).archived) fail(400, 'appointment.type-archived');
     const rides = body.rides ?? typeOf(body.type).rides;
-    const first = MockCalendar.validated(this.placed({ ...body, id: '', seriesId: null, cancelled: false, rides }, body.locationId ?? null));
+    const first = MockCalendar.validated(
+      this.placed({ ...body, id: '', seriesId: null, cancelled: false, rides, audience, createdBy: member.id }, body.locationId ?? null),
+    );
     requireCabinLabels(first.cabins);
     const rhythm = body.repeatUntil ? MockCalendar.rhythm(body.intervalWeeks, body.intervalMonths, body.byWeekday) : null;
     const local = this.people.clock.toLocal(first.startsAt);
@@ -193,15 +200,17 @@ export class MockCalendar {
   /** server: CalendarHandlers.update — with includeFollowing the later occurrences change alike (times shift by as much). */
   update(member: Member, id: string, patch: AppointmentPatch): Appointment {
     const current = this.visible(member, id);
-    this.requireMayEdit(member, current.teamId);
+    this.requireMayEdit(member, current);
     const before = { ...current };
-    const { clearLocationId, includeFollowing, ...rest } = patch;
-    const defined = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== null && v !== undefined));
+    const { clearLocationId, includeFollowing, audience, ...rest } = patch;
+    const defined: Partial<Appointment> = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== null && v !== undefined));
+    if (audience != null) defined.audience = MockDirectory.parseReach(audience, 'appointment.audience-invalid');
     const apply = (a: Appointment, startsAt: string, endsAt: string) => {
       const merged = { ...a, ...defined, startsAt, endsAt };
       return MockCalendar.validated(clearLocationId ? { ...merged, locationId: null } : this.placed(merged, patch.locationId ?? null));
     };
     const next = apply(current, patch.startsAt ?? current.startsAt, patch.endsAt ?? current.endsAt);
+    this.requireMayEdit(member, next); // a coach keeps it for chosen people
     if (patch.cabins) requireCabinLabels(next.cabins);
     const startShift = Date.parse(next.startsAt) - Date.parse(before.startsAt);
     const endShift = Date.parse(next.endsAt) - Date.parse(before.endsAt);
@@ -237,7 +246,7 @@ export class MockCalendar {
 
   cancel(member: Member, id: string, includeFollowing: boolean, rawReason: string | null = null): Appointment[] {
     const current = this.visible(member, id);
-    this.requireMayEdit(member, current.teamId);
+    this.requireMayEdit(member, current);
     const targets =
       includeFollowing && current.seriesId
         ? this.appointments.data.filter((a) => a.seriesId === current.seriesId && a.startsAt >= current.startsAt && !a.cancelled)
@@ -263,7 +272,7 @@ export class MockCalendar {
   cancelRange(member: Member, body: { teamId?: string | null; from?: string; to?: string; reason?: string | null }): Appointment[] {
     const teamId = body.teamId ?? null;
     if (!body.from || !body.to || body.to < body.from) fail(400, 'calendar.range-invalid');
-    this.requireMayEdit(member, teamId);
+    this.requireMayEdit(member, { teamId, audience: teamId ? NO_AUDIENCE : EVERYONE, createdBy: null });
     const clock = this.people.clock;
     const from = clock.toInstant(`${body.from}T00:00`);
     const to = clock.toInstant(`${ZonedClock.addDays(body.to!, 1)}T00:00`);
@@ -274,7 +283,7 @@ export class MockCalendar {
   /** server: CalendarHandlers.restore */
   restore(member: Member, id: string): Appointment {
     const current = this.visible(member, id);
-    this.requireMayEdit(member, current.teamId);
+    this.requireMayEdit(member, current);
     if (!current.cancelled) return current;
     Object.assign(current, { cancelled: false, cancelReason: null });
     this.appointments.save();
@@ -285,7 +294,7 @@ export class MockCalendar {
   /** server: CalendarHandlers.delete — only while nobody answered. */
   delete(member: Member, id: string): void {
     const current = this.visible(member, id);
-    this.requireMayEdit(member, current.teamId);
+    this.requireMayEdit(member, current);
     if (Object.keys(this.responses.data[id] ?? {}).length) fail(409, 'appointment.has-answers');
     this.appointments.data.splice(this.appointments.data.indexOf(current), 1);
     this.appointments.save();
@@ -311,7 +320,7 @@ export class MockCalendar {
 
   setExtras(member: Member, id: string, body: Record<string, any>): Extras {
     const appointment = this.visible(member, id);
-    this.requireMayEdit(member, appointment.teamId);
+    this.requireMayEdit(member, appointment);
     const content = typeof body.content === 'string' && body.content.trim() ? body.content.trim() : null;
     const opponent = typeof body.opponent === 'string' && body.opponent.trim() ? body.opponent.trim() : null;
     const sets: string[] = (Array.isArray(body.sets) ? body.sets : []).map((s: string) => String(s).trim()).filter(Boolean);
@@ -377,7 +386,7 @@ export class MockCalendar {
   /** server: CalendarHandlers.extend — after the last occurrence, in the stored rhythm, with the last one's details. */
   extend(member: Member, id: string, repeatUntil: string | undefined): Appointment[] {
     const any = this.visible(member, id);
-    this.requireMayEdit(member, any.teamId);
+    this.requireMayEdit(member, any);
     if (!any.seriesId) fail(400, 'appointment.not-a-series');
     const series = this.appointments.data.filter((a) => a.seriesId === any.seriesId).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
     const last = series[series.length - 1];
@@ -418,6 +427,24 @@ export class MockCalendar {
     return this.people.isManager(member) || (!!teamId && coaches(this.people.teamRoles(member.id)[teamId]));
   }
 
+  /** server: AttendanceHandlers.runs — who runs the team, or the coach who made an appointment for chosen people. */
+  private runs(member: Member, a: Appointment): boolean {
+    return this.runsTeam(member, a.teamId) || (isChosen(a.audience) && member.roles.includes('COACH') && a.createdBy === member.id);
+  }
+
+  /** Players (club-wide CLUB: every member; chosen: the reach) expected to answer. */
+  private players(a: Appointment): string[] {
+    const teamId = a.teamId;
+    if (teamId) return this.people.teamMembers(teamId).filter((id) => !coaches(this.people.teamRoles(id)[teamId]));
+    return isChosen(a.audience) ? this.people.reachPool(a.audience) : this.people.audienceIds({ everyone: true });
+  }
+
+  /** server: an appointment expects answers — team ones and chosen ones unless NONE, club-wide ones with CLUB. */
+  private static expects(a: Appointment): boolean {
+    const expect = typeOf(a.type).expectAnswers;
+    return a.teamId || isChosen(a.audience) ? expect !== 'NONE' : expect === 'CLUB';
+  }
+
   private coachesOf(teamId: string): string[] {
     return this.people.teamMembers(teamId).filter((id) => coaches(this.people.teamRoles(id)[teamId]));
   }
@@ -443,10 +470,10 @@ export class MockCalendar {
   /** server: AttendanceHandlers.remindOpen — counts as the first reminder. */
   remindOpen(member: Member, id: string): number {
     const appointment = this.open(member, id);
-    this.requireRunsTeam(member, appointment.teamId);
+    if (!this.runs(member, appointment)) fail(403, 'access.denied');
     const expect = typeOf(appointment.type).expectAnswers;
     if (expect === 'NONE') fail(400, 'attendance.answers-off');
-    if (!appointment.teamId && expect !== 'CLUB') fail(400, 'attendance.not-a-team-appointment');
+    if (!MockCalendar.expects(appointment)) fail(400, 'attendance.not-a-team-appointment');
     return this.remind(appointment, 1);
   }
 
@@ -457,12 +484,8 @@ export class MockCalendar {
     if (this.openReminded.data.includes(key)) return 0;
     this.openReminded.data.push(key);
     this.openReminded.save();
-    const teamId = appointment.teamId;
     const answers = this.responses.data[appointment.id] ?? {};
-    const players = teamId
-      ? this.people.teamMembers(teamId).filter((id) => !coaches(this.people.teamRoles(id)[teamId]))
-      : this.people.audienceIds({ everyone: true });
-    const open = players.filter((id) => !answers[id] && !this.absentOn(id, appointment.startsAt));
+    const open = this.players(appointment).filter((id) => !answers[id] && !this.absentOn(id, appointment.startsAt));
     this.notice('OPEN_REMINDER', [...open, ...this.people.guardiansOf(open)], appointment);
     return open.length;
   }
@@ -473,7 +496,7 @@ export class MockCalendar {
     for (const a of this.appointments.data) {
       const type = types.data.find((t) => t.key === a.type);
       const start = Date.parse(a.startsAt);
-      if (!type?.remindHours || type.expectAnswers === 'NONE' || (!a.teamId && type.expectAnswers !== 'CLUB')) continue;
+      if (!type?.remindHours || !MockCalendar.expects(a)) continue;
       if (a.cancelled || start <= now) continue;
       if (type.remindAgainHours && start - type.remindAgainHours * 3_600_000 <= now) this.remind(a, 2);
       else if (start - type.remindHours * 3_600_000 <= now) this.remind(a, 1);
@@ -516,12 +539,16 @@ export class MockCalendar {
     const items: OpenAnswer[] = [];
     for (const a of this.appointments.data) {
       const start = Date.parse(a.startsAt);
-      const expect = typeOf(a.type).expectAnswers;
-      const expected = a.teamId ? expect !== 'NONE' : expect === 'CLUB';
-      if (a.cancelled || !expected || start <= now || start > now + calendarSettings.data.openAnswerDays * DAY_MS || !this.canSee(member, a))
+      if (
+        a.cancelled ||
+        !MockCalendar.expects(a) ||
+        start <= now ||
+        start > now + calendarSettings.data.openAnswerDays * DAY_MS ||
+        !this.canSee(member, a)
+      )
         continue;
       for (const id of people) {
-        if ((a.teamId && !(a.teamId in this.people.teamRoles(id))) || this.responses.data[a.id]?.[id] || this.absentOn(id, a.startsAt)) continue;
+        if (!this.involved(a, id) || this.responses.data[a.id]?.[id] || this.absentOn(id, a.startsAt)) continue;
         items.push({
           appointmentId: a.id,
           teamId: a.teamId,
@@ -538,14 +565,14 @@ export class MockCalendar {
   /** server: AttendanceHandlers.setPresence — once it started, by who runs the team; with self check-in by the member or a guardian until the end. */
   setPresence(member: Member, id: string, body: { memberId?: string; present?: boolean | null }): Attendance {
     const appointment = this.visible(member, id);
-    if (!this.runsTeam(member, appointment.teamId)) {
+    if (!this.runs(member, appointment)) {
       if (!typeOf(appointment.type).selfCheckIn) fail(403, 'access.denied');
       if (body.memberId !== member.id && !this.people.wardsOf(member.id).includes(body.memberId ?? '')) fail(404, 'member.not-found');
       if (Date.parse(appointment.endsAt) <= Date.now()) fail(409, 'attendance.check-in-closed');
     }
     if (appointment.cancelled || Date.parse(appointment.startsAt) > Date.now()) fail(409, 'attendance.presence-not-yet');
     if (!body.memberId) fail(400, 'request.invalid');
-    if (appointment.teamId && !this.people.teamMembers(appointment.teamId).includes(body.memberId!)) fail(403, 'attendance.not-in-team');
+    if (!this.involved(appointment, body.memberId!)) fail(403, 'attendance.not-in-team');
     const marks = (this.presence.data[id] ??= {});
     if (body.present == null) delete marks[body.memberId!];
     else marks[body.memberId!] = body.present;
@@ -599,7 +626,7 @@ export class MockCalendar {
     if ((body.reason?.length ?? 0) > limits.reasonMaxLength) fail(400, 'attendance.reason-too-long');
     if (appointment.cancelled) fail(409, 'attendance.appointment-cancelled');
     if (Date.parse(appointment.startsAt) <= Date.now()) fail(409, 'attendance.closed');
-    if (appointment.teamId && !(appointment.teamId in this.people.teamRoles(target))) fail(403, 'attendance.not-in-team');
+    if (!this.involved(appointment, target)) fail(403, 'attendance.not-in-team');
     const type = typeOf(appointment.type);
     if (type.expectAnswers === 'NONE') fail(400, 'attendance.answers-off');
     if (Date.parse(appointment.startsAt) - type.answerDeadlineHours * 3_600_000 <= Date.now()) fail(409, 'attendance.deadline-passed');
@@ -616,7 +643,7 @@ export class MockCalendar {
     mockServer.events.publish({
       type: 'attendance.response-changed',
       data: { appointmentId: id, memberId: target, status: response.status },
-      audience: this.people.teamAudience(appointment.teamId),
+      audience: this.audienceOf(appointment),
     });
     return { appointmentId: id, memberId: target, status: response.status, reason: response.reason, updatedAt: response.updatedAt };
   }
@@ -627,11 +654,11 @@ export class MockCalendar {
     const answers = this.responses.data[id] ?? {};
     const expected = new Set(Object.keys(answers));
     if (appointment.teamId) this.people.teamMembers(appointment.teamId).forEach((m) => expected.add(m));
+    else if (isChosen(appointment.audience)) this.people.reachPool(appointment.audience).forEach((m) => expected.add(m));
     else if (typeOf(appointment.type).expectAnswers === 'CLUB') this.people.audienceIds({ everyone: true }).forEach((m) => expected.add(m));
     // server: an absence on the appointment's local day counts as NO until the member answers.
     const day = this.people.clock.localDate(appointment.startsAt);
-    const showReasons =
-      this.people.isManager(member) || (appointment.teamId !== null && coaches(this.people.teamRoles(member.id)[appointment.teamId]));
+    const showReasons = this.runs(member, appointment);
     const own = [member.id, ...this.people.wardsOf(member.id)];
     const entries: AttendanceEntry[] = [...expected]
       .flatMap((memberId): AttendanceEntry[] => {
@@ -824,7 +851,7 @@ export class MockCalendar {
     mockServer.events.publish({
       type: 'attendance.rides-changed',
       data: { appointmentId: appointment.id },
-      audience: this.people.teamAudience(appointment.teamId),
+      audience: this.audienceOf(appointment),
     });
   }
 
@@ -869,22 +896,45 @@ export class MockCalendar {
         firstStartsAt: first.startsAt,
         ...extra,
       },
-      audience: this.people.teamAudience(first.teamId),
+      audience: this.audienceOf(first),
     });
   }
 
-  /** server: CalendarHandlers.Viewer.canSee */
-  private canSee(member: Member, appointment: Appointment): boolean {
-    return appointment.teamId === null || this.people.isManager(member) || this.people.visibleTeamIds(member.id).has(appointment.teamId);
+  /** server: CalendarHandlers.publish — the team; the whole club; or for chosen people the reach, their guardians, the creator and admin/board. */
+  private audienceOf(a: Appointment): MockAudience {
+    if (!isChosen(a.audience)) return this.people.teamAudience(a.teamId);
+    const pool = this.people.reachPool(a.audience);
+    return { members: [...pool, ...this.people.guardiansOf(pool), ...(a.createdBy ? [a.createdBy] : [])], roles: ADMIN_BOARD };
   }
 
-  /** server: CalendarHandlers.requireMayEdit */
-  private requireMayEdit(member: Member, teamId: string | null): void {
-    if (teamId === null || this.people.isManager(member)) {
-      this.people.requirePrivileged(member, ['ADMIN', 'BOARD']);
-      return;
-    }
-    if (!coaches(this.people.teamRoles(member.id)[teamId])) fail(403, 'access.denied');
+  /** server: CalendarHandlers.Viewer.canSee — chosen ones by the reach of the member or a minor, or as their creator. */
+  private canSee(member: Member, appointment: Appointment): boolean {
+    if (this.people.isManager(member)) return true;
+    if (appointment.teamId) return this.people.visibleTeamIds(member.id).has(appointment.teamId);
+    if (!isChosen(appointment.audience)) return true;
+    return (
+      appointment.createdBy === member.id ||
+      [member.id, ...this.people.wardsOf(member.id)].some((id) => this.people.reaches(appointment.audience, id))
+    );
+  }
+
+  /** server: CalendarHandlers.mayEdit — the board; coaches of the team; a coach the appointment for chosen people they made. */
+  mayEdit(member: Member, a: Pick<Appointment, 'teamId' | 'audience' | 'createdBy'>): boolean {
+    if (this.people.isManager(member)) return true;
+    if (a.teamId) return coaches(this.people.teamRoles(member.id)[a.teamId]);
+    return isChosen(a.audience) && member.roles.includes('COACH') && a.createdBy === member.id;
+  }
+
+  /** server: CalendarHandlers.requireMayEdit — the whole club needs admin/board. */
+  private requireMayEdit(member: Member, a: Pick<Appointment, 'teamId' | 'audience' | 'createdBy'>): void {
+    if (a.teamId === null && !isChosen(a.audience)) this.people.requirePrivileged(member, ['ADMIN', 'BOARD']);
+    else if (!this.mayEdit(member, a)) fail(403, 'access.denied');
+  }
+
+  /** Who is expected to answer: the team, or for chosen people the reach (server: AttendanceHandlers). */
+  private involved(a: Appointment, memberId: string): boolean {
+    if (a.teamId) return a.teamId in this.people.teamRoles(memberId);
+    return !isChosen(a.audience) || this.people.reaches(a.audience, memberId);
   }
 
   /** server: Series.rhythm — weeks (default 1, up to 8) or months (1–12, by date or weekday), not both. */
@@ -984,7 +1034,15 @@ export class MockCalendar {
       location: a.location || null,
       locationId: a.locationId ?? null,
       cabins,
+      audience: MockCalendar.normalised(a.teamId, a.audience),
     };
+  }
+
+  /** server: Appointment constructor — no team and no entries = everyone; a team takes no audience. */
+  private static normalised(teamId: string | null, audience: Reach | undefined): Reach {
+    if (!audience || !hasAudience(audience)) return teamId ? NO_AUDIENCE : EVERYONE;
+    if (teamId) fail(400, 'appointment.audience-invalid');
+    return audience;
   }
 
   /** Demo data relative to today: weekly trainings, a match, club-wide events, one cancellation. */
@@ -995,7 +1053,7 @@ export class MockCalendar {
     const at = (offsetDays: number, time: string) => clock.toInstant(`${ZonedClock.addDays(weekStart, offsetDays)}T${time}`);
     const items: Appointment[] = [];
     let n = 0;
-    type Seed = Omit<Appointment, 'id' | 'cancelled' | 'locationId' | 'cabins' | 'rides'> & Partial<Appointment>;
+    type Seed = Omit<Appointment, 'id' | 'cancelled' | 'locationId' | 'cabins' | 'rides' | 'audience' | 'createdBy'> & Partial<Appointment>;
     const add = (a: Seed) =>
       items.push({
         id: `a-${++n}`,
@@ -1003,6 +1061,8 @@ export class MockCalendar {
         locationId: null,
         cabins: [],
         rides: typeOf(a.type).rides,
+        audience: a.teamId ? NO_AUDIENCE : EVERYONE,
+        createdBy: null,
         ...a,
         description: a.description ?? null,
         location: a.location ?? null,
@@ -1116,7 +1176,13 @@ export class MockCalendar {
     this.rides.data.splice(0, this.rides.data.length, ...rides);
     for (const ride of this.rides.data) ride.passengers = ride.passengers.filter((id) => id !== memberId);
     delete this.feeds.data[memberId];
-    for (const table of [this.responses, this.absences, this.rides, this.feeds]) table.save();
+    // server: CalendarRepository.forgetMember
+    for (const a of this.appointments.data.filter((x) => x.audience.memberIds.includes(memberId))) {
+      a.audience = { ...a.audience, memberIds: a.audience.memberIds.filter((id) => id !== memberId) };
+      // An audience left empty would read as the whole club: it falls back to admin and board.
+      if (!hasAudience(a.audience)) a.audience = { ...a.audience, roles: [...ADMIN_BOARD] };
+    }
+    for (const table of [this.responses, this.absences, this.rides, this.feeds, this.appointments]) table.save();
   }
 
   private seedRides(): StoredRide[] {

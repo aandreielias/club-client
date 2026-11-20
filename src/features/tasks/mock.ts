@@ -1,13 +1,14 @@
 // Mock of the club-server tasks module (TaskHandlers): visibility, work and manage rights, validation.
 import { activity, MockActivity } from '../../lib/mock/MockActivity';
 import { settings } from '../../settings';
-import { personalData, directory, type MockDirectory } from '../../lib/mock/core';
+import { personalData, directory, MockDirectory } from '../../lib/mock/core';
+import { EVERYONE, hasAudience, isChosen, NO_AUDIENCE, type Reach } from '../../lib/reach';
 import { itemUseSources, MockLinks, type ItemUse } from '../../lib/mock/MockLinks';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import type { Member } from '../../lib/types';
 import { repeatAt, type Rhythm } from '../../lib/time/repeat';
-import type { NewTask, Task, TaskComment, TaskPatch, TaskSettings, TaskSource, TaskStatus } from './model';
+import { type NewTask, type Task, type TaskComment, type TaskPatch, type TaskSettings, type TaskSource, type TaskStatus } from './model';
 import type { MockEvent } from '../../lib/mock/MockEventBus';
 import { ADMIN_BOARD, coaches } from '../../lib/types';
 import { CHANGE_FIELD_LABELS, type ChangeField } from '../members/MembersApi';
@@ -25,16 +26,23 @@ class Viewer {
   readonly coachTeamIds: Set<string>;
   /** The member plus their minors. */
   readonly self: Set<string>;
+  readonly offices: string[];
 
   constructor(
     readonly member: Member,
-    people: MockDirectory,
+    private readonly people: MockDirectory,
   ) {
     const own = people.teamRoles(member.id);
     this.board = people.isManager(member);
     this.teamIds = new Set(Object.keys(own));
     this.coachTeamIds = new Set(Object.keys(own).filter((team) => coaches(own[team])));
     this.self = new Set([member.id, ...people.wardsOf(member.id)]);
+    this.offices = people.officesOf(member.id);
+  }
+
+  /** server: Viewer.inAudience — the member's own roles, running offices, teams and kinds, or named. */
+  inAudience(a: Reach): boolean {
+    return this.people.reaches(a, this.member.id);
   }
 
   assigned(task: StoredTask): boolean {
@@ -42,7 +50,13 @@ class Viewer {
   }
 
   canSee(task: StoredTask): boolean {
-    return this.board || task.createdBy === this.member.id || this.assigned(task) || (task.teamId !== null && this.teamIds.has(task.teamId));
+    return (
+      this.board ||
+      task.createdBy === this.member.id ||
+      this.assigned(task) ||
+      (task.teamId !== null && this.teamIds.has(task.teamId)) ||
+      this.inAudience(task.audience)
+    );
   }
 
   canWork(task: StoredTask): boolean {
@@ -105,6 +119,7 @@ export class MockTasks {
         repeatWeeks: null,
         repeatMonths: null,
         repeatByWeekday: false,
+        audience: NO_AUDIENCE,
       };
       this.tasks.data.push(task);
       this.sources.data[task.id] = { kind: 'CHANGE_REQUEST', id: data.requestId };
@@ -143,6 +158,7 @@ export class MockTasks {
         repeatWeeks: null,
         repeatMonths: null,
         repeatByWeekday: false,
+        audience: NO_AUDIENCE,
       };
       this.tasks.data.push(task);
       this.sources.data[task.id] = { kind, id: sourceId };
@@ -195,6 +211,7 @@ export class MockTasks {
       repeatWeeks: null,
       repeatMonths: null,
       repeatByWeekday: false,
+      audience: NO_AUDIENCE,
     };
     this.tasks.data.push(task);
     this.sources.data[task.id] = { kind: 'MEETING_REMINDER', id: key };
@@ -216,7 +233,10 @@ export class MockTasks {
       mockServer.events.publish({ type: 'tasks.task-purged', data: { taskId } });
       mockServer.events.publish({ type: 'activity.purged', data: { kind: 'TASK', recordId: taskId } });
     }
-    for (const task of this.tasks.data) task.assignees = task.assignees.filter((id) => id !== memberId);
+    for (const task of this.tasks.data) {
+      task.assignees = task.assignees.filter((id) => id !== memberId);
+      task.audience = { ...task.audience, memberIds: task.audience.memberIds.filter((id) => id !== memberId) };
+    }
     for (const table of [this.tasks, this.sources, this.comments]) table.save();
   }
 
@@ -287,7 +307,7 @@ export class MockTasks {
   setLinks(member: Member, id: string, body: Record<string, unknown>) {
     const viewer = this.viewer(member);
     const task = this.visible(viewer, id);
-    this.requireMayManage(viewer, task.teamId);
+    this.requireMayManage(viewer, task);
     const links = this.links.set(member, task.id, body);
     this.changed(task, 'UPDATED');
     MockActivity.record('TASK', task.id, member, 'UPDATED', { title: task.title, teamIds: task.teamId ? [task.teamId] : [] });
@@ -324,10 +344,13 @@ export class MockTasks {
 
   create(member: Member, body: NewTask): Task {
     const viewer = this.viewer(member);
-    this.requireMayManage(viewer, body.teamId ?? null);
-    this.requireValidAssignees(body.teamId ?? null, body.assignees);
+    const audience = MockTasks.audience(body.audience);
+    if (body.teamId && hasAudience(audience)) fail(400, 'task.audience-invalid');
+    this.requireMayManage(viewer, { teamId: body.teamId ?? null, audience, createdBy: member.id });
+    this.requireValidAssignees(body.teamId ?? null, audience, body.assignees);
     const now = new Date().toISOString();
     const task: StoredTask = MockTasks.validated({
+      audience,
       id: crypto.randomUUID(),
       teamId: body.teamId ?? null,
       appointmentId: body.appointmentId ?? null,
@@ -354,8 +377,11 @@ export class MockTasks {
   update(member: Member, id: string, patch: TaskPatch): Task {
     const viewer = this.viewer(member);
     const current = this.visible(viewer, id);
-    this.requireMayManage(viewer, current.teamId);
-    if (patch.assignees) this.requireValidAssignees(current.teamId, patch.assignees);
+    this.requireMayManage(viewer, current);
+    const audience = patch.audience ? MockTasks.audience(patch.audience) : current.audience;
+    if (patch.audience && (!hasAudience(current.audience) || !hasAudience(audience))) fail(400, 'task.audience-invalid');
+    if (patch.audience) this.requireMayManage(viewer, { teamId: null, audience, createdBy: current.createdBy });
+    if (patch.assignees || patch.audience) this.requireValidAssignees(current.teamId, audience, patch.assignees ?? current.assignees);
     if (patch.clearDue && patch.dueAt) fail(400, 'task.due-conflict');
     const previousAssignees = [...current.assignees];
     const next = MockTasks.validated({
@@ -364,6 +390,7 @@ export class MockTasks {
       description: patch.description ?? current.description,
       dueAt: patch.clearDue ? null : (patch.dueAt ?? current.dueAt),
       assignees: patch.assignees ? [...new Set(patch.assignees)] : current.assignees,
+      audience,
       checklist: patch.checklist ? MockTasks.items(patch.checklist) : current.checklist,
       ...(patch.clearRepeat
         ? MockTasks.rhythm(null, null, false)
@@ -441,7 +468,7 @@ export class MockTasks {
   delete(member: Member, id: string): void {
     const viewer = this.viewer(member);
     const task = this.visible(viewer, id);
-    this.requireMayManage(viewer, task.teamId);
+    this.requireMayManage(viewer, task);
     this.changed(task, 'DELETED'); // audience computed before the task is gone
     MockActivity.record('TASK', task.id, member, 'DELETED', { title: task.title, teamIds: task.teamId ? [task.teamId] : [] });
     this.tasks.data.splice(this.tasks.data.indexOf(task), 1);
@@ -455,10 +482,11 @@ export class MockTasks {
   private changed(task: StoredTask, change: string, previousAssignees: readonly string[] = []): void {
     const members = new Set([...task.assignees, ...previousAssignees, task.createdBy, ...this.people.guardiansOf(task.assignees)]);
     if (task.teamId) this.people.teamMembers(task.teamId).forEach((m) => members.add(m));
+    this.pool(task.audience).forEach((m) => members.add(m));
     mockServer.events.publish({
       type: 'tasks.task-changed',
       data: { taskId: task.id, teamId: task.teamId, change },
-      audience: { members: [...members], roles: ['ADMIN', 'BOARD'] },
+      audience: task.audience.everyone ? { everyone: true } : { members: [...members], roles: ['ADMIN', 'BOARD'] },
     });
   }
 
@@ -497,20 +525,43 @@ export class MockTasks {
     return task;
   }
 
-  /** server: TaskHandlers.requireMayManage */
-  private requireMayManage(viewer: Viewer, teamId: string | null): void {
-    if (teamId === null || viewer.board) {
-      this.people.requirePrivileged(viewer.member, ['ADMIN', 'BOARD']);
-      return;
-    }
-    if (!viewer.coachTeamIds.has(teamId)) fail(403, 'access.denied');
+  /** server: TaskHandlers.mayManage — the board; coaches of the team; a coach their own task for chosen people. */
+  private mayManage(viewer: Viewer, task: Pick<StoredTask, 'teamId' | 'audience' | 'createdBy'>): boolean {
+    if (viewer.board) return true;
+    if (task.teamId !== null) return viewer.coachTeamIds.has(task.teamId);
+    return isChosen(task.audience) && viewer.member.roles.includes('COACH') && task.createdBy === viewer.member.id;
+  }
+
+  private requireMayManage(viewer: Viewer, task: Pick<StoredTask, 'teamId' | 'audience' | 'createdBy'>): void {
+    if (viewer.board) this.people.requirePrivileged(viewer.member, ['ADMIN', 'BOARD']);
+    else if (!this.mayManage(viewer, task)) fail(403, 'access.denied');
   }
 
   /** server: TaskHandlers.requireValidAssignees */
-  private requireValidAssignees(teamId: string | null, assignees: readonly string[] | undefined): void {
+  private requireValidAssignees(teamId: string | null, audience: Reach, assignees: readonly string[] | undefined): void {
     if (!assignees?.length) return fail(400, 'task.assignees-invalid');
     if (assignees.some((id) => !this.people.name(id))) fail(400, 'task.assignee-unknown');
     if (teamId && assignees.some((id) => !(teamId in this.people.teamRoles(id)))) fail(400, 'task.assignee-not-in-team');
+    if (hasAudience(audience)) {
+      const pool = this.pool(audience);
+      if (assignees.some((id) => !pool.has(id))) fail(400, 'task.assignee-not-in-audience');
+    }
+  }
+
+  /** server: TaskPublisher.pool — active members (no guests) the audience reaches. */
+  private pool(a: Reach): Set<string> {
+    return new Set(this.people.reachPool(a));
+  }
+
+  /** server: TaskHandlers.audienceMembers — admin, board and coaches. */
+  audienceMembers(member: Member, body: unknown): { memberIds: string[] } {
+    if (!member.roles.some((r) => r === 'ADMIN' || r === 'BOARD' || r === 'COACH')) fail(403, 'access.denied');
+    return { memberIds: [...this.pool(MockTasks.audience(body))] };
+  }
+
+  /** server: Reach (null lists = empty) and TaskHandlers.requireValidAudience. */
+  private static audience(body: unknown): Reach {
+    return MockDirectory.parseReach(body, 'task.audience-invalid');
   }
 
   private withComments(task: StoredTask): Task {
@@ -584,6 +635,7 @@ export class MockTasks {
       repeatWeeks: null as number | null,
       repeatMonths: null as number | null,
       repeatByWeekday: false,
+      audience: NO_AUDIENCE,
     };
     const items = (...entries: [string, boolean][]) => entries.map(([text, done], i) => ({ id: `ci-${text.length}-${i}`, text, done }));
     return [
@@ -648,6 +700,7 @@ export class MockTasks {
         assignees: ['vorstand'],
         checklist: [],
         completedAt: at(-11),
+        audience: EVERYONE,
       },
       {
         ...base,
@@ -660,6 +713,19 @@ export class MockTasks {
         createdBy: 'admin',
         assignees: ['trainer'],
         checklist: [],
+      },
+      {
+        ...base,
+        id: 't-7',
+        teamId: null,
+        title: 'Termine für die Trainer:innen-Fortbildung sammeln',
+        description: null,
+        status: 'OPEN',
+        dueAt: at(9),
+        createdBy: 'vorstand',
+        assignees: ['trainer'],
+        checklist: [],
+        audience: { ...NO_AUDIENCE, roles: ['COACH'] },
       },
     ];
   }
@@ -705,6 +771,7 @@ mockServer
     return { items: found.slice(0, 1000), truncated: found.length > 1000 }; // server: TaskRepository.MAX_LIST
   })
   .on('POST', '/api/v1/tasks', (req) => tasks.create(actor(req), req.body ?? {}))
+  .on('POST', '/api/v1/tasks/audience-members', (req) => tasks.audienceMembers(actor(req), req.body))
   .on('GET', '/api/v1/tasks/:id', (req) => tasks.get(actor(req), req.params.id))
   .on('PATCH', '/api/v1/tasks/:id', (req) => tasks.update(actor(req), req.params.id, req.body ?? {}))
   .on('PUT', '/api/v1/tasks/:id/status', (req) => tasks.setStatus(actor(req), req.params.id, req.body?.status))

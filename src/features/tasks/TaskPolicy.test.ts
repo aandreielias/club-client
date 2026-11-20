@@ -3,6 +3,7 @@ import { TeamDirectory } from '../../lib/directory/TeamDirectory.svelte';
 import { ApiClient } from '../../lib/http/ApiClient';
 import { ClubPermissions } from '../../lib/policy/ClubPermissions';
 import { SessionStore } from '../../lib/session/SessionStore.svelte';
+import { NO_AUDIENCE } from '../../lib/reach';
 import type { Task } from './model';
 import { TaskPolicy } from './TaskPolicy';
 
@@ -24,6 +25,7 @@ const task = (assignees: string[]): Task => ({
   repeatMonths: null,
   repeatByWeekday: false,
   source: null,
+  audience: NO_AUDIENCE,
 });
 
 describe('TaskPolicy', () => {

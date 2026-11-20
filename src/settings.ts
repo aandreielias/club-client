@@ -404,6 +404,11 @@ export const settings = {
     maxSetPoints: 99,
   },
 
+  /** Who tasks and appointments are for (lib/reach). */
+  audience: {
+    /** Per kind of entry (roles, offices, teams, kinds, members); server: Reach.MAX_ENTRIES. */
+    maxEntries: 20,
+  },
   calendar: {
     defaultView: 'month' as 'month' | 'week',
     /** Hours shown in the week view (end exclusive). */
@@ -593,6 +598,8 @@ export const settings = {
     mockUploadMsPerMb: 400,
   },
 
+  /** ui/ChipPicker: suggestions shown at once while typing. */
+  chipPicker: { maxSuggestions: 50 },
   tasks: {
     defaultDueTime: '18:00',
     /** In-app reminders of own due tasks: how often to look, and when to sum up instead. */

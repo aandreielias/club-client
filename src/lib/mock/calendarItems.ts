@@ -57,7 +57,7 @@ export function items(viewer: Member, from: string, to: string): CalendarItem[] 
   }
 
   for (const a of calendar.list(viewer, from, to, null)) {
-    const editable = !a.cancelled && (board || (!!a.teamId && coached.includes(a.teamId)));
+    const editable = !a.cancelled && calendar.mayEdit(viewer, a);
     out.push({
       ...base,
       kind: 'appointment',

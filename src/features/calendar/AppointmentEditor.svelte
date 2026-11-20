@@ -6,7 +6,9 @@
   import DateInput from '../../ui/DateInput.svelte';
   import DateTimeInput from '../../ui/DateTimeInput.svelte';
   import Select from '../../ui/Select.svelte';
-  import { CLUB_WIDE, type AppointmentForm } from './AppointmentForm.svelte';
+  import AudiencePicker from '../../ui/AudiencePicker.svelte';
+  import { directory } from '../../lib/container';
+  import { CLUB_WIDE, FOR_CHOSEN, type AppointmentForm } from './AppointmentForm.svelte';
   import { appointmentTypes, calendarSettings } from './services';
   import { appointmentPolicy as policy } from './services';
   import type { Location } from '../locations/model';
@@ -26,10 +28,16 @@
     { value: 'months', label: 'Monatlich am selben Tag' },
     { value: 'weekday', label: 'Monatlich am selben Wochentag' },
   ];
-  const teamOptions = $derived([
-    ...(policy.canCreateClubWide() || form.teamId === CLUB_WIDE ? [{ value: CLUB_WIDE, label: 'Ganzer Verein' }] : []),
-    ...policy.plannableTeams().map((t) => ({ value: t.id, label: t.name })),
-  ]);
+  /** Team appointments keep their team; the others switch between the two choices (a coach keeps theirs chosen). */
+  const fixed = $derived(form.isEdit && form.teamOrNull !== null);
+  const teamOptions = $derived(
+    fixed
+      ? [{ value: form.teamId, label: directory.teamName(form.teamOrNull!) ?? 'Team' }]
+      : [
+          ...(policy.canCreateClubWide() || form.teamId === CLUB_WIDE ? [{ value: CLUB_WIDE, label: 'Ganzer Verein' }] : []),
+          ...(policy.canCreateForChosen() || form.forChosen ? [{ value: FOR_CHOSEN, label: 'Bestimmte Personen und Gruppen' }] : []),
+        ],
+  );
 
   /** Places of the club, plus free text for one-off places (a beach court, the opponent's hall). */
   const OTHER = '';
@@ -54,8 +62,13 @@
     <Field label="Art">
       <Select bind:value={form.type} options={appointmentTypes.options(form.type)} />
     </Field>
-    <Field label="Für" hint={form.isEdit ? 'Lässt sich nach dem Anlegen nicht mehr ändern.' : undefined}>
-      <Select bind:value={form.teamId} options={teamOptions} disabled={form.isEdit} />
+    <Field
+      label="Für"
+      hint={fixed
+        ? 'Lässt sich nach dem Anlegen nicht mehr ändern.'
+        : 'Ganzer Verein: alle Mitglieder sehen ihn. Eine einzelne Mannschaft allein ergibt einen Mannschaftstermin.'}
+    >
+      <Select bind:value={form.teamId} options={teamOptions} disabled={fixed || teamOptions.length < 2} />
     </Field>
     <Field label="Beginn" error={form.error('start')}>
       <DateTimeInput bind:value={() => form.start, (value) => form.setStart(value)} required />
@@ -64,6 +77,15 @@
       <DateTimeInput bind:value={form.end} min={form.start} required />
     </Field>
   </div>
+
+  {#if form.forChosen && !fixed}
+    <AudiencePicker
+      value={form.audience}
+      onchange={(v) => (form.audience = v)}
+      error={form.error('audience')}
+      hint="Wer eine der gewählten Rollen, Funktionen, Teams oder Mitgliedsarten hat oder genannt ist (und deren Erziehungsberechtigte), sieht den Termin und antwortet."
+    />
+  {/if}
 
   <div class="grid-2">
     <Field label="Ort" hint={places && !places.length ? 'Orte trägst du unter „Orte“ ein.' : undefined}>

@@ -18,16 +18,10 @@
   const form = new Resource<TaskForm>(async () => {
     if (permissions.isManager) await directory.loadTeams().catch(() => {});
     await directory.loadRosters();
-    return TaskForm.blank(session.clock, defaultTeam());
+    const team = policy.plannableTeams().some((t) => t.id === id) ? id : null;
+    return TaskForm.blank(session.clock, team, policy.canCreateClubWide());
   });
   void form.load();
-
-  /** Requested team if plannable; club-wide only for members allowed to plan it, else their first team. */
-  function defaultTeam(): string | null {
-    const teams = policy.plannableTeams();
-    if (teams.some((t) => t.id === id)) return id;
-    return policy.canCreateClubWide() ? null : (teams[0]?.id ?? null);
-  }
 
   const submit = (value: TaskForm) => create.submit(async () => (await tasksApi.create(value.toNew())).id, 'task', 'Aufgabe angelegt.');
 </script>

@@ -23,6 +23,8 @@
   import Comments from './Comments.svelte';
   import DueField from './DueField.svelte';
   import { TASK_CHANGED } from './events';
+  import { audienceLabel, loadAudienceLabels } from '../../ui/audience';
+  import { audienceEntries, hasAudience } from '../../lib/reach';
   import { repeatLabel, statusHue, statusLabel, type TaskStatus, TASK_STATUSES } from './model';
   import { TaskDetailModel } from './TaskDetailModel.svelte';
   import TaskEditor from './TaskEditor.svelte';
@@ -32,6 +34,7 @@
 
   /** One task: status, properties, checklist, comments; edit and delete for managers. Window and page. */
   let { id, handle, onclosed }: { id: string; handle?: WindowHandle; onclosed?: () => void } = $props();
+  loadAudienceLabels();
 
   // svelte-ignore state_referenced_locally
   const view = new DetailController(bus, handle, onclosed);
@@ -119,7 +122,15 @@
             <dd>{repeatLabel(task)}</dd>
           {/if}
           <dt>Für</dt>
-          <dd>{task.teamId ? (directory.teamName(task.teamId) ?? 'Team') : 'Ganzer Verein'}</dd>
+          <dd>
+            {task.teamId
+              ? (directory.teamName(task.teamId) ?? 'Team')
+              : task.audience.everyone
+                ? 'Ganzer Verein'
+                : hasAudience(task.audience)
+                  ? audienceEntries(task.audience).map(audienceLabel).join(', ')
+                  : 'Nur Vorstand'}
+          </dd>
           <dt>Erstellt</dt>
           <dd>
             {session.format.dateTime(task.createdAt)}{#if directory.knownName(task.createdBy)},&nbsp;<MemberName memberId={task.createdBy} />{/if}

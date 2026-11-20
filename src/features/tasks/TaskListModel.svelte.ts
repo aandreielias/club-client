@@ -1,6 +1,7 @@
 import type { TeamDirectory } from '../../lib/directory/TeamDirectory.svelte';
 import { ListModel } from '../../lib/list/ListModel.svelte';
 import type { LocalStore } from '../../lib/storage/LocalStore';
+import { hasAudience } from '../../lib/reach';
 import { isOverdue, statusLabel, statusRank, TASK_STATUSES, type Task } from './model';
 import type { TaskPolicy } from './TaskPolicy';
 import type { TasksApi } from './TasksApi';
@@ -28,7 +29,13 @@ export class TaskListModel extends ListModel<Task> {
           { key: 'title', label: 'Titel', value: (t) => t.title },
           { key: 'status', label: 'Status', value: (t) => statusRank(t.status), format: (t) => statusLabel(t.status), width: '8rem' },
           { key: 'due', label: 'Fällig', value: (t) => t.dueAt, width: '11rem' },
-          { key: 'team', label: 'Für', value: (t) => (t.teamId ? (directory.teamName(t.teamId) ?? 'Team') : 'Verein'), width: '9rem' },
+          {
+            key: 'team',
+            label: 'Für',
+            value: (t) =>
+              t.teamId ? (directory.teamName(t.teamId) ?? 'Team') : t.audience.everyone ? 'Verein' : hasAudience(t.audience) ? 'Auswahl' : 'Vorstand',
+            width: '9rem',
+          },
           {
             key: 'assignees',
             label: 'Zugewiesen',

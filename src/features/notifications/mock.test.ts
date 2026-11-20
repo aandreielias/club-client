@@ -5,6 +5,7 @@ import { mockServer } from '../../lib/mock/MockServer';
 import type { Member } from '../../lib/types';
 import { calendar } from '../calendar/mock';
 import { tasks } from '../tasks/mock';
+import { NO_AUDIENCE } from '../../lib/reach';
 import { notifications } from './mock';
 
 const member = (id: string): Member => directory.members.data.find((m) => m.id === id)!;
@@ -40,6 +41,7 @@ describe('mock notifications', () => {
       repeatWeeks: null,
       repeatMonths: null,
       repeatByWeekday: false,
+      audience: NO_AUDIENCE,
     });
     expect(notifications.list('spieler', true).items[0]).toMatchObject({
       kind: 'TASK_ASSIGNED',

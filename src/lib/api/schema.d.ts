@@ -1061,6 +1061,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tasks/audience-members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["audienceMembers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/resolutions": {
         parameters: {
             query?: never;
@@ -3289,6 +3305,14 @@ export interface components {
             /** @enum {string} */
             status: "OPEN" | "IN_PROGRESS" | "DONE";
         };
+        "at.clubserver.platform.Reach": {
+            roles: ("ADMIN" | "BOARD" | "COACH" | "PLAYER" | "PARENT" | "VOLUNTEER" | "GUEST")[];
+            offices: string[];
+            teamIds: string[];
+            kinds: string[];
+            memberIds: string[];
+            everyone: boolean;
+        };
         "at.clubserver.tasks.api.TasksApi.ChecklistItemDto": {
             /** Format: uuid */
             id: string;
@@ -3338,6 +3362,7 @@ export interface components {
             repeatMonths: number;
             repeatByWeekday: boolean;
             source: components["schemas"]["at.clubserver.tasks.api.TasksApi.Source"];
+            audience: components["schemas"]["at.clubserver.platform.Reach"];
         };
         "at.clubserver.gateway.rest.LinksBody": {
             needs: components["schemas"]["at.clubserver.gateway.rest.LinksBody.NeedBody"][];
@@ -4580,9 +4605,13 @@ export interface components {
             /** Format: int32 */
             repeatMonths: number;
             repeatByWeekday: boolean;
+            audience: components["schemas"]["at.clubserver.platform.Reach"];
         };
         "at.clubserver.gateway.rest.TasksController.CommentBody": {
             text: string;
+        };
+        "at.clubserver.tasks.api.TasksApi.AudienceMembers": {
+            memberIds: string[];
         };
         "at.clubserver.gateway.rest.ResolutionsController.CircularBody": {
             title: string;
@@ -4958,6 +4987,7 @@ export interface components {
             intervalMonths: number;
             byWeekday: boolean;
             rides: boolean;
+            audience: components["schemas"]["at.clubserver.platform.Reach"];
         };
         "at.clubserver.calendar.api.CalendarApi.AppointmentDto": {
             /** Format: uuid */
@@ -4980,6 +5010,9 @@ export interface components {
             cancelled: boolean;
             rides: boolean;
             cancelReason: string;
+            audience: components["schemas"]["at.clubserver.platform.Reach"];
+            /** Format: uuid */
+            createdBy: string;
         };
         "at.clubserver.calendar.api.CalendarApi.AppointmentList": {
             items: components["schemas"]["at.clubserver.calendar.api.CalendarApi.AppointmentDto"][];
@@ -5051,6 +5084,7 @@ export interface components {
             repeatMonths: number;
             repeatByWeekday: boolean;
             clearRepeat: boolean;
+            audience: components["schemas"]["at.clubserver.platform.Reach"];
         };
         "at.clubserver.gateway.rest.ResolutionsController.ResolutionPatch": {
             title: string;
@@ -5143,6 +5177,7 @@ export interface components {
             endsAt: string;
             rides: boolean;
             includeFollowing: boolean;
+            audience: components["schemas"]["at.clubserver.platform.Reach"];
         };
         "at.clubserver.tournaments.api.TournamentsApi.TournamentList": {
             items: components["schemas"]["at.clubserver.tournaments.api.TournamentsApi.TournamentSummary"][];
@@ -8077,6 +8112,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.tasks.api.TasksApi.TaskDto"];
+                };
+            };
+        };
+    };
+    audienceMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.platform.Reach"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.tasks.api.TasksApi.AudienceMembers"];
                 };
             };
         };

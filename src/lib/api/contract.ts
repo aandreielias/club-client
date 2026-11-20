@@ -47,6 +47,7 @@ import type {
 import type { Notification, NotificationList, NotificationSettings, Preference, Preferences } from '../../features/notifications/model';
 import type { SearchHit, SearchResult } from '../../features/search/model';
 import type { Task, TaskList, TaskSettings } from '../../features/tasks/model';
+import type { Reach } from '../reach';
 import type { TeamInput, Tournament, TournamentSummary } from '../../features/tournaments/model';
 import type { FeedEntry } from '../activity/ActivityApi';
 import type { CalendarItem } from '../calendar/CalendarSources';
@@ -135,6 +136,7 @@ export type Contract = [
   Satisfies<S['at.clubserver.gateway.rest.SearchController.SearchHit'], SearchHit>,
   Satisfies<S['at.clubserver.gateway.rest.SearchController.SearchResult'], SearchResult>,
   Satisfies<S['at.clubserver.tasks.api.TasksApi.TaskDto'], Task>,
+  Satisfies<S['at.clubserver.platform.Reach'], Reach>,
   Satisfies<S['at.clubserver.tasks.api.TasksApi.TaskSettings'], TaskSettings>,
   Satisfies<S['at.clubserver.notifications.api.NotificationsApi.NotificationSettings'], NotificationSettings>,
   Satisfies<S['at.clubserver.tasks.api.TasksApi.TaskList'], TaskList>,
