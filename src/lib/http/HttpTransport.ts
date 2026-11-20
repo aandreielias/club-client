@@ -29,6 +29,7 @@ export class HttpTransport implements Transport {
         response.status,
         data?.code ?? `http.${response.status}`,
         data?.correlationId ?? response.headers.get(HttpTransport.CORRELATION_HEADER),
+        Array.isArray(data?.details) ? data.details : [],
       );
     }
     return data;
@@ -58,6 +59,7 @@ export class HttpTransport implements Transport {
               xhr.status,
               data?.code ?? `http.${xhr.status}`,
               data?.correlationId ?? xhr.getResponseHeader(HttpTransport.CORRELATION_HEADER),
+              Array.isArray(data?.details) ? data.details : [],
             ),
           );
         }

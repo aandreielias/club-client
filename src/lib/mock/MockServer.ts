@@ -60,8 +60,8 @@ export class MockServer {
   }
 
   /** Throws the problem answer the real server would send. */
-  static fail(status: number, code: string): never {
-    throw new ProblemError(status, code, 'mock');
+  static fail(status: number, code: string, details: readonly string[] = []): never {
+    throw new ProblemError(status, code, 'mock', details);
   }
 }
 

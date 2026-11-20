@@ -6,10 +6,9 @@ import { directory, MockDirectory, personalData } from '../../lib/mock/core';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import { resolveRef } from '../../lib/mock/recordRefs';
-import { fill, p, template } from '../../lib/mock/wordTemplate';
 import type { LinkedRef, RefKind } from '../../lib/records/refs';
 import type { FinanceLevel, Member } from '../../lib/types';
-import { files } from '../files/mock';
+import { documents, files } from '../files/mock';
 import { tasks } from '../tasks/mock';
 import {
   formatMoney,
@@ -46,7 +45,6 @@ type StoredCharge = Omit<Charge, 'paidCents' | 'status' | 'payments' | 'payUrl' 
 /** server: InvoiceHandlers.LIST_CAP */
 const INVOICE_CAP = 500;
 /** server: AuditHandlers.TEMPLATE */
-const AUDIT_TEMPLATE = 'Bericht Kassenprüfung.dotx';
 const day = (iso: string) =>
   new Intl.DateTimeFormat('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(`${iso}T12:00:00Z`));
 
@@ -360,15 +358,7 @@ export class MockFinance {
     if (note && note.length > limits.noteMaxLength) fail(400, 'finance.audit-invalid');
     const last = this.checkedUntil();
     if (until >= directory.clock.today() || (last && until <= last)) fail(400, 'finance.audit-date-invalid');
-    const { default: JSZip } = await import('jszip');
-    const builtIn = () => MockFinance.auditTemplate(JSZip);
-    const report = await fill(
-      JSZip,
-      await files.settingTemplate(viewer, 'AUDIT_TEMPLATE', AUDIT_TEMPLATE, builtIn),
-      this.report(viewer, until, last, note),
-      'Konten',
-      this.balances(until),
-    );
+    const report = await documents.render(viewer, 'AUDIT_TEMPLATE', { ...this.report(viewer, until, last, note), Konten: this.balances(until) });
     const title = `Kassenprüfung bis ${day(until)}`;
     const stored = await files.storeSystemFile(viewer, RECEIPT_FOLDER, new File([report], `${title}.docx`));
     const audit: StoredAudit = {
@@ -927,22 +917,17 @@ export class MockFinance {
   }
 
   /** server: AuditHandlers.content */
+  /** server: AuditHandlers.values — the report's placeholders; the letterhead comes from the documents mock. */
   private report(viewer: Member, until: string, last: string | null, note: string | null): Record<string, string | null> {
-    const club = directory.clubInfo();
     const rows = this.bookings.data.filter((b) => b.category && b.bookedOn <= until && (!last || b.bookedOn > last));
     const sum = (sign: number) => rows.filter((b) => Math.sign(b.amountCents) === sign).reduce((s, b) => s + b.amountCents, 0);
     const lastDay = last ? new Date(`${last}T12:00:00Z`) : null;
     lastDay?.setUTCDate(lastDay.getUTCDate() + 1);
     return {
-      Verein: club.name,
-      Adresse: club.address,
-      Webseite: club.website,
-      Kontakt: club.contactEmail,
-      Registernummer: club.registerNumber,
       Von: lastDay ? day(lastDay.toISOString().slice(0, 10)) : 'Beginn der Aufzeichnungen',
       Bis: day(until),
       Prüfer: `${viewer.firstName} ${viewer.lastName}`,
-      Datum: day(directory.clock.today()),
+      Bestätigt: day(directory.clock.today()),
       Buchungen: String(rows.length),
       Einnahmen: this.money(sum(1)),
       Ausgaben: this.money(-sum(-1)),
@@ -951,37 +936,16 @@ export class MockFinance {
   }
 
   /** Each account's balance at `until`; archived ones only with money on them. */
-  private balances(until: string): string[] {
+  private balances(until: string): { Konto: string; Stand: string }[] {
     return this.accounts.data
       .map((a) => ({ a, cents: this.bookings.data.filter((b) => b.account === a.key && b.bookedOn <= until).reduce((s, b) => s + b.amountCents, 0) }))
       .filter(({ a, cents }) => !a.archived || cents !== 0)
-      .map(({ a, cents }) => `${a.label}: ${this.money(cents)}`);
+      .map(({ a, cents }) => ({ Konto: a.label, Stand: this.money(cents) }));
   }
 
   private money(cents: number): string {
     const club = directory.clubInfo();
     return formatMoney(cents, club.currency, club.locale);
-  }
-
-  /** server: AuditReport.defaultTemplate */
-  private static auditTemplate(Zip: Parameters<typeof template>[0]): Promise<Blob> {
-    return template(
-      Zip,
-      [
-        p('Small', '{{Verein}}'),
-        p('Title', 'Bericht der Kassenprüfung'),
-        p('Subtitle', 'Geprüft bis {{Bis}}'),
-        p(null, 'Zeitraum: {{Von}} bis {{Bis}}'),
-        p(null, 'Buchungen: {{Buchungen}}'),
-        p(null, 'Einnahmen: {{Einnahmen}}'),
-        p(null, 'Ausgaben: {{Ausgaben}}'),
-        p('Heading1', 'Kontostände am {{Bis}}'),
-        p('ListParagraph', '{{Konten}}'),
-        p('Heading1', 'Ergebnis'),
-        p(null, '{{Notiz}}'),
-        p(null, 'Bestätigt von {{Prüfer}} am {{Datum}}.'),
-      ].join(''),
-    );
   }
 
   private static audit(a: StoredAudit): Audit {
@@ -1229,6 +1193,11 @@ export class MockFinance {
 }
 
 export const finance = new MockFinance();
+// server: FinanceApi.BANK — the club account for the letterhead
+documents.bank = () => {
+  const { holder, iban, bic } = finance.feeSettings.data;
+  return { holder, iban, bic };
+};
 
 const reader = (req: MockRequest, min: FinanceLevel = 'READ') => finance.require(directory.actor(req), min);
 const yearParam = (req: MockRequest, name: 'season' | 'year'): number => {

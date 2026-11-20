@@ -19,7 +19,6 @@ export const FINANCE_MESSAGES: MessageCatalog = {
   'finance.period-checked': 'Dieser Zeitraum ist schon geprüft; korrigieren nur mehr per Storno.',
   'finance.audit-date-invalid': 'Das Prüfdatum muss vor heute und nach der letzten Prüfung liegen.',
   'finance.audit-invalid': `Das Ergebnis darf höchstens ${limits.noteMaxLength} Zeichen haben.`,
-  'finance.template-invalid': 'Die Vorlage für den Prüfbericht ist keine gültige Word-Vorlage (.dotx).',
   'finance.budget-invalid': 'Je Kategorie einen Betrag ab 0 planen.',
   'finance.invoice-invalid': `Von/an (bis 120 Zeichen) und einen Text (bis ${limits.textMaxLength} Zeichen) angeben.`,
   'finance.invoice-paid': 'Diese Rechnung ist schon bezahlt und lässt sich nicht mehr ändern.',

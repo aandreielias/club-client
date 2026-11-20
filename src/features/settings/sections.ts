@@ -3,7 +3,7 @@ import AppointmentTypesSection from '../calendar/AppointmentTypesSection.svelte'
 import MailboxesSection from '../mail/MailboxesSection.svelte';
 import MeetingTypesSection from '../meetings/MeetingTypesSection.svelte';
 import ResolutionRulesSection from '../meetings/ResolutionRulesSection.svelte';
-import TemplatesSection from '../meetings/TemplatesSection.svelte';
+import TemplatesSection from '../files/TemplatesSection.svelte';
 import BoardSettingsSection from '../members/BoardSettingsSection.svelte';
 import MembershipSection from '../members/MembershipSection.svelte';
 import NotificationRulesSection from '../notifications/NotificationRulesSection.svelte';

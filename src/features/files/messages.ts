@@ -33,6 +33,11 @@ export const FILE_MESSAGES: MessageCatalog = {
   'folder.scope-inherited': 'Unterordner übernehmen die Sichtbarkeit ihres obersten Ordners.',
   'folder.move-into-self': 'Ein Ordner kann nicht in sich selbst verschoben werden.',
   'setting-file.wrong-type': 'Logos: PNG, JPEG oder SVG; Vorlagen: Word-Vorlage (.dotx).',
+  'document.template-invalid': 'Die Vorlage ist keine gültige Word-Vorlage (.dotx).',
+  'document.placeholder-unknown': 'Die Vorlage nutzt unbekannte Platzhalter oder solche außerhalb ihrer Liste:',
+  'document.block-invalid': 'Die Vorlage hat offene, überkreuzte oder falsch gesetzte Blöcke:',
+  'document.template-unsupported': 'Die Vorlage enthält Teile, die die App nicht übernehmen kann (z. B. Diagramme, eingebettete Objekte):',
+  'document.kind-not-found': 'Diese Vorlagenart gibt es nicht.',
   'file.quota-exceeded': 'Dein Speicherplatz für Uploads ist voll. Lösche alte Dateien oder frag den Vorstand.',
   'file-settings.invalid': 'Der Speicherplatz muss zwischen 0,1 und 100 GB liegen.',
 };

@@ -71,18 +71,27 @@
     BrowserFile.save(new Blob([csvText(rows)], { type: 'text/csv;charset=utf-8' }), `anwesenheit-${m.title}.csv`);
   }
 
+  // The drafts (per agenda item and the further notes) follow the saved protocol; a reload keeps what was typed.
   let protocol = $state('');
-  let protocolFor = $state<string | null>(null);
-  // The draft follows the saved protocol until the minute taker starts typing; a closed vote the server appended joins the typed draft.
+  let minutes = $state<Record<string, string>>({});
+  let savedProtocol = $state('');
+  let savedMinutes = $state<Record<string, string>>({});
   $effect(() => {
-    const saved = model.meeting.value?.protocol ?? '';
-    if (protocolFor !== saved) {
-      const before = untrack(() => protocol);
-      const typed = protocolFor !== null && before !== protocolFor;
-      protocol = typed && saved.startsWith(protocolFor!) ? before + saved.slice(protocolFor!.length) : saved;
-      protocolFor = saved;
-    }
+    const m = model.meeting.value;
+    if (!m) return;
+    const nextProtocol = m.protocol ?? '';
+    const nextMinutes = Object.fromEntries(m.agendaItems.filter((i) => i.id).map((i) => [i.id!, i.minutes ?? '']));
+    untrack(() => {
+      if (protocol === savedProtocol) protocol = nextProtocol;
+      minutes = Object.fromEntries(
+        Object.entries(nextMinutes).map(([id, text]) => [id, (minutes[id] ?? '') === (savedMinutes[id] ?? '') ? text : minutes[id]]),
+      );
+      savedProtocol = nextProtocol;
+      savedMinutes = nextMinutes;
+    });
   });
+  const protocolChanged = $derived(protocol !== savedProtocol || Object.entries(minutes).some(([id, text]) => text !== (savedMinutes[id] ?? '')));
+  const minutesList = () => Object.entries(minutes).map(([agendaItemId, text]) => ({ agendaItemId, text }));
 
   const isPresent = (m: Meeting, memberId: string): boolean => m.present.some((p) => p.memberId === memberId);
   /** Vorsitz and Schriftführer:in are picked among those present, from the invitation until the protocol is final. */
@@ -127,7 +136,7 @@
           'Danach lassen sich Anwesenheit und Abstimmungen nicht mehr ändern. Das Protokoll lässt sich fertigschreiben, bis es abgeschlossen ist.',
         confirmLabel: 'Beenden',
       },
-      () => view.attempt(model.action, () => model.close(protocol)),
+      () => view.attempt(model.action, async () => (await model.saveProtocol(protocol, minutesList())) && model.close(protocol)),
       'Sitzung beendet.',
     );
   }
@@ -135,13 +144,13 @@
   async function finalizeProtocol() {
     await view.confirm(
       { title: 'Protokoll abschließen', message: 'Danach lässt sich das Protokoll nicht mehr ändern.', confirmLabel: 'Abschließen' },
-      () => view.attempt(model.action, async () => (await model.saveProtocol(protocol)) && model.finalizeProtocol()),
+      () => view.attempt(model.action, async () => (await model.saveProtocol(protocol, minutesList())) && model.finalizeProtocol()),
       'Protokoll abgeschlossen.',
     );
   }
 
   async function saveProtocol() {
-    if (await model.saveProtocol(protocol)) view.notify('Protokoll gespeichert.');
+    if (await model.saveProtocol(protocol, minutesList())) view.notify('Protokoll gespeichert.');
   }
 </script>
 
@@ -311,16 +320,30 @@
           {#if m.status === 'CLOSED'}<p class="muted small">
               Die Sitzung ist beendet; das Protokoll lässt sich fertigschreiben und dann abschließen.
             </p>{/if}
-          <textarea bind:value={protocol} rows="10" maxlength={settings.meetings.protocolMaxLength} aria-label="Protokoll"></textarea>
+          {#each m.agendaItems as item, index (item.id)}
+            {#if item.id && item.id in minutes}
+              <Field label="{index + 1}. {item.title}">
+                <textarea bind:value={minutes[item.id]} rows="3" maxlength={settings.meetings.minutesMaxLength}></textarea>
+              </Field>
+            {/if}
+          {/each}
+          <Field label="Weitere Notizen" hint="Allfälliges und was zu keinem Tagesordnungspunkt gehört.">
+            <textarea bind:value={protocol} rows="4" maxlength={settings.meetings.protocolMaxLength}></textarea>
+          </Field>
           <div class="row">
-            <Button busy={model.action.busy} disabled={protocol === (m.protocol ?? '')} onclick={saveProtocol}>Protokoll speichern</Button>
+            <Button busy={model.action.busy} disabled={!protocolChanged} onclick={saveProtocol}>Protokoll speichern</Button>
             {#if m.status === 'CLOSED'}<Button variant="primary" busy={model.action.busy} onclick={finalizeProtocol}>Protokoll abschließen</Button
               >{/if}
           </div>
         </div>
-      {:else if m.protocol}
+      {:else if m.protocol || m.agendaItems.some((i) => i.minutes)}
         <h2>Protokoll</h2>
-        <p class="text">{m.protocol}</p>
+        {#each m.agendaItems as item, index (item.id)}
+          {#if item.minutes}<h3>{index + 1}. {item.title}</h3>
+            <p class="text">{item.minutes}</p>{/if}
+        {/each}
+        {#if m.protocol}<h3>Weitere Notizen</h3>
+          <p class="text">{m.protocol}</p>{/if}
       {/if}
       {#if m.status === 'CLOSED'}
         <div class="row">

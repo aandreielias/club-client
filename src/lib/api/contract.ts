@@ -4,7 +4,17 @@
 import type { components } from './schema';
 import type { RemotePreferences } from '../preferences/PreferencesService.svelte';
 import type { Absence, AbsenceList, Appointment, AppointmentList, Attendance, CalendarSettings, Ride, RideList } from '../../features/calendar/model';
-import type { DownloadLink, FileHits, FileList, FilePatch, FileSettings, FolderList, FolderPatch, SettingFileList } from '../../features/files/model';
+import type {
+  DocumentKinds,
+  DownloadLink,
+  FileHits,
+  FileList,
+  FilePatch,
+  FileSettings,
+  FolderList,
+  FolderPatch,
+  SettingFileList,
+} from '../../features/files/model';
 import type {
   Account,
   Audit,
@@ -76,6 +86,7 @@ export type Contract = [
   Satisfies<S['at.clubserver.files.api.FilesApi.FileSettings'], FileSettings>,
   Satisfies<S['at.clubserver.files.api.FilesApi.FileHits'], FileHits>,
   Satisfies<S['at.clubserver.files.api.FilesApi.SettingFileList'], SettingFileList>,
+  Satisfies<S['at.clubserver.documents.api.DocumentsApi.KindList'], DocumentKinds>,
   Satisfies<S['at.clubserver.finance.api.FinanceApi.AccountDto'], Account>,
   Satisfies<S['at.clubserver.finance.api.FinanceApi.CategoryDto'], Category>,
   Satisfies<S['at.clubserver.finance.api.FinanceApi.ReceiptDto'], Receipt>,

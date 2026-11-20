@@ -21,7 +21,8 @@ export class ErrorMessages {
 
   text(error: unknown): string {
     if (!(error instanceof ProblemError)) return error instanceof Error ? error.message : this.unknown;
-    const text = this.#messages.get(error.code) ?? this.byStatus[error.status] ?? `${this.unknown} (${error.code})`;
+    const message = this.#messages.get(error.code) ?? this.byStatus[error.status] ?? `${this.unknown} (${error.code})`;
+    const text = error.details.length > 0 ? `${message} ${error.details.join(', ')}` : message;
     return error.correlationId && error.status >= 500 ? `${text} Ref: ${error.correlationId}` : text;
   }
 }

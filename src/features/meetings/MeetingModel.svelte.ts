@@ -67,8 +67,9 @@ export class MeetingModel {
     return this.write(() => this.api.finalizeProtocol(this.id));
   }
 
-  saveProtocol(protocol: string): Promise<boolean> {
-    return this.write(() => this.api.update(this.id, { protocol }));
+  /** The protocol per agenda item (`minutes`) and the further notes. */
+  saveProtocol(protocol: string, minutes: { agendaItemId: string; text: string }[]): Promise<boolean> {
+    return this.write(() => this.api.update(this.id, { protocol, minutes }));
   }
 
   setPresence(memberId: string, present: boolean): Promise<boolean> {

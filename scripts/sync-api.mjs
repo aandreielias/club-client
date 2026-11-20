@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const from = new URL('../../club-server/docs/api/', import.meta.url);
 const to = new URL('../src/lib/api/', import.meta.url);
-copyFileSync(new URL('error-codes.json', from), new URL('error-codes.json', to));
+for (const file of ['error-codes.json', 'document-kinds.json']) copyFileSync(new URL(file, from), new URL(file, to));
 const schema = fileURLToPath(new URL('schema.d.ts', to));
 execFileSync(
   'npx',

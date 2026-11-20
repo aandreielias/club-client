@@ -1,6 +1,7 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
 import type { ProgressListener } from '../../lib/http/Transport';
 import type {
+  DocumentKinds,
   DownloadLink,
   FileHits,
   FileList,
@@ -47,6 +48,16 @@ export class FilesApi {
     const form = new FormData();
     form.append('file', file, file.name);
     return this.api.upload<SettingFile>(`${FilesApi.BASE}/files/setting-files/${slot}`, form);
+  }
+
+  /** Admin and board: the placeholders of every document template. */
+  documentKinds(): Promise<DocumentKinds> {
+    return this.api.get<DocumentKinds>(`${FilesApi.BASE}/documents/kinds`);
+  }
+
+  /** The slot's template filled with example values and the real letterhead; the base (Dokument) as letter paper (.dotx). */
+  documentSample(slot: SettingSlot): Promise<Blob> {
+    return this.api.post<Blob>(`${FilesApi.BASE}/documents/kinds/${slot}/sample`);
   }
 
   clearSettingFile(slot: SettingSlot): Promise<void> {

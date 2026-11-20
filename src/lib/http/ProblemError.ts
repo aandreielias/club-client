@@ -6,6 +6,8 @@ export class ProblemError extends Error {
     readonly status: number,
     readonly code: string,
     readonly correlationId: string | null = null,
+    /** Names the answer refers to, e.g. unknown placeholders of an uploaded template (server: DomainException.details). */
+    readonly details: readonly string[] = [],
   ) {
     super(code);
     this.name = 'ProblemError';

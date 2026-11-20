@@ -115,7 +115,7 @@ describe('mock resolutions', () => {
     expect(notices).toEqual([expect.objectContaining({ title: 'Geändert: MV', body: 'Geändert: Tagesordnung.' })]);
 
     const stored = meetings.meetings.data.find((m) => m.id === mv.id)!;
-    stored.agendaItems = Array.from({ length: 50 }, (_, k) => ({ id: `i${k}`, title: `Punkt ${k}`, note: null, resolutionId: null }));
+    stored.agendaItems = Array.from({ length: 50 }, (_, k) => ({ id: `i${k}`, title: `Punkt ${k}`, note: null, resolutionId: null, minutes: null }));
     expect(() => meetings.createResolution(member('vorstand'), mv.id, { title: 'Zu viel' })).toThrow(
       expect.objectContaining({ code: 'meeting.agenda-invalid' }),
     );

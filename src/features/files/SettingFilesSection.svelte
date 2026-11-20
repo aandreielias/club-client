@@ -4,9 +4,11 @@
   import { useBus } from '../../lib/bus/useBus.svelte';
   import { Action } from '../../lib/state/Action.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
+  import type { Snippet } from 'svelte';
   import Button from '../../ui/Button.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
   import Icon from '../../ui/Icon.svelte';
+  import InfoTip from '../../ui/InfoTip.svelte';
   import RecordLink from '../../ui/RecordLink.svelte';
   import SearchSelect from '../../ui/SearchSelect.svelte';
   import { FILES_CHANGED } from './events';
@@ -18,15 +20,23 @@
    * Files the settings use (admin/board). Each slot holds a copy in the read-only folder "Einstellungen": picked from Dateien
    * it follows new versions of its original; an own upload here unlinks it and leaves the original as it is.
    */
-  let { slots }: { slots: readonly { slot: SettingSlot; label: string; hint: string }[] } = $props();
+  let {
+    slots,
+    extra,
+  }: {
+    slots: readonly { slot: SettingSlot; label: string; hint?: string; info?: string }[];
+    /** More buttons per slot (Vorlagen: test download). */
+    extra?: Snippet<[SettingSlot]>;
+  } = $props();
 
   const LOGO = ['image/png', 'image/jpeg', 'image/svg+xml'];
   const TEMPLATE = ['application/vnd.openxmlformats-officedocument.wordprocessingml.template'];
   // Mail programs don't show SVG: the e-mail logo takes PNG and JPEG only (server: SettingFileHandlers).
   const MAIL_LOGO = ['image/png', 'image/jpeg'];
-  const typesOf = (slot: SettingSlot) => (slot.endsWith('_TEMPLATE') ? TEMPLATE : slot === 'MAIL_LOGO' ? MAIL_LOGO : LOGO);
+  const isTemplate = (slot: SettingSlot) => slot === 'DOKUMENT' || slot.endsWith('_TEMPLATE');
+  const typesOf = (slot: SettingSlot) => (isTemplate(slot) ? TEMPLATE : slot === 'MAIL_LOGO' ? MAIL_LOGO : LOGO);
   const accept = (slot: SettingSlot) =>
-    slot.endsWith('_TEMPLATE') ? '.dotx' : slot === 'MAIL_LOGO' ? 'image/png,image/jpeg' : 'image/png,image/jpeg,image/svg+xml,.svg';
+    isTemplate(slot) ? '.dotx' : slot === 'MAIL_LOGO' ? 'image/png,image/jpeg' : 'image/png,image/jpeg,image/svg+xml,.svg';
 
   const files = new Resource(() => filesApi.settingFiles());
   void files.load();
@@ -65,21 +75,25 @@
 </script>
 
 <input bind:this={input} type="file" onchange={picked} hidden />
-{#each slots as { slot, label, hint } (slot)}
+{#each slots as { slot, label, hint, info } (slot)}
   {@const current = files.value?.find((f) => f.slot === slot)}
   <div class="slot">
     <span class="thumb"
-      >{#if slot.endsWith('_TEMPLATE')}<Icon name="document" />{:else if current}<Thumbnail file={current.file} />{/if}</span
+      >{#if isTemplate(slot)}<Icon name="document" />{:else if current}<Thumbnail file={current.file} />{/if}</span
     >
     <span class="stack-tight">
-      <strong>{label}</strong>
-      <span class="muted small">{hint}</span>
+      <strong
+        >{label}{#if info}&nbsp;<InfoTip text={info} />{/if}</strong
+      >
+      {#if hint}<span class="muted small">{hint}</span>{/if}
       {#if current}
         <span class="small">
-          {#if slot.endsWith('_TEMPLATE')}<RecordLink kind="file" id={current.file.id}>{current.file.name}</RecordLink> ·
+          {#if isTemplate(slot)}<RecordLink kind="file" id="{current.file.folderId}:{current.file.id}">{current.file.name}</RecordLink> ·
           {/if}
           {#if current.sourceId}
-            Verknüpft mit <RecordLink kind="file" id={current.sourceId}>{current.sourceName ?? 'Datei'}</RecordLink>
+            Verknüpft mit <RecordLink kind="file" id="{current.sourceFolderId}:{current.sourceId}" allowed={!!current.sourceFolderId}
+              >{current.sourceName ?? 'Datei'}</RecordLink
+            >
           {:else}
             Eigene Datei
           {/if}
@@ -96,6 +110,7 @@
         debounceMs={200}
         aria-label="{label} aus Dateien wählen"
       />
+      {@render extra?.(slot)}
       <Button icon="upload" busy={action.busy} tooltip="Eigene Datei hochladen (löst die Verknüpfung)" onclick={() => upload(slot)} />
       {#if current}
         <Button

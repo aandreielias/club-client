@@ -350,6 +350,8 @@ export interface AgendaItem {
   title: string;
   note: string | null;
   resolutionId: string | null;
+  /** The protocol of the item (server: AgendaItemDto.minutes), written from the opening until the protocol is final. */
+  minutes: string | null;
 }
 
 export interface Approval {
@@ -375,7 +377,11 @@ export interface ResolutionSummary {
 export type ResolutionPatch = Partial<Omit<NewResolution, 'majority'>> & { majority?: Majority | null; clearDue?: boolean };
 
 /** Omitted fields stay, '' clears a text. Times only before the invitation, the protocol from the opening until it is final. */
-export type MeetingPatch = Partial<Omit<NewMeeting, 'kind' | 'items'>> & { protocol?: string };
+export type MeetingPatch = Partial<Omit<NewMeeting, 'kind' | 'items'>> & {
+  protocol?: string;
+  /** server: MeetingsController.MinutesBody — the protocol per agenda item; empty removes it. */
+  minutes?: { agendaItemId: string; text: string }[];
+};
 
 // --- video call of an online meeting (server: MeetingsApi.Call*, media through Cloudflare Realtime) ---
 

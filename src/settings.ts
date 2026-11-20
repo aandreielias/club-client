@@ -385,6 +385,8 @@ export const settings = {
     callMinSidePx: 280,
     callMinBottomPx: 200,
     protocolMaxLength: 100_000,
+    /** server: MeetingsController.MinutesBody text. */
+    minutesMaxLength: 20_000,
     guestNameMaxLength: 100,
     guestEmailMaxLength: 200,
     type: { labelMaxLength: 80, invitationLabelMaxLength: 120, maxInvitees: 50, maxGraceMinutes: 1440 },

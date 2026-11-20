@@ -34,9 +34,11 @@ import secondaryPng from '../../lib/mock/brand/sdg-logo-secondary-512.png?url';
 import secondarySvg from '../../lib/mock/brand/sdg-logo-secondary.svg?url';
 import logoSvg from '../../lib/mock/brand/sdg-logo.svg?url';
 import faviconSvg from '../../lib/mock/brand/favicon.svg?url';
-import letterTemplate from '../../lib/mock/brand/Briefvorlage.dotx?url';
+import documentTemplate from '../../lib/mock/brand/Dokument.dotx?url';
 import invitationTemplate from '../../lib/mock/brand/Einladung Sitzung.dotx?url';
 import protocolTemplate from '../../lib/mock/brand/Protokoll Sitzung.dotx?url';
+import auditTemplate from '../../lib/mock/brand/Bericht Kassenprüfung.dotx?url';
+import { checkTemplate, DOCUMENT_SLOTS, MockDocuments } from './documents';
 
 /** `system`: the read-only folder "Einstellungen" (server: files_folder.system). */
 type StoredFolder = Omit<Folder, 'canUpload' | 'canManage' | 'system' | 'office'> & { system?: boolean; office?: string | null };
@@ -54,7 +56,7 @@ const LINK_LIFETIME_MS = 5 * 60_000;
 const EICAR = 'EICAR-STANDARD-ANTIVIRUS-TEST-FILE';
 const SVG = 'image/svg+xml';
 const LOGO_SLOTS: readonly SettingSlot[] = ['LOGO', 'LOGO_SECONDARY', 'FAVICON', 'MAIL_LOGO'];
-const SLOTS: readonly SettingSlot[] = [...LOGO_SLOTS, 'INVITATION_TEMPLATE', 'PROTOCOL_TEMPLATE', 'AUDIT_TEMPLATE'];
+const SLOTS: readonly SettingSlot[] = [...LOGO_SLOTS, ...DOCUMENT_SLOTS];
 const OFFICE: Readonly<Record<string, string>> = {
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   dotx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
@@ -124,14 +126,17 @@ const SEEDED_FILES: readonly (readonly [string, string, string, string, number, 
   ['file-logo-secondary-wine', 'f-logos', 'sdg-logo-secondary-mono-wine.svg', SVG, 5403, secondaryWine],
   ['file-logo-png', 'f-logos', 'sdg-logo-512.png', 'image/png', 33_258, logoPng],
   ['file-logo-secondary-png', 'f-logos', 'sdg-logo-secondary-512.png', 'image/png', 38_112, secondaryPng],
-  ['file-tpl-invitation', 'f-templates', 'Einladung Sitzung.dotx', OFFICE.dotx, 69_828, invitationTemplate],
-  ['file-tpl-protocol', 'f-templates', 'Protokoll Sitzung.dotx', OFFICE.dotx, 69_811, protocolTemplate],
-  ['file-tpl-letter', 'f-templates', 'Briefvorlage.dotx', OFFICE.dotx, 70_237, letterTemplate],
+  ['file-tpl-document', 'f-templates', 'Dokument.dotx', OFFICE.dotx, 70_104, documentTemplate],
+  ['file-tpl-invitation', 'f-templates', 'Einladung Sitzung.dotx', OFFICE.dotx, 70_000, invitationTemplate],
+  ['file-tpl-protocol', 'f-templates', 'Protokoll Sitzung.dotx', OFFICE.dotx, 70_465, protocolTemplate],
+  ['file-tpl-audit', 'f-templates', 'Bericht Kassenprüfung.dotx', OFFICE.dotx, 69_841, auditTemplate],
   ['file-set-logo', 'f-settings', 'sdg-logo.svg', SVG, 5512, logoSvg],
   ['file-set-logo-secondary', 'f-settings', 'sdg-logo-secondary.svg', SVG, 5799, secondarySvg],
   ['file-set-favicon', 'f-settings', 'favicon.svg', SVG, 4959, faviconSvg],
-  ['file-set-invitation', 'f-settings', 'Einladung Sitzung.dotx', OFFICE.dotx, 69_828, invitationTemplate],
-  ['file-set-protocol', 'f-settings', 'Protokoll Sitzung.dotx', OFFICE.dotx, 69_811, protocolTemplate],
+  ['file-set-document', 'f-settings', 'Dokument.dotx', OFFICE.dotx, 70_104, documentTemplate],
+  ['file-set-invitation', 'f-settings', 'Einladung Sitzung.dotx', OFFICE.dotx, 70_000, invitationTemplate],
+  ['file-set-protocol', 'f-settings', 'Protokoll Sitzung.dotx', OFFICE.dotx, 70_465, protocolTemplate],
+  ['file-set-audit', 'f-settings', 'Bericht Kassenprüfung.dotx', OFFICE.dotx, 69_841, auditTemplate],
 ];
 
 /** Text of the seeded Hallenordnung versions (Word content is built on demand). */
@@ -567,7 +572,7 @@ export class MockFiles {
     this.versions.save();
     this.changed(folder, file.id, 'UPDATED');
     MockActivity.record('FILE', file.id, viewer.member, 'UPDATED', { title: file.name, teamIds: folder.teamIds, parentId: folder.id });
-    this.follow(viewer.member, file);
+    await this.follow(viewer.member, file);
     return file;
   }
 
@@ -638,11 +643,12 @@ export class MockFiles {
   }
 
   /** A visible file copied into the slot; the copy follows the file's new versions. */
-  pickSettingFile(member: Member, slot: string, fileId: unknown): SettingFile {
+  async pickSettingFile(member: Member, slot: string, fileId: unknown): Promise<SettingFile> {
     directory.requirePrivileged(member, ADMIN_BOARD);
     const key = MockFiles.slot(slot);
     const source = this.visibleFile(this.viewer(member), String(fileId));
     MockFiles.requireFits(key, source.contentType);
+    await this.requireTemplate(key, this.contentOf(source));
     this.install(member, key, source, this.contentOf(source), source.id);
     return this.settingDto(this.settingRow(key)!);
   }
@@ -670,7 +676,9 @@ export class MockFiles {
       height: size?.height ?? null,
       hasThumbnail: raster && !detected!.heic,
     };
-    this.install(member, key, content, { blob: new Blob([bytes], { type: content.contentType }) }, null);
+    const blob = new Blob([bytes], { type: content.contentType });
+    await this.requireTemplate(key, { blob });
+    this.install(member, key, content, { blob }, null);
     return this.settingDto(this.settingRow(key)!);
   }
 
@@ -707,11 +715,27 @@ export class MockFiles {
     return blob;
   }
 
-  /** server: SettingFileHandlers.follow — copies of `original` take its new content. */
-  private follow(member: Member, original: StoredFile): void {
+  /** server: SettingFileHandlers.follow — copies of `original` take its new content; a template failing the check keeps the old copy. */
+  private async follow(member: Member, original: StoredFile): Promise<void> {
     for (const row of this.settingFiles.data.filter((r) => r.sourceId === original.id)) {
+      try {
+        await this.requireTemplate(row.slot, this.contentOf(original));
+      } catch (e) {
+        console.warn(`Setting file ${row.slot} keeps its copy`, e);
+        continue;
+      }
       this.install(member, row.slot, original, this.contentOf(original), original.id);
     }
+  }
+
+  /** server: SettingFileHandlers — document slots take only templates passing the documents check. */
+  private async requireTemplate(slot: SettingSlot, from: { blob?: Blob; seeded?: string }): Promise<void> {
+    if (!DOCUMENT_SLOTS.includes(slot)) return;
+    // shortcut: a seeded file without bytes (sample Word files) passes unchecked; mock-only, the server always has the bytes
+    const blob = from.blob ?? (from.seeded ? await fetch(from.seeded).then((r) => r.blob()) : null);
+    if (!blob) return;
+    const { default: JSZip } = await import('jszip');
+    await checkTemplate(JSZip, slot, blob);
   }
 
   /** server: SettingFileHandlers.install — the slot's copy in the system folder, created on first use. */
@@ -771,7 +795,7 @@ export class MockFiles {
   private settingDto(row: SettingRow): SettingFile {
     const file = this.files.data.find((f) => f.id === row.fileId)!;
     const source = row.sourceId ? this.files.data.find((f) => f.id === row.sourceId) : undefined;
-    return { slot: row.slot, file, sourceId: row.sourceId, sourceName: source?.name ?? null };
+    return { slot: row.slot, file, sourceId: row.sourceId, sourceName: source?.name ?? null, sourceFolderId: source?.folderId ?? null };
   }
 
   /** server: SystemFileHandlers.folder — a read-only BOARD folder by name, created on first use. */
@@ -1269,8 +1293,10 @@ export class MockFiles {
       { slot: 'LOGO', fileId: 'file-set-logo', sourceId: 'file-logo' },
       { slot: 'LOGO_SECONDARY', fileId: 'file-set-logo-secondary', sourceId: 'file-logo-secondary' },
       { slot: 'FAVICON', fileId: 'file-set-favicon', sourceId: 'file-favicon' },
+      { slot: 'DOKUMENT', fileId: 'file-set-document', sourceId: 'file-tpl-document' },
       { slot: 'INVITATION_TEMPLATE', fileId: 'file-set-invitation', sourceId: 'file-tpl-invitation' },
       { slot: 'PROTOCOL_TEMPLATE', fileId: 'file-set-protocol', sourceId: 'file-tpl-protocol' },
+      { slot: 'AUDIT_TEMPLATE', fileId: 'file-set-audit', sourceId: 'file-tpl-audit' },
     ];
   }
 
@@ -1292,6 +1318,7 @@ export class MockFiles {
 }
 
 export const files = new MockFiles(directory);
+export const documents = new MockDocuments(files, directory);
 
 linkRefs.files = (member, links) => files.refs(member, links);
 
@@ -1307,6 +1334,8 @@ mockServer
   .on('GET', '/api/v1/files/setting-files', (req) => files.listSettingFiles(actor(req)))
   .on('PUT', '/api/v1/files/setting-files/:slot', (req) => files.pickSettingFile(actor(req), req.params.slot, req.body?.fileId))
   .on('POST', '/api/v1/files/setting-files/:slot', (req) => files.uploadSettingFile(req))
+  .on('GET', '/api/v1/documents/kinds', (req) => documents.kinds(actor(req)))
+  .on('POST', '/api/v1/documents/kinds/:slot/sample', (req) => documents.sample(actor(req), req.params.slot))
   .on('DELETE', '/api/v1/files/setting-files/:slot', (req) => files.clearSettingFile(actor(req), req.params.slot))
   .on('GET', '/api/v1/folders', (req) => ({ items: files.listFolders(actor(req)) }))
   .on('POST', '/api/v1/folders', (req) => files.createFolder(actor(req), req.body ?? {}))

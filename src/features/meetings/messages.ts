@@ -28,7 +28,6 @@ export const MEETING_MESSAGES: MessageCatalog = {
   'meeting.vote-open': 'Während eine Abstimmung läuft, bleibt die Anwesenheit, wie sie ist.',
   'meeting-type.key-invalid': 'Der Schlüssel der Sitzungsart ist ungültig.',
   'meeting.kind-missing': 'Bitte die Sitzungsart wählen.',
-  'meeting.template-invalid': 'Die Vorlage ist keine Word-Datei (.docx/.dotx).',
   'meeting.not-found': 'Sitzung nicht gefunden.',
   'meeting.title-invalid': 'Titel mit 1 bis 120 Zeichen angeben.',
   'meeting.agenda-too-long': 'Die Tagesordnung hat höchstens 4000 Zeichen.',

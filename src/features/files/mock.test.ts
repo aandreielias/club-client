@@ -156,12 +156,10 @@ describe('mock setting files (server: SettingFileHandlers)', () => {
   const logo = () => files.listSettingFiles(member('vorstand')).items.find((s) => s.slot === 'LOGO')!;
 
   it('copies a picked file into the read-only system folder and follows its new versions', async () => {
-    const picked = files.pickSettingFile(member('vorstand'), 'LOGO', 'file-logo-black');
+    const picked = await files.pickSettingFile(member('vorstand'), 'LOGO', 'file-logo-black');
     expect(picked).toMatchObject({ sourceId: 'file-logo-black', file: { folderId: 'f-settings', name: 'sdg-logo-mono-black.svg' } });
-    expect(() => files.pickSettingFile(member('vorstand'), 'LOGO', 'file-tpl-letter')).toThrow(
-      expect.objectContaining({ code: 'setting-file.wrong-type' }),
-    );
-    expect(() => files.pickSettingFile(member('spieler'), 'LOGO', 'file-logo-black')).toThrow();
+    await expect(files.pickSettingFile(member('vorstand'), 'LOGO', 'file-tpl-document')).rejects.toMatchObject({ code: 'setting-file.wrong-type' });
+    await expect(files.pickSettingFile(member('spieler'), 'LOGO', 'file-logo-black')).rejects.toThrow();
 
     const content = svg('#123456');
     const form = new FormData();
@@ -178,7 +176,7 @@ describe('mock setting files (server: SettingFileHandlers)', () => {
   });
 
   it('unlinks on an own upload, refuses unsafe SVGs and empties a slot', async () => {
-    files.pickSettingFile(member('vorstand'), 'LOGO', 'file-logo-wine');
+    await files.pickSettingFile(member('vorstand'), 'LOGO', 'file-logo-wine');
     const own = await files.uploadSettingFile(slotRequest('LOGO', svg('#000000'), 'eigen.svg'));
     expect(own).toMatchObject({ sourceId: null, file: { name: 'eigen.svg' } });
     expect(files.listFiles(member('vorstand'), 'f-logos').map((f) => f.id)).toContain('file-logo-wine');
@@ -190,9 +188,9 @@ describe('mock setting files (server: SettingFileHandlers)', () => {
   });
 
   it('refuses an SVG as e-mail logo (mail programs do not show SVG)', async () => {
-    expect(() => files.pickSettingFile(member('vorstand'), 'MAIL_LOGO', 'file-logo-black')).toThrow(
-      expect.objectContaining({ code: 'setting-file.wrong-type' }),
-    );
+    await expect(files.pickSettingFile(member('vorstand'), 'MAIL_LOGO', 'file-logo-black')).rejects.toMatchObject({
+      code: 'setting-file.wrong-type',
+    });
     await expect(files.uploadSettingFile(slotRequest('MAIL_LOGO', svg('#000000'), 'mail.svg'))).rejects.toMatchObject({
       code: 'setting-file.wrong-type',
     });
@@ -200,7 +198,7 @@ describe('mock setting files (server: SettingFileHandlers)', () => {
 
   it('lets only admin and board change a file a setting follows', async () => {
     const own = await files.upload(uploadRequest('trainer', 'f-damen', svg('#00ff00'), 'team.svg'));
-    files.pickSettingFile(member('vorstand'), 'LOGO_SECONDARY', own.id);
+    await files.pickSettingFile(member('vorstand'), 'LOGO_SECONDARY', own.id);
     expect(files.listFiles(member('trainer'), 'f-damen').find((f) => f.id === own.id)).toMatchObject({ settingSource: true });
     expect(() => files.deleteFile(member('trainer'), own.id)).toThrow(expect.objectContaining({ code: 'access.denied' }));
 

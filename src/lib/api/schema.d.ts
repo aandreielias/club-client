@@ -1541,22 +1541,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/meetings/templates": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["seedTemplates"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/me/push-tokens/remove": {
         parameters: {
             query?: never;
@@ -1967,6 +1951,22 @@ export interface paths {
         get: operations["versions"];
         put?: never;
         post: operations["uploadVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/kinds/{slot}/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["sample"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2965,6 +2965,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/documents/kinds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["kinds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/club/assets/{kind}": {
         parameters: {
             query?: never;
@@ -3627,6 +3643,7 @@ export interface components {
             note: string;
             /** Format: uuid */
             resolutionId: string;
+            minutes: string;
         };
         "at.clubserver.meetings.api.MeetingsApi.Approval": {
             /** Format: uuid */
@@ -4247,11 +4264,13 @@ export interface components {
         };
         "at.clubserver.files.api.FilesApi.SettingFileDto": {
             /** @enum {string} */
-            slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE" | "AUDIT_TEMPLATE";
+            slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "DOKUMENT" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE" | "AUDIT_TEMPLATE";
             file: components["schemas"]["at.clubserver.files.api.FilesApi.FileDto"];
             /** Format: uuid */
             sourceId: string;
             sourceName: string;
+            /** Format: uuid */
+            sourceFolderId: string;
         };
         "at.clubserver.gateway.rest.ClubController.ClubBody": {
             name: string;
@@ -5114,6 +5133,12 @@ export interface components {
             endsAt: string;
             location: string;
             protocol: string;
+            minutes: components["schemas"]["at.clubserver.gateway.rest.MeetingsController.MinutesBody"][];
+        };
+        "at.clubserver.gateway.rest.MeetingsController.MinutesBody": {
+            /** Format: uuid */
+            agendaItemId: string;
+            text: string;
         };
         "at.clubserver.gateway.rest.NotificationsController.ReadBody": {
             read: boolean;
@@ -5600,6 +5625,22 @@ export interface components {
         };
         "at.clubserver.files.api.FilesApi.SettingFileList": {
             items: components["schemas"]["at.clubserver.files.api.FilesApi.SettingFileDto"][];
+        };
+        "at.clubserver.documents.api.DocumentsApi.DocumentKind": {
+            /** @enum {string} */
+            slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "DOKUMENT" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE" | "AUDIT_TEMPLATE";
+            label: string;
+            fields: components["schemas"]["at.clubserver.documents.api.DocumentsApi.Field"][];
+        };
+        "at.clubserver.documents.api.DocumentsApi.Field": {
+            name: string;
+            description: string;
+            example: string;
+            fields: components["schemas"]["at.clubserver.documents.api.DocumentsApi.Field"][];
+        };
+        "at.clubserver.documents.api.DocumentsApi.KindList": {
+            letterhead: components["schemas"]["at.clubserver.documents.api.DocumentsApi.Field"][];
+            items: components["schemas"]["at.clubserver.documents.api.DocumentsApi.DocumentKind"][];
         };
         "at.clubserver.calendar.api.CalendarApi.AppointmentTypeList": {
             items: components["schemas"]["at.clubserver.calendar.api.CalendarApi.AppointmentTypeDto"][];
@@ -7295,7 +7336,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE" | "AUDIT_TEMPLATE";
+                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "DOKUMENT" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE" | "AUDIT_TEMPLATE";
             };
             cookie?: never;
         };
@@ -7321,7 +7362,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE" | "AUDIT_TEMPLATE";
+                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "DOKUMENT" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE" | "AUDIT_TEMPLATE";
             };
             cookie?: never;
         };
@@ -7350,7 +7391,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE" | "AUDIT_TEMPLATE";
+                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "DOKUMENT" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE" | "AUDIT_TEMPLATE";
             };
             cookie?: never;
         };
@@ -9009,24 +9050,6 @@ export interface operations {
             };
         };
     };
-    seedTemplates: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     removePushToken: {
         parameters: {
             query?: never;
@@ -9971,6 +9994,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.files.api.FilesApi.FileDto"];
+                };
+            };
+        };
+    };
+    sample: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slot: "LOGO" | "LOGO_SECONDARY" | "FAVICON" | "MAIL_LOGO" | "DOKUMENT" | "INVITATION_TEMPLATE" | "PROTOCOL_TEMPLATE" | "AUDIT_TEMPLATE";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
                 };
             };
         };
@@ -11936,6 +11981,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.files.api.FilesApi.SettingFileList"];
+                };
+            };
+        };
+    };
+    kinds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.documents.api.DocumentsApi.KindList"];
                 };
             };
         };

@@ -181,7 +181,22 @@ export interface FileSettings {
 }
 
 /** What the club settings use a file for (server: FilesApi.SettingSlot). */
-export type SettingSlot = 'LOGO' | 'LOGO_SECONDARY' | 'FAVICON' | 'MAIL_LOGO' | 'INVITATION_TEMPLATE' | 'PROTOCOL_TEMPLATE' | 'AUDIT_TEMPLATE';
+export type SettingSlot =
+  'LOGO' | 'LOGO_SECONDARY' | 'FAVICON' | 'MAIL_LOGO' | 'DOKUMENT' | 'INVITATION_TEMPLATE' | 'PROTOCOL_TEMPLATE' | 'AUDIT_TEMPLATE';
+
+/** server: DocumentsApi.Field — a placeholder, or a list (`fields`) for {{#Name}}…{{/Name}} blocks. */
+export interface DocumentField {
+  name: string;
+  description: string;
+  example: string | null;
+  fields: DocumentField[];
+}
+
+/** server: DocumentsApi.KindList — the placeholders every document knows (`letterhead`) and those of each kind, the base first. */
+export interface DocumentKinds {
+  letterhead: DocumentField[];
+  items: { slot: SettingSlot; label: string; fields: DocumentField[] }[];
+}
 
 /** server: FilesApi.SettingFileDto — the slot's copy in "Einstellungen"; `sourceId` while it follows a file in Dateien. */
 export interface SettingFile {
@@ -189,6 +204,7 @@ export interface SettingFile {
   file: StoredFile;
   sourceId: string | null;
   sourceName: string | null;
+  sourceFolderId: string | null;
 }
 
 export interface SettingFileList {

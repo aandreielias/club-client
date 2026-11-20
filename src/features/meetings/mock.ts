@@ -4,8 +4,8 @@ import { directory, MockDirectory } from '../../lib/mock/core';
 import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockServer';
 import { MockTable } from '../../lib/mock/MockTable';
 import { resolveRef } from '../../lib/mock/recordRefs';
-import { files, meetingFolderRights } from '../files/mock';
-import { defaultTemplate, fill, PROTOCOL_TEMPLATE_NAME, protocolTemplate, TEMPLATE_NAME } from './invitationDocument';
+import { documents, files, meetingFolderRights } from '../files/mock';
+import type { Values } from '../../lib/mock/wordTemplate';
 import type { LinkedRef, RefKind } from '../../lib/records/refs';
 import { ADMIN_BOARD, guestOnly, type Hue, type Member, type Role } from '../../lib/types';
 import { HUES } from '../calendar/model';
@@ -317,6 +317,8 @@ export class MockMeetings {
     const type = this.type(meeting.kind);
     const own = this.resolutions.data.filter((r) => r.meetingId === meeting.id);
     const listed = (meeting.agendaItems ?? []).map((i) => i.resolutionId).filter((id): id is string => !!id);
+    // Kept items keep their protocol.
+    const minutes = new Map((meeting.agendaItems ?? []).map((i) => [i.id, i.minutes ?? null]));
     const kept = new Set<string>();
     const out = given.map((i) => {
       const title = String(i.title).trim();
@@ -342,7 +344,7 @@ export class MockMeetings {
           this.resolutionChanged(existing, 'UPDATED');
         }
       }
-      return { id: i.id ?? crypto.randomUUID(), title, note: String(i.note ?? '').trim() || null, resolutionId };
+      return { id: i.id ?? crypto.randomUUID(), title, note: String(i.note ?? '').trim() || null, resolutionId, minutes: minutes.get(i.id) ?? null };
     });
     for (const id of listed.filter((x) => !kept.has(x))) {
       const left = own.find((r) => r.id === id);
@@ -415,10 +417,19 @@ export class MockMeetings {
     if (details && meeting.status === 'CLOSED') fail(409, 'meeting.closed');
     const moves = (body.startsAt && body.startsAt !== meeting.startsAt) || (body.endsAt && body.endsAt !== meeting.endsAt);
     if (moves && meeting.status !== 'DRAFT') fail(409, 'meeting.invited-time-fixed');
-    if (body.protocol != null) {
+    if (body.protocol != null || body.minutes != null) {
       if (meeting.status !== 'OPEN' && meeting.status !== 'CLOSED') fail(409, 'meeting.protocol-not-yet');
       if (this.protocolFinalAt(meeting)) fail(409, 'meeting.protocol-final');
-      if (String(body.protocol).length > 100000) fail(400, 'meeting.protocol-too-long');
+      if (body.protocol != null && String(body.protocol).length > 100000) fail(400, 'meeting.protocol-too-long');
+    }
+    if (body.minutes != null) {
+      // server: MeetingHandlers.saveMinutes — items of other meetings are refused, an empty text clears
+      const given = new Map<string, string | null>(
+        (body.minutes as { agendaItemId: string; text: string | null }[]).map((i) => [i.agendaItemId, i.text?.trim() || null]),
+      );
+      const items = meeting.agendaItems ?? [];
+      if ([...given.keys()].some((id) => !items.some((i) => i.id === id))) fail(400, 'meeting.agenda-invalid');
+      meeting.agendaItems = items.map((i) => (given.has(i.id!) ? { ...i, minutes: given.get(i.id!)! } : i));
     }
     if (typeof body.location === 'string' && body.location.length > 200) fail(400, 'meeting.location-too-long');
     const before = { Titel: meeting.title, Tagesordnung: meeting.agenda, Ort: meeting.location };
@@ -717,41 +728,7 @@ export class MockMeetings {
   async generateProtocol(viewer: Member, id: string): Promise<Meeting> {
     const meeting = this.managed(viewer, id);
     if (meeting.status !== 'CLOSED') fail(409, 'meeting.not-closed');
-    const { default: JSZip } = await import('jszip');
-    const type = this.type(meeting.kind);
-    const results = this.resolutions.data
-      .filter((r) => r.meetingId === id)
-      .map((r) => {
-        // App ballots plus a show of hands.
-        const [yes, no, abstain] = [r.yes + (r.analogYes ?? 0), r.no + (r.analogNo ?? 0), r.abstain + (r.analogAbstain ?? 0)];
-        const result =
-          r.result === 'PASSED' ? 'angenommen' : r.result === 'FAILED' ? 'abgelehnt' : r.result ? 'nicht beschlussfähig' : 'nicht abgestimmt';
-        return `${r.title}: ${result}${yes + no + abstain > 0 ? ` (Ja ${yes}, Nein ${no}, Enthaltung ${abstain})` : ''}`;
-      });
-    const content = await fill(
-      JSZip,
-      await files.settingTemplate(viewer, 'PROTOCOL_TEMPLATE', PROTOCOL_TEMPLATE_NAME, () => protocolTemplate(JSZip)),
-      {
-        ...this.letterhead(meeting),
-        Art: type.invitationLabel,
-        Titel: meeting.title.toLowerCase() === type.label.toLowerCase() ? null : meeting.title,
-        Wann: this.when(meeting),
-        Ort: meeting.location,
-        Vorsitz: meeting.chairId ? this.name(meeting.chairId) : null,
-        Schriftführer: meeting.secretaryId ? this.name(meeting.secretaryId) : null,
-        Anwesend:
-          Object.keys(meeting.presence)
-            .map((m) => this.name(m))
-            .join(', ') || null,
-        Beschlussfähig: this.quorate(meeting, this.meetingVoters(meeting)) ? 'ja' : 'nein',
-        Agenda: meeting.agenda?.replaceAll('\n', '; ') ?? null,
-        Beschlüsse: results.join('; ') || null,
-      },
-      (meeting.protocol ?? 'Kein Protokolltext eingetragen.')
-        .split('\n')
-        .map((l) => l.trim())
-        .filter(Boolean),
-    );
+    const content = await documents.render(viewer, 'PROTOCOL_TEMPLATE', { ...this.values(meeting), ...this.protocolValues(viewer, meeting) });
     const stored = this.documents.data[id];
     const folderId = this.meetingFolder(viewer, meeting, stored?.folderId);
     const file = await this.upload(viewer, folderId, new File([content], `Protokoll ${this.day(meeting)} ${meeting.title}.docx`));
@@ -791,30 +768,19 @@ export class MockMeetings {
   /** server: MeetingHandlers.generateInvitation + InvitationDocuments — again = a new version of the same file. */
   async generateInvitation(viewer: Member, id: string): Promise<Meeting> {
     const meeting = this.managed(viewer, id);
-    const { default: JSZip } = await import('jszip');
-    const type = this.type(meeting.kind);
-    // server: MeetingHandlers.documentAgenda — every item, Beschlüsse with their motion
-    const agenda = this.invitedItems(meeting).flatMap((item, k) => [
-      `${k + 1}. ${item.resolution ? 'Beschluss: ' : ''}${item.title}`,
-      ...(item.motion?.trim() ? [`Antrag: ${item.motion.trim().replace(/\s+/g, ' ')}`] : []),
-    ]);
-    const content = await fill(
-      JSZip,
-      await files.settingTemplate(viewer, 'INVITATION_TEMPLATE', TEMPLATE_NAME, () => defaultTemplate(JSZip)),
-      {
-        ...this.letterhead(meeting),
-        Art: type.invitationLabel,
-        Titel: meeting.title.toLowerCase() === type.label.toLowerCase() ? null : meeting.title,
-        Wann: this.when(meeting),
-        Ort: meeting.location,
-        Video: type.online ? 'In der App' : null,
-        Dringlichkeit: meeting.urgency,
-        // A placeholder older templates still carry (server: AgendaDocument); empty, so its paragraph is dropped.
-        Statuten: null,
-        Versandt: this.format(meeting.invitedAt ?? new Date().toISOString(), { dateStyle: 'long' }),
-      },
-      agenda.length ? agenda : ['Keine Tagesordnung eingetragen.'],
-    );
+    const own = this.resolutions.data.filter((r) => r.meetingId === id);
+    const content = await documents.render(viewer, 'INVITATION_TEMPLATE', {
+      ...this.values(meeting),
+      Dringlichkeit: meeting.urgency,
+      Versandt: this.format(meeting.invitedAt ?? new Date().toISOString(), { dateStyle: 'long' }),
+      // server: MeetingHandlers.documentItems
+      Punkte: (meeting.agendaItems ?? []).map((i, k) => ({
+        Nummer: String(k + 1),
+        Titel: i.title,
+        Notiz: i.note,
+        Antrag: own.find((r) => r.id === i.resolutionId)?.text ?? null,
+      })),
+    });
     const stored = this.documents.data[id];
     const folderId = this.meetingFolder(viewer, meeting, stored?.folderId);
     let fileId: string;
@@ -861,25 +827,75 @@ export class MockMeetings {
     );
   }
 
-  /** server: AgendaDocument.Letterhead — club facts for letterheads and footers; `{{Sitzung}}` is always the title. */
-  private letterhead(meeting: StoredMeeting): Record<string, string | null> {
-    const club = this.people.clubInfo();
+  /** server: InvitationDocuments.values — what invitation and protocol share; `Titel` only when it differs from the type's name. */
+  private values(m: StoredMeeting): Values {
+    const type = this.type(m.kind);
+    const time = (iso: string) => this.format(iso, { timeStyle: 'short' });
     return {
-      Verein: club.name,
-      Adresse: club.address,
-      Webseite: club.website,
-      Kontakt: club.contactEmail,
-      Registernummer: club.registerNumber,
-      Sitzung: meeting.title,
+      Art: type.invitationLabel,
+      Sitzung: m.title,
+      Titel: m.title.toLowerCase() === type.label.toLowerCase() ? null : m.title,
+      Datum: this.format(m.startsAt, { dateStyle: 'long' }),
+      Beginn: time(m.startsAt),
+      Ende: time(m.endsAt),
+      Wann: this.when(m),
+      Ort: m.location,
+      Online: type.online ? 'In der App' : null,
     };
   }
 
-  /** server: InvitationDocuments.seedTemplates — both template slots get the built-in layout when empty. */
-  async seedTemplates(viewer: Member): Promise<void> {
-    this.people.requirePrivileged(viewer, ADMIN_BOARD);
-    const { default: JSZip } = await import('jszip');
-    await files.settingTemplate(viewer, 'INVITATION_TEMPLATE', TEMPLATE_NAME, () => defaultTemplate(JSZip));
-    await files.settingTemplate(viewer, 'PROTOCOL_TEMPLATE', PROTOCOL_TEMPLATE_NAME, () => protocolTemplate(JSZip));
+  /** server: MeetingHandlers.protocolValues — who was there, each item with its protocol and vote, the tasks of passed Beschlüsse. */
+  private protocolValues(viewer: Member, m: StoredMeeting): Values {
+    const dto = this.dto(viewer, m);
+    const present = new Set(dto.present.map((p) => p.memberId));
+    const names = (ids: readonly { name: string }[]) => ids.map((p) => p.name).join(', ');
+    const own = this.resolutions.data.filter((r) => r.meetingId === m.id);
+    const day = (iso: string) => this.format(iso, { day: 'numeric', month: 'numeric', year: 'numeric' });
+    const items = (m.agendaItems ?? []).map((i) => [i, own.find((r) => r.id === i.resolutionId)] as const);
+    return {
+      Vorsitz: dto.chair?.name ?? null,
+      Schriftführer: dto.secretary?.name ?? null,
+      Anwesend: names(dto.present),
+      Abwesend: names(dto.electorate.filter((p) => !present.has(p.memberId))),
+      Gäste: (m.guests ?? []).map((g) => this.name(g)).join(', ') || null,
+      AnzahlAnwesend: String(dto.present.length),
+      AnzahlStimmberechtigt: String(dto.electorate.length),
+      Beschlussfähig: dto.quorate ? 'ja' : 'nein',
+      Punkte: items.map(([i, r], k) => ({
+        Nummer: String(k + 1),
+        Titel: i.title,
+        Protokoll: i.minutes ?? null,
+        Beschluss: r ? [this.protocolVote(r)] : [],
+      })),
+      Aufgaben: items
+        .filter(([, r]) => r?.result === 'PASSED')
+        .map(([, r]) => ({
+          Aufgabe: r!.title,
+          Verantwortlich: (r!.assigneeIds ?? [])
+            .map((a) => this.name(a))
+            .sort()
+            .join(', '),
+          Bis: r!.implementDue ? day(`${r!.implementDue}T12:00:00Z`) : null,
+        })),
+      Notizen: m.protocol,
+      Freigaben: dto.approvals.map((a) => `${a.name}, ${day(a.at)}`).join('\n'),
+    };
+  }
+
+  /** server: MeetingHandlers.vote — app ballots plus a show of hands. */
+  private protocolVote(r: StoredResolution): Values {
+    const RESULT = { PASSED: 'angenommen', FAILED: 'abgelehnt', NOT_QUORATE: 'ohne ausreichende Beteiligung' } as const;
+    const MAJORITY = { SIMPLE: 'einfache Mehrheit', TWO_THIRDS: 'Zweidrittelmehrheit', THREE_QUARTERS: 'Dreiviertelmehrheit' } as const;
+    const counted = r.result != null;
+    return {
+      Antrag: r.text ?? r.title,
+      Ergebnis: r.result ? RESULT[r.result] : 'nicht abgestimmt',
+      Ja: counted ? String(r.yes + (r.analogYes ?? 0)) : null,
+      Nein: counted ? String(r.no + (r.analogNo ?? 0)) : null,
+      Enthaltung: counted ? String(r.abstain + (r.analogAbstain ?? 0)) : null,
+      Mehrheit: MAJORITY[r.majority],
+      Modus: r.voteMode === 'HAND' ? 'Handzeichen' : r.voteMode === 'APP' ? 'in der App' : null,
+    };
   }
 
   /** The meeting's own folder below "Mitgliederversammlungen" or "Vorstandssitzungen", created on first use. */
@@ -960,7 +976,7 @@ export class MockMeetings {
     const r = this.draft(viewer, meetingId, title, body, majority, deadline);
     this.resolutions.data.push(r);
     if (meeting) {
-      this.setItems(meeting, [...(meeting.agendaItems ?? []), { id: crypto.randomUUID(), title, note: null, resolutionId: r.id }]);
+      this.setItems(meeting, [...(meeting.agendaItems ?? []), { id: crypto.randomUUID(), title, note: null, resolutionId: r.id, minutes: null }]);
       this.meetings.save();
       this.noticeChange(meeting, ['Tagesordnung']); // like an agenda edit
     }
@@ -1147,8 +1163,7 @@ export class MockMeetings {
     Object.assign(r, { status: 'CLOSED', closedAt: new Date().toISOString(), result });
     const meeting = r.meetingId ? this.meetings.data.find((m) => m.id === r.meetingId)! : null;
     if (result === 'PASSED') this.passed(r, meeting);
-    if (meeting) this.addToProtocol(r, meeting);
-    else {
+    if (!meeting) {
       tasks.deadlineDone(`deadline-circular-${r.id}`);
       const word = result === 'PASSED' ? 'angenommen' : result === 'FAILED' ? 'abgelehnt' : 'ohne ausreichende Beteiligung';
       this.notice(
@@ -1160,20 +1175,6 @@ export class MockMeetings {
     }
     this.resolutionChanged(r, 'CLOSED');
     return r;
-  }
-
-  /** server: ResolutionHandlers.addToProtocol — a closed meeting vote is written once into a protocol still being written. */
-  private addToProtocol(r: StoredResolution, m: StoredMeeting): void {
-    const word = r.result === 'PASSED' ? 'angenommen' : r.result === 'FAILED' ? 'abgelehnt' : 'ohne ausreichende Beteiligung';
-    const majority = r.majority === 'SIMPLE' ? 'einfache Mehrheit' : r.majority === 'TWO_THIRDS' ? 'Zweidrittelmehrheit' : 'Dreiviertelmehrheit';
-    const counts = `Ja ${r.yes + (r.analogYes ?? 0)}, Nein ${r.no + (r.analogNo ?? 0)}, Enthaltung ${r.abstain + (r.analogAbstain ?? 0)}`;
-    const line =
-      `Beschluss: ${r.title} – ${word} (${counts}; ${majority}, ${r.voteMode === 'HAND' ? 'Handzeichen' : 'in der App'})` +
-      (r.text ? `\nAntrag: ${r.text}` : '');
-    const protocol = m.protocol ? `${m.protocol}\n\n${line}` : line;
-    if ((m.status !== 'OPEN' && m.status !== 'CLOSED') || this.protocolFinalAt(m) || protocol.length > 100000) return;
-    m.protocol = protocol;
-    this.changed(m, 'UPDATED');
   }
 
   /** server: ResolutionTasks.passed — the task "<Titel> umsetzen" for the named active members, else the club's task fallback. */
@@ -1626,7 +1627,6 @@ const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer
   .on('GET', '/api/v1/meetings', (req) => meetings.list(actor(req), req.query.get('from'), req.query.get('to')))
-  .on('POST', '/api/v1/meetings/templates', (req) => meetings.seedTemplates(actor(req)))
   .on('GET', '/api/v1/meetings/resolution-rules', (req) => (actor(req), meetings.rules()))
   .on('PUT', '/api/v1/meetings/resolution-rules', (req) => meetings.saveRules(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/meetings/types', (req) => (actor(req), meetings.listTypes()))
