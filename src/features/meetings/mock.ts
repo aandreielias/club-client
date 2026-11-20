@@ -860,7 +860,16 @@ export class MockMeetings {
       Gäste: (m.guests ?? []).map((g) => this.name(g)).join(', ') || null,
       AnzahlAnwesend: String(dto.present.length),
       AnzahlStimmberechtigt: String(dto.electorate.length),
-      Beschlussfähig: dto.quorate ? 'ja' : 'nein',
+      // server: MeetingAccess.wasQuorate — judged at the closing, the status no longer counts
+      Beschlussfähig: isQuorate(
+        this.type(m.kind),
+        dto.present.filter((p) => dto.electorate.some((e) => e.memberId === p.memberId)).length,
+        dto.electorate.length,
+        m.startsAt,
+        m.closedAt ? Date.parse(m.closedAt) : Date.now(),
+      )
+        ? 'ja'
+        : 'nein',
       Punkte: items.map(([i, r], k) => ({
         Nummer: String(k + 1),
         Titel: i.title,

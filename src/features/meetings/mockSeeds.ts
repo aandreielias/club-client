@@ -409,6 +409,14 @@ export function seedMeetings(): StoredMeeting[] {
   };
   const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
   const base = { urgency: null, openedAt: null, closedAt: null, protocol: null, presence: {}, links: [] };
+  // every Beschluss of a meeting sits on its agenda (server: CreateResolution appends an item)
+  const item = (id: string, title: string, resolutionId: string | null = null): AgendaItem => ({
+    id,
+    title,
+    note: null,
+    resolutionId,
+    minutes: null,
+  });
   return [
     {
       ...base,
@@ -422,7 +430,13 @@ export function seedMeetings(): StoredMeeting[] {
       status: 'OPEN',
       invitedAt: ago(20 * 24 * 60),
       openedAt: ago(10),
-      protocol: '1. Begrüßung durch den Vorsitz, 8 von 12 Stimmberechtigten anwesend.',
+      protocol: null,
+      agendaItems: [
+        { ...item('ai-live-1', 'Begrüßung und Beschlussfähigkeit'), minutes: 'Begrüßung durch den Vorsitz, 8 von 12 Stimmberechtigten anwesend.' },
+        item('ai-live-2', 'Mitgliedsbeitrag 2027: 60 €', 'rs-beitrag'),
+        item('ai-live-3', 'Statutenänderung: Mitgliedschaft', 'rs-statuten'),
+        item('ai-live-4', 'Allfälliges'),
+      ],
       presence: { vorstand: true, kassier: true, schrift: true, beisitz: true, beisitz2: true, admin: true, eltern: true, ehren: true },
       links: [
         { kind: 'MEMBER', id: 'kassier', title: 'Karin Kassier', parentId: null },
@@ -458,7 +472,10 @@ export function seedMeetings(): StoredMeeting[] {
       openedAt: at(-40, 17),
       closedAt: at(-40, 19),
       protocolFinalAt: at(-40, 19),
-      protocol: '1. Jahresvoranschlag besprochen und angenommen.\n2. Hallenmiete: siehe Beschluss.',
+      agendaItems: [
+        { ...item('ai-past-1', 'Jahresvoranschlag'), minutes: 'Besprochen und angenommen.' },
+        { ...item('ai-past-2', 'Hallenmiete Wintersaison: 1.800 €', 'rs-halle'), minutes: 'Angebot der Gemeinde liegt vor.' },
+      ],
       presence: { vorstand: true, kassier: true, schrift: true, beisitz: true, beisitz2: true },
     },
     {
