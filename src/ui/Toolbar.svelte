@@ -1,11 +1,12 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { arrowNav } from './arrowNav';
 
   /** The one filter bar: filters and search on the left (`start`), sorting and extras on the right (`end`). */
   let { start, end, label = 'Filtern und sortieren' }: { start?: Snippet; end?: Snippet; label?: string } = $props();
 </script>
 
-<div class="toolbar" role="toolbar" aria-label={label}>
+<div class="toolbar" role="toolbar" aria-label={label} {@attach arrowNav({ items: 'button, a', axis: 'horizontal' })}>
   <div class="side">{@render start?.()}</div>
   <div class="side">{@render end?.()}</div>
 </div>

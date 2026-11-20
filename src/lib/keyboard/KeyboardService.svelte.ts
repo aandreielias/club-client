@@ -1,4 +1,4 @@
-import type { CommandId } from '../../shortcuts';
+import { SHORTCUTS, type CommandId } from '../../shortcuts';
 import type { CommandRegistry } from './CommandRegistry.svelte';
 import type { Keymap } from './Keymap.svelte';
 import { KeySpec, type KeyInput } from './KeySpec';
@@ -12,7 +12,7 @@ export interface KeyEventLike extends KeyInput {
 
 /**
  * Turns key presses into commands. Handles sequences (G, then K) with a timeout, stays out of the
- * way while the user types (only Mod/Ctrl/Alt combos and Escape, also Shift+Escape, reach commands then), and leaves
+ * way while the user types (only commands marked `whileTyping` run then: Escape, Shift+Escape, Mod+Enter), and leaves
  * native modal dialogs (confirmations) alone.
  */
 export class KeyboardService {
@@ -44,21 +44,23 @@ export class KeyboardService {
     if (!this.enabled || event.defaultPrevented || KeyboardService.inModalDialog(event.target)) return false;
     const combo = KeySpec.fromEvent(event, this.isMac);
     if (!combo) return false;
-    if (KeyboardService.isTyping(event.target) && !this.pending.length && !KeySpec.hasCommandModifier(combo) && !/(^|\+)Escape$/.test(combo))
-      return false;
-    // Enter on a focused button or link keeps its native meaning.
+    const typing = KeyboardService.isTyping(event.target);
+    // Enter on a focused button or link keeps its native meaning; so do the arrows inside controls that move with them.
     if (combo === 'Enter' && KeyboardService.isInteractive(event.target)) return false;
+    if (KeyboardService.MOVE_KEYS.test(combo) && KeyboardService.ownsArrows(event.target)) return false;
 
     const steps = [...this.pending, combo];
     const spec = steps.join(' ');
-    const runnable = this.keymap.commandsFor(spec).find((id) => this.commands.handler(id));
+    const runnable = this.keymap
+      .commandsFor(spec)
+      .find((id) => (!typing || ('whileTyping' in SHORTCUTS[id] && SHORTCUTS[id].whileTyping)) && this.commands.handler(id));
     if (runnable) {
       event.preventDefault();
       this.clearPending();
       this.commands.run(runnable);
       return true;
     }
-    if (this.keymap.continuations(steps).some(({ id }) => this.commands.handler(id))) {
+    if (!typing && this.keymap.continuations(steps).some(({ id }) => this.commands.handler(id))) {
       event.preventDefault();
       this.pending = steps;
       clearTimeout(this.#timer);
@@ -96,6 +98,16 @@ export class KeyboardService {
   private static isInteractive(target: EventTarget | null): boolean {
     const element = target as HTMLElement | null;
     return !!element && typeof element.tagName === 'string' && ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA', 'SUMMARY'].includes(element.tagName);
+  }
+
+  private static readonly MOVE_KEYS = /^(Arrow(Up|Down|Left|Right)|Home|End|PageUp|PageDown)$/;
+  /** Elements that move with the arrows themselves: ARIA widgets, radio and range inputs, and `arrowNav` containers (ui/arrowNav). */
+  static readonly ARROW_OWNERS =
+    '[data-arrow-nav], [role="radiogroup"], [role="tablist"], [role="menu"], [role="listbox"], [role="grid"], [role="tree"], [role="slider"], [role="separator"], [role="toolbar"], input[type="radio"], input[type="range"]';
+
+  private static ownsArrows(target: EventTarget | null): boolean {
+    const element = target as HTMLElement | null;
+    return !!element?.closest?.(KeyboardService.ARROW_OWNERS);
   }
 
   private static inModalDialog(target: EventTarget | null): boolean {

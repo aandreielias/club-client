@@ -19,6 +19,8 @@ export interface ShortcutDefinition {
   keys: string;
   /** Navigation commands: the route they open. */
   path?: string;
+  /** Also runs while a text field has focus (only what belongs to the field: leave it, save the form). */
+  whileTyping?: boolean;
 }
 
 export const SHORTCUTS = {
@@ -57,6 +59,7 @@ export const SHORTCUTS = {
   'nav.absences': { label: 'Zu den Abwesenheiten', group: 'Navigation', context: 'global', keys: 'g w', path: '/calendar/absences' },
   'nav.search': { label: 'Zur Suchseite', group: 'Navigation', context: 'global', keys: 'g q', path: '/search' },
   'nav.back': { label: 'Zurück', group: 'Navigation', context: 'global', keys: 'Alt+ArrowLeft' },
+  'nav.forward': { label: 'Vorwärts', group: 'Navigation', context: 'global', keys: 'Alt+ArrowRight' },
 
   // ---- Fenster ----
   'view.back': {
@@ -64,26 +67,54 @@ export const SHORTCUTS = {
     group: 'Fenster',
     context: 'global',
     keys: 'Escape',
+    whileTyping: true,
   },
-  'window.close': { label: 'Fenster schließen', group: 'Fenster', context: 'window', keys: 'Shift+Escape' },
+  'window.close': { label: 'Fenster schließen', group: 'Fenster', context: 'window', keys: 'Shift+Escape', whileTyping: true },
   'window.center': { label: 'Fenster in die Mitte', group: 'Fenster', context: 'window', keys: 'w m' },
   'window.side': { label: 'Fenster an die Seite', group: 'Fenster', context: 'window', keys: 'w s' },
   'window.bottom': { label: 'Fenster nach unten', group: 'Fenster', context: 'window', keys: 'w u' },
   'window.page': { label: 'Fenster als Seite öffnen', group: 'Fenster', context: 'window', keys: 'w o' },
+  'window.minimize': { label: 'Fenster minimieren', group: 'Fenster', context: 'window', keys: 'w n' },
+  'window.restoreTab': { label: 'Zuletzt minimiertes Fenster wiederherstellen', group: 'Fenster', context: 'global', keys: 'w t' },
+  'window.next': { label: 'Zum nächsten Fenster', group: 'Fenster', context: 'global', keys: 'w w' },
+  'area.left': { label: 'Zum Bereich links (Seitenleiste)', group: 'Fenster', context: 'global', keys: 'Mod+ArrowLeft' },
+  'area.right': { label: 'Zum Bereich rechts', group: 'Fenster', context: 'global', keys: 'Mod+ArrowRight' },
+  'area.up': { label: 'Zum Bereich oben', group: 'Fenster', context: 'global', keys: 'Mod+ArrowUp' },
+  'area.down': { label: 'Zum Bereich unten (Fenster unten, minimierte Fenster)', group: 'Fenster', context: 'global', keys: 'Mod+ArrowDown' },
+
+  // ---- Videokonferenz ----
+  'call.mic': { label: 'Mikrofon an oder aus', group: 'Videokonferenz', context: 'global', keys: 'c m' },
+  'call.camera': { label: 'Kamera an oder aus', group: 'Videokonferenz', context: 'global', keys: 'c k' },
+  'call.minimize': { label: 'Videokonferenz minimieren oder wieder öffnen', group: 'Videokonferenz', context: 'global', keys: 'c n' },
+  'call.fullscreen': { label: 'Videokonferenz im Vollbild', group: 'Videokonferenz', context: 'global', keys: 'c f' },
+  'call.leave': { label: 'Videokonferenz verlassen', group: 'Videokonferenz', context: 'global', keys: 'c l' },
 
   // ---- Seite und Listen ----
   'page.new': { label: 'Neu anlegen', group: 'Seite', context: 'page', keys: 'n' },
-  'form.submit': { label: 'Formular speichern', group: 'Seite', context: 'global', keys: 'Mod+Enter' },
+  'form.submit': { label: 'Formular speichern', group: 'Seite', context: 'global', keys: 'Mod+Enter', whileTyping: true },
   'list.search': { label: 'In der Liste suchen', group: 'Listen', context: 'list', keys: '/' },
-  'list.next': { label: 'Nächste Zeile', group: 'Listen', context: 'list', keys: 'j' },
-  'list.previous': { label: 'Vorherige Zeile', group: 'Listen', context: 'list', keys: 'k' },
+  'list.next': { label: 'Nächste Zeile', group: 'Listen', context: 'list', keys: 'j | ArrowDown' },
+  'list.previous': { label: 'Vorherige Zeile', group: 'Listen', context: 'list', keys: 'k | ArrowUp' },
+  'list.first': { label: 'Erste Zeile', group: 'Listen', context: 'list', keys: 'Home' },
+  'list.last': { label: 'Letzte Zeile', group: 'Listen', context: 'list', keys: 'End' },
   'list.open': { label: 'Zeile öffnen', group: 'Listen', context: 'list', keys: 'Enter' },
+  'list.openNew': { label: 'Zeile in neuem Fenster öffnen', group: 'Listen', context: 'list', keys: 'Shift+Enter' },
   'list.menu': { label: 'Kontextmenü der Zeile', group: 'Listen', context: 'list', keys: 'Shift+F10' },
   'list.reset': { label: 'Filter zurücksetzen', group: 'Listen', context: 'list', keys: 'Shift+X' },
 
   // ---- Kalender ----
-  'calendar.previous': { label: 'Vorheriger Zeitraum', group: 'Kalender', context: 'calendar', keys: 'ArrowLeft' },
-  'calendar.next': { label: 'Nächster Zeitraum', group: 'Kalender', context: 'calendar', keys: 'ArrowRight' },
+  'calendar.previous': { label: 'Vorheriger Zeitraum', group: 'Kalender', context: 'calendar', keys: 'PageUp' },
+  'calendar.next': { label: 'Nächster Zeitraum', group: 'Kalender', context: 'calendar', keys: 'PageDown' },
+  'calendar.dayLeft': { label: 'Vorheriger Tag', group: 'Kalender', context: 'calendar', keys: 'ArrowLeft | h' },
+  'calendar.dayRight': { label: 'Nächster Tag', group: 'Kalender', context: 'calendar', keys: 'ArrowRight | l' },
+  'calendar.weekUp': { label: 'Eine Woche zurück', group: 'Kalender', context: 'calendar', keys: 'ArrowUp | k' },
+  'calendar.weekDown': { label: 'Eine Woche weiter', group: 'Kalender', context: 'calendar', keys: 'ArrowDown | j' },
+  'calendar.openDay': {
+    label: 'Ersten Eintrag des Tages öffnen (leerer Tag: neuer Termin)',
+    group: 'Kalender',
+    context: 'calendar',
+    keys: 'Enter',
+  },
   'calendar.today': { label: 'Heute', group: 'Kalender', context: 'calendar', keys: 't' },
   'calendar.month': { label: 'Monatsansicht', group: 'Kalender', context: 'calendar', keys: 'v m' },
   'calendar.week': { label: 'Wochenansicht', group: 'Kalender', context: 'calendar', keys: 'v w' },

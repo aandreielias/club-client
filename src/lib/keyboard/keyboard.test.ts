@@ -37,6 +37,13 @@ describe('KeySpec', () => {
     expect(KeySpec.clashes('', 'g')).toBe(false);
   });
 
+  it('takes alternatives separated by |', () => {
+    expect(KeySpec.normalize('j|arrowdown')).toBe('J | ArrowDown');
+    expect(KeySpec.clashes('j | ArrowDown', 'ArrowDown')).toBe(true);
+    expect(KeySpec.text('k | ArrowUp', false)).toBe('K oder Pfeil hoch');
+    expect(new Keymap(null).commandsFor('ArrowDown')).toContain('list.next');
+  });
+
   it('labels keys for people', () => {
     expect(KeySpec.text('Mod+K', false)).toBe('Strg + K');
     expect(KeySpec.text('Mod+K', true)).toBe('Cmd + K');
@@ -99,7 +106,7 @@ describe('KeyboardService', () => {
     expect(service.pending).toEqual([]);
   });
 
-  it('stays out of the way while typing, except for modifier combos and Escape', () => {
+  it('stays out of the way while typing, except for the commands of the field (Escape, Mod+Enter)', () => {
     const { registry, service } = setup();
     const next = vi.fn();
     const close = vi.fn();
@@ -111,7 +118,7 @@ describe('KeyboardService', () => {
     service.handle(key('Escape', { target: input as unknown as EventTarget }));
     service.handle(key('k', { ctrlKey: true, target: input as unknown as EventTarget }));
     expect(close).toHaveBeenCalledOnce();
-    expect(palette).toHaveBeenCalledOnce();
+    expect(palette).not.toHaveBeenCalled();
   });
 
   it('ignores keys inside native modal dialogs and while disabled', () => {

@@ -126,6 +126,20 @@ describe('CalendarModel data', () => {
   });
 });
 
+describe('CalendarModel day cursor', () => {
+  it('shows the cursor first, moves it by days and weeks, and turns the page when it leaves the month', () => {
+    const model = new CalendarModel(new CalendarSources(api([])), vienna, null, { view: 'month', date: '2026-10-15' });
+    void model.moveCursor(1);
+    expect(model.cursor).toBe('2026-10-01'); // the month's first day, as today lies after October 2026
+    void model.moveCursor(-1);
+    expect(model.cursor).toBe('2026-09-30');
+    expect(model.anchor).toBe('2026-09-30');
+    void model.moveCursor(7);
+    expect(model.cursor).toBe('2026-10-07');
+    expect(model.anchor).toBe('2026-10-07');
+  });
+});
+
 describe('CalendarModel views', () => {
   it('opens an old list link or preference as month view', () => {
     const sources = new CalendarSources(api([]));

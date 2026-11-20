@@ -299,9 +299,10 @@ export class WindowService {
     return typeof value === 'number' && value > 0 ? value : null;
   }
 
-  /** A Ctrl/Cmd click (the event being handled right now) asks for a new window. */
+  /** A Ctrl/Cmd click or Shift+Enter (the event being handled right now, e.g. `list.openNew`) asks for a new window. */
   static newWindowClick(): boolean {
     const event = (globalThis as { event?: Event }).event;
+    if (typeof KeyboardEvent !== 'undefined' && event instanceof KeyboardEvent) return event.key === 'Enter' && event.shiftKey;
     return typeof MouseEvent !== 'undefined' && event instanceof MouseEvent && (event.ctrlKey || event.metaKey);
   }
 

@@ -3,6 +3,7 @@
   import AsyncView from '../../ui/AsyncView.svelte';
   import SectionHeading from '../../ui/SectionHeading.svelte';
   import { tooltip } from '../../ui/tooltip';
+  import { arrowNav } from '../../ui/arrowNav';
   import FolderCover from './FolderCover.svelte';
   import { FolderTree } from './FolderTree.svelte';
   import { filePolicy, filesApi } from './services';
@@ -17,7 +18,7 @@
   {#snippet children()}
     {@const roots = tree.children(null)}
     {#if roots.length}
-      <ul class="tiles">
+      <ul class="tiles" {@attach arrowNav({ items: '.tile', axis: 'grid' })}>
         {#each roots as folder (folder.id)}
           <li>
             <a class="tile" href="#/files/{folder.id}" {@attach tooltip(`${folder.name} öffnen`)}>

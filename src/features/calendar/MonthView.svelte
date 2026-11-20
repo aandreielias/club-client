@@ -64,6 +64,7 @@
           class:outside={!model.inAnchorMonth(day)}
           class:today={day === model.today}
           class:picked={day === shownDay}
+          class:cursor={day === model.cursor}
           class:creatable={policy.canCreate()}
           role="group"
           aria-label={session.format.dayHeading(day)}
@@ -119,6 +120,9 @@
 </section>
 
 <style>
+  .cell.cursor {
+    box-shadow: inset 0 0 0 2px var(--color-accent);
+  }
   .cell.drop-target {
     background: var(--color-accent-soft);
     box-shadow: inset 0 0 0 1px var(--color-accent);

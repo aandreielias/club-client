@@ -25,6 +25,7 @@ import type { SessionStore } from './lib/session/SessionStore.svelte';
 import type { PendingDeletes } from './lib/state/PendingDeletes.svelte';
 import { ProblemError } from './lib/http/ProblemError';
 import { guestOnly } from './lib/types';
+import { focusArea, focusNextWindow, trackAreaFocus } from './lib/keyboard/areas';
 
 /** Which top-level screen the app shows; derived from auth, profile and route state. */
 export type Screen = 'failed' | 'loading' | 'set-password' | 'forgot-password' | 'login' | 'onboarding' | 'setup' | 'shell';
@@ -153,6 +154,7 @@ export class AppController {
       bus.subscribe(MEMBER_DEACTIVATED, () => directory.forgetMembers()).unsubscribe,
       bus.subscribe(CLUB_CHANGED, ({ data }) => session.setClub(data.club)).unsubscribe,
       detachKeyboard,
+      trackAreaFocus(),
       removeCommands,
       () => removeEventListener('online', wake),
       () => document.removeEventListener('visibilitychange', wake),
@@ -186,6 +188,7 @@ export class AppController {
       'theme.toggle': { run: () => preferences.toggleScheme(matchMedia('(prefers-color-scheme: dark)').matches) },
       'auth.logout': { run: () => void this.logout() },
       'nav.back': { run: () => history.back() },
+      'nav.forward': { run: () => history.forward() },
       // Escape: leave the newest inner view (edit mode, panel), else the previous record, else close.
       'view.back': {
         run: () => (commands.paletteOpen ? (commands.paletteOpen = false) : backStack.back() || windows.back()),
@@ -196,6 +199,16 @@ export class AppController {
       'window.center': { run: () => windows.setDock('center'), when: windowOpen },
       'window.side': { run: () => windows.setDock('side'), when: windowOpen },
       'window.bottom': { run: () => windows.setDock('bottom'), when: windowOpen },
+      'window.minimize': { run: () => windows.focused && windows.minimize(windows.focused.key), when: windowOpen },
+      'window.restoreTab': {
+        run: () => windows.tabs.length && windows.restore(windows.tabs[windows.tabs.length - 1].key),
+        when: () => windows.tabs.length > 0,
+      },
+      'window.next': { run: () => void focusNextWindow() },
+      'area.left': { run: () => void focusArea('left') },
+      'area.right': { run: () => void focusArea('right') },
+      'area.up': { run: () => void focusArea('up') },
+      'area.down': { run: () => void focusArea('down') },
       'window.page': {
         run: () => {
           const focused = windows.focused;

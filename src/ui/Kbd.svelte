@@ -5,14 +5,17 @@
   /** Keycaps of a key spec, e.g. [Strg][K] or [G] dann [K]. Renders nothing for an empty spec. */
   let { keys }: { keys: string } = $props();
 
-  const steps = $derived(KeySpec.labels(keys, keyboard.isMac));
+  const alternatives = $derived(KeySpec.alternatives(keys).map((alternative) => KeySpec.labels(alternative, keyboard.isMac)));
 </script>
 
-{#if steps.length}
+{#if alternatives.length}
   <span class="keys" aria-label={KeySpec.text(keys, keyboard.isMac)}>
-    {#each steps as step, i (i)}
-      {#if i > 0}<span class="then" aria-hidden="true">dann</span>{/if}
-      {#each step as part, j (j)}<kbd aria-hidden="true">{part}</kbd>{/each}
+    {#each alternatives as steps, a (a)}
+      {#if a > 0}<span class="then" aria-hidden="true">oder</span>{/if}
+      {#each steps as step, i (i)}
+        {#if i > 0}<span class="then" aria-hidden="true">dann</span>{/if}
+        {#each step as part, j (j)}<kbd aria-hidden="true">{part}</kbd>{/each}
+      {/each}
     {/each}
   </span>
 {/if}

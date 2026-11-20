@@ -29,6 +29,7 @@
   import MonthView from './MonthView.svelte';
   import { appointmentPolicy as policy, calendarExport } from './services';
   import WeekView from './WeekView.svelte';
+  import { createAppointment } from './newAppointment';
 
   // Every event that can touch the calendar (appointments, answers, absences, task due dates, meetings, votes, tournaments) reloads it.
   // Its own pane of the split view, or the main page.
@@ -90,13 +91,26 @@
   const teamOptions = $derived(policy.filterableTeams().map((t) => ({ value: t.id, label: t.name })));
 
   useCommands(commands, {
-    'page.new': { run: () => newAppointment(), when: () => policy.canCreate() },
+    'page.new': { run: () => (model.cursor ? createAppointment(model, model.cursor) : newAppointment()), when: () => policy.canCreate() },
     'calendar.previous': { run: () => void model.previous() },
     'calendar.next': { run: () => void model.next() },
     'calendar.today': { run: () => void model.goToday() },
     'calendar.month': { run: () => void model.setView('month') },
     'calendar.week': { run: () => void model.setView('week') },
+    'calendar.dayLeft': { run: () => void model.moveCursor(-1) },
+    'calendar.dayRight': { run: () => void model.moveCursor(1) },
+    'calendar.weekUp': { run: () => void model.moveCursor(-7) },
+    'calendar.weekDown': { run: () => void model.moveCursor(7) },
+    'calendar.openDay': { run: openDay, when: () => !!model.cursor },
   });
+
+  /** Enter on the day cursor: focus its first entry (Enter again opens it), or start a new appointment on an empty day. */
+  function openDay() {
+    const day = model.cursor!;
+    const first = [...document.querySelectorAll(`[data-day="${day}"]`)].map((cell) => cell.querySelector<HTMLElement>('button.chip')).find(Boolean);
+    if (first) first.focus();
+    else createAppointment(model, day);
+  }
 
   function newAppointment() {
     const params = new URLSearchParams();

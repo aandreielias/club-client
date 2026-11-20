@@ -1,14 +1,15 @@
 <script lang="ts">
   import { onDestroy, tick, untrack } from 'svelte';
   import { innerHeight, innerWidth } from 'svelte/reactivity/window';
-  import { motion, preferences, windows } from '../../lib/container';
+  import { commands, motion, preferences, windows } from '../../lib/container';
+  import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { WindowService } from '../../lib/window/WindowService.svelte';
   import { dragWindow, type Box } from '../../lib/window/windowDrag';
   import { settings } from '../../settings';
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup, { type Choice } from '../../ui/ChoiceGroup.svelte';
   import ErrorNote from '../../ui/ErrorNote.svelte';
-  import { tooltip } from '../../ui/tooltip';
+  import { tooltip, withKeys } from '../../ui/tooltip';
   import { SELF } from './CallSession.svelte';
   import type { CallLayout, CallPlacement } from './CallService.svelte';
   import { calls } from './services';
@@ -212,6 +213,15 @@
   }
 
   onDestroy(() => void calls.leave());
+
+  const inCall = () => !!call && !!calls.meeting;
+  useCommands(commands, {
+    'call.mic': { run: () => call?.toggleMic(), when: () => !!call?.local?.getAudioTracks().length },
+    'call.camera': { run: () => call?.toggleCamera(), when: () => !!call?.local?.getVideoTracks().length },
+    'call.minimize': { run: () => (calls.minimized ? (calls.minimized = false) : minimize()), when: inCall },
+    'call.fullscreen': { run: toggleFullscreen, when: () => inCall() && !calls.minimized },
+    'call.leave': { run: () => void calls.leave(), when: inCall },
+  });
 </script>
 
 <svelte:window onpagehide={() => void calls.leave(false)} />
@@ -229,6 +239,7 @@
   <section
     bind:this={element}
     class="call {dock}"
+    data-area="window"
     class:bar={calls.minimized}
     aria-label="Videokonferenz: {calls.meeting.title}"
     style:z-index={windows.zIndex(WindowService.CALL)}
@@ -244,8 +255,16 @@
         <span>{tiles.length} in der Videokonferenz{speaker ? ` · spricht: ${speaker}` : ''}</span>
       </div>
       {@render toggles()}
-      <Button size="sm" variant="ghost" icon="restore" tooltip="Videokonferenz wieder öffnen" onclick={() => (calls.minimized = false)} />
-      <Button size="sm" variant="danger" icon="hangUp" onclick={() => void calls.leave()}>Verlassen</Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        icon="restore"
+        tooltip={withKeys('Videokonferenz wieder öffnen', 'call.minimize')}
+        onclick={() => (calls.minimized = false)}
+      />
+      <Button size="sm" variant="danger" icon="hangUp" tooltip="Videokonferenz verlassen" command="call.leave" onclick={() => void calls.leave()}
+        >Verlassen</Button
+      >
     {:else}
       {#if dock !== 'center' && !fullscreen}
         <!-- ARIA window splitter, as in WindowHost. -->
@@ -286,13 +305,15 @@
               />
             </div>
           {/if}
-          <Button size="sm" variant="danger" icon="hangUp" onclick={() => void calls.leave()}>Verlassen</Button>
+          <Button size="sm" variant="danger" icon="hangUp" tooltip="Videokonferenz verlassen" command="call.leave" onclick={() => void calls.leave()}
+            >Verlassen</Button
+          >
           <span class="wide">
             <Button
               size="sm"
               variant="ghost"
               icon={fullscreen ? 'fullscreenExit' : 'fullscreen'}
-              tooltip={fullscreen ? 'Vollbild beenden' : 'Vollbild'}
+              tooltip={withKeys(fullscreen ? 'Vollbild beenden' : 'Vollbild', 'call.fullscreen')}
               onclick={toggleFullscreen}
             />
           </span>
@@ -300,7 +321,7 @@
             size="sm"
             variant="ghost"
             icon="minimize"
-            tooltip="Minimieren: die App bleibt frei, die Videokonferenz läuft weiter"
+            tooltip={withKeys('Minimieren: die App bleibt frei, die Videokonferenz läuft weiter', 'call.minimize')}
             onclick={minimize}
           />
         </div>
@@ -344,7 +365,7 @@
       size="sm"
       icon={call.micOn ? 'mic' : 'micOff'}
       pressed={!call.micOn}
-      tooltip={call.micOn ? 'Mikrofon aus' : 'Mikrofon an'}
+      tooltip={withKeys(call.micOn ? 'Mikrofon aus' : 'Mikrofon an', 'call.mic')}
       onclick={() => call?.toggleMic()}
     />
   {/if}
@@ -353,7 +374,7 @@
       size="sm"
       icon={call.cameraOn ? 'camera' : 'cameraOff'}
       pressed={!call.cameraOn}
-      tooltip={call.cameraOn ? 'Kamera aus' : 'Kamera an'}
+      tooltip={withKeys(call.cameraOn ? 'Kamera aus' : 'Kamera an', 'call.camera')}
       onclick={() => call?.toggleCamera()}
     />
   {/if}

@@ -99,7 +99,11 @@
   useCommands(commands, {
     'list.next': { run: () => move(1), when: navigable },
     'list.previous': { run: () => move(-1), when: navigable },
+    'list.first': { run: () => move(-shownRows.length), when: navigable },
+    'list.last': { run: () => move(shownRows.length), when: navigable },
     'list.open': { run: () => onopen?.(shownRows[cursor]), when: () => navigable() && cursor >= 0 && cursor < shownRows.length },
+    // Shift+Enter: the window service reads the key event and opens a new window (WindowService.newWindowClick).
+    'list.openNew': { run: () => onopen?.(shownRows[cursor]), when: () => navigable() && cursor >= 0 && cursor < shownRows.length },
     'list.search': {
       run: () => container?.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
       when: () => !!onopen && toolbar && model.searchable,

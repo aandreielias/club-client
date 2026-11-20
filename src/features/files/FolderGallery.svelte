@@ -13,6 +13,7 @@
   import { RowDragging, type RowDrag } from '../../ui/rowDrag';
   import { RecordDrag, type RecordRef } from '../../lib/records/RecordDrag';
   import { recordDrop } from '../../ui/recordDrop';
+  import { arrowNav } from '../../ui/arrowNav';
 
   /** Gallery view of the same list model as the table: tiles for folders, photos and documents. */
   let {
@@ -56,7 +57,7 @@
   <AsyncView resource={model.data}>
     {#snippet children()}
       {#if model.rows.some((item) => !pendingDeletes.isHidden(item.id))}
-        <ul class="tiles">
+        <ul class="tiles" {@attach arrowNav({ items: '.tile', axis: 'grid' })}>
           {#each model.rows.filter((item) => !pendingDeletes.isHidden(item.id)) as item (item.id)}
             <li
               class="cell"

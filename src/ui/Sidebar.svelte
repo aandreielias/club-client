@@ -19,6 +19,7 @@
   import NavTree from './NavTree.svelte';
   import { SidebarFlyout } from './SidebarFlyout.svelte';
   import { tooltip, withKeys } from './tooltip';
+  import { arrowNav } from './arrowNav';
 
   let {
     title,
@@ -217,7 +218,14 @@
     {@attach tooltip('Navigation schließen')}
   ></button>{/if}
 
-<nav id="sidebar" class:open class:collapsed aria-label="Hauptnavigation">
+<nav
+  id="sidebar"
+  data-area="sidebar"
+  class:open
+  class:collapsed
+  aria-label="Hauptnavigation"
+  {@attach arrowNav({ items: 'a, button', axis: 'vertical', skip: '.flyout', tree: true })}
+>
   <div class="title">
     {#if logo}<img class="logo" src={logo} alt="" />{:else}<span class="mark" aria-hidden="true">{title.slice(0, 1)}</span>{/if}
     <span class="name" {title}>{title}</span>

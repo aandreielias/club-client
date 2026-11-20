@@ -54,17 +54,19 @@ export class Keymap {
     );
   }
 
-  /** Commands bound to exactly this canonical spec. */
+  /** Commands with an alternative bound to exactly this canonical spec. */
   commandsFor(spec: string): CommandId[] {
-    return (Object.keys(SHORTCUTS) as CommandId[]).filter((id) => this.keys(id) === spec);
+    return (Object.keys(SHORTCUTS) as CommandId[]).filter((id) => KeySpec.alternatives(this.keys(id)).includes(spec));
   }
 
   /** Commands whose spec continues after the given steps (for the "next key" hint). */
   continuations(prefix: readonly string[]): { id: CommandId; next: string }[] {
-    return (Object.keys(SHORTCUTS) as CommandId[]).flatMap((id) => {
-      const steps = KeySpec.steps(this.keys(id));
-      return steps.length > prefix.length && prefix.every((step, i) => steps[i] === step) ? [{ id, next: steps[prefix.length] }] : [];
-    });
+    return (Object.keys(SHORTCUTS) as CommandId[]).flatMap((id) =>
+      KeySpec.alternatives(this.keys(id)).flatMap((alternative) => {
+        const steps = KeySpec.steps(alternative);
+        return steps.length > prefix.length && prefix.every((step, i) => steps[i] === step) ? [{ id, next: steps[prefix.length] }] : [];
+      }),
+    );
   }
 
   /** Global keys are unique everywhere; other contexts only clash with themselves. */

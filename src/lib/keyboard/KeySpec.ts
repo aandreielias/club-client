@@ -21,6 +21,10 @@ const KEY_LABELS: Readonly<Record<string, string>> = {
   Backspace: 'Rücktaste',
   Delete: 'Entf',
   Tab: 'Tab',
+  Home: 'Pos1',
+  End: 'Ende',
+  PageUp: 'Bild hoch',
+  PageDown: 'Bild runter',
 };
 
 /**
@@ -31,8 +35,22 @@ const KEY_LABELS: Readonly<Record<string, string>> = {
 export class KeySpec {
   private constructor() {}
 
-  /** Canonical form of a spec; '' for an empty or unusable spec. */
+  /** Canonical form of a spec; '' for an empty or unusable spec. Alternatives join with " | " ("J | ArrowDown"). */
   static normalize(spec: string): string {
+    return spec
+      .split('|')
+      .map((alternative) => KeySpec.normalizeOne(alternative))
+      .filter(Boolean)
+      .join(' | ');
+  }
+
+  /** The alternatives of a spec, each canonical ("J | ArrowDown" → ["J", "ArrowDown"]). */
+  static alternatives(spec: string): string[] {
+    const normalized = KeySpec.normalize(spec);
+    return normalized ? normalized.split(' | ') : [];
+  }
+
+  private static normalizeOne(spec: string): string {
     return spec
       .trim()
       .split(/\s+/)
@@ -63,8 +81,9 @@ export class KeySpec {
     return KeySpec.normalizeCombo([...mods, key].join('+'));
   }
 
+  /** Steps of one alternative. */
   static steps(spec: string): string[] {
-    const normalized = KeySpec.normalize(spec);
+    const normalized = KeySpec.normalizeOne(spec);
     return normalized ? normalized.split(' ') : [];
   }
 
@@ -73,8 +92,12 @@ export class KeySpec {
     return /(^|\+)(Mod|Ctrl|Alt)\+/.test(combo);
   }
 
-  /** Two specs clash when equal or when one is the start of the other (the longer could never fire). */
+  /** Two specs clash when an alternative of one equals or starts an alternative of the other (the longer could never fire). */
   static clashes(a: string, b: string): boolean {
+    return KeySpec.alternatives(a).some((x) => KeySpec.alternatives(b).some((y) => KeySpec.clashesOne(x, y)));
+  }
+
+  private static clashesOne(a: string, b: string): boolean {
     const x = KeySpec.steps(a);
     const y = KeySpec.steps(b);
     if (!x.length || !y.length) return false;
@@ -83,7 +106,7 @@ export class KeySpec {
     return shorter.every((step, i) => longer[i] === step);
   }
 
-  /** Display labels per step and key, e.g. "Mod+K" → [["Strg", "K"]], "g k" → [["G"], ["K"]]. */
+  /** Display labels per step and key of one alternative, e.g. "Mod+K" → [["Strg", "K"]], "g k" → [["G"], ["K"]]. */
   static labels(spec: string, isMac: boolean): string[][] {
     return KeySpec.steps(spec).map((step) =>
       step.split('+').map((part) => {
@@ -97,11 +120,15 @@ export class KeySpec {
     );
   }
 
-  /** Readable text, e.g. "G, dann K" or "Strg + K". */
+  /** Readable text, e.g. "G, dann K", "Strg + K" or "J oder Pfeil runter". */
   static text(spec: string, isMac: boolean): string {
-    return KeySpec.labels(spec, isMac)
-      .map((parts) => parts.join(' + '))
-      .join(', dann ');
+    return KeySpec.alternatives(spec)
+      .map((alternative) =>
+        KeySpec.labels(alternative, isMac)
+          .map((parts) => parts.join(' + '))
+          .join(', dann '),
+      )
+      .join(' oder ');
   }
 
   private static normalizeCombo(combo: string): string {
@@ -144,6 +171,10 @@ export class KeySpec {
       arrowright: 'ArrowRight',
       arrowup: 'ArrowUp',
       arrowdown: 'ArrowDown',
+      home: 'Home',
+      end: 'End',
+      pageup: 'PageUp',
+      pagedown: 'PageDown',
     };
     return named[lower] ?? (/^f\d{1,2}$/.test(lower) ? lower.toUpperCase() : '');
   }

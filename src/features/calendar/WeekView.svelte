@@ -39,7 +39,7 @@
 <div class="week" style:--hours={hours.length}>
   <div class="corner"></div>
   {#each model.days as day (day)}
-    <div class="day-head" class:today={day === model.today}>
+    <div class="day-head" class:today={day === model.today} class:cursor={day === model.cursor}>
       <span class="muted">{session.format.weekday(day)}</span>
       <span class="number">{Number(day.slice(8))}</span>
     </div>
@@ -87,6 +87,7 @@
       data-start-hour={startHour}
       data-end-hour={endHour}
       class:today={day === model.today}
+      class:cursor={day === model.cursor}
       ondblclick={() => createAppointment(model, day)}
       {@attach menu(() => newAppointmentEntries(model, day))}
       class:drop-target={hover === day}
@@ -121,6 +122,10 @@
 </div>
 
 <style>
+  .day-head.cursor,
+  .column.cursor {
+    box-shadow: inset 0 0 0 2px var(--color-accent);
+  }
   .drop-target {
     background: var(--color-accent-soft);
   }

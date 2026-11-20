@@ -54,6 +54,8 @@ export class CalendarModel {
   anchor = $state<LocalDate>('');
   teamId = $state<string | null>(null);
   hidden = $state<string[]>([]);
+  /** The day the arrow keys are on (null until they are used). */
+  cursor = $state<LocalDate | null>(null);
   /** An entry being resized: shown with this range until saved or dropped. */
   preview = $state<{ key: string; start: string; end: string } | null>(null);
 
@@ -116,6 +118,20 @@ export class CalendarModel {
 
   previous(): Promise<void> {
     return this.goTo(CalendarModel.step(this.view, this.anchor, -1));
+  }
+
+  /**
+   * Moves the keyboard day cursor; the first press only shows it (on today, else the first shown day). Leaving the shown
+   * range turns the page.
+   */
+  moveCursor(days: number): Promise<void> | void {
+    const shown = (day: LocalDate) => (this.view === 'month' ? this.inAnchorMonth(day) : this.days.includes(day));
+    if (!this.cursor || !shown(this.cursor)) {
+      this.cursor = shown(this.today) ? this.today : this.days.find(shown)!;
+      return;
+    }
+    this.cursor = ZonedClock.addDays(this.cursor, days);
+    if (!shown(this.cursor)) return this.goTo(this.cursor);
   }
 
   goToday(): Promise<void> {

@@ -2,6 +2,7 @@
   import { motion, windows } from '../lib/container';
   import Button from './Button.svelte';
   import { tooltip } from './tooltip';
+  import { arrowNav } from './arrowNav';
 
   /**
    * The footer strip of minimized windows: one tab each, the first minimized rightmost. A click grows the window back
@@ -9,6 +10,14 @@
    */
   const fade = motion.fade;
   let width = $state(0);
+
+  /** Delete on a tab: the focus moves to a neighbour, so the keyboard stays in the strip. */
+  function closeTab(button: HTMLElement, key: string) {
+    const tab = button.closest('.tab');
+    const neighbour = (tab?.nextElementSibling ?? tab?.previousElementSibling)?.querySelector<HTMLElement>('.restore');
+    neighbour?.focus();
+    windows.close(undefined, key);
+  }
 
   $effect(() => {
     const root = document.documentElement;
@@ -23,11 +32,17 @@
 </script>
 
 {#if windows.tabs.length}
-  <div class="strip" role="toolbar" aria-label="Minimierte Fenster" transition:fade|global>
-    <div class="tabs" bind:offsetWidth={width}>
+  <div class="strip" data-area="tabs" role="toolbar" aria-label="Minimierte Fenster" transition:fade|global>
+    <div class="tabs" bind:offsetWidth={width} {@attach arrowNav({ items: '.restore', axis: 'horizontal' })}>
       {#each windows.tabs as win (win.key)}
         <div class="tab" data-window-tab={win.key} transition:fade|global>
-          <button type="button" class="restore" onclick={() => windows.restore(win.key)} {@attach tooltip('Wiederherstellen')}>
+          <button
+            type="button"
+            class="restore"
+            onclick={() => windows.restore(win.key)}
+            onkeydown={(e) => e.key === 'Delete' && (e.preventDefault(), closeTab(e.currentTarget, win.key))}
+            {@attach tooltip('Wiederherstellen (Entf: schließen)')}
+          >
             <strong>{windows.title(win.key) || 'Fenster'}</strong>
             <span>{windows.content(win.kind)?.label}</span>
           </button>

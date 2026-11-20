@@ -262,6 +262,7 @@
   <div
     bind:this={element}
     class="window {win.dock}"
+    data-area="window"
     class:focused={handle.focused}
     class:hidden
     style:z-index={windows.zIndex(key)}
@@ -339,7 +340,7 @@
             tooltip={withKeys('Als eigene Seite öffnen', 'window.page')}
           />
         {/if}
-        <Button size="sm" variant="ghost" icon="minimize" onclick={() => windows.minimize(key)} tooltip="Minimieren" />
+        <Button size="sm" variant="ghost" icon="minimize" onclick={() => windows.minimize(key)} tooltip={withKeys('Minimieren', 'window.minimize')} />
         <Button
           size="sm"
           variant="ghost"
