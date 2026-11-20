@@ -15,8 +15,8 @@ export const teamsFeature: Feature = {
   ],
   actions: { team: teamActions },
   windows: {
-    team: { component: TeamView, page: (id) => `/teams/${encodeURIComponent(id)}` },
-    'team-new': { component: TeamCreateView, canOpen: () => teamPolicy.canCreate() },
+    team: { label: 'Team', component: TeamView, page: (id) => `/teams/${encodeURIComponent(id)}` },
+    'team-new': { label: 'Neues Team', component: TeamCreateView, canOpen: () => teamPolicy.canCreate() },
   },
   messages: TEAM_MESSAGES,
   home: { id: 'teams', label: 'Meine Teams', component: TeamsHome },

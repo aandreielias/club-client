@@ -15,7 +15,7 @@ export const filesFeature: Feature = {
   ],
   // `photo` stays for links that name it; both show any file.
   actions: { file: fileActions, photo: fileActions },
-  windows: { file: { component: PhotoView }, photo: { component: PhotoView } },
+  windows: { file: { label: 'Datei', component: PhotoView }, photo: { label: 'Foto', component: PhotoView } },
   messages: FILE_MESSAGES,
   home: { id: 'files', label: 'Ordner', component: FilesHome },
 };

@@ -2,7 +2,7 @@ import type { EventBus } from '../bus';
 import type { MenuAction, MenuEntry, MenuSource } from '../overlay/ContextMenuService.svelte';
 import type { Router } from '../router/Router.svelte';
 import { copyLinkEntry, openEntries } from '../window/windowMenu';
-import { WINDOW_CLOSE, type WindowService } from '../window/WindowService.svelte';
+import type { WindowService } from '../window/WindowService.svelte';
 import { actionLabel, type RecordAction, type RecordActionRegistry } from './RecordActions';
 
 export interface RecordMenuDeps {
@@ -55,8 +55,7 @@ export function actionEntries(
       command: action.command,
       run: async () => {
         const ok = await action.run();
-        const shown = deps.windows.current?.kind === kind && deps.windows.current.id === id;
-        if (action.leaves && ok !== false && shown) deps.bus.publish(WINDOW_CLOSE);
+        if (action.leaves && ok !== false) deps.windows.closeShowing(kind, id);
       },
       ...(action.icon ? { icon: action.icon } : {}),
       ...(action.danger ? { danger: true } : {}),

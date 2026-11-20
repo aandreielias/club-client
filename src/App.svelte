@@ -209,10 +209,10 @@
     transition: margin var(--motion-window) var(--motion-easing);
   }
   /* A docked window leaves the page usable next to it. */
-  :global(:root[data-window='side']:not([data-layout='compact'])) main {
+  :global(:root[data-window-side]:not([data-layout='compact'])) main {
     margin-right: var(--window-side-width);
   }
-  :global(:root[data-window='bottom']:not([data-layout='compact'])) main {
+  :global(:root[data-window-bottom]:not([data-layout='compact'])) main {
     margin-bottom: var(--window-bottom-height);
   }
   /* The same for the docked video call (CallWindow) and its bar. */
@@ -225,11 +225,15 @@
   :global(:root[data-call='bottom']:not([data-layout='compact'])) main {
     margin-bottom: var(--call-bottom-height);
   }
-  :global(:root[data-call='bar']) main {
+  /* The footer: the minimized call's bar and the tabs of minimized windows (WindowTabs) share one strip. */
+  :global(:root:is([data-call='bar'], [data-window-tabs])) main {
     margin-bottom: var(--call-bar-height);
   }
-  :global(:root[data-call='bar'][data-window='bottom']:not([data-layout='compact'])) main {
+  :global(:root:is([data-call='bar'], [data-window-tabs])[data-window-bottom]:not([data-layout='compact'])) main {
     margin-bottom: calc(var(--window-bottom-height) + var(--call-bar-height));
+  }
+  :global(:root[data-call='bottom'][data-window-tabs]:not([data-layout='compact'])) main {
+    margin-bottom: calc(var(--call-bottom-height) + var(--call-bar-height));
   }
   /* Split view: two scrolling panes side by side; on phones only the main page shows. */
   .panes {

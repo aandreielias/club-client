@@ -24,12 +24,12 @@ export const mailFeature: Feature = {
   links: [{ server: '/mail/:mailbox/:mail', to: ({ mailbox, mail }) => ({ window: { kind: 'mail', id: `${mailbox}:${mail}` } }) }],
   actions: { mail: mailActions, mailbox: mailboxActions },
   windows: {
-    mail: { component: MailView },
-    'mail-new': { component: MailComposeView },
-    'mail-signature': { component: MailSignatureView },
+    mail: { label: 'E-Mail', component: MailView },
+    'mail-new': { label: 'Neue E-Mail', component: MailComposeView },
+    'mail-signature': { label: 'Signatur', component: MailSignatureView },
     // Einstellungen › Postfächer
-    mailbox: { component: MailboxView, page: (id) => `/mailboxes/${encodeURIComponent(id)}`, roles: ADMIN_BOARD },
-    'mailbox-new': { component: MailboxCreateView, roles: ADMIN_BOARD },
+    mailbox: { label: 'Postfach', component: MailboxView, page: (id) => `/mailboxes/${encodeURIComponent(id)}`, roles: ADMIN_BOARD },
+    'mailbox-new': { label: 'Neues Postfach', component: MailboxCreateView, roles: ADMIN_BOARD },
   },
   messages: MAIL_MESSAGES,
   start: (guest) => (guest ? undefined : mailCenter.start()),

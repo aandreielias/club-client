@@ -252,6 +252,9 @@ export const settings = {
       centerHeight: 'min(85vh, 880px)',
       sideWidth: 'min(580px, 46vw)',
       bottomHeight: '50vh',
+      /** A minimized window's tab in the footer; crowded tabs shrink to the smallest width and show their title only. */
+      tabWidth: '280px',
+      tabMinWidth: '120px',
     },
     /** Video call window sizes per placement; `left` is the side placement moved next to the sidebar. */
     call: {
@@ -261,6 +264,8 @@ export const settings = {
       bottomHeight: '42vh',
       /** The minimized call: one bar along the bottom. */
       barHeight: '56px',
+      /** What the bar keeps next to crowded window tabs. */
+      barMinWidth: '320px',
       /** Share of the brand's primary colour in the call's dark background. */
       tint: '30%',
     },
@@ -456,8 +461,18 @@ export const settings = {
     /** Records offered under "Zuletzt geöffnet" in the command palette. */
     recentRecords: 8,
     defaultDock: 'center' as 'center' | 'side' | 'bottom',
-    /** Dragging the inner edge of a docked window: its smallest size, what the page keeps, arrow-key step. */
-    resize: { minSidePx: 320, minBottomPx: 200, pageMinWidthPx: 360, pageMinHeightPx: 160, stepPx: 24 },
+    /** Dragging the inner edge of a docked window: its smallest size, what the page keeps, arrow-key step; the middle one's smallest size at its border. */
+    resize: {
+      minSidePx: 320,
+      minBottomPx: 200,
+      pageMinWidthPx: 360,
+      pageMinHeightPx: 160,
+      stepPx: 24,
+      minCenterWidthPx: 360,
+      minCenterHeightPx: 240,
+    },
+    /** Each further window in the middle opens this much lower and to the right (px), so none hides another completely. */
+    cascadePx: 28,
     /**
      * Dragging the detail window or the call by its header (lib/window/windowDrag): how far a docked one moves before it
      * undocks, how close its edge comes to the screen's to dock there, how far ahead (ms at the drag's speed) that is judged.

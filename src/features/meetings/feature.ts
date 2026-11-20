@@ -30,12 +30,17 @@ export const meetingsFeature: Feature = {
   ],
   actions: { meeting: meetingActions, resolution: resolutionActions, 'meeting-type': meetingTypeActions },
   windows: {
-    meeting: { component: MeetingView, page: (id) => `/meetings/${encodeURIComponent(id)}` },
-    'meeting-new': { component: MeetingCreateView, roles: ADMIN_BOARD },
-    resolution: { component: ResolutionView, page: (id) => `/resolutions/${encodeURIComponent(id)}` },
-    'resolution-new': { component: CircularCreateView, roles: ADMIN_BOARD },
-    'meeting-type': { component: MeetingTypeView, page: (key) => `/meeting-types/${encodeURIComponent(key)}`, roles: ADMIN_BOARD },
-    'meeting-type-new': { component: MeetingTypeCreateView, roles: ADMIN_BOARD },
+    meeting: { label: 'Sitzung', component: MeetingView, page: (id) => `/meetings/${encodeURIComponent(id)}` },
+    'meeting-new': { label: 'Neue Sitzung', component: MeetingCreateView, roles: ADMIN_BOARD },
+    resolution: { label: 'Beschluss', component: ResolutionView, page: (id) => `/resolutions/${encodeURIComponent(id)}` },
+    'resolution-new': { label: 'Neuer Umlaufbeschluss', component: CircularCreateView, roles: ADMIN_BOARD },
+    'meeting-type': {
+      label: 'Sitzungsart',
+      component: MeetingTypeView,
+      page: (key) => `/meeting-types/${encodeURIComponent(key)}`,
+      roles: ADMIN_BOARD,
+    },
+    'meeting-type-new': { label: 'Neue Sitzungsart', component: MeetingTypeCreateView, roles: ADMIN_BOARD },
   },
   calendar: {
     MEETING: (item) => {

@@ -10,6 +10,6 @@ export const settingsFeature: Feature = {
     { path: '/settings/:section', component: SettingsPage, guest: true },
   ],
   windows: {
-    settings: { component: SettingsView, page: (section) => `/settings/${encodeURIComponent(section)}` },
+    settings: { label: 'Einstellungen', component: SettingsView, page: (section) => `/settings/${encodeURIComponent(section)}` },
   },
 };

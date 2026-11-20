@@ -33,14 +33,19 @@ export const calendarFeature: Feature = {
     detailRoute('/holidays/:id', HolidayView, { href: '/settings/holidays', label: 'Feiertage' }, { roles: ADMIN_BOARD }),
   ],
   windows: {
-    appointment: { component: AppointmentView, page: (id) => `/calendar/${encodeURIComponent(id)}` },
+    appointment: { label: 'Termin', component: AppointmentView, page: (id) => `/calendar/${encodeURIComponent(id)}` },
     // Admin/board, and coaches of a team (by team role, server: requireMayEdit).
-    'appointment-new': { component: AppointmentCreateView, canOpen: () => permissions.canManageAnything() },
-    'appointment-type': { component: AppointmentTypeView, page: (key) => `/appointment-types/${encodeURIComponent(key)}`, roles: ADMIN_BOARD },
-    'appointment-type-new': { component: AppointmentTypeCreateView, roles: ADMIN_BOARD },
-    holiday: { component: HolidayView, page: (id) => `/holidays/${encodeURIComponent(id)}`, roles: ADMIN_BOARD },
-    'holiday-new': { component: HolidayCreateView, roles: ADMIN_BOARD },
-    'absence-new': { component: AbsenceCreateView },
+    'appointment-new': { label: 'Neuer Termin', component: AppointmentCreateView, canOpen: () => permissions.canManageAnything() },
+    'appointment-type': {
+      label: 'Terminart',
+      component: AppointmentTypeView,
+      page: (key) => `/appointment-types/${encodeURIComponent(key)}`,
+      roles: ADMIN_BOARD,
+    },
+    'appointment-type-new': { label: 'Neue Terminart', component: AppointmentTypeCreateView, roles: ADMIN_BOARD },
+    holiday: { label: 'Feiertag', component: HolidayView, page: (id) => `/holidays/${encodeURIComponent(id)}`, roles: ADMIN_BOARD },
+    'holiday-new': { label: 'Neuer Feiertag', component: HolidayCreateView, roles: ADMIN_BOARD },
+    'absence-new': { label: 'Neue Abwesenheit', component: AbsenceCreateView },
   },
   actions: { appointment: appointmentActions, 'appointment-type': appointmentTypeActions, holiday: holidayActions },
   start: (guest) => {

@@ -109,11 +109,11 @@
     color: var(--color-text);
   }
   :global([data-layout='compact']) .layout,
-  :global(:root[data-window='side']) .layout {
+  :global(.window.side) .layout {
     grid-template-columns: 1fr;
   }
   :global([data-layout='compact']) .tabs,
-  :global(:root[data-window='side']) .tabs {
+  :global(.window.side) .tabs {
     position: static;
   }
 </style>

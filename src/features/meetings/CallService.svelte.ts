@@ -48,12 +48,12 @@ export class CallService {
 
   /** The detail window docked at the bottom leaves no room for the call there. */
   get bottomTaken(): boolean {
-    return !!this.windows.current && this.windows.dock === 'bottom';
+    return this.windows.docked('bottom');
   }
 
   /** The detail window docked at the side: the call's side placement takes the left edge. */
   get sideTaken(): boolean {
-    return !!this.windows.current && this.windows.dock === 'side';
+    return this.windows.docked('side');
   }
 
   /** The call holds the left edge, or its drag preview does: the sidebar collapses meanwhile. */
@@ -70,7 +70,7 @@ export class CallService {
   /** Where a placement would be drawn now (the snap preview while dragging). */
   dockFor(placement: CallPlacement): CallDock {
     if (placement === 'center') return 'center';
-    return this.windows.current && this.windows.dock === placement ? 'left' : placement;
+    return this.windows.docked(placement) ? 'left' : placement;
   }
 
   /** Joins a meeting's call, leaving another one first; the same meeting only brings the window back. */

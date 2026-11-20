@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { onDestroy, tick } from 'svelte';
+  import { onDestroy, tick, untrack } from 'svelte';
   import { innerHeight, innerWidth } from 'svelte/reactivity/window';
-  import { motion, preferences } from '../../lib/container';
+  import { motion, preferences, windows } from '../../lib/container';
   import { WindowService } from '../../lib/window/WindowService.svelte';
   import { dragWindow, type Box } from '../../lib/window/windowDrag';
   import { settings } from '../../settings';
@@ -73,7 +73,12 @@
   /** The window's box when the dock preview appeared: the preview grows from there. */
   let snapFrom: DOMRect | null = null;
 
-  // The page makes room for the docked call and the bar (App.svelte, WindowHost.svelte).
+  // A call joined comes up above the open windows (it shares their stacking order).
+  $effect(() => {
+    if (call) untrack(() => windows.raise(WindowService.CALL));
+  });
+
+  // The page makes room for the docked call and the bar (App.svelte, DetailWindow.svelte).
   $effect(() => {
     const root = document.documentElement;
     if (!call) return;
@@ -226,8 +231,11 @@
     class="call {dock}"
     class:bar={calls.minimized}
     aria-label="Videokonferenz: {calls.meeting.title}"
+    style:z-index={windows.zIndex(WindowService.CALL)}
     onclick={(e) => calls.minimized && !(e.target as Element).closest('button') && (calls.minimized = false)}
     onpointerdown={startMove}
+    onpointerdowncapture={() => windows.raise(WindowService.CALL)}
+    onfocusin={() => windows.raise(WindowService.CALL)}
   >
     {#if calls.minimized}
       <span class="live" aria-hidden="true"></span>
@@ -361,7 +369,6 @@
     --color-elevated: color-mix(in oklab, white 22%, var(--call-bg));
     --color-border: color-mix(in oklab, white 16%, transparent);
     position: fixed;
-    z-index: 32;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -377,7 +384,7 @@
   }
   .preview {
     position: fixed;
-    z-index: 32;
+    z-index: 39;
     background: color-mix(in oklab, var(--color-accent) 22%, transparent);
     backdrop-filter: blur(2px);
     pointer-events: none;
@@ -423,17 +430,25 @@
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   }
   /* Next to the docked detail window: the side call ends above a bottom window, the bottom call left of a side window. */
-  :global(:root[data-window='bottom']) .side:not(.bar) {
+  :global(:root[data-window-bottom]) .side:not(.bar) {
     height: calc(100dvh - var(--window-bottom-height));
   }
-  :global(:root[data-window='side']) .bottom:not(.bar) {
+  :global(:root[data-window-side]) .bottom:not(.bar) {
     width: calc(100vw - var(--layout-sidebar-width) - var(--window-side-width));
   }
+  /* The tabs of minimized windows (WindowTabs) keep the footer below the docked call. */
+  :global(:root[data-window-tabs]:not([data-layout='compact'])) :is(.side, .left):not(.bar) {
+    height: calc(100dvh - var(--call-bar-height));
+  }
+  :global(:root[data-window-tabs]:not([data-layout='compact'])) .bottom:not(.bar) {
+    top: calc(100dvh - var(--call-bottom-height) - var(--call-bar-height));
+  }
+  /* The bar shares the footer with the window tabs and ends where they begin. */
   .call.bar {
     cursor: pointer;
     top: calc(100dvh - var(--call-bar-height));
     left: var(--layout-sidebar-width);
-    width: calc(100vw - var(--layout-sidebar-width));
+    width: calc(100vw - var(--layout-sidebar-width) - var(--window-tabs-width, 0px));
     height: var(--call-bar-height);
     min-width: 0;
     min-height: 0;
@@ -462,7 +477,7 @@
   }
   :global([data-layout='compact']) .call.bar {
     left: 0;
-    width: 100vw;
+    width: calc(100vw - var(--window-tabs-width, 0px));
   }
   :global([data-layout='compact']) .docks,
   :global([data-layout='compact']) .wide,

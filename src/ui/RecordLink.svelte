@@ -3,9 +3,9 @@
   import { WINDOW_OPEN } from '../channels';
   import { bus } from '../lib/container';
   import { RecordDrag } from '../lib/records/RecordDrag';
+  import { windowHandle } from '../lib/window/WindowService.svelte';
   import { menu, recordMenu } from './contextMenu';
   import { tooltip } from './tooltip';
-  import { windowHandle } from './windowContext';
 
   /**
    * A name that opens its record in the window: inside a window with a way back, elsewhere fresh.

@@ -15,8 +15,8 @@ export const locationsFeature: Feature = {
   ],
   actions: { location: locationActions },
   windows: {
-    location: { component: LocationView, page: (id) => `/locations/${encodeURIComponent(id)}` },
-    'location-new': { component: LocationCreateView, roles: PRIVILEGED },
+    location: { label: 'Ort', component: LocationView, page: (id) => `/locations/${encodeURIComponent(id)}` },
+    'location-new': { label: 'Neuer Ort', component: LocationCreateView, roles: PRIVILEGED },
   },
   messages: LOCATION_MESSAGES,
 };

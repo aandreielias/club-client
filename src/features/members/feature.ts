@@ -32,13 +32,23 @@ export const membersFeature: Feature = {
   actions: { member: memberActions, 'membership-kind': membershipKindActions, 'office-setting': officeSettingActions },
   windows: {
     // server: requireMaySee - coaches only the members of their teams.
-    member: { component: MemberView, page: (id) => `/members/${encodeURIComponent(id)}`, canOpen: (id) => permissions.canSeeMember(id) },
-    'member-new': { component: MemberInviteView, roles: ADMIN_BOARD },
-    'membership-kind': { component: MembershipKindView, page: (key) => `/membership-kinds/${encodeURIComponent(key)}`, roles: ADMIN_BOARD },
-    'membership-kind-new': { component: MembershipKindCreateView, roles: ADMIN_BOARD },
-    'office-setting': { component: OfficeSettingView, roles: ADMIN_BOARD },
-    'office-setting-new': { component: OfficeSettingCreateView, roles: ADMIN_BOARD },
-    'office-assign': { component: OfficeAssignView, canOpen: () => memberPolicy.canManageOffices() },
+    member: {
+      label: 'Mitglied',
+      component: MemberView,
+      page: (id) => `/members/${encodeURIComponent(id)}`,
+      canOpen: (id) => permissions.canSeeMember(id),
+    },
+    'member-new': { label: 'Neues Mitglied', component: MemberInviteView, roles: ADMIN_BOARD },
+    'membership-kind': {
+      label: 'Mitgliedsart',
+      component: MembershipKindView,
+      page: (key) => `/membership-kinds/${encodeURIComponent(key)}`,
+      roles: ADMIN_BOARD,
+    },
+    'membership-kind-new': { label: 'Neue Mitgliedsart', component: MembershipKindCreateView, roles: ADMIN_BOARD },
+    'office-setting': { label: 'Funktion', component: OfficeSettingView, roles: ADMIN_BOARD },
+    'office-setting-new': { label: 'Neue Funktion', component: OfficeSettingCreateView, roles: ADMIN_BOARD },
+    'office-assign': { label: 'Funktion besetzen', component: OfficeAssignView, canOpen: () => memberPolicy.canManageOffices() },
   },
   messages: MEMBER_MESSAGES,
   start: (guest) => {

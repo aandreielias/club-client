@@ -15,9 +15,9 @@ export const tasksFeature: Feature = {
     detailRoute('/tasks/:id', TaskView, { href: '/tasks', label: 'Aufgaben' }),
   ],
   windows: {
-    task: { component: TaskView, page: (id) => `/tasks/${encodeURIComponent(id)}` },
+    task: { label: 'Aufgabe', component: TaskView, page: (id) => `/tasks/${encodeURIComponent(id)}` },
     // Admin/board, and coaches of a team (by team role, server: requireMayManage).
-    'task-new': { component: TaskCreateView, canOpen: () => permissions.canManageAnything() },
+    'task-new': { label: 'Neue Aufgabe', component: TaskCreateView, canOpen: () => permissions.canManageAnything() },
   },
   actions: { task: taskActions },
   calendar: {

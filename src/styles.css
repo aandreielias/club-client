@@ -512,7 +512,7 @@ input.short {
   }
 }
 
-/* Printing a page or the open window: no app chrome, no buttons, dark text on paper (backgrounds don't print by default). */
+/* Printing a page or the focused window: no app chrome, no buttons, dark text on paper (backgrounds don't print by default). */
 @media print {
   #sidebar,
   .toolbar,
@@ -520,6 +520,7 @@ input.short {
   .backdrop,
   .controls,
   button:not(.record-link, .link-button, .open, th button),
+  .window:not(.focused),
   :root[data-window] .shell {
     display: none !important;
   }

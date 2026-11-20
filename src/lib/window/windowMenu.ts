@@ -22,8 +22,8 @@ export function openEntries(bus: EventBus, windows: WindowService, kind: string,
   const openDocked = (dock: Dock) => () => bus.publish(WINDOW_OPEN, { kind, id, dock });
   return [
     { label: 'Öffnen', icon: 'dockCenter', run: () => bus.publish(WINDOW_OPEN, { kind, id }) },
-    // "Öffnen" already uses the current placement; offer the other two.
-    ...DOCK_LABELS.filter(([dock]) => dock !== windows.dock).map(([dock, label, icon]) => ({ label, icon, run: openDocked(dock) })),
+    { label: 'In neuem Fenster öffnen', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind, id, newWindow: true }) },
+    ...DOCK_LABELS.map(([dock, label, icon]) => ({ label, icon, run: openDocked(dock) })),
     ...(page ? [{ label: 'Als Seite öffnen', icon: 'page' as const, run: () => bus.publish(NAVIGATE, { path: page }) }] : []),
     ...(page ? [{ label: 'In geteilter Ansicht öffnen', icon: 'split' as const, run: () => bus.publish(SPLIT_OPEN, { path: page }) }] : []),
   ];

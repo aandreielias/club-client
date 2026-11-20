@@ -16,8 +16,8 @@ export const inventoryFeature: Feature = {
   ],
   actions: { item: itemActions },
   windows: {
-    item: { component: ItemView, page: (id) => `/inventory/${encodeURIComponent(id)}`, roles: PRIVILEGED },
-    'item-new': { component: ItemCreateView, roles: PRIVILEGED },
+    item: { label: 'Gegenstand', component: ItemView, page: (id) => `/inventory/${encodeURIComponent(id)}`, roles: PRIVILEGED },
+    'item-new': { label: 'Neuer Gegenstand', component: ItemCreateView, roles: PRIVILEGED },
   },
   messages: INVENTORY_MESSAGES,
   home: { id: 'inventory', label: 'Inventar', component: InventoryHome, roles: PRIVILEGED },

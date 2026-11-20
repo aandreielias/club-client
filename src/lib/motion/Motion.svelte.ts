@@ -79,6 +79,32 @@ export class Motion {
     );
   }
 
+  /** The reverse of `morph`: shrinks the node into `to` (a window into its footer tab); `done` runs at the end, the node still drawn there. */
+  morphTo(node: HTMLElement, to: DOMRect, done: () => void): Animation | null {
+    const from = node.getBoundingClientRect();
+    if (!this.ms('window') || !from.width || !from.height) {
+      done();
+      return null;
+    }
+    const shift = `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${to.width / from.width}, ${to.height / from.height})`;
+    const animation = node.animate(
+      [
+        { transformOrigin: '0 0', transform: 'none', opacity: 1 },
+        { transformOrigin: '0 0', transform: shift, opacity: 0.4 },
+      ],
+      { duration: this.ms('window'), easing: getComputedStyle(node).getPropertyValue('--motion-easing').trim() || 'ease-out', fill: 'forwards' },
+    );
+    // Held at the end until `done` has hidden the node, so it never flashes back in between.
+    void animation.finished.then(
+      () => {
+        done();
+        requestAnimationFrame(() => animation.cancel());
+      },
+      () => {},
+    );
+    return animation;
+  }
+
   /** Plain cross-fade: backdrops. */
   fade = (_node?: Element): TransitionConfig => ({ duration: this.ms('base'), easing: cubicInOut, css: (t) => `opacity: ${t};` });
 

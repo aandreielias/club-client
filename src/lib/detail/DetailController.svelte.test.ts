@@ -14,7 +14,7 @@ function setup(answer: boolean) {
   bus.subscribe(APP_ERROR, (error) => errors.push(error));
   bus.handleRequest(CONFIRM, () => answer);
   const close = vi.fn();
-  const view = new DetailController(bus, { close, setTitle: vi.fn(), open: vi.fn(), replace: vi.fn(), navigate: vi.fn() });
+  const view = new DetailController(bus, { close, setTitle: vi.fn(), open: vi.fn(), replace: vi.fn(), navigate: vi.fn(), focused: true });
   return { bus, toasts, errors, view, close };
 }
 

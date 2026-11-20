@@ -17,8 +17,8 @@ export const tournamentsFeature: Feature = {
   ],
   actions: { tournament: tournamentActions },
   windows: {
-    tournament: { component: TournamentView, page: (id) => `/tournaments/${encodeURIComponent(id)}` },
-    'tournament-new': { component: TournamentCreateView, roles: PRIVILEGED },
+    tournament: { label: 'Turnier', component: TournamentView, page: (id) => `/tournaments/${encodeURIComponent(id)}` },
+    'tournament-new': { label: 'Neues Turnier', component: TournamentCreateView, roles: PRIVILEGED },
   },
   messages: TOURNAMENT_MESSAGES,
 };

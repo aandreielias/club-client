@@ -4,6 +4,7 @@ import { defineEvent, type EventBus } from '../bus';
 export const NAVIGATE = defineEvent<{ path: string; replace?: boolean }>('ui/navigate');
 
 export type RouteParams = Record<string, string>;
+export type QueryValue = string | readonly string[] | null;
 
 /**
  * Hash router: deep links from outside become hash routes on start (DeepLink), so the route lives after '#'.
@@ -45,19 +46,22 @@ export class Router {
     if (this.#started) this.read();
   }
 
-  /** Current path with query keys changed (null removes a key); other keys are kept. */
-  withQuery(changes: Readonly<Record<string, string | null>>): string {
+  /** Current path with query keys changed (null removes a key, a list repeats it); other keys are kept. */
+  withQuery(changes: Readonly<Record<string, QueryValue>>): string {
     const query = new URLSearchParams(this.query);
     for (const [key, value] of Object.entries(changes)) {
-      if (value === null) query.delete(key);
-      else query.set(key, value);
+      if (typeof value === 'string') query.set(key, value);
+      else {
+        query.delete(key);
+        for (const one of value ?? []) query.append(key, one);
+      }
     }
     const search = query.toString();
     return search ? `${this.path}?${search}` : this.path;
   }
 
   /** Applies query changes as a new history entry, or in place with `replace`. */
-  updateQuery(changes: Readonly<Record<string, string | null>>, replace = false): void {
+  updateQuery(changes: Readonly<Record<string, QueryValue>>, replace = false): void {
     const target = this.withQuery(changes);
     if (replace) this.replace(target);
     else this.navigate(target);

@@ -198,9 +198,9 @@ export class AppController {
       'window.bottom': { run: () => windows.setDock('bottom'), when: windowOpen },
       'window.page': {
         run: () => {
-          const current = windows.current;
-          const page = current && windows.content(current.kind)?.page;
-          if (current && page) windows.handle().navigate(page(current.id));
+          const focused = windows.focused;
+          const page = focused && windows.content(focused.kind)?.page;
+          if (focused && page) windows.handle(focused.key).navigate(page(focused.id));
         },
         when: () => !!windows.current && !!windows.content(windows.current.kind)?.page,
       },
