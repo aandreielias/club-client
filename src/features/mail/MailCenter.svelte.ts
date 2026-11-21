@@ -1,4 +1,5 @@
 import type { EventBus } from '../../lib/bus';
+import { LIVE_RESYNC } from '../../lib/live/LiveUpdates.svelte';
 import { Resource } from '../../lib/state/Resource.svelte';
 import { MAIL_RECEIVED } from './events';
 import type { MailApi } from './MailApi';
@@ -23,9 +24,10 @@ export class MailCenter {
   /** Session hook: initial load plus live refresh; returns the cleanup. */
   start(): () => void {
     void this.mailboxes.load();
-    const subscription = this.bus.subscribe(MAIL_RECEIVED, () => void this.mailboxes.load());
+    const reload = () => void this.mailboxes.load();
+    const subscriptions = [this.bus.subscribe(MAIL_RECEIVED, reload), this.bus.subscribe(LIVE_RESYNC, reload)];
     return () => {
-      subscription.unsubscribe();
+      subscriptions.forEach((s) => s.unsubscribe());
       this.mailboxes.set([]);
     };
   }

@@ -1,5 +1,9 @@
 <script lang="ts">
   import { Resource } from '../../lib/state/Resource.svelte';
+  import { bus } from '../../lib/container';
+  import { useBus } from '../../lib/bus/useBus.svelte';
+  import { LIVE_RESYNC } from '../../lib/live/LiveUpdates.svelte';
+  import { MEMBER_CHANGED } from './events';
   import RecordLink from '../../ui/RecordLink.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { tooltip } from '../../ui/tooltip';
@@ -23,6 +27,8 @@
   // svelte-ignore state_referenced_locally
   const family = new Resource(() => membersApi.family(memberId));
   void family.load();
+  useBus(bus, MEMBER_CHANGED, ({ data }) => data.memberId === memberId && void family.load());
+  useBus(bus, LIVE_RESYNC, () => void family.load());
 
   const RIGHTS = [
     'Termine, Aufgaben, Team-Ordner und Nachrichten sehen und Erinnerungen dazu bekommen',

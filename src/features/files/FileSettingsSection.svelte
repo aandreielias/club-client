@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { bus } from '../../lib/container';
+  import { useBus } from '../../lib/bus/useBus.svelte';
+  import { FILE_SETTINGS_CHANGED } from './events';
   import { settings } from '../../settings';
   import { Action } from '../../lib/state/Action.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
@@ -29,6 +32,7 @@
   });
   const draft = new SettingsDraft<Form>({ quotaGb: 2, roleGb: {}, types: FILE_TYPES.map((t) => t.value), maxImageSide: 3000, keepVersions: 0 });
   void load.run(async () => draft.load(toForm(await filesApi.settings())));
+  useBus(bus, FILE_SETTINGS_CHANGED, () => void filesApi.settings().then((s) => draft.refresh(toForm(s))));
 
   async function save(value: Form) {
     const roleQuotaMb = Object.fromEntries(

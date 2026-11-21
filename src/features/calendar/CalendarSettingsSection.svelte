@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { bus } from '../../lib/container';
+  import { useBus } from '../../lib/bus/useBus.svelte';
+  import { CALENDAR_SETTINGS_CHANGED } from './events';
   import { Action } from '../../lib/state/Action.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
   import type { CalendarSettings } from './model';
@@ -11,6 +14,7 @@
   const load = new Action();
   const draft = new SettingsDraft<CalendarSettings>({ cabinLabels: [], itemRemindHours: 24, openAnswerDays: 14, maxRideSeats: 8 });
   void load.run(async () => draft.load(await calendarApi.settings()));
+  useBus(bus, CALENDAR_SETTINGS_CHANGED, () => void calendarApi.settings().then((s) => draft.refresh(s)));
 </script>
 
 <div class="stack">

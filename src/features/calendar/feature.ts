@@ -1,7 +1,9 @@
 import { appointmentActions, appointmentTypeActions, holidayActions } from './actions';
 import CalendarHome from './CalendarHome.svelte';
 import OpenAnswersHome from './OpenAnswersHome.svelte';
-import { permissions } from '../../lib/container';
+import { bus, permissions } from '../../lib/container';
+import { LIVE_RESYNC } from '../../lib/live/LiveUpdates.svelte';
+import { CALENDAR_SETTINGS_CHANGED } from './events';
 import { ADMIN_BOARD } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
 import { appointmentTypes, calendarSettings } from './services';
@@ -50,8 +52,14 @@ export const calendarFeature: Feature = {
   actions: { appointment: appointmentActions, 'appointment-type': appointmentTypeActions, holiday: holidayActions },
   start: (guest) => {
     if (guest) return undefined;
-    void calendarSettings.load();
-    return appointmentTypes.start();
+    const reload = () => void calendarSettings.load();
+    reload();
+    const subscriptions = [bus.subscribe(CALENDAR_SETTINGS_CHANGED, reload), bus.subscribe(LIVE_RESYNC, reload)];
+    const stopTypes = appointmentTypes.start();
+    return () => {
+      subscriptions.forEach((s) => s.unsubscribe());
+      stopTypes();
+    };
   },
   calendar: {
     // The reason comes only for who may see it (self, guardians, coaches, admin, board).

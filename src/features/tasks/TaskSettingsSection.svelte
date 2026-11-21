@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { bus } from '../../lib/container';
+  import { useBus } from '../../lib/bus/useBus.svelte';
+  import { TASK_SETTINGS_CHANGED } from './events';
   import { settings } from '../../settings';
   import { Action } from '../../lib/state/Action.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
@@ -12,6 +15,7 @@
   const load = new Action();
   const draft = new SettingsDraft<TaskSettings>({ remindHours: 24, overdueRepeatDays: 0, escalateAfterDays: 0 });
   void load.run(async () => draft.load(await tasksApi.settings()));
+  useBus(bus, TASK_SETTINGS_CHANGED, () => void tasksApi.settings().then((s) => draft.refresh(s)));
 </script>
 
 <div class="stack">

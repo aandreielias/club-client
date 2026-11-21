@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { bus } from '../../lib/container';
+  import { useBus } from '../../lib/bus/useBus.svelte';
+  import { NOTIFICATION_SETTINGS_CHANGED } from './NotificationCenter.svelte';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
   import DataTable from '../../ui/DataTable.svelte';
   import SettingsForm from '../../ui/SettingsForm.svelte';
@@ -17,6 +20,8 @@
     return stored.map((p) => p.kind);
   });
   void list.load();
+  // The club's important kinds only; the member's own choices stay as they are.
+  useBus(bus, NOTIFICATION_SETTINGS_CHANGED, () => void notificationsApi.settings().then((s) => (important = s.importantKinds)));
 
   const preference = (kind: NotificationKind) => draft.value.find((p) => p.kind === kind);
 

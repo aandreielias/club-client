@@ -5,6 +5,7 @@
   import { APP_ERROR, CONFIRM, TOAST, WINDOW_OPEN } from '../../channels';
   import { bus, commands, directory, pendingDeletes, preferences, session, store } from '../../lib/container';
   import { useBus } from '../../lib/bus/useBus.svelte';
+  import { LIVE_RESYNC } from '../../lib/live/LiveUpdates.svelte';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import type { MenuSource } from '../../lib/overlay/ContextMenuService.svelte';
   import { recordMenu } from '../../ui/contextMenu';
@@ -58,6 +59,7 @@
     if (data.fileId) fileLinks.forget(data.fileId);
     void list.load();
   });
+  useBus(bus, LIVE_RESYNC, () => void list.load());
 
   const folder = $derived(folderId ? tree.get(folderId) : undefined);
   const canCreate = $derived(

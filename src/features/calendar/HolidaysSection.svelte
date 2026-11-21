@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { pendingDeletes, session } from '../../lib/container';
+  import { bus, pendingDeletes, session } from '../../lib/container';
+  import { useBus } from '../../lib/bus/useBus.svelte';
+  import { CALENDAR_SETTINGS_CHANGED } from './events';
   import { Action } from '../../lib/state/Action.svelte';
   import SettingsList from '../../ui/SettingsList.svelte';
   import { holidays } from './services';
@@ -8,6 +10,7 @@
   const load = new Action();
   const reload = () => void load.run(() => holidays.load());
   reload();
+  useBus(bus, CALENDAR_SETTINGS_CHANGED, () => reload());
 
   const rows = $derived(
     holidays.items

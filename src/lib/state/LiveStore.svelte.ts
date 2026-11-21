@@ -1,6 +1,6 @@
 import { background } from './background';
 import type { EventBus, EventChannel } from '../bus';
-import type { LiveEvent } from '../live/LiveUpdates.svelte';
+import { LIVE_RESYNC, type LiveEvent } from '../live/LiveUpdates.svelte';
 
 /**
  * Club data every page reads (types, rules, settings): a seeded value until the server's arrives, loaded at start and again on
@@ -18,10 +18,12 @@ export class LiveStore<T> {
     this.value = initial;
   }
 
-  /** Loads now and on every change; returns the cleanup. */
+  /** Loads now, on every change and after a reconnect; returns the cleanup. */
   start(): () => void {
     background(this.load());
-    return this.bus.subscribe(this.changed, () => background(this.load())).unsubscribe;
+    const reload = () => background(this.load());
+    const subscriptions = [this.bus.subscribe(this.changed, reload), this.bus.subscribe(LIVE_RESYNC, reload)];
+    return () => subscriptions.forEach((s) => s.unsubscribe());
   }
 
   #sequence = 0;

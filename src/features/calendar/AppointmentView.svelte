@@ -8,6 +8,7 @@
   import { appointmentActions } from './actions';
   import { LinksModel } from '../../lib/links/LinksModel.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
+  import { LIVE_RESYNC } from '../../lib/live/LiveUpdates.svelte';
   import type { WindowHandle } from '../../lib/window/WindowService.svelte';
   import ActivitySection from '../../ui/ActivitySection.svelte';
   import AsyncView from '../../ui/AsyncView.svelte';
@@ -77,6 +78,11 @@
   });
   useBus(bus, RESPONSE_CHANGED, ({ data }) => {
     if (data.appointmentId === detail.id && !detail.respondAction.busy) void detail.attendance.load();
+  });
+  useBus(bus, LIVE_RESYNC, () => {
+    if (!edit.save.busy && !edit.editing) void detail.appointment.load();
+    if (!links.editing && !links.save.busy) void links.load();
+    if (!detail.respondAction.busy) void detail.attendance.load();
   });
 
   const respondents = $derived(detail.appointment.value ? policy.respondents(detail.appointment.value, detail.attendance.value ?? null) : []);

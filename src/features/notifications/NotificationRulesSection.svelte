@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { bus } from '../../lib/container';
+  import { useBus } from '../../lib/bus/useBus.svelte';
+  import { NOTIFICATION_SETTINGS_CHANGED } from './NotificationCenter.svelte';
   import { settings } from '../../settings';
   import { SettingsDraft } from '../../lib/state/SettingsDraft.svelte';
   import DataTable from '../../ui/DataTable.svelte';
@@ -15,6 +18,7 @@
     return draft.value.defaults.map((d) => d.kind);
   }, true);
   void list.load();
+  useBus(bus, NOTIFICATION_SETTINGS_CHANGED, () => void notificationsApi.settings().then((s) => draft.refresh(s)));
 
   const preference = (kind: NotificationKind) => draft.value.defaults.find((p) => p.kind === kind);
 

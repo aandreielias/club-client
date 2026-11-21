@@ -1,5 +1,5 @@
 import type { EventBus } from '../../lib/bus';
-import { liveEvent } from '../../lib/live/LiveUpdates.svelte';
+import { LIVE_RESYNC, liveEvent } from '../../lib/live/LiveUpdates.svelte';
 import { TOAST } from '../../lib/notify/ToastService.svelte';
 import { Action } from '../../lib/state/Action.svelte';
 import { Resource } from '../../lib/state/Resource.svelte';
@@ -7,10 +7,14 @@ import type { NotificationsApi } from './NotificationsApi';
 import type { Notification, NotificationCreated, NotificationList } from './model';
 
 export const NOTIFICATION_CREATED = liveEvent<NotificationCreated>('notifications.notification-created');
+/** The member read notifications in another tab or device. */
+export const NOTIFICATIONS_READ = liveEvent<Record<string, never>>('notifications.notifications-read');
+/** Club notification rules changed (important kinds, defaults, retention). */
+export const NOTIFICATION_SETTINGS_CHANGED = liveEvent<Record<string, never>>('notifications.settings-changed');
 
 /**
  * The member's inbox, shared by the sidebar badge and the inbox page. Loads once per session and
- * reloads when the server announces a new notification.
+ * reloads when the server announces a new notification, a read elsewhere or a reconnect.
  */
 export class NotificationCenter {
   readonly inbox: Resource<NotificationList>;
@@ -29,12 +33,17 @@ export class NotificationCenter {
   /** Session hook: initial load plus live refresh; returns the cleanup. */
   start(): () => void {
     void this.inbox.load();
-    const subscription = this.bus.subscribe(NOTIFICATION_CREATED, ({ data }) => {
-      if (this.toastOnArrival) this.bus.publish(TOAST, { text: data.title });
-      void this.inbox.load();
-    });
+    const reload = () => void this.inbox.load();
+    const subscriptions = [
+      this.bus.subscribe(NOTIFICATION_CREATED, ({ data }) => {
+        if (this.toastOnArrival) this.bus.publish(TOAST, { text: data.title });
+        reload();
+      }),
+      this.bus.subscribe(NOTIFICATIONS_READ, reload),
+      this.bus.subscribe(LIVE_RESYNC, reload),
+    ];
     return () => {
-      subscription.unsubscribe();
+      subscriptions.forEach((s) => s.unsubscribe());
       this.inbox.set({ items: [], unread: 0 });
     };
   }

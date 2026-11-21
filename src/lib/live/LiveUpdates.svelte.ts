@@ -12,6 +12,14 @@ export interface LiveEvent<T = unknown> {
 /** Bus prefix of every server event. */
 const LIVE_ROOT = 'domain';
 
+/** Published after a reconnect: events sent while offline are lost, so whatever shows server data reloads. */
+export const LIVE_RESYNC = defineEvent('live/resync');
+
+/** True for the bus channels of server events (see `liveEvent`). */
+export function isLiveChannel(channel: EventChannel<unknown>): boolean {
+  return channel.path.startsWith(`${LIVE_ROOT}/`);
+}
+
 /** Bus channel of a server event type: 'tasks.task-changed' → 'domain/tasks/task-changed'. */
 export function liveEvent<T>(type: string): EventChannel<LiveEvent<T>> {
   return defineEvent<LiveEvent<T>>(`${LIVE_ROOT}/${type.replaceAll('.', '/')}`);
@@ -42,6 +50,8 @@ export class LiveUpdates {
   #reauthTimer: ReturnType<typeof setTimeout> | undefined;
   /** Incremented on every start/stop, so callbacks of an old socket are ignored. */
   #generation = 0;
+  /** Authenticated before, so the auth.ok of a new socket (also after stop/start) follows a gap. */
+  #wasOnline = false;
 
   constructor(
     private readonly openSocket: SocketFactory,
@@ -125,7 +135,10 @@ export class LiveUpdates {
       return;
     }
     if (message.type === 'auth.ok') {
+      const reconnected = this.#wasOnline && this.status !== 'online'; // a re-auth on the open socket missed nothing
+      this.#wasOnline = true;
       this.status = 'online';
+      if (reconnected) this.bus.publish(LIVE_RESYNC);
       this.#attempt = 0;
       this.scheduleReauth(socket, String(message.expiresAt), generation);
       return;

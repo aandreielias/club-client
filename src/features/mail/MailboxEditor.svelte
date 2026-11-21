@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { useBus } from '../../lib/bus/useBus.svelte';
+  import { MAIL_SETTINGS_CHANGED } from './events';
   import { settings as limits } from '../../settings';
   import EditorForm from '../../ui/EditorForm.svelte';
-  import { directory, store } from '../../lib/container';
+  import { bus, directory, store } from '../../lib/container';
   import { boardSettings } from '../members/services';
   import OptionList from '../../ui/OptionList.svelte';
   import PeoplePicker from '../../ui/PeoplePicker.svelte';
@@ -35,6 +37,7 @@
   void members.load();
   const settings = new Resource(() => mailApi.settings());
   void settings.load();
+  useBus(bus, MAIL_SETTINGS_CHANGED, () => void settings.load());
   void boardSettings.load();
   void directory.loadTeams();
   const offices = $derived(boardSettings.enabled.map((k) => ({ value: k, label: boardSettings.label(k) })));

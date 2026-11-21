@@ -757,7 +757,11 @@ const flag = (req: MockRequest, name: string) => req.query.get(name) === 'true';
 
 mockServer
   .on('GET', '/api/v1/tasks/settings', (req) => (actor(req), tasks.taskSettings()))
-  .on('PUT', '/api/v1/tasks/settings', (req) => tasks.saveTaskSettings(actor(req), req.body ?? {}))
+  .on('PUT', '/api/v1/tasks/settings', (req) => {
+    const result = tasks.saveTaskSettings(actor(req), req.body ?? {});
+    mockServer.events.publish({ type: 'tasks.settings-changed', data: {}, audience: { everyone: true } });
+    return result;
+  })
   .on('GET', '/api/v1/tasks/:id/activity', (req) => activity.list(actor(req), 'TASK', tasks.get(actor(req), req.params.id).id))
   .on('GET', '/api/v1/tasks', (req) => {
     const found = tasks.list(

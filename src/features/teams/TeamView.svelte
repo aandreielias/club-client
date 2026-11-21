@@ -6,6 +6,7 @@
   import { teamActions } from './actions';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
+  import { LIVE_RESYNC } from '../../lib/live/LiveUpdates.svelte';
   import { TEAM_ROLE_LABELS, type RosterEntry, type TeamRole } from '../../lib/types';
   import AsyncView from '../../ui/AsyncView.svelte';
   import Button from '../../ui/Button.svelte';
@@ -119,6 +120,7 @@
   useBus(bus, MEMBERSHIP_CHANGED, ({ data }) => {
     if (data.teamId === model.teamId && !model.busy) void model.load();
   });
+  useBus(bus, LIVE_RESYNC, () => !model.busy && void model.load());
 
   async function changeRole(entry: RosterEntry, role: TeamRole) {
     if (role !== entry.teamRole) await view.attempt(model.assignAction, () => model.assign(entry.memberId, role));

@@ -1,5 +1,7 @@
 import TasksHome from './TasksHome.svelte';
-import { permissions } from '../../lib/container';
+import { bus, permissions } from '../../lib/container';
+import { LIVE_RESYNC } from '../../lib/live/LiveUpdates.svelte';
+import { TASK_SETTINGS_CHANGED } from './events';
 import { detailRoute, type Feature } from '../Feature';
 import { TASK_MESSAGES } from './messages';
 import { dueReminders, taskSettings } from './services';
@@ -32,9 +34,12 @@ export const tasksFeature: Feature = {
     void taskSettings.load().then(() => {
       if (!ended) stop = dueReminders.start();
     });
+    const reload = () => void taskSettings.load();
+    const subscriptions = [bus.subscribe(TASK_SETTINGS_CHANGED, reload), bus.subscribe(LIVE_RESYNC, reload)];
     return () => {
       ended = true;
       stop?.();
+      subscriptions.forEach((s) => s.unsubscribe());
     };
   },
   home: { id: 'tasks', label: 'Meine Aufgaben', component: TasksHome },

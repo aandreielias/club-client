@@ -59,14 +59,24 @@ export class MockNotifications {
   markRead(memberId: string, id: string): void {
     const notification = (this.inbox.data[memberId] ?? []).find((n) => n.id === id);
     if (!notification) return; // server: NotificationRepository.markRead marks nothing, no error
-    notification.readAt ??= new Date().toISOString();
+    if (notification.readAt) return;
+    notification.readAt = new Date().toISOString();
     this.inbox.save();
+    this.read(memberId);
   }
 
   markAllRead(memberId: string): void {
     const now = new Date().toISOString();
-    (this.inbox.data[memberId] ?? []).forEach((n) => (n.readAt ??= now));
+    const unread = (this.inbox.data[memberId] ?? []).filter((n) => !n.readAt);
+    if (!unread.length) return;
+    unread.forEach((n) => (n.readAt = now));
     this.inbox.save();
+    this.read(memberId);
+  }
+
+  /** server: NotificationsApi.NotificationsRead — the reader's other tabs and devices clear their badge */
+  private read(memberId: string): void {
+    mockServer.events.publish({ type: 'notifications.notifications-read', data: {}, audience: { members: [memberId] } });
   }
 
   /** server: NotificationHandlers.effective — the member's choice, else the club's default; important kinds always on */
@@ -355,6 +365,10 @@ mockServer
     return notifications.markRead(me(req), req.params.id);
   })
   .on('GET', '/api/v1/notifications/settings', () => notifications.settings.data)
-  .on('PUT', '/api/v1/notifications/settings', (req) => notifications.saveSettings(directory.actor(req), req.body))
+  .on('PUT', '/api/v1/notifications/settings', (req) => {
+    const result = notifications.saveSettings(directory.actor(req), req.body);
+    mockServer.events.publish({ type: 'notifications.settings-changed', data: {}, audience: { everyone: true } });
+    return result;
+  })
   .on('GET', '/api/v1/me/notification-preferences', (req) => ({ items: notifications.effective(me(req)) }))
   .on('PUT', '/api/v1/me/notification-preferences', (req) => ({ items: notifications.setPreferences(me(req), req.body?.items) }));

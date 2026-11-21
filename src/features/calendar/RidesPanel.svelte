@@ -1,6 +1,7 @@
 <script lang="ts">
   import { bus, directory, pendingDeletes, permissions, session } from '../../lib/container';
   import { useBus } from '../../lib/bus/useBus.svelte';
+  import { LIVE_RESYNC } from '../../lib/live/LiveUpdates.svelte';
   import { TOAST } from '../../channels';
   import { settings } from '../../settings';
   import AsyncView from '../../ui/AsyncView.svelte';
@@ -24,6 +25,7 @@
   useBus(bus, RIDES_CHANGED, ({ data }) => {
     if (data.appointmentId === model.appointmentId && !model.action.busy) void model.load();
   });
+  useBus(bus, LIVE_RESYNC, () => !model.action.busy && void model.load());
 
   const seatOptions = $derived(
     Array.from({ length: calendarSettings.value?.maxRideSeats ?? settings.calendar.rideMaxSeats }, (_, i) => ({

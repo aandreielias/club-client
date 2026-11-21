@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LiveSocket } from './LiveSocket';
 import { EventBus } from '../bus';
-import { CLOSE_CODES, LiveUpdates, liveEvent } from './LiveUpdates.svelte';
+import { CLOSE_CODES, LIVE_RESYNC, LiveUpdates, liveEvent } from './LiveUpdates.svelte';
 
 class FakeSocket implements LiveSocket {
   onopen: ((event: Event) => void) | null = null;
@@ -78,6 +78,22 @@ describe('LiveUpdates', () => {
     sub.unsubscribe();
     sockets[0].receive({ type: 'tasks.task-changed', occurredAt: 'x', data: {} });
     expect(tasks).toHaveBeenCalledOnce();
+  });
+
+  it('asks for a resync after a reconnect, not on the first connect or a re-auth', async () => {
+    const { live, sockets, bus } = setup();
+    const resync = vi.fn();
+    bus.subscribe(LIVE_RESYNC, resync);
+    const ok = () => ({ type: 'auth.ok', expiresAt: new Date(Date.now() + 600_000).toISOString() });
+    live.start();
+    await flush();
+    sockets[0].receive(ok());
+    sockets[0].receive(ok()); // re-auth on the open socket
+    expect(resync).not.toHaveBeenCalled();
+    sockets[0].drop(1006);
+    await vi.advanceTimersByTimeAsync(1000);
+    sockets[1].receive(ok());
+    expect(resync).toHaveBeenCalledOnce();
   });
 
   it('reconnects with exponential backoff and resets it after auth.ok', async () => {

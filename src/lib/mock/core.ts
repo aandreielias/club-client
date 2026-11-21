@@ -712,6 +712,11 @@ export class MockDirectory {
     return member;
   }
 
+  /** server: MembersApi.MemberChanged, published after profile, role, guardian, membership and login changes */
+  memberChanged(...memberIds: string[]): void {
+    for (const memberId of memberIds) mockServer.events.publish({ type: 'members.member-changed', data: { memberId }, audience: { everyone: true } });
+  }
+
   setRoles(viewer: Member, memberId: string, rawRoles: unknown): Member {
     this.requirePrivileged(viewer, ['ADMIN']);
     const roles = MockDirectory.roles(rawRoles);
@@ -1208,7 +1213,9 @@ mockServer
   // Own profile also works before onboarding is complete (birth date step).
   .on('PATCH', '/api/v1/members/:id', (req) => {
     const viewer = directory.actor(req, req.params.id === directory.findActive(req.email)?.id);
-    return directory.updateProfile(viewer, req.params.id, req.body ?? {});
+    const member = directory.updateProfile(viewer, req.params.id, req.body ?? {});
+    directory.memberChanged(req.params.id);
+    return member;
   })
   .on('GET', '/api/v1/teams', (req) => {
     const member = directory.actor(req);

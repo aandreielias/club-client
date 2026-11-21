@@ -24,6 +24,11 @@ export class SettingsDraft<T> {
     this.#saved = JSON.stringify(value);
   }
 
+  /** Takes values changed elsewhere (live update), unless the member is editing or saving: typed input is never overwritten. */
+  refresh(value: T): void {
+    if (!this.dirty && !this.save.busy) this.load(value);
+  }
+
   /** Back to the saved values. */
   reset(): void {
     this.value = JSON.parse(this.#saved) as T;

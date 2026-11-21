@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { useBus } from '../../lib/bus/useBus.svelte';
+  import { MAIL_SETTINGS_CHANGED } from './events';
   import InfoTip from '../../ui/InfoTip.svelte';
   import { settings } from '../../settings';
   import { removeRecord } from '../../lib/detail/removeRecord';
@@ -39,6 +41,7 @@
   ] as const;
   const settingsLoad = new Action();
   void settingsLoad.run(async () => draft.load(await mailApi.settings()));
+  useBus(bus, MAIL_SETTINGS_CHANGED, () => void mailApi.settings().then((s) => draft.refresh(s)));
 
   const rows = $derived(
     mailboxes.items.map((m) => ({

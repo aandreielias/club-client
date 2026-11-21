@@ -14,7 +14,7 @@
 
   import Page from '../../ui/Page.svelte';
   import { PRIVILEGED } from '../../lib/types';
-  import { MEMBER_DEACTIVATED, MEMBER_INVITED } from './events';
+  import { MEMBER_CHANGED, MEMBER_DEACTIVATED, MEMBER_INVITED } from './events';
   import { membersToCsv, parseMemberImport, runMemberImport, type ImportProblem } from './MemberCsv.svelte';
   import { teamsApi } from '../teams/services';
   import { MemberListModel, type MemberRow } from './MemberListModel.svelte';
@@ -31,7 +31,7 @@
 
   const list = new MemberListModel(membersApi, store, policy.isManager);
   void list.load();
-  useBus(bus, [MEMBER_INVITED, MEMBER_DEACTIVATED], () => void list.load());
+  useBus(bus, [MEMBER_INVITED, MEMBER_DEACTIVATED, MEMBER_CHANGED], () => void list.load());
 
   useCommands(commands, { 'page.new': { run: () => bus.publish(WINDOW_OPEN, { kind: 'member-new', id: '-' }), when: () => policy.canInvite() } });
 

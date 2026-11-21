@@ -9,6 +9,8 @@ export const ABSENCES_CHANGED = defineEvent('calendar/absences-changed');
 export const APPOINTMENTS_CHANGED = liveEvent<AppointmentsChanged>('calendar.appointments-changed');
 export const RIDES_CHANGED = liveEvent<RidesChanged>('attendance.rides-changed');
 export const RESPONSE_CHANGED = liveEvent<ResponseChanged>('attendance.response-changed');
+/** Calendar rules or holidays changed. */
+export const CALENDAR_SETTINGS_CHANGED = liveEvent<Record<string, never>>('calendar.settings-changed');
 
 export interface AppointmentsChanged {
   appointmentIds: string[];

@@ -2,6 +2,9 @@
   import { HONORARY } from './MembersApi';
   import { backStack, bus, commands, session } from '../../lib/container';
   import { DetailController } from '../../lib/detail/DetailController.svelte';
+  import { useBus } from '../../lib/bus/useBus.svelte';
+  import { LIVE_RESYNC } from '../../lib/live/LiveUpdates.svelte';
+  import { MEMBER_CHANGED } from './events';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { useRecordActions } from '../../lib/actions/useRecordActions.svelte';
   import RecordActionButtons from '../../ui/RecordActionButtons.svelte';
@@ -42,6 +45,8 @@
     () => editing,
     () => (editing = false),
   );
+  useBus(bus, MEMBER_CHANGED, ({ data }) => data.memberId === id && !editing && void model.load());
+  useBus(bus, LIVE_RESYNC, () => !editing && void model.load());
   useCommands(commands, {
     'record.edit': { run: () => (editing = true), when: () => !editing && !!model.member.value && policy.canEditProfile(model.member.value) },
   });

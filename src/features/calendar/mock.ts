@@ -1312,7 +1312,11 @@ const actor = (req: MockRequest) => directory.actor(req);
 mockServer
   .on('GET', '/api/v1/appointments/:id/activity', (req) => activity.list(actor(req), 'APPOINTMENT', calendar.visible(actor(req), req.params.id).id))
   .on('GET', '/api/v1/calendar/settings', (req) => (directory.actor(req), calendar.settings()))
-  .on('PUT', '/api/v1/calendar/settings', (req) => calendar.saveSettings(directory.actor(req), req.body ?? {}))
+  .on('PUT', '/api/v1/calendar/settings', (req) => {
+    const result = calendar.saveSettings(directory.actor(req), req.body ?? {});
+    mockServer.events.publish({ type: 'calendar.settings-changed', data: {}, audience: { everyone: true } });
+    return result;
+  })
   .on('GET', '/api/v1/calendar/types', (req) => (directory.actor(req), appointmentTypes.list()))
   .on('POST', '/api/v1/calendar/types', (req) => appointmentTypes.save(directory.actor(req), null, req.body ?? {}))
   .on('PUT', '/api/v1/calendar/types/:key', (req) => appointmentTypes.save(directory.actor(req), req.params.key, req.body ?? {}))
@@ -1334,9 +1338,21 @@ mockServer
   .on('GET', '/api/v1/me/open-answers', (req) => calendar.openAnswers(actor(req)))
   .on('GET', '/api/v1/me/answers', (req) => ({ items: calendar.myAnswers(actor(req), req.query.get('from'), req.query.get('to')) }))
   .on('GET', '/api/v1/calendar/holidays', (req) => (actor(req), { items: calendar.holidays.data }))
-  .on('POST', '/api/v1/calendar/holidays', (req) => calendar.saveHoliday(actor(req), null, req.body ?? {}))
-  .on('PUT', '/api/v1/calendar/holidays/:id', (req) => calendar.saveHoliday(actor(req), req.params.id, req.body ?? {}))
-  .on('DELETE', '/api/v1/calendar/holidays/:id', (req) => calendar.deleteHoliday(actor(req), req.params.id))
+  .on('POST', '/api/v1/calendar/holidays', (req) => {
+    const result = calendar.saveHoliday(actor(req), null, req.body ?? {});
+    mockServer.events.publish({ type: 'calendar.settings-changed', data: {}, audience: { everyone: true } });
+    return result;
+  })
+  .on('PUT', '/api/v1/calendar/holidays/:id', (req) => {
+    const result = calendar.saveHoliday(actor(req), req.params.id, req.body ?? {});
+    mockServer.events.publish({ type: 'calendar.settings-changed', data: {}, audience: { everyone: true } });
+    return result;
+  })
+  .on('DELETE', '/api/v1/calendar/holidays/:id', (req) => {
+    const result = calendar.deleteHoliday(actor(req), req.params.id);
+    mockServer.events.publish({ type: 'calendar.settings-changed', data: {}, audience: { everyone: true } });
+    return result;
+  })
   .on('POST', '/api/v1/appointments/:id/extend', (req) => ({ items: calendar.extend(actor(req), req.params.id, req.body?.repeatUntil) }))
   .on('GET', '/api/v1/appointments/:id/extras', (req) => calendar.extras(actor(req), req.params.id))
   .on('PUT', '/api/v1/appointments/:id/extras', (req) => calendar.setExtras(actor(req), req.params.id, req.body ?? {}))

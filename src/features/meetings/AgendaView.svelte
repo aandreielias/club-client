@@ -1,6 +1,7 @@
 <script lang="ts">
   import { bus, pendingDeletes } from '../../lib/container';
   import { useBus } from '../../lib/bus/useBus.svelte';
+  import { LIVE_RESYNC } from '../../lib/live/LiveUpdates.svelte';
   import type { Resource } from '../../lib/state/Resource.svelte';
   import { MEETING_CHANGED, RESOLUTION_CHANGED } from './events';
   import type { Meeting, Resolution } from './model';
@@ -15,6 +16,7 @@
   useBus(bus, RESOLUTION_CHANGED, ({ data }) => data.meetingId === meeting.id && void resolutions.load());
   // Presence decides who may vote: a latecomer gets the vote buttons without reloading.
   useBus(bus, MEETING_CHANGED, ({ data }) => data.meetingId === meeting.id && void resolutions.load());
+  useBus(bus, LIVE_RESYNC, () => void resolutions.load());
 
   const byId = $derived(new Map((resolutions.value ?? []).map((r) => [r.id, r])));
   const unlisted = $derived(

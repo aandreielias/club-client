@@ -329,15 +329,17 @@ mockServer
     return member;
   })
   .on('GET', '/api/v1/members/:id', (req) => directory.get(directory.actor(req), req.params.id))
-  .on('PUT', '/api/v1/members/:id/roles', (req) => directory.setRoles(directory.actor(req), req.params.id, req.body?.roles))
+  .on('PUT', '/api/v1/members/:id/roles', (req) => changed(directory.setRoles(directory.actor(req), req.params.id, req.body?.roles), req.params.id))
   .on('POST', '/api/v1/members/:id/deactivate', (req) => directory.deactivate(directory.actor(req), req.params.id))
-  .on('POST', '/api/v1/members/:id/guardians', (req) => directory.linkGuardian(directory.actor(req), req.params.id, req.body?.guardianId))
+  .on('POST', '/api/v1/members/:id/guardians', (req) =>
+    changed(directory.linkGuardian(directory.actor(req), req.params.id, req.body?.guardianId), req.params.id, req.body?.guardianId),
+  )
   .on('GET', '/api/v1/members/:id/family', (req) => directory.family(directory.actor(req), req.params.id))
   .on('GET', '/api/v1/members/:id/guardians', (req) => directory.listGuardians(directory.actor(req), req.params.id))
   .on('DELETE', '/api/v1/members/:id/guardians/:guardianId', (req) =>
-    directory.unlinkGuardian(directory.actor(req), req.params.id, req.params.guardianId),
+    changed(directory.unlinkGuardian(directory.actor(req), req.params.id, req.params.guardianId), req.params.id, req.params.guardianId),
   )
-  .on('POST', '/api/v1/members/:id/reactivate', (req) => directory.reactivate(directory.actor(req), req.params.id))
+  .on('POST', '/api/v1/members/:id/reactivate', (req) => changed(directory.reactivate(directory.actor(req), req.params.id), req.params.id))
   .on('POST', '/api/v1/members/:id/erase', (req) => {
     directory.erase(directory.actor(req), req.params.id);
     // server: MemberHandlers.erase publishes MEMBER_ERASED with the deleted change requests; every module drops its data
@@ -345,8 +347,11 @@ mockServer
       type: 'members.member-erased',
       data: { memberId: req.params.id, changeRequestIds: changeRequests.deleteOf(req.params.id) },
     });
+    directory.memberChanged(req.params.id);
   })
-  .on('PUT', '/api/v1/members/:id/membership', (req) => directory.setMembership(directory.actor(req), req.params.id, req.body ?? {}))
+  .on('PUT', '/api/v1/members/:id/membership', (req) =>
+    changed(directory.setMembership(directory.actor(req), req.params.id, req.body ?? {}), req.params.id),
+  )
   .on('GET', '/api/v1/board/offices', (req) => {
     directory.actor(req);
     return board.board();
@@ -469,13 +474,22 @@ const FIELDS: readonly ChangeField[] = ['EMAIL', 'FIRST_NAME', 'MIDDLE_NAME', 'L
 const PROFILE_KEYS = { FIRST_NAME: 'firstName', MIDDLE_NAME: 'middleName', LAST_NAME: 'lastName', BIRTH_DATE: 'birthDate', EMAIL: 'email' } as const;
 const fail = MockServer.fail;
 
+/** Publishes members.member-changed for each id, then answers the result. */
+function changed<T>(result: T, ...memberIds: string[]): T {
+  directory.memberChanged(...memberIds);
+  return result;
+}
+
 export const changeRequests = new MockChangeRequests(directory);
 const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer
-  .on('PUT', '/api/v1/members/:id/email', (req) => directory.changeEmail(actor(req), req.params.id, req.body?.email))
+  .on('PUT', '/api/v1/members/:id/email', (req) => changed(directory.changeEmail(actor(req), req.params.id, req.body?.email), req.params.id))
   .on('POST', '/api/v1/me/change-requests', (req) => changeRequests.request(actor(req), req.body ?? {}))
   .on('GET', '/api/v1/me/change-requests', (req) => changeRequests.own(actor(req)))
   .on('GET', '/api/v1/members/change-requests/:id', (req) => changeRequests.get(actor(req), req.params.id))
-  .on('POST', '/api/v1/members/change-requests/:id/approve', (req) => changeRequests.decide(actor(req), req.params.id, true))
+  .on('POST', '/api/v1/members/change-requests/:id/approve', (req) => {
+    const decided = changeRequests.decide(actor(req), req.params.id, true);
+    return changed(decided, decided.memberId);
+  })
   .on('POST', '/api/v1/members/change-requests/:id/reject', (req) => changeRequests.decide(actor(req), req.params.id, false));

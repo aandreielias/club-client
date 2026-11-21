@@ -1,5 +1,5 @@
 // Word templates for the mocks: the built-in layout and the engine of server platform.WordTemplate, line for line. Both pass
-// club-server/docs/api/word-template-cases.json (wordTemplate.test.ts here, WordTemplateTest there); change both or neither.
+// club-server/docs/api/word-template-cases.json, copied to src/lib/api by npm run api:sync (wordTemplate.test.ts here, WordTemplateTest there); change both or neither.
 import type JSZip from 'jszip';
 
 const TEMPLATE_TYPE = 'wordprocessingml.template.main+xml';

@@ -1,18 +1,19 @@
 import type { EventBus, EventChannel } from '../bus';
 import { APP_ERROR } from '../errors/ErrorReporter';
-import type { LiveEvent } from '../live/LiveUpdates.svelte';
+import { LIVE_RESYNC, type LiveEvent } from '../live/LiveUpdates.svelte';
 import { CONFIRM, type ConfirmRequest } from '../notify/ConfirmService.svelte';
 import { TOAST } from '../notify/ToastService.svelte';
 import type { BackStack } from '../navigation/BackStack.svelte';
 import { Action } from '../state/Action.svelte';
 import { WINDOW_OPEN, type WindowHandle } from '../window/WindowService.svelte';
 
-export interface WatchOptions<T> {
+export interface WatchOptions {
   /** Toast shown when the record was deleted elsewhere; the view then closes. */
   deleted: string;
   /** While true (own write running), events are ignored: the write reloads by itself. */
   busy: () => boolean;
-  changed: (data: T) => void;
+  /** Also runs after a reconnect (`LIVE_RESYNC`), so it reloads rather than reading the event. */
+  changed: () => void;
 }
 
 /**
@@ -70,18 +71,21 @@ export class DetailController {
   }
 
   /** Live changes of this record: `DELETED` closes the view with a toast, anything else calls `changed`. */
-  watch<T extends { change: string }>(channel: EventChannel<LiveEvent<T>>, mine: (data: T) => boolean, options: WatchOptions<T>): void {
+  watch<T extends { change: string }>(channel: EventChannel<LiveEvent<T>>, mine: (data: T) => boolean, options: WatchOptions): void {
     $effect(() => {
-      const subscription = this.bus.subscribe(channel, ({ data }) => {
-        if (this.#left || !mine(data) || options.busy()) return;
-        if (data.change === 'DELETED') {
-          this.notify(options.deleted);
-          this.leave();
-        } else {
-          options.changed(data);
-        }
-      });
-      return () => subscription.unsubscribe();
+      const subscriptions = [
+        this.bus.subscribe(channel, ({ data }) => {
+          if (this.#left || !mine(data) || options.busy()) return;
+          if (data.change === 'DELETED') {
+            this.notify(options.deleted);
+            this.leave();
+          } else {
+            options.changed();
+          }
+        }),
+        this.bus.subscribe(LIVE_RESYNC, () => !this.#left && !options.busy() && options.changed()),
+      ];
+      return () => subscriptions.forEach((s) => s.unsubscribe());
     });
   }
 }

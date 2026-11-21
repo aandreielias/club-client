@@ -1326,7 +1326,11 @@ const actor = (req: MockRequest) => directory.actor(req);
 
 mockServer
   .on('GET', '/api/v1/files/settings', (req) => files.fileSettings(actor(req)))
-  .on('PUT', '/api/v1/files/settings', (req) => files.saveFileSettings(actor(req), req.body ?? {}))
+  .on('PUT', '/api/v1/files/settings', (req) => {
+    const result = files.saveFileSettings(actor(req), req.body ?? {});
+    mockServer.events.publish({ type: 'files.settings-changed', data: {}, audience: { roles: ADMIN_BOARD } });
+    return result;
+  })
   .on('GET', '/api/v1/files/:id/activity', (req) => {
     const [ref] = files.refs(actor(req), [{ fileId: req.params.id, folderId: null, name: null }]);
     return ref && !ref.deleted ? activity.list(actor(req), 'FILE', ref.id) : MockServer.fail(404, 'file.not-found');

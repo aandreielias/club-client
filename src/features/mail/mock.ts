@@ -631,7 +631,11 @@ mockServer
   .on('GET', '/api/v1/mail/mailboxes/:id/messages', (req) => mail.folder(actor(req), req.params.id, req.query.get('folder'), req.query.get('before')))
   .on('PATCH', '/api/v1/mail/mailboxes/:id/messages/:mailId', (req) => mail.update(actor(req), req.params.id, req.params.mailId, req.body ?? {}))
   .on('GET', '/api/v1/mail/admin/settings', (req) => mail.mailSettings(actor(req)))
-  .on('PUT', '/api/v1/mail/admin/settings', (req) => mail.saveMailSettings(actor(req), req.body ?? {}))
+  .on('PUT', '/api/v1/mail/admin/settings', (req) => {
+    const result = mail.saveMailSettings(actor(req), req.body ?? {});
+    mockServer.events.publish({ type: 'mail.settings-changed', data: {}, audience: { roles: ADMIN_BOARD } });
+    return result;
+  })
   .on('POST', '/api/v1/mail/mailboxes/:id/messages', (req) => mail.send(actor(req), req.params.id, req.body ?? {}))
   .on('GET', '/api/v1/mail/mailboxes/:id/messages/:mailId', (req) => mail.get(actor(req), req.params.id, req.params.mailId))
   .on('DELETE', '/api/v1/mail/mailboxes/:id/messages/:mailId', (req) => mail.delete(actor(req), req.params.id, req.params.mailId))

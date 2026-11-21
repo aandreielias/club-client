@@ -7,6 +7,7 @@
   import { FILES_CHANGED } from '../features/files/events';
   import { ITEM_CHANGED } from '../features/inventory/events';
   import { useBus } from '../lib/bus/useBus.svelte';
+  import { LIVE_RESYNC } from '../lib/live/LiveUpdates.svelte';
   import { LinksModel } from '../lib/links/LinksModel.svelte';
   import { placeName, type FileRef } from '../lib/links/model';
   import Button from './Button.svelte';
@@ -29,6 +30,7 @@
     const files = model.links.value?.files ?? [];
     if (files.some((f) => (data.fileId ? f.id === data.fileId : f.folderId === data.folderId))) reload();
   });
+  useBus(bus, LIVE_RESYNC, () => reload());
 
   async function download(file: FileRef) {
     try {

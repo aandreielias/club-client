@@ -1,7 +1,9 @@
 import BoardPage from './BoardPage.svelte';
 import MembersHome from './MembersHome.svelte';
 import BoardHome from './BoardHome.svelte';
-import { permissions } from '../../lib/container';
+import { bus, directory, permissions } from '../../lib/container';
+import { LIVE_RESYNC } from '../../lib/live/LiveUpdates.svelte';
+import { MEMBER_CHANGED } from './events';
 import { ADMIN_BOARD } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
 import MemberInviteView from './MemberInviteView.svelte';
@@ -53,7 +55,13 @@ export const membersFeature: Feature = {
   messages: MEMBER_MESSAGES,
   start: (guest) => {
     if (guest) return;
-    const stops = [boardSettings.start(), membershipKinds.start()];
+    // Names shown everywhere (pickers, MemberName) follow renames, joins and leaves.
+    const names = () => {
+      directory.forgetMembers();
+      void directory.loadNames();
+    };
+    const subscriptions = [bus.subscribe(MEMBER_CHANGED, names), bus.subscribe(LIVE_RESYNC, names)];
+    const stops = [boardSettings.start(), membershipKinds.start(), () => subscriptions.forEach((s) => s.unsubscribe())];
     return () => stops.forEach((stop) => stop());
   },
   home: [

@@ -5,7 +5,7 @@
   import RecordLink from '../../ui/RecordLink.svelte';
   import Tag from '../../ui/Tag.svelte';
   import { MEMBERSHIP_CHANGED, TEAMS_CHANGED } from '../teams/events';
-  import { MEMBER_DEACTIVATED, MEMBER_INVITED, OFFICES_CHANGED } from './events';
+  import { MEMBER_CHANGED, MEMBER_DEACTIVATED, MEMBER_INVITED, OFFICES_CHANGED } from './events';
   import { NO_TEAM, orgLayers, OrgChartModel, type OrgLabels } from './OrgChartModel.svelte';
   import { boardSettings, memberPolicy, membershipKinds, membersApi } from './services';
 
@@ -15,7 +15,7 @@
    */
   const model = new OrgChartModel(membersApi);
   void model.load();
-  useBus(bus, [OFFICES_CHANGED, MEMBER_INVITED, MEMBER_DEACTIVATED, MEMBERSHIP_CHANGED, TEAMS_CHANGED], () => void model.load());
+  useBus(bus, [OFFICES_CHANGED, MEMBER_INVITED, MEMBER_DEACTIVATED, MEMBER_CHANGED, MEMBERSHIP_CHANGED, TEAMS_CHANGED], () => void model.load());
 
   const labels: OrgLabels = {
     office: (kind) => boardSettings.label(kind),

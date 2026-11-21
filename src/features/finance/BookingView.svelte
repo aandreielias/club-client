@@ -6,6 +6,7 @@
   import { bookingActions } from './actions';
   import { APP_ERROR } from '../../channels';
   import { useBus } from '../../lib/bus/useBus.svelte';
+  import { LIVE_RESYNC } from '../../lib/live/LiveUpdates.svelte';
   import { DetailController, EditSession } from '../../lib/detail/DetailController.svelte';
   import { Action } from '../../lib/state/Action.svelte';
   import { Resource } from '../../lib/state/Resource.svelte';
@@ -45,6 +46,7 @@
   useBus(bus, FINANCE_CHANGED, ({ data }) => {
     if ((data.bookingId === null || data.bookingId === id) && !edit.editing && !write.busy) void booking.load();
   });
+  useBus(bus, LIVE_RESYNC, () => !edit.editing && !write.busy && void booking.load());
 
   const writer = $derived(financeMay('WRITE'));
   const direction = (key: string) => categories.get(key)?.direction;

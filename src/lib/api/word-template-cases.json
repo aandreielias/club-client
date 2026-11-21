@@ -1,0 +1,228 @@
+[
+  {
+    "name": "a value replaces its placeholder",
+    "xml": "<w:body><w:p><w:r><w:t>Titel: {{Titel}}</w:t></w:r></w:p></w:body>",
+    "values": {
+      "Titel": "Hauptversammlung"
+    },
+    "expected": "<w:body><w:p><w:r><w:t xml:space=\"preserve\">Titel: Hauptversammlung</w:t></w:r></w:p></w:body>"
+  },
+  {
+    "name": "spaces inside the braces are allowed",
+    "xml": "<w:body><w:p><w:r><w:t>{{ Titel }}</w:t></w:r></w:p></w:body>",
+    "values": {
+      "Titel": "MV"
+    },
+    "expected": "<w:body><w:p><w:r><w:t xml:space=\"preserve\">MV</w:t></w:r></w:p></w:body>"
+  },
+  {
+    "name": "a placeholder split into runs by Word is filled; other runs keep their format",
+    "xml": "<w:body><w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Wann: </w:t></w:r><w:r><w:t>{{Wa</w:t></w:r><w:proofErr w:type=\"spellStart\"/><w:r><w:rPr><w:i/></w:rPr><w:t>n</w:t></w:r><w:r><w:t>n}} Uhr</w:t></w:r></w:p></w:body>",
+    "values": {
+      "Wann": "Freitag, 18:00"
+    },
+    "expected": "<w:body><w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Wann: </w:t></w:r><w:r><w:t xml:space=\"preserve\">Freitag, 18:00</w:t></w:r><w:proofErr w:type=\"spellStart\"/><w:r><w:rPr><w:i/></w:rPr><w:t xml:space=\"preserve\"></w:t></w:r><w:r><w:t xml:space=\"preserve\"> Uhr</w:t></w:r></w:p></w:body>"
+  },
+  {
+    "name": "an empty value leaves its paragraph out",
+    "xml": "<w:body><w:p><w:r><w:t>A</w:t></w:r></w:p><w:p><w:r><w:t>Grund: {{Dringlichkeit}}</w:t></w:r></w:p><w:p><w:r><w:t>B</w:t></w:r></w:p></w:body>",
+    "values": {
+      "Dringlichkeit": null
+    },
+    "expected": "<w:body><w:p><w:r><w:t>A</w:t></w:r></w:p><w:p><w:r><w:t>B</w:t></w:r></w:p></w:body>"
+  },
+  {
+    "name": "an unknown placeholder stays visible",
+    "xml": "<w:body><w:p><w:r><w:t>{{Titel}} {{Unbekannt}}</w:t></w:r></w:p></w:body>",
+    "values": {
+      "Titel": "MV"
+    },
+    "expected": "<w:body><w:p><w:r><w:t xml:space=\"preserve\">MV {{Unbekannt}}</w:t></w:r></w:p></w:body>"
+  },
+  {
+    "name": "values are escaped, entities in the template are read",
+    "xml": "<w:body><w:p><w:r><w:t>Q&amp;A &#228; {{Titel}}</w:t></w:r></w:p></w:body>",
+    "values": {
+      "Titel": "Kasse & \"Beiträge\" <neu>"
+    },
+    "expected": "<w:body><w:p><w:r><w:t xml:space=\"preserve\">Q&amp;A ä Kasse &amp; &quot;Beiträge&quot; &lt;neu&gt;</w:t></w:r></w:p></w:body>"
+  },
+  {
+    "name": "a value with several lines repeats its paragraph; ids that must be unique are dropped",
+    "xml": "<w:body><w:p w14:paraId=\"1A2B\" w14:textId=\"3C4D\"><w:pPr><w:pStyle w:val=\"ListParagraph\"/></w:pPr><w:bookmarkStart w:id=\"0\" w:name=\"_GoBack\"/><w:r><w:t>{{Tagesordnung}}</w:t></w:r><w:bookmarkEnd w:id=\"0\"/></w:p></w:body>",
+    "values": {
+      "Tagesordnung": "1. Begrüßung\n\n 2. Bericht \n"
+    },
+    "expected": "<w:body><w:p><w:pPr><w:pStyle w:val=\"ListParagraph\"/></w:pPr><w:r><w:t xml:space=\"preserve\">1. Begrüßung</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val=\"ListParagraph\"/></w:pPr><w:r><w:t xml:space=\"preserve\">2. Bericht</w:t></w:r></w:p></w:body>"
+  },
+  {
+    "name": "a table row whose placeholders are all empty is left out; a cell left empty gets a paragraph",
+    "xml": "<w:body><w:tbl><w:tr><w:tc><w:p><w:r><w:t>Ort</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>{{Ort}}</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:p><w:r><w:t>Online</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>{{Online}}</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:w=\"1\"/></w:tcPr><w:p><w:r><w:t>{{Adresse}}</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>{{Ort}}</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body>",
+    "values": {
+      "Ort": "Halle",
+      "Online": "",
+      "Adresse": ""
+    },
+    "expected": "<w:body><w:tbl><w:tr><w:tc><w:p><w:r><w:t>Ort</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t xml:space=\"preserve\">Halle</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:w=\"1\"/></w:tcPr><w:p/></w:tc><w:tc><w:p><w:r><w:t xml:space=\"preserve\">Halle</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body>"
+  },
+  {
+    "name": "a row with both markers repeats per item; item fields first, outer values too",
+    "xml": "<w:body><w:tbl><w:tblPr/><w:tr><w:tc><w:p><w:r><w:t>Aufgabe</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>Bis</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:p><w:r><w:t>{{#Aufgaben}}{{Aufgabe}} ({{Sitzung}})</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>{{Bis}}{{/Aufgaben}}</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body>",
+    "values": {
+      "Sitzung": "MV",
+      "Aufgaben": [
+        {
+          "Aufgabe": "Kassa prüfen",
+          "Bis": "1.12."
+        },
+        {
+          "Aufgabe": "Halle buchen",
+          "Bis": null
+        }
+      ]
+    },
+    "expected": "<w:body><w:tbl><w:tblPr/><w:tr><w:tc><w:p><w:r><w:t>Aufgabe</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>Bis</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:p><w:r><w:t xml:space=\"preserve\">Kassa prüfen (MV)</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t xml:space=\"preserve\">1.12.</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:p><w:r><w:t xml:space=\"preserve\">Halle buchen (MV)</w:t></w:r></w:p></w:tc><w:tc><w:p/></w:tc></w:tr></w:tbl></w:body>"
+  },
+  {
+    "name": "a repeated row with an empty list goes; a table left without rows goes too",
+    "xml": "<w:body><w:p><w:r><w:t>vor</w:t></w:r></w:p><w:tbl><w:tblPr/><w:tr><w:tc><w:p><w:r><w:t>{{#Aufgaben}}{{Aufgabe}}{{/Aufgaben}}</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p><w:r><w:t>nach</w:t></w:r></w:p></w:body>",
+    "values": {
+      "Aufgaben": []
+    },
+    "expected": "<w:body><w:p><w:r><w:t>vor</w:t></w:r></w:p><w:p><w:r><w:t>nach</w:t></w:r></w:p></w:body>"
+  },
+  {
+    "name": "a marker alone in a cell paragraph of a repeated row leaves an empty paragraph",
+    "xml": "<w:body><w:tbl><w:tr><w:tc><w:p><w:r><w:t>{{#Konten}}</w:t></w:r></w:p><w:p><w:r><w:t>{{Konto}}</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>{{Stand}}</w:t></w:r></w:p><w:p><w:r><w:t>{{/Konten}}</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body>",
+    "values": {
+      "Konten": [
+        {
+          "Konto": "Bank",
+          "Stand": "10 €"
+        }
+      ]
+    },
+    "expected": "<w:body><w:tbl><w:tr><w:tc><w:p><w:r><w:t xml:space=\"preserve\"></w:t></w:r></w:p><w:p><w:r><w:t xml:space=\"preserve\">Bank</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t xml:space=\"preserve\">10 €</w:t></w:r></w:p><w:p><w:r><w:t xml:space=\"preserve\"></w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body>"
+  },
+  {
+    "name": "paragraph blocks repeat what lies between them and nest",
+    "xml": "<w:body><w:p><w:r><w:t>{{#Punkte}}</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val=\"Heading2\"/></w:pPr><w:r><w:t>{{Nummer}}. {{Titel}}</w:t></w:r></w:p><w:p><w:r><w:t>{{Protokoll}}</w:t></w:r></w:p><w:p><w:r><w:t>{{#Beschluss}}</w:t></w:r></w:p><w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Beschluss: </w:t></w:r><w:r><w:t>{{Antrag}}</w:t></w:r></w:p><w:p><w:r><w:t>{{/Beschluss}}</w:t></w:r></w:p><w:p><w:r><w:t>{{/Punkte}}</w:t></w:r></w:p></w:body>",
+    "values": {
+      "Punkte": [
+        {
+          "Nummer": "1",
+          "Titel": "Begrüßung",
+          "Protokoll": "Eröffnet um 19 Uhr.",
+          "Beschluss": []
+        },
+        {
+          "Nummer": "2",
+          "Titel": "Beitrag",
+          "Protokoll": "Diskussion.\nEinigung.",
+          "Beschluss": [
+            {
+              "Antrag": "Beitrag 50 €"
+            }
+          ]
+        }
+      ]
+    },
+    "expected": "<w:body><w:p><w:pPr><w:pStyle w:val=\"Heading2\"/></w:pPr><w:r><w:t xml:space=\"preserve\">1. Begrüßung</w:t></w:r></w:p><w:p><w:r><w:t xml:space=\"preserve\">Eröffnet um 19 Uhr.</w:t></w:r></w:p><w:p><w:pPr><w:pStyle w:val=\"Heading2\"/></w:pPr><w:r><w:t xml:space=\"preserve\">2. Beitrag</w:t></w:r></w:p><w:p><w:r><w:t xml:space=\"preserve\">Diskussion.</w:t></w:r></w:p><w:p><w:r><w:t xml:space=\"preserve\">Einigung.</w:t></w:r></w:p><w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Beschluss: </w:t></w:r><w:r><w:t xml:space=\"preserve\">Beitrag 50 €</w:t></w:r></w:p></w:body>"
+  },
+  {
+    "name": "a block over a text keeps its content when the text is set; the inverted block when it is empty",
+    "xml": "<w:body><w:p><w:r><w:t>{{#Online}}</w:t></w:r></w:p><w:p><w:r><w:t>Online: {{Online}}</w:t></w:r></w:p><w:p><w:r><w:t>{{/Online}}</w:t></w:r></w:p><w:p><w:r><w:t>{{^Online}}</w:t></w:r></w:p><w:p><w:r><w:t>Vor Ort</w:t></w:r></w:p><w:p><w:r><w:t>{{/Online}}</w:t></w:r></w:p><w:p><w:r><w:t>{{^Punkte}}</w:t></w:r></w:p><w:p><w:r><w:t>Keine Punkte</w:t></w:r></w:p><w:p><w:r><w:t>{{/Punkte}}</w:t></w:r></w:p></w:body>",
+    "values": {
+      "Online": "In der App",
+      "Punkte": []
+    },
+    "expected": "<w:body><w:p><w:r><w:t xml:space=\"preserve\">Online: In der App</w:t></w:r></w:p><w:p><w:r><w:t>Keine Punkte</w:t></w:r></w:p></w:body>"
+  },
+  {
+    "name": "a block can hold a table; a block inside one cell stays in that cell",
+    "xml": "<w:body><w:p><w:r><w:t>{{#Beschluss}}</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>{{Antrag}}</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>{{^Ja}}</w:t></w:r></w:p><w:p><w:r><w:t>ohne Zählung</w:t></w:r></w:p><w:p><w:r><w:t>{{/Ja}}</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p><w:r><w:t>{{/Beschluss}}</w:t></w:r></w:p></w:body>",
+    "values": {
+      "Beschluss": [
+        {
+          "Antrag": "Budget",
+          "Ja": ""
+        }
+      ]
+    },
+    "expected": "<w:body><w:tbl><w:tr><w:tc><w:p><w:r><w:t xml:space=\"preserve\">Budget</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>ohne Zählung</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body>"
+  },
+  {
+    "name": "text in text boxes and fields is left alone",
+    "xml": "<w:hdr><w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r><w:r><w:instrText xml:space=\"preserve\">PAGE</w:instrText></w:r><w:r><w:fldChar w:fldCharType=\"end\"/></w:r><w:r><w:t xml:space=\"preserve\"> · {{Verein}}</w:t></w:r></w:p></w:hdr>",
+    "values": {
+      "Verein": "SV"
+    },
+    "expected": "<w:hdr><w:p><w:r><w:fldChar w:fldCharType=\"begin\"/></w:r><w:r><w:instrText xml:space=\"preserve\">PAGE</w:instrText></w:r><w:r><w:fldChar w:fldCharType=\"end\"/></w:r><w:r><w:t xml:space=\"preserve\"> · SV</w:t></w:r></w:p></w:hdr>"
+  },
+  {
+    "name": "check: unknown names anywhere, item fields only inside their list, both branches read",
+    "xml": "<w:body><w:p><w:r><w:t>{{Titl}}</w:t></w:r></w:p><w:p><w:r><w:t>{{Aufgabe}}</w:t></w:r></w:p><w:p><w:r><w:t>{{^Online}}</w:t></w:r></w:p><w:p><w:r><w:t>{{Onlien}}</w:t></w:r></w:p><w:p><w:r><w:t>{{/Online}}</w:t></w:r></w:p><w:p><w:r><w:t>{{#Aufgaben}}</w:t></w:r></w:p><w:p><w:r><w:t>{{Aufgabe}} {{Titel}} {{Wer}}</w:t></w:r></w:p><w:p><w:r><w:t>{{/Aufgaben}}</w:t></w:r></w:p></w:body>",
+    "values": {
+      "Titel": "MV",
+      "Online": "App",
+      "Aufgaben": [
+        {
+          "Aufgabe": "A"
+        }
+      ]
+    },
+    "check": {
+      "unknown": [
+        "Titl",
+        "Aufgabe",
+        "Onlien",
+        "Wer"
+      ],
+      "blocks": []
+    }
+  },
+  {
+    "name": "check: unclosed, stray and inline markers and a list used as text",
+    "xml": "<w:body><w:p><w:r><w:t>{{#Punkte}}</w:t></w:r></w:p><w:p><w:r><w:t>x</w:t></w:r></w:p><w:p><w:r><w:t>{{/Aufgaben}}</w:t></w:r></w:p><w:p><w:r><w:t>Text {{#Online}}x{{/Online}}</w:t></w:r></w:p><w:p><w:r><w:t>{{Aufgaben}}</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>{{#Aufgaben}}</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body>",
+    "values": {
+      "Online": "App",
+      "Punkte": [
+        {}
+      ],
+      "Aufgaben": [
+        {}
+      ]
+    },
+    "check": {
+      "unknown": [],
+      "blocks": [
+        "{{#Punkte}}",
+        "{{/Aufgaben}}",
+        "{{#Online}}",
+        "{{/Online}}",
+        "{{Aufgaben}}",
+        "{{#Aufgaben}}"
+      ]
+    }
+  },
+  {
+    "name": "check: a sound template has no problems",
+    "xml": "<w:body><w:p><w:r><w:t>{{#Punkte}}</w:t></w:r></w:p><w:p><w:r><w:t>{{Titel}}</w:t></w:r></w:p><w:p><w:r><w:t>{{/Punkte}}</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>{{#Aufgaben}}{{Aufgabe}}</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>{{/Aufgaben}}</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body>",
+    "values": {
+      "Punkte": [
+        {
+          "Titel": "T"
+        }
+      ],
+      "Aufgaben": [
+        {
+          "Aufgabe": "A"
+        }
+      ]
+    },
+    "check": {
+      "unknown": [],
+      "blocks": []
+    }
+  }
+]
