@@ -20,6 +20,10 @@ const draft = (teamId: string | null, assignees: string[]): NewTask => ({
   assignees,
   checklist: ['Eins', 'Zwei'],
   audience: NO_AUDIENCE,
+  priority: 'NORMAL',
+  labels: [],
+  parentId: null,
+  blockedBy: [],
 });
 
 describe('mock tasks', () => {
@@ -34,9 +38,9 @@ describe('mock tasks', () => {
   });
 
   it('lets assignees and team coaches work on a task, not other team members', () => {
-    expect(tasks.setStatus(member('spielerin'), 't-1', 'DONE')).toMatchObject({ status: 'DONE', completedAt: expect.any(String) });
-    expect(tasks.setStatus(member('trainer'), 't-1', 'OPEN')).toMatchObject({ status: 'OPEN', completedAt: null });
-    expect(() => tasks.setStatus(member('neu'), 't-1', 'DONE')).toThrow(expect.objectContaining({ code: 'access.denied' }));
+    expect(tasks.setStatus(member('spielerin'), 't-1', { status: 'DONE' })).toMatchObject({ status: 'DONE', completedAt: expect.any(String) });
+    expect(tasks.setStatus(member('trainer'), 't-1', { status: 'OPEN' })).toMatchObject({ status: 'OPEN', completedAt: null });
+    expect(() => tasks.setStatus(member('neu'), 't-1', { status: 'DONE' })).toThrow(expect.objectContaining({ code: 'access.denied' }));
     const item = tasks.get(member('spielerin'), 't-2').checklist[1];
     expect(tasks.check(member('spielerin'), 't-2', item.id, true).checklist[1].done).toBe(true);
   });
@@ -90,5 +94,40 @@ describe('mock tasks', () => {
     const task = tasks.comment(member('neu'), 't-2', 'Ich fahre auch.');
     expect(task.comments.at(-1)).toMatchObject({ authorId: 'neu', text: 'Ich fahre auch.' });
     expect(() => tasks.comment(member('neu'), 't-2', ' ')).toThrow(expect.objectContaining({ code: 'task.comment-invalid' }));
+  });
+
+  it('moves tasks between club stages within their phase and keeps each phase staffed', () => {
+    const review = tasks.saveStage(member('admin'), null, { label: 'Prüfung', hue: 'purple', phase: 'IN_PROGRESS', sort: 25, archived: false });
+    expect(tasks.setStatus(member('spielerin'), 't-1', { stage: review.key })).toMatchObject({ status: 'IN_PROGRESS', stage: review.key });
+    expect(tasks.setStatus(member('spielerin'), 't-1', { status: 'IN_PROGRESS' }).stage).toBe(review.key);
+    expect(() => tasks.saveStage(member('admin'), review.key, { ...review, phase: 'DONE' })).toThrow(
+      expect.objectContaining({ code: 'task-stage.phase-fixed' }),
+    );
+    expect(() => tasks.deleteStage(member('admin'), review.key)).toThrow(expect.objectContaining({ code: 'task-stage.in-use' }));
+    expect(() => tasks.saveStage(member('admin'), 'DONE', { label: 'Erledigt', hue: 'green', phase: 'DONE', sort: 30, archived: true })).toThrow(
+      expect.objectContaining({ code: 'task-stage.phase-empty' }),
+    );
+    expect(() => tasks.saveStage(member('trainer'), null, { label: 'X', hue: 'red', phase: 'OPEN', sort: 1, archived: false })).toThrow(
+      expect.objectContaining({ code: 'access.denied' }),
+    );
+    expect(tasks.setStatus(member('spielerin'), 't-1', { status: 'DONE' }).stage).toBe('DONE');
+  });
+
+  it('keeps labels, one level of subtasks and blockers without circles', () => {
+    const label = tasks.saveLabel(member('admin'), null, { label: 'Dringend', hue: 'red', sort: 1, archived: false });
+    const parent = tasks.create(member('admin'), { ...draft(null, ['spieler']), labels: [label.key] });
+    expect(parent.labels).toEqual([label.key]);
+    expect(() => tasks.deleteLabel(member('admin'), label.key)).toThrow(expect.objectContaining({ code: 'task-label.in-use' }));
+    const child = tasks.create(member('admin'), { ...draft(null, ['spieler']), parentId: parent.id, blockedBy: [parent.id] });
+    expect(tasks.get(member('admin'), parent.id).subtasks).toEqual([expect.objectContaining({ id: child.id })]);
+    expect(child.blockedBy).toEqual([expect.objectContaining({ id: parent.id })]);
+    expect(() => tasks.create(member('admin'), { ...draft(null, ['spieler']), parentId: child.id })).toThrow(
+      expect.objectContaining({ code: 'task.parent-invalid' }),
+    );
+    expect(() => tasks.update(member('admin'), parent.id, { blockedBy: [child.id] })).toThrow(
+      expect.objectContaining({ code: 'task.blockers-cycle' }),
+    );
+    tasks.delete(member('admin'), parent.id);
+    expect(tasks.get(member('admin'), child.id)).toMatchObject({ parent: null, blockedBy: [] });
   });
 });

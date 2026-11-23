@@ -3,16 +3,26 @@
   import { APP_ERROR, CONFIRM, TOAST, WINDOW_OPEN } from '../../channels';
   import { useCommands } from '../../lib/keyboard/useCommands.svelte';
   import { useBus } from '../../lib/bus/useBus.svelte';
+  import { usePane } from '../../lib/split/usePane';
   import Button from '../../ui/Button.svelte';
+  import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import Dialog from '../../ui/Dialog.svelte';
   import Field from '../../ui/Field.svelte';
   import Select from '../../ui/Select.svelte';
+  import TaskBoard from './TaskBoard.svelte';
   import TaskTable from './TaskTable.svelte';
   import Page from '../../ui/Page.svelte';
   import { TASK_CHANGED } from './events';
   import type { Task } from './model';
   import { TaskListModel } from './TaskListModel.svelte';
   import { taskPolicy, tasksApi } from './services';
+
+  const VIEWS = [
+    { value: 'list', label: 'Liste' },
+    { value: 'board', label: 'Tafel' },
+  ] as const;
+  const pane = usePane();
+  const view = $derived(pane.query.get('view') === 'board' ? 'board' : 'list');
 
   const list = new TaskListModel(tasksApi, taskPolicy, directory, store);
   void list.load();
@@ -105,6 +115,14 @@
 
 <Page title="Aufgaben">
   {#snippet actions()}
+    {#if !selecting}
+      <ChoiceGroup
+        name="tasks-view"
+        label="Ansicht"
+        options={VIEWS}
+        bind:value={() => view, (v) => pane.updateQuery({ view: v === 'board' ? 'board' : null }, true)}
+      />
+    {/if}
     {#if selecting}
       <span class="muted">{chosen.size} ausgewählt</span>
       <Button
@@ -130,7 +148,7 @@
       <Button busy={bulkBusy} disabled={!chosen.size} onclick={openAssign}>Zuweisen</Button>
       <Button variant="danger" icon="delete" busy={bulkBusy} disabled={!chosen.size} onclick={bulkDelete}>Auswahl löschen</Button>
       <Button variant="ghost" onclick={stopSelecting}>Fertig</Button>
-    {:else}
+    {:else if view === 'list'}
       <Button onclick={() => (selecting = true)}>Auswählen</Button>
     {/if}
     {#if taskPolicy.canCreate() && !selecting}
@@ -140,15 +158,19 @@
     {/if}
   {/snippet}
 
-  <TaskTable
-    {list}
-    check={selecting ? { checked: (t) => chosen.has(t.id), toggle, label: (t) => `${t.title} auswählen` } : undefined}
-    emptyText={list.filters.mine ? 'Dir ist keine offene Aufgabe zugewiesen.' : 'Keine Aufgaben.'}
-    emptyAction={taskPolicy.canCreate()
-      ? { label: 'Neue Aufgabe', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'task-new', id: list.filters.team || '-' }) }
-      : null}
-  />
-  {#if list.cut.truncated}<p class="muted small">Es gibt mehr Aufgaben, als die Liste zeigt. Bitte Filter eingrenzen.</p>{/if}
+  {#if view === 'board'}
+    <TaskBoard />
+  {:else}
+    <TaskTable
+      {list}
+      check={selecting ? { checked: (t) => chosen.has(t.id), toggle, label: (t) => `${t.title} auswählen` } : undefined}
+      emptyText={list.filters.mine ? 'Dir ist keine offene Aufgabe zugewiesen.' : 'Keine Aufgaben.'}
+      emptyAction={taskPolicy.canCreate()
+        ? { label: 'Neue Aufgabe', icon: 'add', run: () => bus.publish(WINDOW_OPEN, { kind: 'task-new', id: list.filters.team || '-' }) }
+        : null}
+    />
+    {#if list.cut.truncated}<p class="muted small">Es gibt mehr Aufgaben, als die Liste zeigt. Bitte Filter eingrenzen.</p>{/if}
+  {/if}
 </Page>
 
 <Dialog open={assigning} title="Aufgaben zuweisen" onclose={() => (assigning = false)}>

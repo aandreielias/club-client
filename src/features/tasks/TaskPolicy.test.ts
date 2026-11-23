@@ -26,6 +26,12 @@ const task = (assignees: string[]): Task => ({
   repeatByWeekday: false,
   source: null,
   audience: NO_AUDIENCE,
+  stage: 'OPEN',
+  priority: 'NORMAL',
+  labels: [],
+  parent: null,
+  subtasks: [],
+  blockedBy: [],
 });
 
 describe('TaskPolicy', () => {

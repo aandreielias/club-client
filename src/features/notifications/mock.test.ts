@@ -42,6 +42,10 @@ describe('mock notifications', () => {
       repeatMonths: null,
       repeatByWeekday: false,
       audience: NO_AUDIENCE,
+      priority: 'NORMAL',
+      labels: [],
+      parentId: null,
+      blockedBy: [],
     });
     expect(notifications.list('spieler', true).items[0]).toMatchObject({
       kind: 'TASK_ASSIGNED',

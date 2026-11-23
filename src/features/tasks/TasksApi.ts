@@ -1,6 +1,18 @@
 import type { ApiClient } from '../../lib/http/ApiClient';
 import type { Reach } from '../../lib/reach';
-import type { NewTask, Task, TaskList, TaskPatch, TaskQuery, TaskSettings, TaskStatus } from './model';
+import type {
+  NewTask,
+  Task,
+  TaskLabel,
+  TaskLabelInput,
+  TaskList,
+  TaskPatch,
+  TaskQuery,
+  TaskSettings,
+  TaskStage,
+  TaskStageInput,
+  TaskStatus,
+} from './model';
 
 /** Typed access to the tasks endpoints of club-server. Every write answers with the updated task. */
 export class TasksApi {
@@ -40,7 +52,41 @@ export class TasksApi {
   }
 
   setStatus(id: string, status: TaskStatus): Promise<Task> {
-    return this.api.put<Task>(`${this.path(id)}/status`, { status });
+    return this.api.put<Task>(`${this.path(id)}/status`, { status, stage: null });
+  }
+
+  /** Moves the task to one of the club's statuses (its phase follows). */
+  setStage(id: string, stage: string): Promise<Task> {
+    return this.api.put<Task>(`${this.path(id)}/status`, { status: null, stage });
+  }
+
+  async stages(): Promise<TaskStage[]> {
+    return (await this.api.get<{ items: TaskStage[] }>(`${TasksApi.BASE}/stages`)).items;
+  }
+
+  /** `key` null = new (admin, board). */
+  saveStage(key: string | null, input: TaskStageInput): Promise<TaskStage> {
+    return key
+      ? this.api.put<TaskStage>(`${TasksApi.BASE}/stages/${encodeURIComponent(key)}`, input)
+      : this.api.post<TaskStage>(`${TasksApi.BASE}/stages`, input);
+  }
+
+  deleteStage(key: string): Promise<void> {
+    return this.api.delete(`${TasksApi.BASE}/stages/${encodeURIComponent(key)}`);
+  }
+
+  async labels(): Promise<TaskLabel[]> {
+    return (await this.api.get<{ items: TaskLabel[] }>(`${TasksApi.BASE}/labels`)).items;
+  }
+
+  saveLabel(key: string | null, input: TaskLabelInput): Promise<TaskLabel> {
+    return key
+      ? this.api.put<TaskLabel>(`${TasksApi.BASE}/labels/${encodeURIComponent(key)}`, input)
+      : this.api.post<TaskLabel>(`${TasksApi.BASE}/labels`, input);
+  }
+
+  deleteLabel(key: string): Promise<void> {
+    return this.api.delete(`${TasksApi.BASE}/labels/${encodeURIComponent(key)}`);
   }
 
   check(id: string, itemId: string, done: boolean): Promise<Task> {

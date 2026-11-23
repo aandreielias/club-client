@@ -2,7 +2,8 @@ import type { TeamDirectory } from '../../lib/directory/TeamDirectory.svelte';
 import { ListModel } from '../../lib/list/ListModel.svelte';
 import type { LocalStore } from '../../lib/storage/LocalStore';
 import { hasAudience } from '../../lib/reach';
-import { isOverdue, statusLabel, statusRank, TASK_STATUSES, type Task } from './model';
+import { isOverdue, priorityLabel, TASK_PRIORITIES, type Task } from './model';
+import { stageTag, taskLabels, taskStages } from './services';
 import type { TaskPolicy } from './TaskPolicy';
 import type { TasksApi } from './TasksApi';
 
@@ -13,13 +14,14 @@ export class TaskListModel extends ListModel<Task> {
   /** `truncated`: the server cut the list (more tasks than it answers at once). */
   readonly cut: { truncated: boolean };
 
-  constructor(api: TasksApi, policy: TaskPolicy, directory: TeamDirectory, store: LocalStore | null) {
+  /** `board`: the Kanban board, which always loads done tasks (its own remembered filters, no "Erledigte zeigen"). */
+  constructor(api: TasksApi, policy: TaskPolicy, directory: TeamDirectory, store: LocalStore | null, board = false) {
     const cut = $state({ truncated: false });
     super(
       {
-        id: 'tasks',
+        id: board ? 'tasks-board' : 'tasks',
         load: async (server) => {
-          const page = await api.list({ mine: server.mine === '1', teamId: server.team || null, includeDone: server.done === '1' });
+          const page = await api.list({ mine: server.mine === '1', teamId: server.team || null, includeDone: board || server.done === '1' });
           cut.truncated = page.truncated;
           return page.items;
         },
@@ -27,7 +29,22 @@ export class TaskListModel extends ListModel<Task> {
         searchText: (t) => `${t.title} ${t.description ?? ''}`,
         columns: [
           { key: 'title', label: 'Titel', value: (t) => t.title },
-          { key: 'status', label: 'Status', value: (t) => statusRank(t.status), format: (t) => statusLabel(t.status), width: '8rem' },
+          {
+            key: 'status',
+            label: 'Status',
+            value: (t) => taskStages.items.findIndex((s) => s.key === t.stage),
+            format: (t) => stageTag(t).label,
+            width: '8rem',
+          },
+          {
+            key: 'priority',
+            label: 'Priorität',
+            value: (t) => TASK_PRIORITIES.findIndex((p) => p.value === t.priority),
+            // Only what stands out; sorting by the column groups them.
+            format: (t) => (t.priority === 'NORMAL' ? '' : priorityLabel(t.priority)),
+            width: '6rem',
+            hideOnCompact: true,
+          },
           { key: 'due', label: 'Fällig', value: (t) => t.dueAt, width: '11rem' },
           {
             key: 'team',
@@ -66,8 +83,16 @@ export class TaskListModel extends ListModel<Task> {
             label: 'Status',
             kind: 'select',
             allLabel: 'Jeder Status',
-            options: () => TASK_STATUSES.map((s) => ({ value: s.value, label: s.label })),
-            test: (t, value) => t.status === value,
+            options: () => taskStages.items.map((s) => ({ value: s.key, label: taskStages.label(s.key) })),
+            test: (t, value) => t.stage === value,
+          },
+          {
+            key: 'label',
+            label: 'Label',
+            kind: 'select',
+            allLabel: 'Alle Labels',
+            options: () => taskLabels.items.map((l) => ({ value: l.key, label: taskLabels.label(l.key) })),
+            test: (t, value) => t.labels.includes(value),
           },
           {
             key: 'dueIn',
@@ -81,7 +106,7 @@ export class TaskListModel extends ListModel<Task> {
             ],
             test: (t, value) => TaskListModel.dueMatches(t, value, new Date()),
           },
-          { key: 'done', label: 'Erledigte zeigen', kind: 'toggle' },
+          ...(board ? [] : [{ key: 'done', label: 'Erledigte zeigen', kind: 'toggle' as const }]),
         ],
       },
       store,

@@ -10,8 +10,9 @@
   import Field from '../../ui/Field.svelte';
   import SettingsForm from '../../ui/SettingsForm.svelte';
   import { taskSettings, tasksApi } from './services';
+  import TaskBoardSettingsSection from './TaskBoardSettingsSection.svelte';
 
-  /** Einstellungen › Aufgaben (admin/board): when the people of a task hear that it is due or overdue, and when it escalates. */
+  /** Einstellungen › Aufgaben-Regeln (admin/board): reminders, overdue notices and escalation, then the board's statuses and labels. */
   const load = new Action();
   const draft = new SettingsDraft<TaskSettings>({ remindHours: 24, overdueRepeatDays: 0, escalateAfterDays: 0 });
   void load.run(async () => draft.load(await tasksApi.settings()));
@@ -43,4 +44,5 @@
       <input type="number" min="0" max={settings.tasks.maxEscalateAfterDays} bind:value={draft.value.escalateAfterDays} class="short" />
     </Field>
   </SettingsForm>
+  <TaskBoardSettingsSection />
 </div>

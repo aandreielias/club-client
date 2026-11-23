@@ -149,7 +149,11 @@ const TABS: { [K in SectionId]: Omit<SettingsTab, 'id'> } = {
     icon: 'notifications',
     keywords: 'benachrichtigungen wichtig push e-mail vorgabe aufbewahrung posteingang verlauf löschen',
   },
-  tasks: { label: 'Aufgaben-Erinnerung', icon: 'tasks', keywords: 'aufgaben erinnerung fällig frist vorlauf' },
+  tasks: {
+    label: 'Aufgaben-Regeln',
+    icon: 'tasks',
+    keywords: 'aufgaben erinnerung fällig frist vorlauf status spalten tafel kanban label schlagwort',
+  },
   files: { label: 'Speicherplatz', icon: 'files', keywords: 'dateien upload kontingent quota gb' },
   mailboxes: { label: 'Postfächer', icon: 'mail', keywords: 'mail e-mail domain adresse limit signatur' },
   general: { label: 'Allgemein', icon: 'settings', keywords: 'app version' },

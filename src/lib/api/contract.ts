@@ -57,7 +57,7 @@ import type {
 } from '../../features/members/MembersApi';
 import type { Notification, NotificationList, NotificationSettings, Preference, Preferences } from '../../features/notifications/model';
 import type { SearchHit, SearchResult } from '../../features/search/model';
-import type { Task, TaskList, TaskSettings } from '../../features/tasks/model';
+import type { Task, TaskLabel, TaskLink, TaskList, TaskSettings, TaskStage } from '../../features/tasks/model';
 import type { Reach } from '../reach';
 import type { TeamInput, Tournament, TournamentSummary } from '../../features/tournaments/model';
 import type { FeedEntry } from '../activity/ActivityApi';
@@ -153,6 +153,9 @@ export type Contract = [
   Satisfies<S['at.clubserver.tasks.api.TasksApi.TaskSettings'], TaskSettings>,
   Satisfies<S['at.clubserver.notifications.api.NotificationsApi.NotificationSettings'], NotificationSettings>,
   Satisfies<S['at.clubserver.tasks.api.TasksApi.TaskList'], TaskList>,
+  Satisfies<S['at.clubserver.tasks.api.TasksApi.TaskLink'], TaskLink>,
+  Satisfies<With<S['at.clubserver.tasks.api.TasksApi.StageDto'], 'hue', TaskStage['hue']>, TaskStage>, // the server keeps hues as strings
+  Satisfies<With<S['at.clubserver.tasks.api.TasksApi.LabelDto'], 'hue', TaskLabel['hue']>, TaskLabel>,
   Satisfies<S['at.clubserver.tournaments.api.TournamentsApi.TournamentDto'], Tournament>,
   Satisfies<S['at.clubserver.tournaments.api.TournamentsApi.TournamentSummary'], TournamentSummary>,
   Satisfies<S['at.clubserver.tournaments.api.TournamentsApi.TeamInput'], TeamInput>,

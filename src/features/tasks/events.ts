@@ -3,6 +3,8 @@
 import { liveEvent } from '../../lib/live/LiveUpdates.svelte';
 
 export const TASK_CHANGED = liveEvent<TaskChanged>('tasks.task-changed');
+/** Statuses or labels changed (server: TasksApi.CatalogChanged). */
+export const TASK_CATALOG_CHANGED = liveEvent<Record<string, never>>('tasks.catalog-changed');
 export const TASK_SETTINGS_CHANGED = liveEvent<Record<string, never>>('tasks.settings-changed');
 
 export interface TaskChanged {

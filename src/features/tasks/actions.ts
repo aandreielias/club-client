@@ -1,7 +1,11 @@
 import { attempt, inWindow, type RecordActionProvider } from '../../lib/actions/RecordActions';
-import { bus, pendingDeletes } from '../../lib/container';
+import { catalogActions } from '../../lib/actions/catalogActions';
+import { bus, pendingDeletes, permissions } from '../../lib/container';
 import type { Task } from './model';
-import { taskPolicy as policy, tasksApi } from './services';
+import { taskLabels, taskPolicy as policy, taskStages, tasksApi } from './services';
+
+export const taskStageActions = catalogActions(bus, 'task-stage', 'Status', taskStages, () => permissions.isManager);
+export const taskLabelActions = catalogActions(bus, 'task-label', 'Label', taskLabels, () => permissions.isManager);
 
 /** What can be done with a task: context menus, its window and the command palette. */
 export const taskActions: RecordActionProvider<Task> = {

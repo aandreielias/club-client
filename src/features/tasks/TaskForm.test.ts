@@ -29,6 +29,12 @@ const existing: Task = {
   repeatByWeekday: false,
   source: null,
   audience: NO_AUDIENCE,
+  stage: 'OPEN',
+  priority: 'NORMAL',
+  labels: [],
+  parent: null,
+  subtasks: [],
+  blockedBy: [],
 };
 
 describe('TaskForm', () => {
@@ -64,6 +70,10 @@ describe('TaskForm', () => {
       repeatMonths: null,
       repeatByWeekday: false,
       audience: NO_AUDIENCE,
+      priority: 'NORMAL',
+      labels: [],
+      parentId: null,
+      blockedBy: [],
     });
   });
 

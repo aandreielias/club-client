@@ -32,13 +32,17 @@
     {/if}
     {#each model.filterDefinitions as filter (filter.key)}
       {#if filter.kind === 'select'}
-        <Select
-          inline
-          aria-label={filter.label}
-          value={model.filters[filter.key] ?? ''}
-          onchange={(value) => model.setFilter(filter.key, value)}
-          options={[{ value: '', label: filter.allLabel ?? filter.label }, ...(filter.options?.(model.data.value ?? []) ?? [])]}
-        />
+        {@const options = filter.options?.(model.data.value ?? []) ?? []}
+        <!-- A choice without options (e.g. no labels yet) is left out. -->
+        {#if options.length || model.filters[filter.key]}
+          <Select
+            inline
+            aria-label={filter.label}
+            value={model.filters[filter.key] ?? ''}
+            onchange={(value) => model.setFilter(filter.key, value)}
+            options={[{ value: '', label: filter.allLabel ?? filter.label }, ...options]}
+          />
+        {/if}
       {:else if filter.kind === 'multi'}
         {@const chosen = (model.filters[filter.key] ?? '').split(',').filter(Boolean)}
         {@const options = filter.options?.(model.data.value ?? []) ?? []}

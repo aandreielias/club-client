@@ -5,7 +5,8 @@
   import DataTable from '../../ui/DataTable.svelte';
   import type { EmptyAction } from '../../ui/Empty.svelte';
   import Tag from '../../ui/Tag.svelte';
-  import { statusHue, statusLabel, type Task } from './model';
+  import type { Task } from './model';
+  import { stageTag } from './services';
   import TaskDue from './TaskDue.svelte';
   import type { TaskListModel } from './TaskListModel.svelte';
 
@@ -45,7 +46,8 @@
     {#if column.key === 'title'}
       <span class:done={task.status === 'DONE'}>{task.title}</span>
     {:else if column.key === 'status'}
-      <Tag tone={statusHue(task.status)}>{statusLabel(task.status)}</Tag>
+      {@const tag = stageTag(task)}
+      <Tag tone={tag.hue}>{tag.label}</Tag>
     {:else if column.key === 'due'}
       <TaskDue {task} />
     {:else}

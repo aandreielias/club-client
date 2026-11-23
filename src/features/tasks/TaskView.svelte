@@ -25,12 +25,13 @@
   import { TASK_CHANGED } from './events';
   import { audienceLabel, loadAudienceLabels } from '../../ui/audience';
   import { audienceEntries, hasAudience } from '../../lib/reach';
-  import { repeatLabel, statusHue, statusLabel, type TaskStatus, TASK_STATUSES } from './model';
+  import { priorityLabel, repeatLabel, statusLabel, type TaskLink, type TaskStatus } from './model';
+  import RecordLink from '../../ui/RecordLink.svelte';
   import { TaskDetailModel } from './TaskDetailModel.svelte';
   import TaskEditor from './TaskEditor.svelte';
   import { TaskForm } from './TaskForm.svelte';
   import { TasksApi } from './TasksApi';
-  import { taskPolicy as policy, tasksApi } from './services';
+  import { stageTag, taskLabels, taskPolicy as policy, taskStages, tasksApi } from './services';
 
   /** One task: status, properties, checklist, comments; edit and delete for managers. Window and page. */
   let { id, handle, onclosed }: { id: string; handle?: WindowHandle; onclosed?: () => void } = $props();
@@ -77,6 +78,10 @@
   }
 </script>
 
+{#snippet link(t: TaskLink)}
+  <span class:done={t.status === 'DONE'}><RecordLink kind="task" id={t.id}>{t.title}</RecordLink></span>
+{/snippet}
+
 <AsyncView resource={detail.task}>
   {#snippet children(task)}
     <Detail title={edit.form ? 'Aufgabe bearbeiten' : task.title}>
@@ -88,7 +93,7 @@
       {/snippet}
       {#snippet meta()}
         <!-- Members who work on the task change the status in the slider below; others only read it. -->
-        {#if !edit.form && !policy.canWork(task)}<Tag tone={statusHue(task.status)}>{statusLabel(task.status)}</Tag>{/if}
+        {#if !edit.form && !policy.canWork(task)}<Tag tone={stageTag(task).hue}>{stageTag(task).label}</Tag>{/if}
       {/snippet}
 
       {#if edit.form}
@@ -106,9 +111,9 @@
             <ChoiceGroup
               name="task-status-{task.id}"
               label="Status"
-              options={TASK_STATUSES}
+              options={taskStages.options(task.stage)}
               disabled={detail.statusAction.busy}
-              bind:value={() => task.status, (status) => status && detail.setStatus(status)}
+              bind:value={() => task.stage, (stage) => stage && detail.setStage(stage)}
             />
           {/if}
         </div>
@@ -131,6 +136,32 @@
                   ? audienceEntries(task.audience).map(audienceLabel).join(', ')
                   : 'Nur Vorstand'}
           </dd>
+          {#if task.priority !== 'NORMAL'}
+            <dt>Priorität</dt>
+            <dd>{priorityLabel(task.priority)}</dd>
+          {/if}
+          {#if task.labels.length}
+            <dt>Labels</dt>
+            <dd class="tags">
+              {#each task.labels as key (key)}<Tag tone={taskLabels.get(key)?.hue ?? 'gray'}>{taskLabels.label(key)}</Tag>{/each}
+            </dd>
+          {/if}
+          {#if task.parent}
+            <dt>Teil von</dt>
+            <dd>{@render link(task.parent)}</dd>
+          {/if}
+          {#if task.subtasks.length}
+            <dt>Unteraufgaben</dt>
+            <dd class="tags">
+              {#each task.subtasks as sub (sub.id)}{@render link(sub)}{/each}
+            </dd>
+          {/if}
+          {#if task.blockedBy.length}
+            <dt>Wartet auf</dt>
+            <dd class="tags">
+              {#each task.blockedBy as blocker (blocker.id)}{@render link(blocker)}{/each}
+            </dd>
+          {/if}
           <dt>Erstellt</dt>
           <dd>
             {session.format.dateTime(task.createdAt)}{#if directory.knownName(task.createdBy)},&nbsp;<MemberName memberId={task.createdBy} />{/if}
@@ -193,5 +224,13 @@
   }
   .count {
     font-weight: normal;
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs) var(--space-sm);
+  }
+  .done {
+    text-decoration: line-through;
   }
 </style>

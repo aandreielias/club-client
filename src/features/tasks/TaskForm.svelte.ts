@@ -2,7 +2,7 @@ import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import type { ZonedClock, LocalDateTime } from '../../lib/time/ZonedClock';
 import { audienceEntries, audienceError, audienceOf, EVERYONE, hasAudience, NO_AUDIENCE, sameAudience, type Reach } from '../../lib/reach';
-import { rhythmCode, rhythmOf, type NewTask, type Task, type TaskPatch } from './model';
+import { rhythmCode, rhythmOf, type NewTask, type Task, type TaskPatch, type TaskPriority } from './model';
 
 export type TaskField = 'audience' | 'title' | 'description' | 'dueAt' | 'assignees' | 'checklist' | 'repeat';
 
@@ -39,6 +39,11 @@ export class TaskForm extends FormState<TaskFormErrors> {
   /** Audience entries (`lib/reach` audienceOf), only with `FOR_CHOSEN`. */
   audience = $state<string[]>([]);
   checklist = $state<ChecklistLine[]>([]);
+  priority = $state<TaskPriority>('NORMAL');
+  labels = $state<string[]>([]);
+  /** '' = no parent task. */
+  parentId = $state('');
+  blockedBy = $state<string[]>([]);
 
   #nextKey = 0;
 
@@ -71,6 +76,10 @@ export class TaskForm extends FormState<TaskFormErrors> {
     form.repeat = rhythmCode(task);
     form.assignees = [...task.assignees];
     form.checklist = task.checklist.map((item) => form.line(item.text));
+    form.priority = task.priority;
+    form.labels = [...task.labels];
+    form.parentId = task.parent?.id ?? '';
+    form.blockedBy = task.blockedBy.map((t) => t.id);
     return form;
   }
 
@@ -129,6 +138,10 @@ export class TaskForm extends FormState<TaskFormErrors> {
       checklist: this.texts(),
       ...rhythmOf(this.repeat),
       audience: this.audienceValue,
+      priority: this.priority,
+      labels: [...this.labels],
+      parentId: this.parentId || null,
+      blockedBy: [...this.blockedBy],
     };
   }
 
@@ -147,6 +160,20 @@ export class TaskForm extends FormState<TaskFormErrors> {
     if (hasAudience(original.audience) && hasAudience(next.audience) && !sameAudience(next.audience, original.audience))
       patch.audience = next.audience;
     if (this.checklistChanged()) patch.checklist = next.checklist;
+    if (next.priority !== original.priority) patch.priority = next.priority;
+    if (!TaskForm.sameSet(next.labels, original.labels)) patch.labels = next.labels;
+    if (next.parentId !== (original.parent?.id ?? null)) {
+      if (next.parentId) patch.parentId = next.parentId;
+      else patch.clearParent = true;
+    }
+    // blockedBy lists only what the reader sees; the server keeps the others.
+    if (
+      !TaskForm.sameSet(
+        next.blockedBy,
+        original.blockedBy.map((t) => t.id),
+      )
+    )
+      patch.blockedBy = next.blockedBy;
     if (this.repeat !== rhythmCode(original)) {
       if (next.repeatWeeks) patch.repeatWeeks = next.repeatWeeks;
       else if (next.repeatMonths) Object.assign(patch, { repeatMonths: next.repeatMonths, repeatByWeekday: next.repeatByWeekday });

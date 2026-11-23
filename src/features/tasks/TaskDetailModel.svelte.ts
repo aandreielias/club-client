@@ -1,7 +1,7 @@
 import { Action } from '../../lib/state/Action.svelte';
 import { Resource } from '../../lib/state/Resource.svelte';
 import type { TasksApi } from './TasksApi';
-import type { ChecklistItem, Task, TaskStatus } from './model';
+import type { ChecklistItem, Task } from './model';
 
 /** One task with the actions of its detail page. Every write answers with the updated task. */
 export class TaskDetailModel {
@@ -25,8 +25,9 @@ export class TaskDetailModel {
     return this.task.load();
   }
 
-  setStatus(status: TaskStatus): Promise<boolean> {
-    return this.write(this.statusAction, () => this.api.setStatus(this.id, status));
+  /** One of the club's statuses; its phase follows. */
+  setStage(stage: string): Promise<boolean> {
+    return this.write(this.statusAction, () => this.api.setStage(this.id, stage));
   }
 
   async toggle(item: ChecklistItem): Promise<boolean> {

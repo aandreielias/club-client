@@ -117,6 +117,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tasks/stages/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["saveStage"];
+        post?: never;
+        delete: operations["deleteStage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tasks/settings": {
         parameters: {
             query?: never;
@@ -128,6 +144,22 @@ export interface paths {
         put: operations["saveSettings"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/labels/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["saveLabel"];
+        post?: never;
+        delete: operations["deleteLabel"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1055,6 +1087,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["comment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/stages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stages"];
+        put?: never;
+        post: operations["createStage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["labels"];
+        put?: never;
+        post: operations["createLabel"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3320,6 +3384,7 @@ export interface components {
         "at.clubserver.gateway.rest.TasksController.StatusBody": {
             /** @enum {string} */
             status: "OPEN" | "IN_PROGRESS" | "DONE";
+            stage: string;
         };
         "at.clubserver.platform.Reach": {
             roles: ("ADMIN" | "BOARD" | "COACH" | "PLAYER" | "PARENT" | "VOLUNTEER" | "GUEST")[];
@@ -3379,6 +3444,20 @@ export interface components {
             repeatByWeekday: boolean;
             source: components["schemas"]["at.clubserver.tasks.api.TasksApi.Source"];
             audience: components["schemas"]["at.clubserver.platform.Reach"];
+            stage: string;
+            /** @enum {string} */
+            priority: "LOW" | "NORMAL" | "HIGH";
+            labels: string[];
+            parent: components["schemas"]["at.clubserver.tasks.api.TasksApi.TaskLink"];
+            subtasks: components["schemas"]["at.clubserver.tasks.api.TasksApi.TaskLink"][];
+            blockedBy: components["schemas"]["at.clubserver.tasks.api.TasksApi.TaskLink"][];
+        };
+        "at.clubserver.tasks.api.TasksApi.TaskLink": {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** @enum {string} */
+            status: "OPEN" | "IN_PROGRESS" | "DONE";
         };
         "at.clubserver.gateway.rest.LinksBody": {
             needs: components["schemas"]["at.clubserver.gateway.rest.LinksBody.NeedBody"][];
@@ -3428,6 +3507,26 @@ export interface components {
         "at.clubserver.gateway.rest.TasksController.CheckBody": {
             done: boolean;
         };
+        "at.clubserver.gateway.rest.TasksController.StageBody": {
+            label: string;
+            hue: string;
+            /** @enum {string} */
+            phase: "OPEN" | "IN_PROGRESS" | "DONE";
+            /** Format: int32 */
+            sort: number;
+            archived: boolean;
+        };
+        "at.clubserver.tasks.api.TasksApi.StageDto": {
+            key: string;
+            label: string;
+            hue: string;
+            /** @enum {string} */
+            phase: "OPEN" | "IN_PROGRESS" | "DONE";
+            /** Format: int32 */
+            sort: number;
+            archived: boolean;
+            inUse: boolean;
+        };
         "at.clubserver.gateway.rest.TasksController.SettingsBody": {
             /** Format: int32 */
             remindHours: number;
@@ -3443,6 +3542,22 @@ export interface components {
             overdueRepeatDays: number;
             /** Format: int32 */
             escalateAfterDays: number;
+        };
+        "at.clubserver.gateway.rest.TasksController.LabelBody": {
+            label: string;
+            hue: string;
+            /** Format: int32 */
+            sort: number;
+            archived: boolean;
+        };
+        "at.clubserver.tasks.api.TasksApi.LabelDto": {
+            key: string;
+            label: string;
+            hue: string;
+            /** Format: int32 */
+            sort: number;
+            archived: boolean;
+            inUse: boolean;
         };
         "at.clubserver.gateway.rest.CalendarController.PassengerBody": {
             /** Format: uuid */
@@ -4625,6 +4740,12 @@ export interface components {
             repeatMonths: number;
             repeatByWeekday: boolean;
             audience: components["schemas"]["at.clubserver.platform.Reach"];
+            /** @enum {string} */
+            priority: "LOW" | "NORMAL" | "HIGH";
+            labels: string[];
+            /** Format: uuid */
+            parentId: string;
+            blockedBy: string[];
         };
         "at.clubserver.gateway.rest.TasksController.CommentBody": {
             text: string;
@@ -5104,6 +5225,13 @@ export interface components {
             repeatByWeekday: boolean;
             clearRepeat: boolean;
             audience: components["schemas"]["at.clubserver.platform.Reach"];
+            /** @enum {string} */
+            priority: "LOW" | "NORMAL" | "HIGH";
+            labels: string[];
+            /** Format: uuid */
+            parentId: string;
+            clearParent: boolean;
+            blockedBy: string[];
         };
         "at.clubserver.gateway.rest.ResolutionsController.ResolutionPatch": {
             title: string;
@@ -5287,6 +5415,12 @@ export interface components {
             detail: string;
             /** Format: date-time */
             at: string;
+        };
+        "at.clubserver.tasks.api.TasksApi.StageList": {
+            items: components["schemas"]["at.clubserver.tasks.api.TasksApi.StageDto"][];
+        };
+        "at.clubserver.tasks.api.TasksApi.LabelList": {
+            items: components["schemas"]["at.clubserver.tasks.api.TasksApi.LabelDto"][];
         };
         "at.clubserver.gateway.rest.SearchController.SearchHit": {
             /** @enum {string} */
@@ -5941,6 +6075,52 @@ export interface operations {
             };
         };
     };
+    saveStage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.TasksController.StageBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.tasks.api.TasksApi.StageDto"];
+                };
+            };
+        };
+    };
+    deleteStage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     settings: {
         parameters: {
             query?: never;
@@ -5982,6 +6162,52 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["at.clubserver.tasks.api.TasksApi.TaskSettings"];
                 };
+            };
+        };
+    };
+    saveLabel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.TasksController.LabelBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.tasks.api.TasksApi.LabelDto"];
+                };
+            };
+        };
+    };
+    deleteLabel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -8154,6 +8380,94 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["at.clubserver.tasks.api.TasksApi.TaskDto"];
+                };
+            };
+        };
+    };
+    stages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.tasks.api.TasksApi.StageList"];
+                };
+            };
+        };
+    };
+    createStage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.TasksController.StageBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.tasks.api.TasksApi.StageDto"];
+                };
+            };
+        };
+    };
+    labels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.tasks.api.TasksApi.LabelList"];
+                };
+            };
+        };
+    };
+    createLabel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["at.clubserver.gateway.rest.TasksController.LabelBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["at.clubserver.tasks.api.TasksApi.LabelDto"];
                 };
             };
         };

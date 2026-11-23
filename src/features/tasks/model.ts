@@ -42,7 +42,59 @@ export interface Task {
   source: TaskSource | null;
   /** Club tasks only: who else sees it and may be assigned. Empty = the board's own task. */
   audience: Reach;
+  /** The club's status (board column, `TaskStage.key`) within `status`, its phase. */
+  stage: string;
+  priority: TaskPriority;
+  /** Keys of the club's labels. */
+  labels: string[];
+  /** The task this one is a subtask of (one level); null also when the reader cannot see it. */
+  parent: TaskLink | null;
+  subtasks: TaskLink[];
+  /** Tasks this one waits for (shown only; completing stays allowed). Only those the reader sees. */
+  blockedBy: TaskLink[];
 }
+
+export type TaskPriority = 'LOW' | 'NORMAL' | 'HIGH';
+
+export const TASK_PRIORITIES: readonly { value: TaskPriority; label: string }[] = [
+  { value: 'LOW', label: 'Niedrig' },
+  { value: 'NORMAL', label: 'Normal' },
+  { value: 'HIGH', label: 'Hoch' },
+];
+
+export const priorityLabel = (p: TaskPriority): string => TASK_PRIORITIES.find((o) => o.value === p)?.label ?? p;
+
+/** Another task, as a task names it (parent, subtask, blocker). */
+export interface TaskLink {
+  id: string;
+  title: string;
+  status: TaskStatus;
+}
+
+/** server: TasksApi.StageDto — a club status (board column) inside one of the fixed phases the rules read. */
+export interface TaskStage {
+  key: string;
+  label: string;
+  hue: Hue;
+  phase: TaskStatus;
+  sort: number;
+  archived: boolean;
+  inUse: boolean;
+}
+
+export type TaskStageInput = Pick<TaskStage, 'label' | 'hue' | 'phase' | 'sort' | 'archived'>;
+
+/** server: TasksApi.LabelDto */
+export interface TaskLabel {
+  key: string;
+  label: string;
+  hue: Hue;
+  sort: number;
+  archived: boolean;
+  inUse: boolean;
+}
+
+export type TaskLabelInput = Pick<TaskLabel, 'label' | 'hue' | 'sort' | 'archived'>;
 
 export interface TaskSource {
   /** MEETING_REMINDER: a deadline (invitation, circular vote, term end, yearly meetings, co-option, by-election) as a task. */
@@ -68,6 +120,10 @@ export interface NewTask {
   repeatMonths: number | null;
   repeatByWeekday: boolean;
   audience: Reach;
+  priority: TaskPriority;
+  labels: string[];
+  parentId: string | null;
+  blockedBy: string[];
 }
 
 /** Omitted fields stay unchanged; a given checklist replaces the old one (and resets its ticks). */
@@ -80,6 +136,12 @@ export type TaskPatch = Partial<Pick<NewTask, 'title' | 'description' | 'dueAt' 
   clearRepeat?: boolean;
   /** Only for tasks that have one, and never emptied. */
   audience?: Reach;
+  priority?: TaskPriority;
+  labels?: string[];
+  parentId?: string;
+  clearParent?: boolean;
+  /** Replaces the list; tasks the editor cannot see stay. */
+  blockedBy?: string[];
 };
 
 /** "Wiederholen" choices; '' = once. */
@@ -139,7 +201,7 @@ export function isDueSoon(task: Task, hours: number, now: Date): boolean {
 
 export const statusLabel = (status: TaskStatus): string => TASK_STATUSES.find((s) => s.value === status)?.label ?? status;
 
-const STATUS_HUES: Readonly<Record<TaskStatus, Hue>> = { OPEN: 'gray', IN_PROGRESS: 'blue', DONE: 'green' };
+const STATUS_HUES: Readonly<Record<TaskStatus, Hue>> = { OPEN: 'red', IN_PROGRESS: 'yellow', DONE: 'green' };
 
 export const statusHue = (status: TaskStatus): Hue => STATUS_HUES[status];
 

@@ -8,12 +8,39 @@ import { MockServer, mockServer, type MockRequest } from '../../lib/mock/MockSer
 import { MockTable } from '../../lib/mock/MockTable';
 import type { Member } from '../../lib/types';
 import { repeatAt, type Rhythm } from '../../lib/time/repeat';
-import { type NewTask, type Task, type TaskComment, type TaskPatch, type TaskSettings, type TaskSource, type TaskStatus } from './model';
+import {
+  type NewTask,
+  type Task,
+  type TaskComment,
+  type TaskLabel,
+  type TaskLink,
+  type TaskPatch,
+  type TaskPriority,
+  type TaskSettings,
+  type TaskSource,
+  type TaskStage,
+  type TaskStatus,
+} from './model';
+import { HUES } from '../calendar/model';
 import type { MockEvent } from '../../lib/mock/MockEventBus';
 import { ADMIN_BOARD, coaches } from '../../lib/types';
 import { CHANGE_FIELD_LABELS, type ChangeField } from '../members/MembersApi';
 
-type StoredTask = Omit<Task, 'comments' | 'source'>;
+/** As tasks_task stores it: the club stage (null = the first of its phase), the parent and the tasks it waits for by id. */
+type StoredTask = Omit<Task, 'comments' | 'source' | 'stage' | 'parent' | 'subtasks' | 'blockedBy'> & {
+  stage: string | null;
+  parentId: string | null;
+  blockerIds: string[];
+};
+type StoredStage = Omit<TaskStage, 'inUse'>;
+type StoredLabel = Omit<TaskLabel, 'inUse'>;
+
+/** What tasks the app makes carry (server: Task.create). */
+const UNPLANNED = { stage: null, priority: 'NORMAL' as TaskPriority, labels: [] as string[], parentId: null, blockerIds: [] as string[] };
+const PRIORITIES: readonly TaskPriority[] = ['LOW', 'NORMAL', 'HIGH'];
+/** server: Task.MAX_LABELS, TaskHandlers.MAX_BLOCKERS */
+const MAX_LABELS = 10;
+const MAX_BLOCKERS = 20;
 
 const fail = MockServer.fail;
 const limits = settings.tasks;
@@ -74,6 +101,15 @@ export class MockTasks {
   /** server: tasks_setting */
   readonly settings = new MockTable<TaskSettings>('task-settings', () => ({ remindHours: 24, overdueRepeatDays: 0, escalateAfterDays: 0 }));
 
+  /** server: tasks_stage, seeded by V158 */
+  readonly stages = new MockTable<StoredStage[]>('task-stages', () => [
+    { key: 'OPEN', label: 'Offen', hue: 'red', phase: 'OPEN', sort: 10, archived: false },
+    { key: 'IN_PROGRESS', label: 'In Arbeit', hue: 'yellow', phase: 'IN_PROGRESS', sort: 20, archived: false },
+    { key: 'DONE', label: 'Erledigt', hue: 'green', phase: 'DONE', sort: 30, archived: false },
+  ]);
+  /** server: tasks_label */
+  readonly labels = new MockTable<StoredLabel[]>('task-labels', () => []);
+
   constructor(private readonly people: MockDirectory) {
     this.tasks = new MockTable('tasks', () => this.seedTasks());
     this.comments = new MockTable('task-comments', () => this.seedComments());
@@ -120,6 +156,7 @@ export class MockTasks {
         repeatMonths: null,
         repeatByWeekday: false,
         audience: NO_AUDIENCE,
+        ...UNPLANNED,
       };
       this.tasks.data.push(task);
       this.sources.data[task.id] = { kind: 'CHANGE_REQUEST', id: data.requestId };
@@ -159,6 +196,7 @@ export class MockTasks {
         repeatMonths: null,
         repeatByWeekday: false,
         audience: NO_AUDIENCE,
+        ...UNPLANNED,
       };
       this.tasks.data.push(task);
       this.sources.data[task.id] = { kind, id: sourceId };
@@ -174,6 +212,7 @@ export class MockTasks {
     const task = this.tasks.data.find((t) => t.id === taskId && t.status !== 'DONE');
     if (!task) return;
     task.status = 'DONE';
+    task.stage = null;
     task.completedAt = new Date().toISOString();
     this.tasks.save();
     this.changed(task, 'STATUS');
@@ -212,6 +251,7 @@ export class MockTasks {
       repeatMonths: null,
       repeatByWeekday: false,
       audience: NO_AUDIENCE,
+      ...UNPLANNED,
     };
     this.tasks.data.push(task);
     this.sources.data[task.id] = { kind: 'MEETING_REMINDER', id: key };
@@ -335,11 +375,12 @@ export class MockTasks {
           viewer.canSee(t) && (!mine || viewer.assigned(t)) && (!teamId || t.teamId === teamId) && (includeDone || t.status !== 'DONE') && inRange(t),
       )
       .sort((a, b) => MockTasks.compareDue(a, b))
-      .map((t) => ({ ...t, comments: [], source: null }));
+      .map((t) => this.dto(viewer, t, [], null));
   }
 
   get(member: Member, id: string): Task {
-    return this.withComments(this.visible(this.viewer(member), id));
+    const viewer = this.viewer(member);
+    return this.withComments(viewer, this.visible(viewer, id));
   }
 
   create(member: Member, body: NewTask): Task {
@@ -348,10 +389,14 @@ export class MockTasks {
     if (body.teamId && hasAudience(audience)) fail(400, 'task.audience-invalid');
     this.requireMayManage(viewer, { teamId: body.teamId ?? null, audience, createdBy: member.id });
     this.requireValidAssignees(body.teamId ?? null, audience, body.assignees);
+    const id = crypto.randomUUID();
+    this.requireParent(viewer, id, body.parentId ?? null);
+    const blockerIds = [...new Set(body.blockedBy ?? [])];
+    this.requireBlockers(viewer, id, blockerIds);
     const now = new Date().toISOString();
     const task: StoredTask = MockTasks.validated({
       audience,
-      id: crypto.randomUUID(),
+      id,
       teamId: body.teamId ?? null,
       appointmentId: body.appointmentId ?? null,
       title: body.title,
@@ -364,13 +409,18 @@ export class MockTasks {
       createdAt: now,
       completedAt: null,
       ...MockTasks.rhythm(body.repeatWeeks, body.repeatMonths, body.repeatByWeekday),
+      stage: null,
+      priority: body.priority ?? 'NORMAL',
+      labels: this.requireLabels(body.labels ?? [], []),
+      parentId: body.parentId ?? null,
+      blockerIds,
     });
     this.tasks.data.push(task);
     this.tasks.save();
     this.changed(task, 'CREATED');
     MockActivity.record('TASK', task.id, member, 'CREATED', { title: task.title, teamIds: task.teamId ? [task.teamId] : [] });
     this.assigned(task, []);
-    return { ...task, comments: [], source: null };
+    return this.withComments(viewer, task);
   }
 
   /** Null fields stay unchanged; a given checklist replaces the old one. */
@@ -383,6 +433,15 @@ export class MockTasks {
     if (patch.audience) this.requireMayManage(viewer, { teamId: null, audience, createdBy: current.createdBy });
     if (patch.assignees || patch.audience) this.requireValidAssignees(current.teamId, audience, patch.assignees ?? current.assignees);
     if (patch.clearDue && patch.dueAt) fail(400, 'task.due-conflict');
+    if (!patch.clearParent) this.requireParent(viewer, current.id, patch.parentId ?? null);
+    const labels = patch.labels ? this.requireLabels(patch.labels, current.labels) : current.labels;
+    let blockerIds = current.blockerIds;
+    if (patch.blockedBy) {
+      this.requireBlockers(viewer, current.id, patch.blockedBy);
+      // server: tasks the editor cannot see stay
+      const hidden = current.blockerIds.filter((b) => !this.tasks.data.some((t) => t.id === b && viewer.canSee(t)));
+      blockerIds = [...new Set([...patch.blockedBy, ...hidden])];
+    }
     const previousAssignees = [...current.assignees];
     const next = MockTasks.validated({
       ...current,
@@ -397,18 +456,33 @@ export class MockTasks {
         : patch.repeatWeeks != null || patch.repeatMonths != null
           ? MockTasks.rhythm(patch.repeatWeeks, patch.repeatMonths, patch.repeatByWeekday)
           : {}),
+      priority: patch.priority ?? current.priority,
+      labels,
+      parentId: patch.clearParent ? null : (patch.parentId ?? current.parentId),
+      blockerIds,
     });
     Object.assign(current, next);
     this.tasks.save();
     this.changed(current, 'UPDATED', previousAssignees);
     MockActivity.record('TASK', current.id, member, 'UPDATED', { title: current.title, teamIds: current.teamId ? [current.teamId] : [] });
     this.assigned(current, previousAssignees);
-    return this.withComments(current);
+    return this.withComments(viewer, current);
   }
 
-  setStatus(member: Member, id: string, status: unknown): Task {
-    if (!STATUSES.includes(status as TaskStatus)) return fail(400, 'request.invalid');
-    const task = this.workable(this.viewer(member), id);
+  /** server: TaskHandlers.setStatus — a phase, or one of the club's stages (its phase follows). */
+  setStatus(member: Member, id: string, body: { status?: unknown; stage?: unknown }): Task {
+    const viewer = this.viewer(member);
+    const task = this.workable(viewer, id);
+    let status: TaskStatus;
+    let stage: string | null;
+    if (body.stage != null) {
+      const found = this.stages.data.find((s) => s.key === body.stage && (!s.archived || s.key === task.stage));
+      if (!found) return fail(400, 'task.stage-unknown');
+      [status, stage] = [found.phase, found.key];
+    } else if (STATUSES.includes(body.status as TaskStatus)) {
+      status = body.status as TaskStatus;
+      stage = status === task.status ? task.stage : null;
+    } else return fail(400, 'task.stage-unknown');
     // server: finishing a repeating task creates the next one, same local time n weeks later.
     if (status === 'DONE' && task.status !== 'DONE' && (task.repeatWeeks || task.repeatMonths) && task.dueAt) {
       const next: StoredTask = {
@@ -416,6 +490,8 @@ export class MockTasks {
         id: crypto.randomUUID(),
         appointmentId: null,
         status: 'OPEN',
+        stage: null,
+        blockerIds: [],
         dueAt: MockTasks.nextDue(task.dueAt, { weeks: task.repeatWeeks ?? 0, months: task.repeatMonths ?? 0, byWeekday: task.repeatByWeekday }),
         checklist: MockTasks.items(task.checklist.map((i) => i.text)),
         createdAt: new Date().toISOString(),
@@ -434,35 +510,38 @@ export class MockTasks {
       this.assigned(next, []);
     }
     const finished = status === 'DONE' && task.status !== 'DONE';
-    task.status = status as TaskStatus;
+    task.status = status;
+    task.stage = stage;
     task.completedAt = status === 'DONE' ? (task.completedAt ?? new Date().toISOString()) : null;
     this.tasks.save();
     this.changed(task, 'STATUS');
     if (finished) this.notice('DONE', task, [task.createdBy], member);
     MockActivity.record('TASK', task.id, member, 'STATUS', { title: task.title, teamIds: task.teamId ? [task.teamId] : [], detail: task.status });
-    return this.withComments(task);
+    return this.withComments(viewer, task);
   }
 
   check(member: Member, id: string, itemId: string, done: boolean): Task {
-    const task = this.workable(this.viewer(member), id);
+    const viewer = this.viewer(member);
+    const task = this.workable(viewer, id);
     const item = task.checklist.find((i) => i.id === itemId);
     if (!item) return fail(404, 'task.checklist-item-not-found');
     item.done = !!done;
     this.tasks.save();
     this.changed(task, 'UPDATED');
     MockActivity.record('TASK', task.id, member, 'UPDATED', { title: task.title, teamIds: task.teamId ? [task.teamId] : [] });
-    return this.withComments(task);
+    return this.withComments(viewer, task);
   }
 
   comment(member: Member, id: string, text: unknown): Task {
-    const task = this.visible(this.viewer(member), id);
+    const viewer = this.viewer(member);
+    const task = this.visible(viewer, id);
     if (typeof text !== 'string' || !text.trim() || text.length > limits.commentMaxLength) return fail(400, 'task.comment-invalid');
     (this.comments.data[id] ??= []).push({ id: crypto.randomUUID(), authorId: member.id, text, createdAt: new Date().toISOString() });
     this.comments.save();
     this.changed(task, 'COMMENTED');
     this.notice('COMMENTED', task, [task.createdBy, ...task.assignees, ...this.people.guardiansOf(task.assignees)], member);
     MockActivity.record('TASK', task.id, member, 'COMMENTED', { title: task.title, teamIds: task.teamId ? [task.teamId] : [] });
-    return this.withComments(task);
+    return this.withComments(viewer, task);
   }
 
   delete(member: Member, id: string): void {
@@ -472,6 +551,11 @@ export class MockTasks {
     this.changed(task, 'DELETED'); // audience computed before the task is gone
     MockActivity.record('TASK', task.id, member, 'DELETED', { title: task.title, teamIds: task.teamId ? [task.teamId] : [] });
     this.tasks.data.splice(this.tasks.data.indexOf(task), 1);
+    // server: parent_id ON DELETE SET NULL, tasks_dependency ON DELETE CASCADE
+    for (const t of this.tasks.data) {
+      if (t.parentId === id) t.parentId = null;
+      t.blockerIds = t.blockerIds.filter((b) => b !== id);
+    }
     delete this.comments.data[id];
     this.links.remove(id);
     this.tasks.save();
@@ -564,8 +648,151 @@ export class MockTasks {
     return MockDirectory.parseReach(body, 'task.audience-invalid');
   }
 
-  private withComments(task: StoredTask): Task {
-    return { ...task, comments: [...(this.comments.data[task.id] ?? [])], source: this.sources.data[task.id] ?? null };
+  private withComments(viewer: Viewer, task: StoredTask): Task {
+    return this.dto(viewer, task, [...(this.comments.data[task.id] ?? [])], this.sources.data[task.id] ?? null);
+  }
+
+  /** server: TaskHandlers.toDto with Related — the effective stage and the related tasks the reader sees. */
+  private dto(viewer: Viewer, task: StoredTask, comments: TaskComment[], source: TaskSource | null): Task {
+    const { parentId, blockerIds, ...rest } = task;
+    const seen = (id: string | null) => this.tasks.data.find((t) => t.id === id && viewer.canSee(t));
+    const link = (t: StoredTask): TaskLink => ({ id: t.id, title: t.title, status: t.status });
+    const parent = seen(parentId);
+    return {
+      ...rest,
+      stage: this.stageOf(task),
+      labels: [...task.labels].sort(),
+      parent: parent ? link(parent) : null,
+      subtasks: this.tasks.data.filter((t) => t.parentId === task.id && viewer.canSee(t)).map(link),
+      blockedBy: blockerIds
+        .flatMap((id) => seen(id) ?? [])
+        .sort((a, b) => a.title.localeCompare(b.title))
+        .map(link),
+      comments,
+      source,
+    };
+  }
+
+  /** server: Related.stageOf — the stored stage, else the first of the phase (active ones first). */
+  private stageOf(task: StoredTask): string {
+    if (task.stage) return task.stage;
+    const ofPhase = this.stages.data.filter((s) => s.phase === task.status);
+    return (ofPhase.find((s) => !s.archived) ?? ofPhase[0])?.key ?? task.status;
+  }
+
+  /** server: TaskHandlers.requireLabels — known ones; archived ones only where the task carries them already. */
+  private requireLabels(wanted: readonly string[], kept: readonly string[]): string[] {
+    const allowed = this.labels.data.filter((l) => !l.archived || kept.includes(l.key)).map((l) => l.key);
+    if (wanted.length > MAX_LABELS || wanted.some((k) => !allowed.includes(k))) fail(400, 'task.labels-invalid');
+    return [...new Set(wanted)];
+  }
+
+  /** server: TaskHandlers.requireParent — a visible task that is no subtask itself; the task has no subtasks (one level). */
+  private requireParent(viewer: Viewer, taskId: string, parentId: string | null): void {
+    if (!parentId) return;
+    const parent = this.tasks.data.find((t) => t.id === parentId && viewer.canSee(t));
+    if (!parent || parent.parentId !== null || parent.id === taskId || this.tasks.data.some((t) => t.parentId === taskId)) {
+      fail(400, 'task.parent-invalid');
+    }
+  }
+
+  /** server: TaskHandlers.requireBlockers — visible, at most 20, not itself, no circle. */
+  private requireBlockers(viewer: Viewer, taskId: string, blockedBy: readonly string[]): void {
+    const found = blockedBy.filter((id) => this.tasks.data.some((t) => t.id === id && viewer.canSee(t)));
+    if (blockedBy.length > MAX_BLOCKERS || blockedBy.includes(taskId) || found.length !== new Set(blockedBy).size) fail(400, 'task.blockers-invalid');
+    const seen = new Set(blockedBy);
+    let frontier = [...blockedBy];
+    while (frontier.length) {
+      const next = frontier.flatMap((id) => this.tasks.data.find((t) => t.id === id)?.blockerIds ?? []);
+      if (next.includes(taskId)) fail(400, 'task.blockers-cycle');
+      frontier = next.filter((id) => !seen.has(id) && seen.add(id));
+    }
+  }
+
+  /** server: TaskCatalogHandlers — every member reads; admin and board change; used entries are archived, not deleted. */
+  stageList(): TaskStage[] {
+    return [...this.stages.data]
+      .sort((a, b) => a.sort - b.sort || a.label.localeCompare(b.label))
+      .map((s) => ({ ...s, inUse: this.tasks.data.some((t) => t.stage === s.key) }));
+  }
+
+  labelList(): TaskLabel[] {
+    return [...this.labels.data]
+      .sort((a, b) => a.sort - b.sort || a.label.localeCompare(b.label))
+      .map((l) => ({ ...l, inUse: this.tasks.data.some((t) => t.labels.includes(l.key)) }));
+  }
+
+  saveStage(member: Member, key: string | null, body: Record<string, unknown>): TaskStage {
+    this.people.requirePrivileged(member, ADMIN_BOARD);
+    const stage = { key: key ?? MockTasks.generatedKey('STAGE'), ...MockTasks.catalogEntry(body, 'task-stage.invalid') } as StoredStage;
+    if (!STATUSES.includes(body.phase as TaskStatus)) fail(400, 'request.invalid');
+    stage.phase = body.phase as TaskStatus;
+    const index = this.stages.data.findIndex((s) => s.key === key);
+    if (key && index < 0) fail(404, 'task-stage.not-found');
+    if (key && this.stages.data[index].phase !== stage.phase && this.tasks.data.some((t) => t.stage === key)) {
+      fail(409, 'task-stage.phase-fixed');
+    }
+    const next = key ? this.stages.data.map((s, i) => (i === index ? stage : s)) : [...this.stages.data, stage];
+    MockTasks.requireEveryPhase(next);
+    this.stages.data.splice(0, this.stages.data.length, ...next);
+    this.stages.save();
+    this.catalogChanged();
+    return { ...stage, inUse: this.tasks.data.some((t) => t.stage === stage.key) };
+  }
+
+  deleteStage(member: Member, key: string): void {
+    this.people.requirePrivileged(member, ADMIN_BOARD);
+    if (!this.stages.data.some((s) => s.key === key)) fail(404, 'task-stage.not-found');
+    if (this.tasks.data.some((t) => t.stage === key)) fail(409, 'task-stage.in-use');
+    const next = this.stages.data.filter((s) => s.key !== key);
+    MockTasks.requireEveryPhase(next);
+    this.stages.data.splice(0, this.stages.data.length, ...next);
+    this.stages.save();
+    this.catalogChanged();
+  }
+
+  saveLabel(member: Member, key: string | null, body: Record<string, unknown>): TaskLabel {
+    this.people.requirePrivileged(member, ADMIN_BOARD);
+    const label = { key: key ?? MockTasks.generatedKey('LABEL'), ...MockTasks.catalogEntry(body, 'task-label.invalid') } as StoredLabel;
+    const index = this.labels.data.findIndex((l) => l.key === key);
+    if (key && index < 0) fail(404, 'task-label.not-found');
+    if (key) this.labels.data[index] = label;
+    else this.labels.data.push(label);
+    this.labels.save();
+    this.catalogChanged();
+    return { ...label, inUse: this.tasks.data.some((t) => t.labels.includes(label.key)) };
+  }
+
+  deleteLabel(member: Member, key: string): void {
+    this.people.requirePrivileged(member, ADMIN_BOARD);
+    const index = this.labels.data.findIndex((l) => l.key === key);
+    if (index < 0) fail(404, 'task-label.not-found');
+    if (this.tasks.data.some((t) => t.labels.includes(key))) fail(409, 'task-label.in-use');
+    this.labels.data.splice(index, 1);
+    this.labels.save();
+    this.catalogChanged();
+  }
+
+  private catalogChanged(): void {
+    mockServer.events.publish({ type: 'tasks.catalog-changed', data: {}, audience: { everyone: true } });
+  }
+
+  /** server: TaskStage.requireEveryPhase — each phase keeps an active stage. */
+  private static requireEveryPhase(stages: readonly StoredStage[]): void {
+    if (STATUSES.some((phase) => !stages.some((s) => s.phase === phase && !s.archived))) fail(400, 'task-stage.phase-empty');
+  }
+
+  /** server: TaskLabel.requireCatalogEntry */
+  private static catalogEntry(body: Record<string, unknown>, code: string) {
+    const label = typeof body.label === 'string' ? body.label.trim() : '';
+    const sort = Number(body.sort);
+    if (!label || label.length > 40 || !HUES.includes(body.hue as never) || !Number.isInteger(sort) || sort < 0 || sort > 1000) fail(400, code);
+    return { label, hue: body.hue, sort, archived: body.archived === true };
+  }
+
+  /** server: Keys.generated */
+  private static generatedKey(prefix: string): string {
+    return `${prefix}_${crypto.randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()}`;
   }
 
   /** server: Task constructor checks */
@@ -584,6 +811,8 @@ export class MockTasks {
     if (weeks != null && (weeks < 1 || weeks > 12 || task.repeatByWeekday)) fail(400, 'task.repeat-invalid');
     if (months != null && (months < 1 || months > 12)) fail(400, 'task.repeat-invalid');
     if ((weeks ?? months) != null && task.dueAt === null) fail(400, 'task.repeat-needs-due');
+    if (!PRIORITIES.includes(task.priority)) fail(400, 'request.invalid');
+    if (task.parentId === task.id) fail(400, 'task.parent-invalid');
     return { ...task, title: task.title.trim(), description: task.description || null };
   }
 
@@ -636,6 +865,7 @@ export class MockTasks {
       repeatMonths: null as number | null,
       repeatByWeekday: false,
       audience: NO_AUDIENCE,
+      ...UNPLANNED,
     };
     const items = (...entries: [string, boolean][]) => entries.map(([text, done], i) => ({ id: `ci-${text.length}-${i}`, text, done }));
     return [
@@ -762,6 +992,14 @@ mockServer
     mockServer.events.publish({ type: 'tasks.settings-changed', data: {}, audience: { everyone: true } });
     return result;
   })
+  .on('GET', '/api/v1/tasks/stages', (req) => (actor(req), { items: tasks.stageList() }))
+  .on('POST', '/api/v1/tasks/stages', (req) => tasks.saveStage(actor(req), null, req.body ?? {}))
+  .on('PUT', '/api/v1/tasks/stages/:key', (req) => tasks.saveStage(actor(req), req.params.key, req.body ?? {}))
+  .on('DELETE', '/api/v1/tasks/stages/:key', (req) => tasks.deleteStage(actor(req), req.params.key))
+  .on('GET', '/api/v1/tasks/labels', (req) => (actor(req), { items: tasks.labelList() }))
+  .on('POST', '/api/v1/tasks/labels', (req) => tasks.saveLabel(actor(req), null, req.body ?? {}))
+  .on('PUT', '/api/v1/tasks/labels/:key', (req) => tasks.saveLabel(actor(req), req.params.key, req.body ?? {}))
+  .on('DELETE', '/api/v1/tasks/labels/:key', (req) => tasks.deleteLabel(actor(req), req.params.key))
   .on('GET', '/api/v1/tasks/:id/activity', (req) => activity.list(actor(req), 'TASK', tasks.get(actor(req), req.params.id).id))
   .on('GET', '/api/v1/tasks', (req) => {
     const found = tasks.list(
@@ -778,7 +1016,7 @@ mockServer
   .on('POST', '/api/v1/tasks/audience-members', (req) => tasks.audienceMembers(actor(req), req.body))
   .on('GET', '/api/v1/tasks/:id', (req) => tasks.get(actor(req), req.params.id))
   .on('PATCH', '/api/v1/tasks/:id', (req) => tasks.update(actor(req), req.params.id, req.body ?? {}))
-  .on('PUT', '/api/v1/tasks/:id/status', (req) => tasks.setStatus(actor(req), req.params.id, req.body?.status))
+  .on('PUT', '/api/v1/tasks/:id/status', (req) => tasks.setStatus(actor(req), req.params.id, req.body ?? {}))
   .on('PUT', '/api/v1/tasks/:id/checklist/:itemId', (req) => tasks.check(actor(req), req.params.id, req.params.itemId, req.body?.done))
   .on('POST', '/api/v1/tasks/:id/comments', (req) => tasks.comment(actor(req), req.params.id, req.body?.text))
   .on('DELETE', '/api/v1/tasks/:id', (req) => tasks.delete(actor(req), req.params.id))
