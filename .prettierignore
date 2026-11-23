@@ -5,3 +5,4 @@ src/lib/api/error-codes.json
 package-lock.json
 .impeccable
 src/lib/api/word-template-cases.json
+src/lib/api/document-kinds.json

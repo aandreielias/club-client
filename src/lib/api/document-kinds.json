@@ -1,478 +1,390 @@
 {
-  "letterhead": [
-    {
-      "name": "Verein",
-      "description": "Name des Vereins",
-      "example": "Musterverein",
-      "fields": []
-    },
-    {
-      "name": "Kurzname",
-      "description": "Kurzname des Vereins",
-      "example": "MV",
-      "fields": []
-    },
-    {
-      "name": "Adresse",
-      "description": "Anschrift des Vereins (jede Zeile ein Absatz)",
-      "example": "Hauptstraße 1, 1010 Wien",
-      "fields": []
-    },
-    {
-      "name": "Webseite",
-      "description": "Webseite des Vereins",
-      "example": "www.musterverein.at",
-      "fields": []
-    },
-    {
-      "name": "Kontakt",
-      "description": "Kontakt-E-Mail des Vereins",
-      "example": "office@musterverein.at",
-      "fields": []
-    },
-    {
-      "name": "Registernummer",
-      "description": "Registernummer (z. B. ZVR)",
-      "example": "123456789",
-      "fields": []
-    },
-    {
-      "name": "Vorstandsvorsitz",
-      "description": "Wer den Vorsitz innehat",
-      "example": "Maria Muster",
-      "fields": []
-    },
-    {
-      "name": "Kontoinhaber",
-      "description": "Kontoinhaber des Vereinskontos (Buchhaltung › Mitgliedsbeiträge › Zahlung)",
-      "example": "Musterverein",
-      "fields": []
-    },
-    {
-      "name": "IBAN",
-      "description": "IBAN des Vereinskontos",
-      "example": "AT61 1904 3002 3457 3201",
-      "fields": []
-    },
-    {
-      "name": "BIC",
-      "description": "BIC des Vereinskontos",
-      "example": "BKAUATWW",
-      "fields": []
-    },
-    {
-      "name": "Dokument",
-      "description": "Art des Dokuments, z. B. Einladung",
-      "example": "Einladung",
-      "fields": []
-    },
-    {
-      "name": "Erstellt",
-      "description": "Tag, an dem das Dokument erstellt wurde",
-      "example": "20. November 2026",
-      "fields": []
-    }
-  ],
-  "items": [
-    {
-      "slot": "DOKUMENT",
-      "label": "Dokument (Briefpapier)",
-      "fields": []
-    },
-    {
-      "slot": "INVITATION_TEMPLATE",
-      "label": "Einladung",
-      "fields": [
-        {
-          "name": "Art",
-          "description": "Sitzungsart, gebeugt (zur …/der …)",
-          "example": "ordentlichen Mitgliederversammlung",
-          "fields": []
-        },
-        {
-          "name": "Sitzung",
-          "description": "Titel der Sitzung",
-          "example": "Mitgliederversammlung 2026",
-          "fields": []
-        },
-        {
-          "name": "Titel",
-          "description": "Titel der Sitzung, nur wenn er vom Namen der Sitzungsart abweicht",
-          "example": "Mitgliederversammlung 2026",
-          "fields": []
-        },
-        {
-          "name": "Datum",
-          "description": "Tag der Sitzung",
-          "example": "Freitag, 4. Dezember 2026",
-          "fields": []
-        },
-        {
-          "name": "Beginn",
-          "description": "Beginn (Uhrzeit)",
-          "example": "19:00",
-          "fields": []
-        },
-        {
-          "name": "Ende",
-          "description": "Ende (Uhrzeit)",
-          "example": "21:00",
-          "fields": []
-        },
-        {
-          "name": "Wann",
-          "description": "Tag, Beginn und Ende",
-          "example": "Freitag, 4. Dezember 2026, 19:00 bis 21:00 Uhr",
-          "fields": []
-        },
-        {
-          "name": "Ort",
-          "description": "Ort der Sitzung",
-          "example": "Vereinsheim, Hauptstraße 1",
-          "fields": []
-        },
-        {
-          "name": "Online",
-          "description": "Hinweis auf die Videokonferenz in der App, leer bei Sitzungen vor Ort",
-          "example": "Videokonferenz in der App",
-          "fields": []
-        },
-        {
-          "name": "Dringlichkeit",
-          "description": "Grund der Dringlichkeit, leer wenn keiner",
-          "example": "Die Halle muss bis Jahresende gekündigt werden.",
-          "fields": []
-        },
-        {
-          "name": "Versandt",
-          "description": "Tag der Einladung",
-          "example": "13. November 2026",
-          "fields": []
-        },
-        {
-          "name": "Punkte",
-          "description": "Die Tagesordnungspunkte (Liste)",
-          "example": null,
-          "fields": [
-            {
-              "name": "Nummer",
-              "description": "Nummer des Punkts",
-              "example": "1",
-              "fields": []
-            },
-            {
-              "name": "Titel",
-              "description": "Titel des Punkts",
-              "example": "Mitgliedsbeitrag 2027",
-              "fields": []
-            },
-            {
-              "name": "Notiz",
-              "description": "Notiz zum Punkt",
-              "example": "Unterlagen liegen bei.",
-              "fields": []
-            },
-            {
-              "name": "Antrag",
-              "description": "Antragstext, wenn über den Punkt abgestimmt wird",
-              "example": "Der Mitgliedsbeitrag 2027 beträgt 120 Euro.",
-              "fields": []
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "slot": "PROTOCOL_TEMPLATE",
-      "label": "Protokoll",
-      "fields": [
-        {
-          "name": "Art",
-          "description": "Sitzungsart, gebeugt (zur …/der …)",
-          "example": "ordentlichen Mitgliederversammlung",
-          "fields": []
-        },
-        {
-          "name": "Sitzung",
-          "description": "Titel der Sitzung",
-          "example": "Mitgliederversammlung 2026",
-          "fields": []
-        },
-        {
-          "name": "Titel",
-          "description": "Titel der Sitzung, nur wenn er vom Namen der Sitzungsart abweicht",
-          "example": "Mitgliederversammlung 2026",
-          "fields": []
-        },
-        {
-          "name": "Datum",
-          "description": "Tag der Sitzung",
-          "example": "Freitag, 4. Dezember 2026",
-          "fields": []
-        },
-        {
-          "name": "Beginn",
-          "description": "Beginn (Uhrzeit)",
-          "example": "19:00",
-          "fields": []
-        },
-        {
-          "name": "Ende",
-          "description": "Ende (Uhrzeit)",
-          "example": "21:00",
-          "fields": []
-        },
-        {
-          "name": "Wann",
-          "description": "Tag, Beginn und Ende",
-          "example": "Freitag, 4. Dezember 2026, 19:00 bis 21:00 Uhr",
-          "fields": []
-        },
-        {
-          "name": "Ort",
-          "description": "Ort der Sitzung",
-          "example": "Vereinsheim, Hauptstraße 1",
-          "fields": []
-        },
-        {
-          "name": "Online",
-          "description": "Hinweis auf die Videokonferenz in der App, leer bei Sitzungen vor Ort",
-          "example": "Videokonferenz in der App",
-          "fields": []
-        },
-        {
-          "name": "Vorsitz",
-          "description": "Vorsitz der Sitzung",
-          "example": "Maria Muster",
-          "fields": []
-        },
-        {
-          "name": "Schriftführer",
-          "description": "Schriftführung der Sitzung",
-          "example": "Max Beispiel",
-          "fields": []
-        },
-        {
-          "name": "Anwesend",
-          "description": "Anwesende Stimmberechtigte",
-          "example": "Maria Muster, Max Beispiel, Eva Neu",
-          "fields": []
-        },
-        {
-          "name": "Abwesend",
-          "description": "Abwesende Stimmberechtigte",
-          "example": "Paul Fern",
-          "fields": []
-        },
-        {
-          "name": "Gäste",
-          "description": "Eingeladene Gäste",
-          "example": "Dr. Anna Gast",
-          "fields": []
-        },
-        {
-          "name": "AnzahlAnwesend",
-          "description": "Zahl der anwesenden Stimmberechtigten",
-          "example": "21",
-          "fields": []
-        },
-        {
-          "name": "AnzahlStimmberechtigt",
-          "description": "Zahl der Stimmberechtigten",
-          "example": "34",
-          "fields": []
-        },
-        {
-          "name": "Beschlussfähig",
-          "description": "ja oder nein",
-          "example": "ja",
-          "fields": []
-        },
-        {
-          "name": "Punkte",
-          "description": "Die Tagesordnungspunkte (Liste)",
-          "example": null,
-          "fields": [
-            {
-              "name": "Nummer",
-              "description": "Nummer des Punkts",
-              "example": "1",
-              "fields": []
-            },
-            {
-              "name": "Titel",
-              "description": "Titel des Punkts",
-              "example": "Mitgliedsbeitrag 2027",
-              "fields": []
-            },
-            {
-              "name": "Protokoll",
-              "description": "Protokoll zum Punkt",
-              "example": "Der Kassier erläutert die Kosten der Halle.",
-              "fields": []
-            },
-            {
-              "name": "Beschluss",
-              "description": "Der Beschluss zum Punkt (Liste mit höchstens einem Eintrag)",
-              "example": null,
-              "fields": [
-                {
-                  "name": "Antrag",
-                  "description": "Antragstext",
-                  "example": "Der Mitgliedsbeitrag 2027 beträgt 120 Euro.",
-                  "fields": []
-                },
-                {
-                  "name": "Ergebnis",
-                  "description": "Ergebnis der Abstimmung",
-                  "example": "angenommen",
-                  "fields": []
-                },
-                {
-                  "name": "Ja",
-                  "description": "Stimmen dafür",
-                  "example": "18",
-                  "fields": []
-                },
-                {
-                  "name": "Nein",
-                  "description": "Stimmen dagegen",
-                  "example": "2",
-                  "fields": []
-                },
-                {
-                  "name": "Enthaltung",
-                  "description": "Enthaltungen",
-                  "example": "1",
-                  "fields": []
-                },
-                {
-                  "name": "Mehrheit",
-                  "description": "Verlangte Mehrheit",
-                  "example": "einfache Mehrheit",
-                  "fields": []
-                },
-                {
-                  "name": "Modus",
-                  "description": "Art der Abstimmung",
-                  "example": "Handzeichen",
-                  "fields": []
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "name": "Aufgaben",
-          "description": "Aufgaben aus angenommenen Beschlüssen (Liste)",
-          "example": null,
-          "fields": [
-            {
-              "name": "Aufgabe",
-              "description": "Was zu tun ist",
-              "example": "Mitgliedsbeitrag 2027 umsetzen",
-              "fields": []
-            },
-            {
-              "name": "Verantwortlich",
-              "description": "Wer es umsetzt",
-              "example": "Max Beispiel",
-              "fields": []
-            },
-            {
-              "name": "Bis",
-              "description": "Bis wann",
-              "example": "31. Jänner 2027",
-              "fields": []
-            }
-          ]
-        },
-        {
-          "name": "Notizen",
-          "description": "Weitere Notizen zum Protokoll",
-          "example": "Nächste Sitzung im Frühjahr.",
-          "fields": []
-        },
-        {
-          "name": "Freigaben",
-          "description": "Wer das Protokoll freigegeben hat (jede Freigabe ein Absatz)",
-          "example": "Maria Muster (Vorsitz) am 10. Dezember 2026",
-          "fields": []
-        }
-      ]
-    },
-    {
-      "slot": "AUDIT_TEMPLATE",
-      "label": "Kassenprüfung",
-      "fields": [
-        {
-          "name": "Von",
-          "description": "Beginn des geprüften Zeitraums",
-          "example": "1. Jänner 2026",
-          "fields": []
-        },
-        {
-          "name": "Bis",
-          "description": "Geprüft bis",
-          "example": "31. Oktober 2026",
-          "fields": []
-        },
-        {
-          "name": "Prüfer",
-          "description": "Wer die Prüfung bestätigt hat",
-          "example": "Eva Neu",
-          "fields": []
-        },
-        {
-          "name": "Bestätigt",
-          "description": "Tag der Bestätigung",
-          "example": "20. November 2026",
-          "fields": []
-        },
-        {
-          "name": "Buchungen",
-          "description": "Zahl der Buchungen im Zeitraum",
-          "example": "148",
-          "fields": []
-        },
-        {
-          "name": "Einnahmen",
-          "description": "Summe der Einnahmen",
-          "example": "€ 12.480,00",
-          "fields": []
-        },
-        {
-          "name": "Ausgaben",
-          "description": "Summe der Ausgaben",
-          "example": "€ 9.215,50",
-          "fields": []
-        },
-        {
-          "name": "Notiz",
-          "description": "Ergebnis der Prüfung",
-          "example": "Keine Beanstandungen.",
-          "fields": []
-        },
-        {
-          "name": "Konten",
-          "description": "Kontostände am Prüfdatum (Liste)",
-          "example": null,
-          "fields": [
-            {
-              "name": "Konto",
-              "description": "Konto",
-              "example": "Bankkonto",
-              "fields": []
-            },
-            {
-              "name": "Stand",
-              "description": "Stand",
-              "example": "€ 3.264,50",
-              "fields": []
-            }
-          ]
-        }
-      ]
-    }
-  ]
+  "letterhead" : [ {
+    "name" : "Verein",
+    "description" : "Name des Vereins",
+    "example" : "Musterverein",
+    "fields" : [ ]
+  }, {
+    "name" : "Kurzname",
+    "description" : "Kurzname des Vereins",
+    "example" : "MV",
+    "fields" : [ ]
+  }, {
+    "name" : "Adresse",
+    "description" : "Anschrift des Vereins (jede Zeile ein Absatz)",
+    "example" : "Hauptstraße 1, 1010 Wien",
+    "fields" : [ ]
+  }, {
+    "name" : "Webseite",
+    "description" : "Webseite des Vereins",
+    "example" : "www.musterverein.at",
+    "fields" : [ ]
+  }, {
+    "name" : "Kontakt",
+    "description" : "Kontakt-E-Mail des Vereins",
+    "example" : "office@musterverein.at",
+    "fields" : [ ]
+  }, {
+    "name" : "Registernummer",
+    "description" : "Registernummer (z. B. ZVR)",
+    "example" : "123456789",
+    "fields" : [ ]
+  }, {
+    "name" : "Vorstandsvorsitz",
+    "description" : "Wer den Vorsitz innehat",
+    "example" : "Maria Muster",
+    "fields" : [ ]
+  }, {
+    "name" : "Kontoinhaber",
+    "description" : "Kontoinhaber des Vereinskontos (Buchhaltung › Mitgliedsbeiträge › Zahlung)",
+    "example" : "Musterverein",
+    "fields" : [ ]
+  }, {
+    "name" : "IBAN",
+    "description" : "IBAN des Vereinskontos",
+    "example" : "AT61 1904 3002 3457 3201",
+    "fields" : [ ]
+  }, {
+    "name" : "BIC",
+    "description" : "BIC des Vereinskontos",
+    "example" : "BKAUATWW",
+    "fields" : [ ]
+  }, {
+    "name" : "Dokument",
+    "description" : "Art des Dokuments, z. B. Einladung",
+    "example" : "Einladung",
+    "fields" : [ ]
+  }, {
+    "name" : "Erstellt",
+    "description" : "Tag, an dem das Dokument erstellt wurde",
+    "example" : "20. November 2026",
+    "fields" : [ ]
+  } ],
+  "items" : [ {
+    "slot" : "DOKUMENT",
+    "label" : "Dokument (Briefpapier)",
+    "fields" : [ ]
+  }, {
+    "slot" : "INVITATION_TEMPLATE",
+    "label" : "Einladung",
+    "fields" : [ {
+      "name" : "Art",
+      "description" : "Sitzungsart, gebeugt (zur …/der …)",
+      "example" : "ordentlichen Mitgliederversammlung",
+      "fields" : [ ]
+    }, {
+      "name" : "Sitzung",
+      "description" : "Titel der Sitzung",
+      "example" : "Mitgliederversammlung 2026",
+      "fields" : [ ]
+    }, {
+      "name" : "Titel",
+      "description" : "Titel der Sitzung, nur wenn er vom Namen der Sitzungsart abweicht",
+      "example" : "Mitgliederversammlung 2026",
+      "fields" : [ ]
+    }, {
+      "name" : "Datum",
+      "description" : "Tag der Sitzung",
+      "example" : "Freitag, 4. Dezember 2026",
+      "fields" : [ ]
+    }, {
+      "name" : "Beginn",
+      "description" : "Beginn (Uhrzeit)",
+      "example" : "19:00",
+      "fields" : [ ]
+    }, {
+      "name" : "Ende",
+      "description" : "Ende (Uhrzeit)",
+      "example" : "21:00",
+      "fields" : [ ]
+    }, {
+      "name" : "Wann",
+      "description" : "Tag, Beginn und Ende",
+      "example" : "Freitag, 4. Dezember 2026, 19:00 bis 21:00 Uhr",
+      "fields" : [ ]
+    }, {
+      "name" : "Ort",
+      "description" : "Ort der Sitzung",
+      "example" : "Vereinsheim, Hauptstraße 1",
+      "fields" : [ ]
+    }, {
+      "name" : "Online",
+      "description" : "Hinweis auf die Videokonferenz in der App, leer bei Sitzungen vor Ort",
+      "example" : "Videokonferenz in der App",
+      "fields" : [ ]
+    }, {
+      "name" : "Dringlichkeit",
+      "description" : "Grund der Dringlichkeit, leer wenn keiner",
+      "example" : "Die Halle muss bis Jahresende gekündigt werden.",
+      "fields" : [ ]
+    }, {
+      "name" : "Versandt",
+      "description" : "Tag der Einladung",
+      "example" : "13. November 2026",
+      "fields" : [ ]
+    }, {
+      "name" : "Punkte",
+      "description" : "Die Tagesordnungspunkte (Liste)",
+      "example" : null,
+      "fields" : [ {
+        "name" : "Nummer",
+        "description" : "Nummer des Punkts",
+        "example" : "1",
+        "fields" : [ ]
+      }, {
+        "name" : "Titel",
+        "description" : "Titel des Punkts",
+        "example" : "Mitgliedsbeitrag 2027",
+        "fields" : [ ]
+      }, {
+        "name" : "Notiz",
+        "description" : "Notiz zum Punkt",
+        "example" : "Unterlagen liegen bei.",
+        "fields" : [ ]
+      }, {
+        "name" : "Antrag",
+        "description" : "Antragstext, wenn über den Punkt abgestimmt wird",
+        "example" : "Der Mitgliedsbeitrag 2027 beträgt 120 Euro.",
+        "fields" : [ ]
+      } ]
+    } ]
+  }, {
+    "slot" : "PROTOCOL_TEMPLATE",
+    "label" : "Protokoll",
+    "fields" : [ {
+      "name" : "Art",
+      "description" : "Sitzungsart, gebeugt (zur …/der …)",
+      "example" : "ordentlichen Mitgliederversammlung",
+      "fields" : [ ]
+    }, {
+      "name" : "Sitzung",
+      "description" : "Titel der Sitzung",
+      "example" : "Mitgliederversammlung 2026",
+      "fields" : [ ]
+    }, {
+      "name" : "Titel",
+      "description" : "Titel der Sitzung, nur wenn er vom Namen der Sitzungsart abweicht",
+      "example" : "Mitgliederversammlung 2026",
+      "fields" : [ ]
+    }, {
+      "name" : "Datum",
+      "description" : "Tag der Sitzung",
+      "example" : "Freitag, 4. Dezember 2026",
+      "fields" : [ ]
+    }, {
+      "name" : "Beginn",
+      "description" : "Beginn (Uhrzeit)",
+      "example" : "19:00",
+      "fields" : [ ]
+    }, {
+      "name" : "Ende",
+      "description" : "Ende (Uhrzeit)",
+      "example" : "21:00",
+      "fields" : [ ]
+    }, {
+      "name" : "Wann",
+      "description" : "Tag, Beginn und Ende",
+      "example" : "Freitag, 4. Dezember 2026, 19:00 bis 21:00 Uhr",
+      "fields" : [ ]
+    }, {
+      "name" : "Ort",
+      "description" : "Ort der Sitzung",
+      "example" : "Vereinsheim, Hauptstraße 1",
+      "fields" : [ ]
+    }, {
+      "name" : "Online",
+      "description" : "Hinweis auf die Videokonferenz in der App, leer bei Sitzungen vor Ort",
+      "example" : "Videokonferenz in der App",
+      "fields" : [ ]
+    }, {
+      "name" : "Vorsitz",
+      "description" : "Vorsitz der Sitzung",
+      "example" : "Maria Muster",
+      "fields" : [ ]
+    }, {
+      "name" : "Schriftführer",
+      "description" : "Schriftführung der Sitzung",
+      "example" : "Max Beispiel",
+      "fields" : [ ]
+    }, {
+      "name" : "Anwesend",
+      "description" : "Anwesende Stimmberechtigte",
+      "example" : "Maria Muster, Max Beispiel, Eva Neu",
+      "fields" : [ ]
+    }, {
+      "name" : "Abwesend",
+      "description" : "Abwesende Stimmberechtigte",
+      "example" : "Paul Fern",
+      "fields" : [ ]
+    }, {
+      "name" : "Gäste",
+      "description" : "Eingeladene Gäste",
+      "example" : "Dr. Anna Gast",
+      "fields" : [ ]
+    }, {
+      "name" : "AnzahlAnwesend",
+      "description" : "Zahl der anwesenden Stimmberechtigten",
+      "example" : "21",
+      "fields" : [ ]
+    }, {
+      "name" : "AnzahlStimmberechtigt",
+      "description" : "Zahl der Stimmberechtigten",
+      "example" : "34",
+      "fields" : [ ]
+    }, {
+      "name" : "Beschlussfähig",
+      "description" : "ja oder nein",
+      "example" : "ja",
+      "fields" : [ ]
+    }, {
+      "name" : "Punkte",
+      "description" : "Die Tagesordnungspunkte (Liste)",
+      "example" : null,
+      "fields" : [ {
+        "name" : "Nummer",
+        "description" : "Nummer des Punkts",
+        "example" : "1",
+        "fields" : [ ]
+      }, {
+        "name" : "Titel",
+        "description" : "Titel des Punkts",
+        "example" : "Mitgliedsbeitrag 2027",
+        "fields" : [ ]
+      }, {
+        "name" : "Protokoll",
+        "description" : "Protokoll zum Punkt",
+        "example" : "Der Kassier erläutert die Kosten der Halle.",
+        "fields" : [ ]
+      }, {
+        "name" : "Beschluss",
+        "description" : "Der Beschluss zum Punkt (Liste mit höchstens einem Eintrag)",
+        "example" : null,
+        "fields" : [ {
+          "name" : "Antrag",
+          "description" : "Antragstext",
+          "example" : "Der Mitgliedsbeitrag 2027 beträgt 120 Euro.",
+          "fields" : [ ]
+        }, {
+          "name" : "Ergebnis",
+          "description" : "Ergebnis der Abstimmung",
+          "example" : "angenommen",
+          "fields" : [ ]
+        }, {
+          "name" : "Ja",
+          "description" : "Stimmen dafür",
+          "example" : "18",
+          "fields" : [ ]
+        }, {
+          "name" : "Nein",
+          "description" : "Stimmen dagegen",
+          "example" : "2",
+          "fields" : [ ]
+        }, {
+          "name" : "Enthaltung",
+          "description" : "Enthaltungen",
+          "example" : "1",
+          "fields" : [ ]
+        }, {
+          "name" : "Mehrheit",
+          "description" : "Verlangte Mehrheit",
+          "example" : "einfache Mehrheit",
+          "fields" : [ ]
+        }, {
+          "name" : "Modus",
+          "description" : "Art der Abstimmung",
+          "example" : "Handzeichen",
+          "fields" : [ ]
+        } ]
+      } ]
+    }, {
+      "name" : "Aufgaben",
+      "description" : "Aufgaben aus angenommenen Beschlüssen (Liste)",
+      "example" : null,
+      "fields" : [ {
+        "name" : "Aufgabe",
+        "description" : "Was zu tun ist",
+        "example" : "Mitgliedsbeitrag 2027 umsetzen",
+        "fields" : [ ]
+      }, {
+        "name" : "Verantwortlich",
+        "description" : "Wer es umsetzt",
+        "example" : "Max Beispiel",
+        "fields" : [ ]
+      }, {
+        "name" : "Bis",
+        "description" : "Bis wann",
+        "example" : "31. Jänner 2027",
+        "fields" : [ ]
+      } ]
+    }, {
+      "name" : "Notizen",
+      "description" : "Weitere Notizen zum Protokoll",
+      "example" : "Nächste Sitzung im Frühjahr.",
+      "fields" : [ ]
+    }, {
+      "name" : "Freigaben",
+      "description" : "Wer das Protokoll freigegeben hat (jede Freigabe ein Absatz)",
+      "example" : "Maria Muster (Vorsitz) am 10. Dezember 2026",
+      "fields" : [ ]
+    } ]
+  }, {
+    "slot" : "AUDIT_TEMPLATE",
+    "label" : "Kassenprüfung",
+    "fields" : [ {
+      "name" : "Von",
+      "description" : "Beginn des geprüften Zeitraums",
+      "example" : "1. Jänner 2026",
+      "fields" : [ ]
+    }, {
+      "name" : "Bis",
+      "description" : "Geprüft bis",
+      "example" : "31. Oktober 2026",
+      "fields" : [ ]
+    }, {
+      "name" : "Prüfer",
+      "description" : "Wer die Prüfung bestätigt hat",
+      "example" : "Eva Neu",
+      "fields" : [ ]
+    }, {
+      "name" : "Bestätigt",
+      "description" : "Tag der Bestätigung",
+      "example" : "20. November 2026",
+      "fields" : [ ]
+    }, {
+      "name" : "Buchungen",
+      "description" : "Zahl der Buchungen im Zeitraum",
+      "example" : "148",
+      "fields" : [ ]
+    }, {
+      "name" : "Einnahmen",
+      "description" : "Summe der Einnahmen",
+      "example" : "€ 12.480,00",
+      "fields" : [ ]
+    }, {
+      "name" : "Ausgaben",
+      "description" : "Summe der Ausgaben",
+      "example" : "€ 9.215,50",
+      "fields" : [ ]
+    }, {
+      "name" : "Notiz",
+      "description" : "Ergebnis der Prüfung",
+      "example" : "Keine Beanstandungen.",
+      "fields" : [ ]
+    }, {
+      "name" : "Konten",
+      "description" : "Kontostände am Prüfdatum (Liste)",
+      "example" : null,
+      "fields" : [ {
+        "name" : "Konto",
+        "description" : "Konto",
+        "example" : "Bankkonto",
+        "fields" : [ ]
+      }, {
+        "name" : "Stand",
+        "description" : "Stand",
+        "example" : "€ 3.264,50",
+        "fields" : [ ]
+      } ]
+    } ]
+  } ]
 }
