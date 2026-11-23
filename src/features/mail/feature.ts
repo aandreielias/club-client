@@ -1,15 +1,17 @@
+import { lazy } from '../../ui/lazy';
 import { mailActions, mailboxActions } from './actions';
 import { ADMIN_BOARD } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
-import MailboxCreateView from './MailboxCreateView.svelte';
-import MailboxView from './MailboxView.svelte';
-import MailComposeView from './MailComposeView.svelte';
-import MailPage from './MailPage.svelte';
-import MailSignatureView from './MailSignatureView.svelte';
-import RecordCodePage from './RecordCodePage.svelte';
-import MailView from './MailView.svelte';
 import { MAIL_MESSAGES } from './messages';
 import { mailCenter } from './services';
+
+const MailboxCreateView = lazy(() => import('./MailboxCreateView.svelte'));
+const MailboxView = lazy(() => import('./MailboxView.svelte'));
+const MailComposeView = lazy(() => import('./MailComposeView.svelte'));
+const MailPage = lazy(() => import('./MailPage.svelte'));
+const MailSignatureView = lazy(() => import('./MailSignatureView.svelte'));
+const RecordCodePage = lazy(() => import('./RecordCodePage.svelte'));
+const MailView = lazy(() => import('./MailView.svelte'));
 
 export const mailFeature: Feature = {
   id: 'mail',

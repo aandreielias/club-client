@@ -1,11 +1,13 @@
+import { lazy } from '../../ui/lazy';
 import { PRIVILEGED } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
 import { TOURNAMENT_MESSAGES } from './messages';
 import { tournamentActions } from './actions';
-import TournamentCreateView from './TournamentCreateView.svelte';
-import TournamentsPage from './TournamentsPage.svelte';
-import TournamentsHome from './TournamentsHome.svelte';
-import TournamentView from './TournamentView.svelte';
+
+const TournamentCreateView = lazy(() => import('./TournamentCreateView.svelte'));
+const TournamentsPage = lazy(() => import('./TournamentsPage.svelte'));
+const TournamentsHome = lazy(() => import('./TournamentsHome.svelte'));
+const TournamentView = lazy(() => import('./TournamentView.svelte'));
 
 export const tournamentsFeature: Feature = {
   id: 'tournaments',

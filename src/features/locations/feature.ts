@@ -1,10 +1,12 @@
+import { lazy } from '../../ui/lazy';
 import { locationActions } from './actions';
 import { PRIVILEGED } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
-import LocationCreateView from './LocationCreateView.svelte';
-import LocationsPage from './LocationsPage.svelte';
-import LocationView from './LocationView.svelte';
 import { LOCATION_MESSAGES } from './messages';
+
+const LocationCreateView = lazy(() => import('./LocationCreateView.svelte'));
+const LocationsPage = lazy(() => import('./LocationsPage.svelte'));
+const LocationView = lazy(() => import('./LocationView.svelte'));
 
 export const locationsFeature: Feature = {
   id: 'locations',

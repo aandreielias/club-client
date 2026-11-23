@@ -1,17 +1,19 @@
-import TasksHome from './TasksHome.svelte';
+import { lazy } from '../../ui/lazy';
 import { bus, permissions } from '../../lib/container';
 import { LIVE_RESYNC } from '../../lib/live/LiveUpdates.svelte';
 import { TASK_SETTINGS_CHANGED } from './events';
 import { detailRoute, type Feature } from '../Feature';
 import { TASK_MESSAGES } from './messages';
 import { dueReminders, taskLabels, taskSettings, taskStages } from './services';
-import TaskCreateView from './TaskCreateView.svelte';
-import TaskListPage from './TaskListPage.svelte';
-import TaskView from './TaskView.svelte';
 import { taskActions, taskLabelActions, taskStageActions } from './actions';
-import TaskStageView from './TaskStageView.svelte';
-import TaskLabelView from './TaskLabelView.svelte';
 import { ADMIN_BOARD } from '../../lib/types';
+
+const TasksHome = lazy(() => import('./TasksHome.svelte'));
+const TaskCreateView = lazy(() => import('./TaskCreateView.svelte'));
+const TaskListPage = lazy(() => import('./TaskListPage.svelte'));
+const TaskView = lazy(() => import('./TaskView.svelte'));
+const TaskStageView = lazy(() => import('./TaskStageView.svelte'));
+const TaskLabelView = lazy(() => import('./TaskLabelView.svelte'));
 
 export const tasksFeature: Feature = {
   id: 'tasks',

@@ -1,11 +1,13 @@
-import TeamsHome from './TeamsHome.svelte';
+import { lazy } from '../../ui/lazy';
 import { detailRoute, type Feature } from '../Feature';
 import { TEAM_MESSAGES } from './messages';
 import { teamActions } from './actions';
 import { teamPolicy } from './services';
-import TeamsPage from './TeamsPage.svelte';
-import TeamCreateView from './TeamCreateView.svelte';
-import TeamView from './TeamView.svelte';
+
+const TeamsHome = lazy(() => import('./TeamsHome.svelte'));
+const TeamsPage = lazy(() => import('./TeamsPage.svelte'));
+const TeamCreateView = lazy(() => import('./TeamCreateView.svelte'));
+const TeamView = lazy(() => import('./TeamView.svelte'));
 
 export const teamsFeature: Feature = {
   id: 'teams',

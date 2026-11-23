@@ -1,11 +1,13 @@
+import { lazy } from '../../ui/lazy';
 import { itemActions } from './actions';
-import InventoryHome from './InventoryHome.svelte';
 import { PRIVILEGED } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
-import InventoryPage from './InventoryPage.svelte';
-import ItemCreateView from './ItemCreateView.svelte';
-import ItemView from './ItemView.svelte';
 import { INVENTORY_MESSAGES } from './messages';
+
+const InventoryHome = lazy(() => import('./InventoryHome.svelte'));
+const InventoryPage = lazy(() => import('./InventoryPage.svelte'));
+const ItemCreateView = lazy(() => import('./ItemCreateView.svelte'));
+const ItemView = lazy(() => import('./ItemView.svelte'));
 
 export const inventoryFeature: Feature = {
   id: 'inventory',

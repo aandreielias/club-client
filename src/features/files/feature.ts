@@ -1,10 +1,12 @@
+import { lazy } from '../../ui/lazy';
 import { fileActions } from './actions';
-import FilesHome from './FilesHome.svelte';
 import type { Feature } from '../Feature';
-import ComparePage from './ComparePage.svelte';
-import FilesPage from './FilesPage.svelte';
 import { FILE_MESSAGES } from './messages';
-import PhotoView from './PhotoView.svelte';
+
+const FilesHome = lazy(() => import('./FilesHome.svelte'));
+const ComparePage = lazy(() => import('./ComparePage.svelte'));
+const FilesPage = lazy(() => import('./FilesPage.svelte'));
+const PhotoView = lazy(() => import('./PhotoView.svelte'));
 
 export const filesFeature: Feature = {
   id: 'files',

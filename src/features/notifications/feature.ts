@@ -1,8 +1,10 @@
+import { lazy } from '../../ui/lazy';
 import type { Feature } from '../Feature';
 import { NOTIFICATION_MESSAGES } from './messages';
-import NotificationsPage from './NotificationsPage.svelte';
-import NotificationsHome from './NotificationsHome.svelte';
 import { notificationCenter } from './services';
+
+const NotificationsPage = lazy(() => import('./NotificationsPage.svelte'));
+const NotificationsHome = lazy(() => import('./NotificationsHome.svelte'));
 
 export const notificationsFeature: Feature = {
   id: 'notifications',

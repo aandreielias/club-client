@@ -1,18 +1,20 @@
+import { lazy } from '../../ui/lazy';
 import { meetingActions, meetingTypeActions, resolutionActions } from './actions';
 import { session } from '../../lib/container';
 import { ADMIN_BOARD } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
 import { meetingTypes, resolutionRules } from './services';
-import MeetingCreateView from './MeetingCreateView.svelte';
-import MeetingsPage from './MeetingsPage.svelte';
-import MeetingsHome from './MeetingsHome.svelte';
-import MeetingTypeCreateView from './MeetingTypeCreateView.svelte';
-import MeetingTypeView from './MeetingTypeView.svelte';
-import MeetingView from './MeetingView.svelte';
-import CircularCreateView from './CircularCreateView.svelte';
-import ResolutionView from './ResolutionView.svelte';
-import ResolutionsPage from './ResolutionsPage.svelte';
 import { MEETING_MESSAGES } from './messages';
+
+const MeetingCreateView = lazy(() => import('./MeetingCreateView.svelte'));
+const MeetingsPage = lazy(() => import('./MeetingsPage.svelte'));
+const MeetingsHome = lazy(() => import('./MeetingsHome.svelte'));
+const MeetingTypeCreateView = lazy(() => import('./MeetingTypeCreateView.svelte'));
+const MeetingTypeView = lazy(() => import('./MeetingTypeView.svelte'));
+const MeetingView = lazy(() => import('./MeetingView.svelte'));
+const CircularCreateView = lazy(() => import('./CircularCreateView.svelte'));
+const ResolutionView = lazy(() => import('./ResolutionView.svelte'));
+const ResolutionsPage = lazy(() => import('./ResolutionsPage.svelte'));
 
 /** Ordinary members only ever get empty lists: the areas show for voters and the board (links to a meeting still open its window). */
 const seesMeetings = () => !!session.me?.member.voter || session.hasRole(...ADMIN_BOARD);

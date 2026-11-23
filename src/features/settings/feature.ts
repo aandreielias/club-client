@@ -1,6 +1,8 @@
+import { lazy } from '../../ui/lazy';
 import type { Feature } from '../Feature';
-import SettingsPage from './SettingsPage.svelte';
-import SettingsView from './SettingsView.svelte';
+
+const SettingsPage = lazy(() => import('./SettingsPage.svelte'));
+const SettingsView = lazy(() => import('./SettingsView.svelte'));
 
 export const settingsFeature: Feature = {
   id: 'settings',

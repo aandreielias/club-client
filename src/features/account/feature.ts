@@ -1,5 +1,7 @@
+import { lazy } from '../../ui/lazy';
 import type { Feature } from '../Feature';
-import AccountPage from './AccountPage.svelte';
+
+const AccountPage = lazy(() => import('./AccountPage.svelte'));
 
 export const accountFeature: Feature = {
   id: 'account',

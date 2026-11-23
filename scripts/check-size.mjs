@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 
-const BUDGET_KB = { js: 380, css: 30 }; // gzip; lower after code splitting
+const BUDGET_KB = { js: 180, css: 15 }; // gzip; pages and windows load lazily (ui/lazy.ts)
 
 const html = readFileSync('dist/index.html', 'utf8');
 const queue = [...html.matchAll(/(?:src|href)="[^"]*?assets\/([^"]+\.(?:js|css))"/g)].map((m) => m[1]);

@@ -1,7 +1,9 @@
+import { lazy } from '../../ui/lazy';
 import { ADMIN_BOARD, PRIVILEGED } from '../../lib/types';
 import type { Feature } from '../Feature';
-import ActivityHome from './ActivityHome.svelte';
-import ActivityPage from './ActivityPage.svelte';
+
+const ActivityHome = lazy(() => import('./ActivityHome.svelte'));
+const ActivityPage = lazy(() => import('./ActivityPage.svelte'));
 
 export const activityFeature: Feature = {
   id: 'activity',

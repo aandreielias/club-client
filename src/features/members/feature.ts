@@ -1,22 +1,24 @@
-import BoardPage from './BoardPage.svelte';
-import MembersHome from './MembersHome.svelte';
-import BoardHome from './BoardHome.svelte';
+import { lazy } from '../../ui/lazy';
 import { bus, directory, permissions } from '../../lib/container';
 import { LIVE_RESYNC } from '../../lib/live/LiveUpdates.svelte';
 import { MEMBER_CHANGED } from './events';
 import { ADMIN_BOARD } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
-import MemberInviteView from './MemberInviteView.svelte';
-import MemberView from './MemberView.svelte';
 import { MEMBER_MESSAGES } from './messages';
 import { memberActions, membershipKindActions, officeSettingActions } from './actions';
 import { boardSettings, memberPolicy, membershipKinds } from './services';
-import MembersPage from './MembersPage.svelte';
-import MembershipKindCreateView from './MembershipKindCreateView.svelte';
-import OfficeAssignView from './OfficeAssignView.svelte';
-import OfficeSettingCreateView from './OfficeSettingCreateView.svelte';
-import OfficeSettingView from './OfficeSettingView.svelte';
-import MembershipKindView from './MembershipKindView.svelte';
+
+const BoardPage = lazy(() => import('./BoardPage.svelte'));
+const MembersHome = lazy(() => import('./MembersHome.svelte'));
+const BoardHome = lazy(() => import('./BoardHome.svelte'));
+const MemberInviteView = lazy(() => import('./MemberInviteView.svelte'));
+const MemberView = lazy(() => import('./MemberView.svelte'));
+const MembersPage = lazy(() => import('./MembersPage.svelte'));
+const MembershipKindCreateView = lazy(() => import('./MembershipKindCreateView.svelte'));
+const OfficeAssignView = lazy(() => import('./OfficeAssignView.svelte'));
+const OfficeSettingCreateView = lazy(() => import('./OfficeSettingCreateView.svelte'));
+const OfficeSettingView = lazy(() => import('./OfficeSettingView.svelte'));
+const MembershipKindView = lazy(() => import('./MembershipKindView.svelte'));
 
 export const membersFeature: Feature = {
   id: 'members',

@@ -1,23 +1,25 @@
+import { lazy } from '../../ui/lazy';
 import { appointmentActions, appointmentTypeActions, holidayActions } from './actions';
-import CalendarHome from './CalendarHome.svelte';
-import OpenAnswersHome from './OpenAnswersHome.svelte';
 import { bus, permissions } from '../../lib/container';
 import { LIVE_RESYNC } from '../../lib/live/LiveUpdates.svelte';
 import { CALENDAR_SETTINGS_CHANGED } from './events';
 import { ADMIN_BOARD } from '../../lib/types';
 import { detailRoute, type Feature } from '../Feature';
 import { appointmentTypes, calendarSettings } from './services';
-import AppointmentCreateView from './AppointmentCreateView.svelte';
-import AppointmentView from './AppointmentView.svelte';
-import AppointmentTypeCreateView from './AppointmentTypeCreateView.svelte';
-import AppointmentTypeView from './AppointmentTypeView.svelte';
-import CalendarPage from './CalendarPage.svelte';
-import EventsPage from './EventsPage.svelte';
-import AbsenceCreateView from './AbsenceCreateView.svelte';
-import AbsencesPage from './AbsencesPage.svelte';
-import HolidayCreateView from './HolidayCreateView.svelte';
-import HolidayView from './HolidayView.svelte';
 import { CALENDAR_MESSAGES } from './messages';
+
+const CalendarHome = lazy(() => import('./CalendarHome.svelte'));
+const OpenAnswersHome = lazy(() => import('./OpenAnswersHome.svelte'));
+const AppointmentCreateView = lazy(() => import('./AppointmentCreateView.svelte'));
+const AppointmentView = lazy(() => import('./AppointmentView.svelte'));
+const AppointmentTypeCreateView = lazy(() => import('./AppointmentTypeCreateView.svelte'));
+const AppointmentTypeView = lazy(() => import('./AppointmentTypeView.svelte'));
+const CalendarPage = lazy(() => import('./CalendarPage.svelte'));
+const EventsPage = lazy(() => import('./EventsPage.svelte'));
+const AbsenceCreateView = lazy(() => import('./AbsenceCreateView.svelte'));
+const AbsencesPage = lazy(() => import('./AbsencesPage.svelte'));
+const HolidayCreateView = lazy(() => import('./HolidayCreateView.svelte'));
+const HolidayView = lazy(() => import('./HolidayView.svelte'));
 
 export const calendarFeature: Feature = {
   id: 'calendar',

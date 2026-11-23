@@ -1,18 +1,20 @@
+import { lazy } from '../../ui/lazy';
 import { session } from '../../lib/container';
 import { reaches } from './model';
 import { detailRoute, type Feature } from '../Feature';
 import { accountActions, auditActions, bookingActions, categoryActions, chargeActions, invoiceActions } from './actions';
-import AccountView from './AccountView.svelte';
-import AuditView from './AuditView.svelte';
-import BookingCreateView from './BookingCreateView.svelte';
-import BookingView from './BookingView.svelte';
-import CategoryView from './CategoryView.svelte';
-import ChargeView from './ChargeView.svelte';
-import FinancePage from './FinancePage.svelte';
-import FinanceSectionView from './FinanceSectionView.svelte';
-import InvoiceView from './InvoiceView.svelte';
 import { FINANCE_MESSAGES } from './messages';
-import MyFeesSection from './MyFeesSection.svelte';
+
+const AccountView = lazy(() => import('./AccountView.svelte'));
+const AuditView = lazy(() => import('./AuditView.svelte'));
+const BookingCreateView = lazy(() => import('./BookingCreateView.svelte'));
+const BookingView = lazy(() => import('./BookingView.svelte'));
+const CategoryView = lazy(() => import('./CategoryView.svelte'));
+const ChargeView = lazy(() => import('./ChargeView.svelte'));
+const FinancePage = lazy(() => import('./FinancePage.svelte'));
+const FinanceSectionView = lazy(() => import('./FinanceSectionView.svelte'));
+const InvoiceView = lazy(() => import('./InvoiceView.svelte'));
+const MyFeesSection = lazy(() => import('./MyFeesSection.svelte'));
 
 // server: FinanceAccess.level - offices with a Buchhaltung level, admins and the board; WRITE to book.
 const reads = () => reaches(session.me?.financeAccess, 'READ');

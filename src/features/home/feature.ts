@@ -1,7 +1,9 @@
+import { lazy } from '../../ui/lazy';
 import type { Feature } from '../Feature';
-import AgendaHome from './AgendaHome.svelte';
-import HomePage from './HomePage.svelte';
-import SetupHome from './SetupHome.svelte';
+
+const AgendaHome = lazy(() => import('./AgendaHome.svelte'));
+const HomePage = lazy(() => import('./HomePage.svelte'));
+const SetupHome = lazy(() => import('./SetupHome.svelte'));
 
 export const homeFeature: Feature = {
   id: 'home',
