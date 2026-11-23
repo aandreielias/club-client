@@ -8,7 +8,7 @@ import type { Notification, NotificationCreated, NotificationList } from './mode
 
 export const NOTIFICATION_CREATED = liveEvent<NotificationCreated>('notifications.notification-created');
 /** The member read notifications in another tab or device. */
-export const NOTIFICATIONS_READ = liveEvent<Record<string, never>>('notifications.notifications-read');
+const NOTIFICATIONS_READ = liveEvent<Record<string, never>>('notifications.notifications-read');
 /** Club notification rules changed (important kinds, defaults, retention). */
 export const NOTIFICATION_SETTINGS_CHANGED = liveEvent<Record<string, never>>('notifications.settings-changed');
 

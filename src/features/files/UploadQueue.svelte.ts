@@ -3,7 +3,7 @@ import type { FileTypes } from './FileTypes';
 import type { FilesApi } from './FilesApi';
 import type { Folder, StoredFile } from './model';
 
-export type UploadState = 'waiting' | 'uploading' | 'done' | 'failed';
+type UploadState = 'waiting' | 'uploading' | 'done' | 'failed';
 
 export interface UploadItem {
   key: number;

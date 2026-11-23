@@ -146,7 +146,7 @@ export interface Board {
 
 /** Account data a member cannot change alone; admin/board decide on a request. */
 export type ChangeField = 'EMAIL' | 'FIRST_NAME' | 'MIDDLE_NAME' | 'LAST_NAME' | 'BIRTH_DATE';
-export type ChangeStatus = 'OPEN' | 'APPROVED' | 'REJECTED';
+type ChangeStatus = 'OPEN' | 'APPROVED' | 'REJECTED';
 
 export const CHANGE_FIELD_LABELS: Readonly<Record<ChangeField, string>> = {
   EMAIL: 'E-Mail',

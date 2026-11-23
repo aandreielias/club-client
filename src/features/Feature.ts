@@ -16,7 +16,7 @@ export interface PageProps {
   params: RouteParams;
 }
 
-export type PageComponent = Component<PageProps> | Component<Record<string, never>>;
+type PageComponent = Component<PageProps> | Component<Record<string, never>>;
 
 export interface FeatureRoute {
   /** Hash path pattern, e.g. '/calendar/:id'. Specific paths before parameter paths. */

@@ -4,7 +4,7 @@ import type { ZonedClock, LocalDateTime } from '../../lib/time/ZonedClock';
 import { audienceEntries, audienceError, audienceOf, EVERYONE, hasAudience, NO_AUDIENCE, sameAudience, type Reach } from '../../lib/reach';
 import { rhythmCode, rhythmOf, type NewTask, type Task, type TaskPatch, type TaskPriority } from './model';
 
-export type TaskField = 'audience' | 'title' | 'description' | 'dueAt' | 'assignees' | 'checklist' | 'repeat';
+type TaskField = 'audience' | 'title' | 'description' | 'dueAt' | 'assignees' | 'checklist' | 'repeat';
 
 export type TaskFormErrors = Partial<Record<TaskField, string>>;
 

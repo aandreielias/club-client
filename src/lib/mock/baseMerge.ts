@@ -4,7 +4,7 @@
 import type JSZip from 'jszip';
 import { MockServer } from './MockServer';
 
-export const UNSUPPORTED = 'document.template-unsupported';
+const UNSUPPORTED = 'document.template-unsupported';
 
 const DOCUMENT = 'word/document.xml';
 const RELS = 'word/_rels/document.xml.rels';

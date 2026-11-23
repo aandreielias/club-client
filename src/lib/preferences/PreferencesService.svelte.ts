@@ -35,7 +35,7 @@ export interface Preferences {
 const STORE_KEY = 'preferences';
 
 /** What the club may preset for its members (admin/board); the look stays the brand's and the member's. */
-export const CLUB_DEFAULT_KEYS = ['calendarView', 'weekStartHour', 'weekEndHour', 'filesView', 'navOrder', 'homeOrder', 'homeShown'] as const;
+const CLUB_DEFAULT_KEYS = ['calendarView', 'weekStartHour', 'weekEndHour', 'filesView', 'navOrder', 'homeOrder', 'homeShown'] as const;
 
 /** server: GET/PUT /me/preferences (JSON text each, null = none). */
 export interface RemotePreferences {

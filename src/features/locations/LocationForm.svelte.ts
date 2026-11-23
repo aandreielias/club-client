@@ -2,7 +2,7 @@ import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import type { Location, LocationPatch, NewLocation } from './model';
 
-export type LocationField = 'name' | 'street' | 'zip' | 'city' | 'note' | 'coordinates';
+type LocationField = 'name' | 'street' | 'zip' | 'city' | 'note' | 'coordinates';
 export type LocationFormErrors = Partial<Record<LocationField, string>>;
 
 const limits = settings.locations;

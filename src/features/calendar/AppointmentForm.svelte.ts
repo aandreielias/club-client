@@ -12,7 +12,7 @@ import {
   type NewAppointment,
 } from './model';
 
-export type FormField = 'title' | 'audience' | 'start' | 'end' | 'description' | 'location' | 'cabins' | 'repeatUntil' | 'interval';
+type FormField = 'title' | 'audience' | 'start' | 'end' | 'description' | 'location' | 'cabins' | 'repeatUntil' | 'interval';
 
 export type FormErrors = Partial<Record<FormField, string>>;
 

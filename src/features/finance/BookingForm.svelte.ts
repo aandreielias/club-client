@@ -3,7 +3,7 @@ import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import { moneyInput, parseMoney, type Booking, type BookingInput, type Direction, type TransferInput } from './model';
 
-export type BookingField = 'bookedOn' | 'account' | 'to' | 'category' | 'amount' | 'text' | 'note' | 'reference' | 'counterparty';
+type BookingField = 'bookedOn' | 'account' | 'to' | 'category' | 'amount' | 'text' | 'note' | 'reference' | 'counterparty';
 
 type BookingErrors = Partial<Record<BookingField, string>>;
 

@@ -277,7 +277,7 @@ export interface Extras {
 
 export type ExtrasInput = Pick<Extras, 'content' | 'opponent' | 'home' | 'sets'>;
 
-export interface MatchResult {
+interface MatchResult {
   appointmentId: string;
   title: string;
   startsAt: string;

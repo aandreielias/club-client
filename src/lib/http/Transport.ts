@@ -3,7 +3,7 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 /** Supplies the current access token; null when signed out. */
 export type TokenSource = () => Promise<string | null>;
 
-export interface UploadProgress {
+interface UploadProgress {
   loaded: number;
   total: number;
 }

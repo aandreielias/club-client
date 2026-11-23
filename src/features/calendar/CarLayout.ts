@@ -1,5 +1,5 @@
 /** One seat of the car drawing, in viewBox units. */
-export interface SeatSpot {
+interface SeatSpot {
   x: number;
   y: number;
   driver: boolean;

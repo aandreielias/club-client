@@ -3,7 +3,7 @@ import { session } from '../../lib/container';
 import { guestOnly } from '../../lib/types';
 import type { SettingsViewer } from './settingsTree';
 
-export { searchSettings, tabPath, visibleSettings, type SectionId, type SettingsTab } from './settingsTree';
+export { searchSettings, tabPath, visibleSettings, type SectionId } from './settingsTree';
 
 /** The signed-in member as a viewer of the settings tree. */
 export const settingsViewer = (): SettingsViewer => ({

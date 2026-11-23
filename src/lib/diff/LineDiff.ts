@@ -1,4 +1,4 @@
-export type DiffKind = 'same' | 'added' | 'removed';
+type DiffKind = 'same' | 'added' | 'removed';
 
 export interface DiffLine {
   kind: DiffKind;

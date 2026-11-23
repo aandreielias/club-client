@@ -1,7 +1,7 @@
 // Mirrors of the club-server tournaments DTOs (TournamentsApi).
 
 export type TournamentStatus = 'DRAFT' | 'GROUPS' | 'KO' | 'DONE';
-export type Stage = 'GROUP' | 'KO';
+type Stage = 'GROUP' | 'KO';
 /** Indoor volleyball (teams of 6), beach volleyball (2 to 4 per team, sets to 21) or simple (only who won). */
 export type TournamentFormat = 'VOLLEYBALL' | 'BEACH' | 'SIMPLE';
 /** Result of a simple match; a draw only in the groups. */
@@ -57,7 +57,7 @@ export interface StandingRow {
   points: number;
 }
 
-export interface TournamentGroup {
+interface TournamentGroup {
   label: string;
   standings: StandingRow[];
 }

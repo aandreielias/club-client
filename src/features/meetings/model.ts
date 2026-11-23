@@ -240,7 +240,7 @@ export interface Person {
 }
 
 /** A guest from outside with a guest account (sees only their meetings); `email` only for who runs the meeting. */
-export interface Guest {
+interface Guest {
   id: string;
   name: string;
   email: string | null;
@@ -314,7 +314,7 @@ export type MeetingSummary = Pick<Meeting, 'id' | 'kind' | 'title' | 'startsAt' 
  * server: MeetingsApi.MotionInput — what a Beschluss proposes: its text, the majority (null: the type's simple one), who carries it out
  * (empty: the board) and by when.
  */
-export interface Motion {
+interface Motion {
   text: string | null;
   majority: Majority | null;
   assigneeIds: string[];
@@ -432,7 +432,7 @@ export const MAJORITY_BASE_HINTS: Readonly<Record<MajorityBase, string>> = {
   CAST: 'Enthaltungen zählen mit, also wie Nein.',
   PRESENT: 'Alle anwesenden Stimmberechtigten zählen, auch wer nicht abstimmt; bei Umlaufbeschlüssen der ganze Vorstand.',
 };
-export type ResolutionStatus = 'DRAFT' | 'OPEN' | 'CLOSED';
+type ResolutionStatus = 'DRAFT' | 'OPEN' | 'CLOSED';
 export type Choice = 'YES' | 'NO' | 'ABSTAIN';
 /** NOT_QUORATE: a circular vote in which fewer of the board took part than the circular quorum asks. */
 export type Result = 'PASSED' | 'FAILED' | 'NOT_QUORATE';

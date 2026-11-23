@@ -70,6 +70,7 @@ type Satisfies<Server extends Client, Client> = [Server, Client];
 /** Where the client deliberately expects less than the server's type allows (a narrower union the server validates). */
 type With<T, K extends keyof T, V> = Omit<T, K> & Record<K, V>;
 
+/** @public Never imported: it exists so svelte-check compares each client DTO with its server schema. */
 export type Contract = [
   Satisfies<S['at.clubserver.calendar.api.CalendarApi.AppointmentDto'], Appointment>,
   Satisfies<S['at.clubserver.calendar.api.CalendarApi.AppointmentList'], AppointmentList>,

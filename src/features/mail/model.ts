@@ -4,7 +4,7 @@ import type { RefKind } from '../../lib/records/refs';
 import type { Role } from '../../lib/types';
 
 export type MailFolder = 'INBOX' | 'DRAFTS' | 'SENT' | 'TRASH';
-export type MailboxKind = 'PERSONAL' | 'SHARED';
+type MailboxKind = 'PERSONAL' | 'SHARED';
 
 export const MAIL_FOLDERS: readonly { value: MailFolder; label: string }[] = [
   { value: 'INBOX', label: 'Posteingang' },
@@ -136,7 +136,7 @@ export interface MailSettings {
   maxRecipients: number;
 }
 
-export type PersonalFor = 'ALL' | 'CLUB_MEMBERS' | 'NONE';
+type PersonalFor = 'ALL' | 'CLUB_MEMBERS' | 'NONE';
 
 export type AddressPattern = 'FIRSTLAST' | 'FIRST_DOT_LAST' | 'INITIAL_DOT_LAST';
 

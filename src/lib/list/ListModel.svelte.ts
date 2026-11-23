@@ -1,7 +1,7 @@
 import { Resource } from '../state/Resource.svelte';
 import type { LocalStore } from '../storage/LocalStore';
 
-export type SortDirection = 'asc' | 'desc';
+type SortDirection = 'asc' | 'desc';
 
 export interface ListSort {
   key: string;
@@ -25,7 +25,7 @@ export interface ListColumn<T> {
   hideWhenEmpty?: boolean;
 }
 
-export interface ListOption {
+interface ListOption {
   value: string;
   label: string;
 }

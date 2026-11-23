@@ -2,7 +2,7 @@ import { FormState } from '../../lib/state/FormState.svelte';
 import { settings } from '../../settings';
 import type { Item, ItemPatch, NewItem } from './model';
 
-export type ItemField = 'name' | 'category' | 'quantity' | 'description';
+type ItemField = 'name' | 'category' | 'quantity' | 'description';
 
 export type ItemFormErrors = Partial<Record<ItemField, string>>;
 

@@ -70,7 +70,7 @@ export function windowHandle(): WindowHandle | undefined {
   return getContext<WindowHandle | undefined>(HANDLE);
 }
 
-export interface WindowContentProps {
+interface WindowContentProps {
   id: string;
   handle: WindowHandle;
 }

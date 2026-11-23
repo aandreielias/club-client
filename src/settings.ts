@@ -6,7 +6,7 @@
 
 const env = import.meta.env;
 
-export type ApiMode = 'mock' | 'http';
+type ApiMode = 'mock' | 'http';
 
 function readApiMode(): ApiMode {
   // The mock (dev login accepts any password) is only a default in development; a release build must say which.

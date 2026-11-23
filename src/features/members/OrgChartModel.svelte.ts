@@ -2,13 +2,13 @@ import { Resource } from '../../lib/state/Resource.svelte';
 import { TEAM_ROLE_LABELS, type MembershipType, type Role, type TeamRole } from '../../lib/types';
 import type { Board, LoginState, MembersApi, OfficeKind, OrgChart, OrgPerson } from './MembersApi';
 
-export interface OrgTag {
+interface OrgTag {
   text: string;
   tone?: 'orange' | 'blue';
 }
 
 /** One person in one layer: `role` is the line above the name, `also` the other layers, `relatives` the children of a parent. */
-export interface OrgCard {
+interface OrgCard {
   key: string;
   memberId: string;
   name: string;
@@ -20,7 +20,7 @@ export interface OrgCard {
 }
 
 /** A cell of a layer: the whole row, or one team (coaches above their players). */
-export interface OrgGroup {
+interface OrgGroup {
   key: string;
   title: string | null;
   subtitle: string | null;

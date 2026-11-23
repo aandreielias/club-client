@@ -206,8 +206,6 @@ const STATUS_HUES: Readonly<Record<TaskStatus, Hue>> = { OPEN: 'red', IN_PROGRES
 export const statusHue = (status: TaskStatus): Hue => STATUS_HUES[status];
 
 /** Sort order of statuses (open first). */
-export const statusRank = (status: TaskStatus): number => TASK_STATUSES.findIndex((s) => s.value === status);
-
 /**
  * server: TasksApi.TaskSettings — hours before the due time when assignees get the reminder; an overdue task is announced
  * again every `overdueRepeatDays` (0 = once) and escalated after `escalateAfterDays` (0 = never) to its creator, or the board

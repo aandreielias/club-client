@@ -229,7 +229,7 @@ export interface FeeRates {
   items: FeeRate[];
 }
 
-export type ChargeStatus = 'OPEN' | 'PARTIAL' | 'PAID' | 'WAIVED';
+type ChargeStatus = 'OPEN' | 'PARTIAL' | 'PAID' | 'WAIVED';
 
 /** One payment: a booking; a Storno cancels it. */
 export interface FeePayment {
@@ -265,7 +265,7 @@ export interface ChargeList {
 
 type StatusTag = { label: string; tone: 'blue' | 'yellow' | 'green' | 'gray' | 'red' };
 
-export const CHARGE_STATUS: Record<ChargeStatus, StatusTag> = {
+const CHARGE_STATUS: Record<ChargeStatus, StatusTag> = {
   OPEN: { label: 'Offen', tone: 'blue' },
   PARTIAL: { label: 'Teilweise bezahlt', tone: 'yellow' },
   PAID: { label: 'Bezahlt', tone: 'green' },

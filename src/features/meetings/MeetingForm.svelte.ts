@@ -3,7 +3,7 @@ import { ZonedClock, type LocalDateTime } from '../../lib/time/ZonedClock';
 import { agendaError, toInputs, type AgendaRow } from './agenda';
 import type { Meeting, MeetingPatch, MeetingType, NewMeeting } from './model';
 
-export type MeetingField = 'title' | 'items' | 'urgency' | 'start' | 'end';
+type MeetingField = 'title' | 'items' | 'urgency' | 'start' | 'end';
 type Errors = Partial<Record<MeetingField, string>>;
 
 /** Place of an existing meeting (changeable until it closes); online kinds have their call in the app. */

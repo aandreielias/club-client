@@ -14,7 +14,7 @@ export function toHours(fraction: number): number {
   return snap(Math.expm1(Math.min(1, Math.max(0, fraction)) * LOG_MAX));
 }
 
-export function snap(hours: number): number {
+function snap(hours: number): number {
   return hours < 48 ? Math.round(hours) : Math.round(hours / 24) * 24;
 }
 

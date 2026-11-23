@@ -20,7 +20,7 @@ import {
   type StepAnchor,
 } from './model';
 
-export type MeetingTypeField =
+type MeetingTypeField =
   'label' | 'invitationLabel' | 'notice' | 'quorum' | 'grace' | 'majorities' | 'conveners' | 'dueBy' | 'steps' | 'invitees' | 'protocol' | 'maxDays';
 type Errors = Partial<Record<MeetingTypeField, string>>;
 

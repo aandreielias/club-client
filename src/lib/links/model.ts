@@ -51,7 +51,7 @@ export interface NeedInput {
 }
 
 /** What the pickers offer: inventory items and visible documents. */
-export interface LinkOption {
+interface LinkOption {
   id: string;
   label: string;
 }
