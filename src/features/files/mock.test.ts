@@ -166,6 +166,7 @@ describe('mock setting files (server: SettingFileHandlers)', () => {
     form.append('file', new File([content], 'neu.svg'));
     form.append('label', '2.0');
     form.append('date', '2026-11-01');
+    form.append('note', 'Neues Logo');
     await files.uploadVersion({ params: { id: 'file-logo-black' }, query: new URLSearchParams(), body: form, email: 'vorstand@example.at' });
     expect(logo().file.sizeBytes).toBe(content.length);
 

@@ -25,6 +25,7 @@ export const FILE_MESSAGES: MessageCatalog = {
   'request.too-large': `Die Datei ist zu groß (höchstens ${Math.floor(limits.maxUploadBytes / 1024 / 1024)} MB).`,
   'file.version-exists': 'Diese Versionsnummer gibt es schon.',
   'file.version-label-invalid': 'Versionsnummer mit 1 bis 20 Zeichen angeben.',
+  'file.version-note-missing': 'Beschreiben, was sich geändert hat (höchstens 1000 Zeichen).',
   'file.version-date-missing': 'Bitte ein Datum für die Version angeben.',
   'file.version-not-found': 'Die Version gibt es nicht mehr.',
   'file.version-type-mismatch': 'Die neue Version muss dasselbe Dateiformat haben.',

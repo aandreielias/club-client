@@ -586,6 +586,8 @@ export const settings = {
     compareContextLines: 2,
     /** server: FileVersion.MAX_LABEL */
     versionLabelMaxLength: 20,
+    /** server: FileVersion.MAX_NOTE */
+    versionNoteMaxLength: 1000,
     /** ZIP downloads are packed in the browser; larger folders must be downloaded in parts. */
     zipMaxBytes: 500 * 1024 * 1024,
     /** Excel/PowerPoint previews show at most this much. */

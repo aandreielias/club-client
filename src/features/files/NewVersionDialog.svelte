@@ -11,7 +11,7 @@
   import { filesApi } from './services';
   import { nextVersion } from './VersionLabel';
 
-  /** Uploads a new version of a file: the file (same type), a version number and the date it stands for. */
+  /** Uploads a new version of a file: the file (same type), a version number, the date it stands for and what changed. */
   let { file, onclose, onsaved }: { file: StoredFile; onclose: () => void; onsaved: (saved: StoredFile) => void } = $props();
 
   // svelte-ignore state_referenced_locally
@@ -19,6 +19,7 @@
   // svelte-ignore state_referenced_locally
   let label = $state(nextVersion(file.version ?? '1.0'));
   let date = $state(session.clock.today());
+  let note = $state('');
   let chosen = $state<File | null>(null);
   let submitted = $state(false);
   const action = new Action();
@@ -32,8 +33,8 @@
   async function submit(event: SubmitEvent) {
     event.preventDefault();
     submitted = true;
-    if (!chosen || labelError || !date) return;
-    const saved = await action.attempt(() => filesApi.uploadVersion(file.id, chosen!, label.trim(), date));
+    if (!chosen || labelError || !date || !note.trim()) return;
+    const saved = await action.attempt(() => filesApi.uploadVersion(file.id, chosen!, label.trim(), date, note.trim()));
     if (saved) onsaved(saved);
   }
 </script>
@@ -55,6 +56,9 @@
         <DateInput bind:value={date} required />
       </Field>
     </div>
+    <Field label="Änderungen" error={submitted && !note.trim() ? 'Beschreiben, was sich geändert hat.' : null}>
+      <textarea bind:value={note} rows="3" maxlength={settings.files.versionNoteMaxLength} required></textarea>
+    </Field>
     <ErrorNote error={action.error} />
     <div class="row">
       <Button type="submit" variant="primary" icon="upload" busy={action.busy}>Version hochladen</Button>

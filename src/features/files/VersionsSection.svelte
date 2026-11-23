@@ -79,6 +79,7 @@
         >
         <span class="muted size">{session.format.bytes(version.sizeBytes)}</span>
         <Button size="sm" variant="ghost" icon="download" tooltip="Version {version.label} herunterladen" onclick={() => download(version.id)} />
+        {#if version.note}<p class="note">{version.note}</p>{/if}
       </li>
     {/each}
   </ul>
@@ -89,6 +90,11 @@
     display: grid;
     grid-template-columns: auto 8rem minmax(0, 1fr) minmax(0, 1fr) 5rem auto;
     gap: var(--space-sm);
+  }
+  .note {
+    grid-column: 2 / -1;
+    margin: 0;
+    white-space: pre-line;
   }
   .label {
     display: inline-flex;

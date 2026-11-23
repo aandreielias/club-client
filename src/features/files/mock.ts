@@ -520,9 +520,11 @@ export class MockFiles {
     const upload = body?.get('file');
     const label = String(body?.get('label') ?? '').trim();
     const date = String(body?.get('date') ?? '');
+    const note = String(body?.get('note') ?? '').trim();
     if (!(upload instanceof Blob)) return fail(400, 'request.invalid');
     if (!label || label.length > limits.versionLabelMaxLength) fail(400, 'file.version-label-invalid');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) fail(400, 'file.version-date-missing');
+    if (!note || note.length > limits.versionNoteMaxLength) fail(400, 'file.version-note-missing');
     await MockFiles.simulateTransfer(upload.size, req.onProgress);
     const bytes = new Uint8Array(await upload.arrayBuffer());
     const detected = MockFiles.detect(bytes, upload instanceof File ? upload.name : file.name);
@@ -536,6 +538,7 @@ export class MockFiles {
         id: crypto.randomUUID(),
         label: '1.0',
         date: file.createdAt.slice(0, 10),
+        note: null,
         contentType: file.contentType,
         sizeBytes: file.sizeBytes,
         uploadedBy: file.uploadedBy,
@@ -551,6 +554,7 @@ export class MockFiles {
       id: crypto.randomUUID(),
       label,
       date,
+      note,
       contentType: file.contentType,
       sizeBytes: upload.size,
       uploadedBy: viewer.member.id,
@@ -1303,17 +1307,23 @@ export class MockFiles {
   /** The seeded Hallenordnung in two versions, so comparing has something to show. */
   private static seedVersions(): Record<string, StoredVersion[]> {
     const at = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString();
-    const v = (id: string, label: string, date: string, daysAgo: number, current: boolean): StoredVersion => ({
+    const v = (id: string, label: string, date: string, daysAgo: number, current: boolean, note: string | null): StoredVersion => ({
       id,
       label,
       date,
+      note,
       contentType: OFFICE.docx,
       sizeBytes: 12_000,
       uploadedBy: 'vorstand',
       createdAt: at(daysAgo),
       current,
     });
-    return { 'file-10': [v('v-10-2', '1.1', '2026-09-01', 5, true), v('v-10-1', '1.0', '2025-09-01', 60, false)] };
+    return {
+      'file-10': [
+        v('v-10-2', '1.1', '2026-09-01', 5, true, 'Hallenzeiten für die neue Saison angepasst.'),
+        v('v-10-1', '1.0', '2025-09-01', 60, false, null),
+      ],
+    };
   }
 }
 

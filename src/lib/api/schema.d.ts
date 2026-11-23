@@ -5611,6 +5611,7 @@ export interface components {
             label: string;
             /** Format: date */
             date: string;
+            note: string;
             contentType: string;
             /** Format: int64 */
             sizeBytes: number;
@@ -9971,6 +9972,7 @@ export interface operations {
             query: {
                 label: string;
                 date: string;
+                note: string;
             };
             header?: never;
             path: {

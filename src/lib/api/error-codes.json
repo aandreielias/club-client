@@ -92,6 +92,7 @@
   "file.uploads-busy",
   "file.version-date-missing",
   "file.version-exists",
+  "file.version-note-missing",
   "file.version-label-invalid",
   "file.version-not-found",
   "file.version-type-mismatch",

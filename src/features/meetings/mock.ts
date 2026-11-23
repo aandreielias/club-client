@@ -789,6 +789,7 @@ export class MockMeetings {
       form.append('file', new File([content], 'einladung.docx'));
       form.append('label', this.format(new Date().toISOString(), { dateStyle: 'short', timeStyle: 'medium' }).replace(',', ''));
       form.append('date', this.people.clock.today());
+      form.append('note', 'Neu erstellt'); // server: texts document.regenerated
       fileId = (await files.uploadVersion({ params: { id: stored.fileId }, query: new URLSearchParams(), body: form, email: viewer.email } as never))
         .id;
     } else {

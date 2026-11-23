@@ -95,6 +95,8 @@ export interface FileVersion {
   label: string;
   /** The date the version stands for (ISO date). */
   date: string;
+  /** What changed; null for the first upload and versions from before change notes. */
+  note: string | null;
   contentType: string;
   sizeBytes: number;
   uploadedBy: string | null;

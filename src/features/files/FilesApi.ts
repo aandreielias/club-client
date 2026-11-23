@@ -104,12 +104,13 @@ export class FilesApi {
     });
   }
 
-  /** New version of a document (same type); multipart `file`, `label`, `date`. */
-  uploadVersion(fileId: string, file: File, label: string, date: string, onProgress?: ProgressListener): Promise<StoredFile> {
+  /** New version of a document (same type); multipart `file`, `label`, `date`, `note` (what changed). */
+  uploadVersion(fileId: string, file: File, label: string, date: string, note: string, onProgress?: ProgressListener): Promise<StoredFile> {
     const form = new FormData();
     form.append('file', file, file.name);
     form.append('label', label);
     form.append('date', date);
+    form.append('note', note);
     return this.api.upload<StoredFile>(`${FilesApi.BASE}/files/${encodeURIComponent(fileId)}/versions`, form, onProgress);
   }
 
