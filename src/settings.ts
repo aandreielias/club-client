@@ -516,6 +516,8 @@ export const settings = {
       compact: { label: 'Kompakt', controlHeight: '26px' },
       comfortable: { label: 'Breit', controlHeight: '36px' },
     },
+    /** Seitenbreite slider in px; `max` means the whole window. Without a choice pages take `theme.layout.contentWidth`. */
+    contentWidth: { min: 960, max: 1920, step: 20 },
   },
 
   /** Start page. */

@@ -9,6 +9,8 @@ export interface ThemeOverrides {
   scheme?: ColorScheme;
   fontSize?: string;
   controlHeight?: string;
+  /** Widest a page grows (a CSS length, `none` = the whole window). */
+  contentWidth?: string;
   /** Turns transitions and the window animation off. */
   reduceMotion?: boolean;
 }
@@ -97,6 +99,7 @@ export class ThemeService {
       scheme: o.scheme ?? theme.scheme,
       font: { ...theme.font, ...(o.fontSize ? { sizeBase: o.fontSize } : {}) },
       control: { ...theme.control, ...(o.controlHeight ? { height: o.controlHeight } : {}) },
+      layout: { ...theme.layout, ...(o.contentWidth ? { contentWidth: o.contentWidth } : {}) },
       motion,
     } as Settings['theme'];
   }

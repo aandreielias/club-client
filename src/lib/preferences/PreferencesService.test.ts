@@ -16,6 +16,18 @@ describe('PreferencesService', () => {
     expect(prefs.themeOverrides()).toMatchObject({ fontSize: settings.appearance.fontSizes.large.size });
   });
 
+  it('caps the page width within the slider, its right end being the whole window', () => {
+    const { min, max } = settings.appearance.contentWidth;
+    const store = { get: () => ({ contentWidth: min - 1 }), set: vi.fn() };
+    const prefs = new PreferencesService(settings.appearance, DEFAULTS, store as never);
+    expect(prefs.values.contentWidth).toBeNull();
+    expect(prefs.themeOverrides().contentWidth).toBeUndefined();
+    prefs.set('contentWidth', 1400);
+    expect(prefs.themeOverrides().contentWidth).toBe('1400px');
+    prefs.set('contentWidth', max);
+    expect(prefs.themeOverrides().contentWidth).toBe('none');
+  });
+
   it('falls back for unknown stored values and toggles the scheme', () => {
     const store = { get: () => ({ accent: 'green', fontSize: 'huge', scheme: 'system', calendarView: 'year' }), set: vi.fn() };
     const prefs = new PreferencesService(settings.appearance, DEFAULTS, store as never);

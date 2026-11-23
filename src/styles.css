@@ -115,12 +115,12 @@ input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']),
 select {
   height: var(--control-height);
 }
-input:not([type='checkbox'], [type='radio']):hover,
+input:not([type='checkbox'], [type='radio'], [type='range']):hover,
 select:hover,
 textarea:hover {
   border-color: var(--color-border-strong);
 }
-input:not([type='checkbox'], [type='radio']):focus,
+input:not([type='checkbox'], [type='radio'], [type='range']):focus,
 select:focus,
 textarea:focus {
   outline: none;

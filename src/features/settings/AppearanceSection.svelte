@@ -7,6 +7,8 @@
   import Button from '../../ui/Button.svelte';
   import ChoiceGroup from '../../ui/ChoiceGroup.svelte';
   import Field from '../../ui/Field.svelte';
+  import Slider from '../../ui/Slider.svelte';
+  import { settings } from '../../settings';
 
   const options = <T extends object>(map: T) =>
     (Object.entries(map) as [Extract<keyof T, string>, { label: string }][]).map(([value, option]) => ({ value, label: option.label }));
@@ -23,6 +25,9 @@
   const HOURS = Array.from({ length: 25 }, (_, h) => ({ value: String(h), label: `${h} Uhr` }));
   const clubAction = new Action();
   const hasClub = $derived(Object.keys(preferences.club).length > 0);
+
+  const WIDTH = settings.appearance.contentWidth;
+  const width = $derived(preferences.values.contentWidth ?? parseInt(settings.theme.layout.contentWidth));
 
   const DOCKS: readonly { value: Dock; label: string }[] = [
     { value: 'center', label: 'Mitte' },
@@ -86,6 +91,17 @@
       label="Dichte"
       options={options(preferences.appearance.densities)}
       bind:value={() => preferences.values.density, (v) => v && preferences.set('density', v)}
+    />
+  </Field>
+
+  <Field label="Seitenbreite" hint="Wie breit Seiten höchstens werden. Ganz rechts nutzen sie das ganze Fenster.">
+    <Slider
+      min={WIDTH.min}
+      max={WIDTH.max}
+      step={WIDTH.step}
+      value={width}
+      text={width >= WIDTH.max ? 'Volle Breite' : `${width} px`}
+      oninput={(v) => preferences.set('contentWidth', v)}
     />
   </Field>
 

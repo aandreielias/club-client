@@ -13,6 +13,8 @@ export interface Preferences {
   fontSize: keyof Appearance['fontSizes'];
   density: keyof Appearance['densities'];
   reduceMotion: boolean;
+  /** Widest a page grows, in px (null = the app's width; `appearance.contentWidth.max` = the whole window). */
+  contentWidth: number | null;
   calendarView: CalendarViewPreference;
   /** Hours the week view shows (end exclusive). */
   weekStartHour: number;
@@ -80,6 +82,7 @@ export class PreferencesService {
       fontSize: PreferencesService.first(appearance.fontSizes),
       density: PreferencesService.first(appearance.densities),
       reduceMotion: false,
+      contentWidth: null,
       calendarView: defaults.calendarView,
       weekStartHour: defaults.weekStartHour,
       weekEndHour: defaults.weekEndHour,
@@ -184,6 +187,7 @@ export class PreferencesService {
       fontSize: this.appearance.fontSizes[v.fontSize].size,
       controlHeight: this.appearance.densities[v.density].controlHeight,
       reduceMotion: v.reduceMotion,
+      contentWidth: v.contentWidth === null ? undefined : v.contentWidth >= this.appearance.contentWidth.max ? 'none' : `${v.contentWidth}px`,
     };
   }
 
@@ -195,6 +199,7 @@ export class PreferencesService {
       fontSize: values.fontSize in this.appearance.fontSizes ? values.fontSize : d.fontSize,
       density: values.density in this.appearance.densities ? values.density : d.density,
       reduceMotion: values.reduceMotion === true,
+      contentWidth: PreferencesService.width(values.contentWidth, this.appearance.contentWidth),
       calendarView: ['month', 'week'].includes(values.calendarView) ? values.calendarView : d.calendarView,
       ...PreferencesService.hours(values, d),
       navOrder: PreferencesService.strings(values.navOrder),
@@ -206,6 +211,11 @@ export class PreferencesService {
         Object.entries(values.homeShown && typeof values.homeShown === 'object' ? values.homeShown : {}).filter(([, on]) => typeof on === 'boolean'),
       ),
     };
+  }
+
+  /** A width inside the slider's range, else none. */
+  private static width(value: unknown, range: Appearance['contentWidth']): number | null {
+    return typeof value === 'number' && value >= range.min && value <= range.max ? value : null;
   }
 
   /** Whole hours 0–24, at least 4 shown; otherwise the defaults. */
