@@ -27,6 +27,10 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      - name: Dependency vulnerability scan (fails on known vulns, dev packages too)
+        run: docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:v2.6.0 scan source -L /src/package-lock.json
+
       - run: npm run check
       - run: npm run lint
       - run: npm test
